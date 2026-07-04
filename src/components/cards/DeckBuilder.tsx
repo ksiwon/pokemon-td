@@ -5,6 +5,7 @@ import { useEffect, useMemo, useState } from 'react';
 import styled from 'styled-components';
 import { ArrowLeft, Shield, Crosshair, Save } from 'lucide-react';
 import { pokeAPI } from '../../api/pokeapi';
+import { useTranslation } from '../../i18n';
 import { cardService } from '../../services/CardService';
 import { useCardState } from '../../hooks/useCardState';
 import { computeSynergies } from '../../services/CardBattleService';
@@ -18,6 +19,7 @@ const EMPTY: SlotState[] = [null, null, null, null, null, null]; // [front0,1,2,
 const idxOf = (row: DeckRow, slot: number) => (row === 'front' ? 0 : 3) + slot;
 
 export const DeckBuilder = ({ onBack }: { onBack: () => void }) => {
+  const { t } = useTranslation();
   const state = useCardState();
   const [slots, setSlots] = useState<SlotState[]>(EMPTY);
   const [sel, setSel] = useState<number | null>(null);
@@ -108,7 +110,7 @@ export const DeckBuilder = ({ onBack }: { onBack: () => void }) => {
     return (
       <RowWrap>
         <RowLabel>
-          {row === 'front' ? <><Shield size={13} /> 전열</> : <><Crosshair size={13} /> 후열</>}
+          {row === 'front' ? <><Shield size={13} /> {t('cards.deck.front')}</> : <><Crosshair size={13} /> {t('cards.deck.back')}</>}
         </RowLabel>
         <RowSlots>
           {[0, 1, 2].map(slot => {
@@ -120,7 +122,7 @@ export const DeckBuilder = ({ onBack }: { onBack: () => void }) => {
                 {s ? (
                   <CardView pokemonId={s.pokemonId} stars={s.stars} size={80} interactive={false} />
                 ) : (
-                  <SlotEmpty>{sel === i ? '여기 배치' : '+'}</SlotEmpty>
+                  <SlotEmpty>{sel === i ? t('cards.deck.placeHere') : '+'}</SlotEmpty>
                 )}
               </Slot>
             );
@@ -133,11 +135,11 @@ export const DeckBuilder = ({ onBack }: { onBack: () => void }) => {
   return (
     <Root>
       <TopBar>
-        <BackBtn onClick={onBack}><ArrowLeft size={16} /> 뒤로</BackBtn>
-        <Title>덱 편성 <Count>{count}/6</Count></Title>
+        <BackBtn onClick={onBack}><ArrowLeft size={16} /> {t('cards.common.back')}</BackBtn>
+        <Title>{t('cards.deck.title')} <Count>{count}/6</Count></Title>
         {/* 0장 저장도 허용 → 모든 카드 회수(덱 비우기) 가능 */}
         <SaveBtn $on onClick={save}>
-          <Save size={15} /> {saved ? '저장됨' : '저장'}
+          <Save size={15} /> {saved ? t('cards.deck.saved') : t('cards.deck.save')}
         </SaveBtn>
       </TopBar>
 
@@ -147,9 +149,9 @@ export const DeckBuilder = ({ onBack }: { onBack: () => void }) => {
 
         {/* 시너지 패널 */}
         <SynergyPanel>
-          <SynTitle>활성 시너지</SynTitle>
+          <SynTitle>{t('cards.deck.synergyTitle')}</SynTitle>
           {synergies.length === 0 ? (
-            <SynEmpty>같은 타입 2마리 이상 모으면 시너지가 발동합니다</SynEmpty>
+            <SynEmpty>{t('cards.deck.synergyEmpty')}</SynEmpty>
           ) : (
             <SynList>
               {synergies.sort((a, b) => b.count - a.count).map(s => (
@@ -162,20 +164,22 @@ export const DeckBuilder = ({ onBack }: { onBack: () => void }) => {
           )}
           {(flyingPen || ghostPen) && (
             <PenNote>
-              <Crosshair size={12} /> 관통 활성 — {flyingPen ? '비행' : ''}{flyingPen && ghostPen ? '·' : ''}{ghostPen ? '고스트' : ''} 유닛이 적 후열 직격
+              <Crosshair size={12} /> {t('cards.deck.penetrate', {
+                types: [flyingPen && t('types.flying'), ghostPen && t('types.ghost')].filter(Boolean).join('·'),
+              })}
             </PenNote>
           )}
         </SynergyPanel>
       </Field>
 
       {/* 보유 카드 */}
-      <PoolLabel>보유 카드 {owned.length}</PoolLabel>
+      <PoolLabel>{t('cards.deck.owned', { n: owned.length })}</PoolLabel>
       <Pool>
-        {owned.length === 0 && <PoolEmpty>먼저 팩을 열어 카드를 모으세요</PoolEmpty>}
+        {owned.length === 0 && <PoolEmpty>{t('cards.deck.poolEmpty')}</PoolEmpty>}
         {owned.map(c => (
           <PoolCard key={c.pokemonId} $placed={placedIds.has(c.pokemonId)} onClick={() => placeCard(c)}>
             <CardView pokemonId={c.pokemonId} stars={c.stars} size={84} interactive={false} />
-            {placedIds.has(c.pokemonId) && <PlacedMark>출전</PlacedMark>}
+            {placedIds.has(c.pokemonId) && <PlacedMark>{t('cards.deck.placed')}</PlacedMark>}
           </PoolCard>
         ))}
       </Pool>

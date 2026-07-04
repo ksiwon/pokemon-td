@@ -160,8 +160,8 @@ export const MainMenu = () => {
                 <ModeEmoji><Emoji glyph="🃏" size={26} /></ModeEmoji>
               </ModeIconWrap>
               <ModeInfo>
-                <ModeName>카드 연구소</ModeName>
-                <ModeDesc>카드를 모으고 오토배틀에 도전하세요</ModeDesc>
+                <ModeName>{t('cards.menu.title')}</ModeName>
+                <ModeDesc>{t('cards.menu.desc')}</ModeDesc>
               </ModeInfo>
               <ModeArrow>→</ModeArrow>
             </ModeCard>

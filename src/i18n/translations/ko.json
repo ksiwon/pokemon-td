@@ -190,6 +190,7 @@
   },
   "picker": {
     "loading": "포켓몬 정보 로딩 중...",
+    "fallbackMove": "몸통박치기",
     "title": "포켓몬 선택",
     "subtitle": "3마리 중 1마리를 선택하세요.",
     "hp": "HP",
@@ -259,6 +260,7 @@
     "candyDesc": "레벨 1 상승",
     "candyCost": "레벨×25원",
     "expCandyName": "경험치 사탕",
+    "expCandyPrice": "레벨×50원",
     "expCandyDesc": "제일 낮은 레벨 포켓몬의 레벨을 다음 순위 레벨에 맞춤",
     "expCandyCost": "목표 레벨×50원",
     "categoryStone": "진화의 돌",
@@ -996,6 +998,115 @@
     "next": "다음 ▶",
     "begin": "시작 ▶",
     "unlockNext": "다음 챕터 해금 ▶",
-    "finale": "완결 ▶"
+    "finale": "완결 ▶",
+    "tagline": "약캐로 성도 8체육관을 탈환하라",
+    "worldTitle": "사람이 사라진 성도지방",
+    "worldSub": "포대장의 성도 표류기 · Story Mode",
+    "worldSubShort": "포대장의 성도 표류기"
+  },
+  "cards": {
+    "menu": {
+      "title": "카드 연구소",
+      "desc": "카드를 모으고 오토배틀에 도전하세요"
+    },
+    "common": {
+      "back": "뒤로"
+    },
+    "packNames": {
+      "normal": "일반 팩",
+      "type": "타입 팩",
+      "premium": "고급 팩"
+    },
+    "packDesc": {
+      "normal": "기본 5장",
+      "type": "레어 확률 ↑",
+      "premium": "고레어 확률 ↑"
+    },
+    "alerts": {
+      "openFail": "개봉에 실패했습니다. 잠시 후 다시 시도해주세요.",
+      "deckEmpty": "먼저 덱을 편성하세요!",
+      "deckLoadFail": "덱 카드를 불러오지 못했습니다.",
+      "battlePrepError": "전투 준비 중 오류가 발생했습니다."
+    },
+    "lab": {
+      "backToMenu": "← 메뉴",
+      "packShop": "팩 상점",
+      "autobattle": "오토배틀",
+      "trainerTower": "트레이너 타워",
+      "deckBuild": "덱 편성",
+      "dex": "도감",
+      "collected": "수집 {n}종",
+      "emptyDex": "아직 카드가 없습니다. 팩을 열어 첫 카드를 모아보세요!",
+      "devGrant": "+ 테스트 화폐",
+      "drawing": "추첨 중...",
+      "floor": "{n}층",
+      "slots": "{n}/6"
+    },
+    "pack": {
+      "cardCount": "{n}장",
+      "tapToOpen": "탭하여 개봉",
+      "tapResult": "탭하여 결과 보기",
+      "tapNext": "탭하여 다음",
+      "tapReveal": "탭하여 공개",
+      "skip": "건너뛰기 ≫",
+      "resultTitle": "개봉 결과",
+      "newCount": "신규 {n}",
+      "starUpCount": "별 상승 {n}",
+      "refundCount": "환급 {n} 코인",
+      "confirm": "확인",
+      "plusCoins": "+{n} 코인"
+    },
+    "deck": {
+      "title": "덱 편성",
+      "front": "전열",
+      "back": "후열",
+      "placeHere": "여기 배치",
+      "save": "저장",
+      "saved": "저장됨",
+      "synergyTitle": "활성 시너지",
+      "synergyEmpty": "같은 타입 2마리 이상 모으면 시너지가 발동합니다",
+      "penetrate": "관통 활성 — {types} 유닛이 적 후열 직격",
+      "owned": "보유 카드 {n}",
+      "poolEmpty": "먼저 팩을 열어 카드를 모으세요",
+      "placed": "출전"
+    },
+    "tower": {
+      "title": "트레이너 타워",
+      "floor": "{n}층",
+      "bossSuffix": " · 보스",
+      "noDeck": "출전할 덱이 없습니다. 먼저 덱을 편성하세요.",
+      "deckReady": "편성된 {n}마리로 도전합니다.",
+      "bossFloor": "보스 층",
+      "start": "전투 시작",
+      "bestReach": "최고 도달: {n}층",
+      "preparing": "상대 트레이너 준비 중...",
+      "enemyTrainer": "상대 트레이너",
+      "myDeck": "내 덱",
+      "skip": "건너뛰기",
+      "victory": "승리!",
+      "defeat": "패배",
+      "clearResult": "{n}층 클리어 · 잔존 {alive}마리",
+      "defeatResult": "잔존 {p} vs {e}",
+      "firstClear": "첫 클리어",
+      "coins": "+{n} 코인",
+      "shards": "+{n} 별조각",
+      "nextFloor": "다음 층 →",
+      "retry": "다시 도전",
+      "exit": "나가기"
+    }
+  },
+  "boss": {
+    "incoming": "보스 출현",
+    "approaching": "보스 출현",
+    "taunt": {
+      "1": "바람을 가르는 내 날개짓을 버텨봐라.",
+      "2": "느려터졌군. 낫 맛 좀 볼래?",
+      "3": "음메—— 굴러간다아아!",
+      "4": "키히히... 그림자에선 못 빠져나가.",
+      "5": "주먹과 물살, 둘 다 못 피한다.",
+      "6": "구오오— 강철은 부서지지 않는다.",
+      "7": "눈보라 속에서 그대로 얼어붙어라.",
+      "8": "심해의 용을 거스를 셈인가."
+    }
   }
 }

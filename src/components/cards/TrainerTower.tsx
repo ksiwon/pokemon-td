@@ -5,6 +5,7 @@ import { useEffect, useMemo, useRef, useState } from 'react';
 import styled, { keyframes, css } from 'styled-components';
 import { ArrowLeft, Play, FastForward, ChevronsRight } from 'lucide-react';
 import { pokeAPI } from '../../api/pokeapi';
+import { useTranslation } from '../../i18n';
 import { cardService } from '../../services/CardService';
 import { useCardState } from '../../hooks/useCardState';
 import {
@@ -15,6 +16,7 @@ type Phase = 'idle' | 'loading' | 'battle' | 'result';
 type Reward = { coins: number; starShards: number; firstClear: boolean };
 
 export const TrainerTower = ({ onBack }: { onBack: () => void }) => {
+  const { t } = useTranslation();
   const state = useCardState();
   const floor = state.towerProgress + 1;
   const deck = useMemo(() => cardService.getDeck(), [state.deck]);
@@ -35,7 +37,7 @@ export const TrainerTower = ({ onBack }: { onBack: () => void }) => {
   const timer = useRef<number | null>(null);
 
   const startBattle = async () => {
-    if (deck.length === 0) { alert('먼저 덱을 편성하세요!'); return; }
+    if (deck.length === 0) { alert(t('cards.alerts.deckEmpty')); return; }
     const currentFloor = floor; // 이번 전투 층 고정
     setFoughtFloor(currentFloor);
     setPhase('loading');
@@ -49,7 +51,7 @@ export const TrainerTower = ({ onBack }: { onBack: () => void }) => {
         if (!p) continue;
         player.push(buildBattleCard(p, { stars: entry.stars, row: s.row, slot: s.slot, side: 'player', uid: `player-${s.pokemonId}` }));
       }
-      if (player.length === 0) { alert('덱 카드를 불러오지 못했습니다.'); setPhase('idle'); return; }
+      if (player.length === 0) { alert(t('cards.alerts.deckLoadFail')); setPhase('idle'); return; }
 
       const seed = currentFloor * 1000 + 7;
       const enemy = await cardBattleService.generateEnemyTeam(currentFloor, seed);
@@ -91,7 +93,7 @@ export const TrainerTower = ({ onBack }: { onBack: () => void }) => {
       setPhase('battle');
     } catch (e) {
       console.warn('[TrainerTower] 전투 준비 실패', e);
-      alert('전투 준비 중 오류가 발생했습니다.');
+      alert(t('cards.alerts.battlePrepError'));
       setPhase('idle');
     }
   };
@@ -163,43 +165,43 @@ export const TrainerTower = ({ onBack }: { onBack: () => void }) => {
   return (
     <Root>
       <TopBar>
-        <BackBtn onClick={onBack}><ArrowLeft size={16} /> 뒤로</BackBtn>
-        <Title>트레이너 타워</Title>
-        <FloorChip>{headerFloor}층{headerFloor % 10 === 0 ? ' · 보스' : ''}</FloorChip>
+        <BackBtn onClick={onBack}><ArrowLeft size={16} /> {t('cards.common.back')}</BackBtn>
+        <Title>{t('cards.tower.title')}</Title>
+        <FloorChip>{t('cards.tower.floor', { n: headerFloor })}{headerFloor % 10 === 0 ? t('cards.tower.bossSuffix') : ''}</FloorChip>
       </TopBar>
 
       {phase === 'idle' && (
         <Center>
-          <FloorBig>{floor}층</FloorBig>
+          <FloorBig>{t('cards.tower.floor', { n: floor })}</FloorBig>
           <FloorDesc>
             {deck.length === 0
-              ? '출전할 덱이 없습니다. 먼저 덱을 편성하세요.'
-              : `편성된 ${deck.length}마리로 도전합니다.`}
-            {floor % 10 === 0 && <BossTag>보스 층</BossTag>}
+              ? t('cards.tower.noDeck')
+              : t('cards.tower.deckReady', { n: deck.length })}
+            {floor % 10 === 0 && <BossTag>{t('cards.tower.bossFloor')}</BossTag>}
           </FloorDesc>
           <StartBtn $on={deck.length > 0} onClick={startBattle} disabled={deck.length === 0}>
-            <Play size={18} /> 전투 시작
+            <Play size={18} /> {t('cards.tower.start')}
           </StartBtn>
-          <Hint>최고 도달: {state.towerProgress}층</Hint>
+          <Hint>{t('cards.tower.bestReach', { n: state.towerProgress })}</Hint>
         </Center>
       )}
 
-      {phase === 'loading' && <Center><FloorDesc>상대 트레이너 준비 중...</FloorDesc></Center>}
+      {phase === 'loading' && <Center><FloorDesc>{t('cards.tower.preparing')}</FloorDesc></Center>}
 
       {(phase === 'battle' || phase === 'result') && (
         <Arena>
-          <SideLabel $side="enemy">상대 트레이너</SideLabel>
+          <SideLabel $side="enemy">{t('cards.tower.enemyTrainer')}</SideLabel>
           {renderTeam(enemyOrder, 'enemy')}
           <Divider />
           {renderTeam(playerOrder, 'player')}
-          <SideLabel $side="player">내 덱</SideLabel>
+          <SideLabel $side="player">{t('cards.tower.myDeck')}</SideLabel>
 
           {phase === 'battle' && (
             <Controls>
               <CtrlBtn onClick={() => setSpeed(s => (s === 1 ? 2 : s === 2 ? 4 : 1))}>
                 <FastForward size={15} /> {speed}x
               </CtrlBtn>
-              <CtrlBtn onClick={skipToEnd}><ChevronsRight size={15} /> 건너뛰기</CtrlBtn>
+              <CtrlBtn onClick={skipToEnd}><ChevronsRight size={15} /> {t('cards.tower.skip')}</CtrlBtn>
             </Controls>
           )}
         </Arena>
@@ -209,25 +211,25 @@ export const TrainerTower = ({ onBack }: { onBack: () => void }) => {
         <ResultVeil>
           <ResultCard $win={result.winner === 'player'}>
             <ResultTitle $win={result.winner === 'player'}>
-              {result.winner === 'player' ? '승리!' : '패배'}
+              {result.winner === 'player' ? t('cards.tower.victory') : t('cards.tower.defeat')}
             </ResultTitle>
             <ResultSub>
               {result.winner === 'player'
-                ? `${foughtFloor}층 클리어 · 잔존 ${result.playerAlive}마리`
-                : `잔존 ${result.playerAlive} vs ${result.enemyAlive}`}
+                ? t('cards.tower.clearResult', { n: foughtFloor, alive: result.playerAlive })
+                : t('cards.tower.defeatResult', { p: result.playerAlive, e: result.enemyAlive })}
             </ResultSub>
             {reward && (reward.coins > 0 || reward.starShards > 0) && (
               <RewardRow>
-                {reward.firstClear && <FirstBadge>첫 클리어</FirstBadge>}
-                {reward.coins > 0 && <Rw $c="#fbbf24">+{reward.coins} 코인</Rw>}
-                {reward.starShards > 0 && <Rw $c="#c084fc">+{reward.starShards} 별조각</Rw>}
+                {reward.firstClear && <FirstBadge>{t('cards.tower.firstClear')}</FirstBadge>}
+                {reward.coins > 0 && <Rw $c="#fbbf24">{t('cards.tower.coins', { n: reward.coins })}</Rw>}
+                {reward.starShards > 0 && <Rw $c="#c084fc">{t('cards.tower.shards', { n: reward.starShards })}</Rw>}
               </RewardRow>
             )}
             <ResultBtns>
               {result.winner === 'player'
-                ? <PrimaryBtn onClick={reset}>다음 층 →</PrimaryBtn>
-                : <PrimaryBtn onClick={reset}>다시 도전</PrimaryBtn>}
-              <GhostBtn onClick={onBack}>나가기</GhostBtn>
+                ? <PrimaryBtn onClick={reset}>{t('cards.tower.nextFloor')}</PrimaryBtn>
+                : <PrimaryBtn onClick={reset}>{t('cards.tower.retry')}</PrimaryBtn>}
+              <GhostBtn onClick={onBack}>{t('cards.tower.exit')}</GhostBtn>
             </ResultBtns>
           </ResultCard>
         </ResultVeil>

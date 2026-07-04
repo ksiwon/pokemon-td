@@ -187,11 +187,9 @@ export const PokemonPicker: React.FC<{ onClose: () => void; storyHeroPool?: numb
       }
       
       if (!usableMove) {
-        // ⭐️ 수정된 부분: t() 함수 대신 localStorage를 직접 읽어 폴백 이름 지정
-        const lang = localStorage.getItem('language');
         usableMove = {
           name: 'tackle',
-          displayName: lang === 'en' ? 'Tackle' : '몸통박치기', // ⭐️ 수정
+          displayName: t('picker.fallbackMove'),
           type: 'normal',
           power: 40,
           accuracy: 100,

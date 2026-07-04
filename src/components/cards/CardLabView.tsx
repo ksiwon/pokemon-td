@@ -6,6 +6,7 @@ import styled, { keyframes } from 'styled-components';
 import { useNavigate } from 'react-router-dom';
 import { Coins, Sparkles, Package, Layers, Swords } from 'lucide-react';
 import { pokeAPI } from '../../api/pokeapi';
+import { useTranslation } from '../../i18n';
 import { cardService, PACK_DEFS } from '../../services/CardService';
 import { useCardState } from '../../hooks/useCardState';
 import { PullResult, PackType } from '../../types/cards';
@@ -18,6 +19,7 @@ import { TrainerTower } from './TrainerTower';
 type SubView = 'hub' | 'deck' | 'tower';
 
 export const CardLabView = () => {
+  const { t } = useTranslation();
   const navigate = useNavigate();
   const state = useCardState();
   const [view, setView] = useState<SubView>('hub');
@@ -56,7 +58,7 @@ export const CardLabView = () => {
       setOpening({ type, results });
     } catch (e) {
       console.warn('[CardLab] 개봉 실패', e);
-      alert('개봉에 실패했습니다. 잠시 후 다시 시도해주세요.');
+      alert(t('cards.alerts.openFail'));
     } finally {
       setBusy(false);
     }
@@ -68,8 +70,8 @@ export const CardLabView = () => {
   return (
     <Root>
       <TopBar>
-        <BackBtn onClick={() => navigate('/')}>← 메뉴</BackBtn>
-        <Title>카드 연구소</Title>
+        <BackBtn onClick={() => navigate('/')}>{t('cards.lab.backToMenu')}</BackBtn>
+        <Title>{t('cards.menu.title')}</Title>
         <Wallet>
           <WChip><Coins size={15} color="#fbbf24" /> {state.wallet.coins.toLocaleString()}</WChip>
           <WChip><Sparkles size={15} color="#c084fc" /> {state.wallet.starShards.toLocaleString()}</WChip>
@@ -79,16 +81,16 @@ export const CardLabView = () => {
       <Body>
         {/* 팩 상점 */}
         <Section>
-          <SecLabel><Package size={15} /> 팩 상점</SecLabel>
+          <SecLabel><Package size={15} /> {t('cards.lab.packShop')}</SecLabel>
           <PackRow>
             {(['normal', 'type', 'premium'] as PackType[]).map(type => {
               const def = PACK_DEFS[type];
               const afford = state.wallet[def.currency] >= def.cost;
               return (
                 <PackCard key={type} $disabled={!afford || busy} onClick={() => handleOpen(type)}>
-                  <PackName>{type === 'normal' ? '일반 팩' : type === 'type' ? '타입 팩' : '고급 팩'}</PackName>
+                  <PackName>{t(`cards.packNames.${type}`)}</PackName>
                   <PackDesc>
-                    {type === 'premium' ? '고레어 확률 ↑' : type === 'type' ? '레어 확률 ↑' : '기본 5장'}
+                    {t(`cards.packDesc.${type}`)}
                   </PackDesc>
                   <PackCost $c={def.currency === 'coins' ? '#fbbf24' : '#c084fc'}>
                     {def.currency === 'coins' ? <Coins size={13} /> : <Sparkles size={13} />}
@@ -102,13 +104,13 @@ export const CardLabView = () => {
 
         {/* 모드 진입(준비중) */}
         <Section>
-          <SecLabel><Swords size={15} /> 오토배틀</SecLabel>
+          <SecLabel><Swords size={15} /> {t('cards.lab.autobattle')}</SecLabel>
           <ModeRow>
             <ModeBtn onClick={() => setView('tower')}>
-              <Swords size={18} /> 트레이너 타워 <FloorBadge>{state.towerProgress + 1}층</FloorBadge>
+              <Swords size={18} /> {t('cards.lab.trainerTower')} <FloorBadge>{t('cards.lab.floor', { n: state.towerProgress + 1 })}</FloorBadge>
             </ModeBtn>
             <ModeBtn onClick={() => setView('deck')}>
-              <Layers size={18} /> 덱 편성 <FloorBadge>{cardService.getDeck().length}/6</FloorBadge>
+              <Layers size={18} /> {t('cards.lab.deckBuild')} <FloorBadge>{t('cards.lab.slots', { n: cardService.getDeck().length })}</FloorBadge>
             </ModeBtn>
           </ModeRow>
         </Section>
@@ -116,11 +118,11 @@ export const CardLabView = () => {
         {/* 도감 */}
         <Section>
           <SecLabel>
-            <Layers size={15} /> 도감
-            <DexCount>수집 {ownedIds.length}종</DexCount>
+            <Layers size={15} /> {t('cards.lab.dex')}
+            <DexCount>{t('cards.lab.collected', { n: ownedIds.length })}</DexCount>
           </SecLabel>
           {ownedIds.length === 0 ? (
-            <Empty>아직 카드가 없습니다. 팩을 열어 첫 카드를 모아보세요!</Empty>
+            <Empty>{t('cards.lab.emptyDex')}</Empty>
           ) : (
             <DexGrid>
               {ownedIds.map(c => (
@@ -141,7 +143,7 @@ export const CardLabView = () => {
         {/* 개발용 화폐 지급 — dev 서버에서만 노출 (프로덕션 빌드에서 제거됨) */}
         {import.meta.env.DEV && (
           <DevBar>
-            <DevBtn onClick={() => cardService.devGrant(1000, 200)}>+ 테스트 화폐</DevBtn>
+            <DevBtn onClick={() => cardService.devGrant(1000, 200)}>{t('cards.lab.devGrant')}</DevBtn>
           </DevBar>
         )}
       </Body>
@@ -153,7 +155,7 @@ export const CardLabView = () => {
           onClose={() => setOpening(null)}
         />
       )}
-      {busy && <BusyVeil><Spinner /> 추첨 중...</BusyVeil>}
+      {busy && <BusyVeil><Spinner /> {t('cards.lab.drawing')}</BusyVeil>}
     </Root>
   );
 };
