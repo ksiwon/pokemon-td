@@ -33,15 +33,16 @@ export const BugReport: React.FC<BugReportProps> = ({ onClose }) => {
 
     try {
       await emailjs.send(
-        'service_243k76q',
-        'template_ln0gk8n',
+        'service_ymdrp77',
+        'template_0gc815a',
         {
           name: 'Anonymous Player',
-          email: 'anonymous@play.er',
           title: formData.subject,
           message: formData.message,
+          // 수신 메일(템플릿 To Email = getosukuri@gmail.com 또는 {{to_email}})
+          to_email: 'getosukuri@gmail.com',
         },
-        '4IpKtWfnb6HwhCl3D'
+        'gjdzeRNJdHhXF2hZu'
       );
       
       alert(t('settings.bugReportSuccess'));

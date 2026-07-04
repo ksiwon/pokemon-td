@@ -347,7 +347,7 @@
     "bugSend": "제보하기",
     "bugSending": "전송 중...",
     "bugReportSuccess": "버그 제보가 성공적으로 전송되었습니다!",
-    "bugReportFail": "버그 제보 전송에 실패했습니다. 이메일(freakit2025@gmail.com)로 직접 제보해 주시면 감사하겠습니다.",
+    "bugReportFail": "버그 제보 전송에 실패했습니다. 이메일(getosukuri@gmail.com)로 직접 제보해 주시면 감사하겠습니다.",
     "dangerZone": "위험 구역"
   },
   "game": {
