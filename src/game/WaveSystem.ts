@@ -8,11 +8,12 @@ const DIFFICULTY_MULTIPLIERS: Record<
   string,
   { hp: number; attack: number; reward: number }
 > = {
-  easiest: { hp: 0.3,  attack: 0.3,  reward: 1.0 },
-  easy:    { hp: 0.5,  attack: 0.5,  reward: 1.0 },
+  // [BALANCE] reward: medium=1.0 기준 난이도당 0.1씩 차등 → 고난도에 골드 이득을 줘 선택 이유 부여.
+  easiest: { hp: 0.3,  attack: 0.3,  reward: 0.8 },
+  easy:    { hp: 0.5,  attack: 0.5,  reward: 0.9 },
   medium:  { hp: 0.7,  attack: 0.7,  reward: 1.0 }, // maps.ts 'medium' 대응
-  hard:    { hp: 0.9,  attack: 0.9,  reward: 1.0 },
-  expert:  { hp: 1.1,  attack: 1.1,  reward: 1.0 },
+  hard:    { hp: 0.9,  attack: 0.9,  reward: 1.1 },
+  expert:  { hp: 1.1,  attack: 1.1,  reward: 1.2 },
 };
 
 // ─── 스토리 모드 챕터별 난이도 배율 ────────────────────────────────────────────
@@ -241,14 +242,16 @@ export class WaveSystem {
       const baseSpecialAttack = pokemonData.stats.specialAttack * waveMultiplier * mult.attack;
       const baseSpecialDefense = pokemonData.stats.specialDefense * waveMultiplier * mult.attack;
 
-      // [수정] 보스 보상: 일반 적의 5배
-      const reward = isBoss ? 50 : 10;
+      // [수정] 보스 보상: 일반 적의 5배. mult.reward 레버 반영(현재 전 난이도 1.0 → 수치 무변).
+      const reward = Math.round((isBoss ? 50 : 10) * (mult.reward ?? 1));
 
       // [최종 보스] 스토리 한정 wave30 보스만 대폭 강화(×8hp/×4stat/−10라이프).
       //   싱글/멀티는 wave30도 일반 보스(×4/×2/−3) — 스토리 전용 스파이크 누출 방지.
+      // [BALANCE] 스토리 최종보스 하향: 히어로풀이 2~3마리로 고정이라 ×8HP/×4스탯은 경로시간 내
+      //   처치 불가('가짜 킬')였음 → ×6HP/×3스탯으로 낮춰 실제 승부가 되게. 실패 페널티(−10)는 유지.
       const isFinalBoss = isBoss && wave === 30 && storyChapterNumber !== null;
-      const hpMult = isFinalBoss ? 8 : (isBoss ? 4 : 1);
-      const statMult = isFinalBoss ? 4 : (isBoss ? 2 : 1);
+      const hpMult = isFinalBoss ? 6 : (isBoss ? 4 : 1);
+      const statMult = isFinalBoss ? 3 : (isBoss ? 2 : 1);
       const livesTaken = isFinalBoss ? 10 : (isBoss ? 3 : 1);
 
       // [보스 강화] HP 5배, 공격/특공/방어/특방 2.5배, 이동속도 40
@@ -319,12 +322,13 @@ export class WaveSystem {
     const baseHp = (50 + wave * 12) * mult.hp;
     const baseAttack = (10 + wave * 2) * mult.attack;
     const baseDefense = 5 + wave;
-    const reward = isBoss ? 50 : 10;
+    const reward = Math.round((isBoss ? 50 : 10) * (mult.reward ?? 1));
 
     // [최종 보스] 스토리 한정 wave30만 대폭 강화. 싱글/멀티는 일반 보스 유지.
+    // [BALANCE] 최종보스 하향(spawnEnemy와 동일 배율) — fallback 경로도 일치시킴.
     const isFinalBoss = isBoss && wave === 30 && useGameStore.getState().storyChapterNumber !== null;
-    const hpMult = isFinalBoss ? 8 : (isBoss ? 4 : 1);
-    const statMult = isFinalBoss ? 4 : (isBoss ? 2 : 1);
+    const hpMult = isFinalBoss ? 6 : (isBoss ? 4 : 1);
+    const statMult = isFinalBoss ? 3 : (isBoss ? 2 : 1);
     const livesTaken = isFinalBoss ? 10 : (isBoss ? 3 : 1);
 
     // [보스 강화] fallback도 동일 배율 적용

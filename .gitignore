@@ -7,6 +7,9 @@ dist-ssr
 .env
 .claude/settings.local.json
 
+# PGlite 디버그 로그 (실수 커밋 방지)
+pglite-debug.log
+
 # Firebase 서비스 계정 키 (DB 전체 권한 — 절대 커밋 금지)
 serviceAccount.json
 *serviceAccount*.json

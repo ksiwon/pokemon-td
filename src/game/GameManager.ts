@@ -809,6 +809,10 @@ export class GameManager {
         // [전당등록] 싱글 플레이(일반 모드) 결과만 전당/리더보드에 반영.
         // 스토리 모드 클리어는 전당등록 대상이 아니다.
         if (isNormalClear) {
+          // [OFFLINE-FIX] 로컬 업적/보상을 Firestore 쓰기보다 '먼저' 확정한다.
+          //   예전엔 addHallOfFameEntry/updateLeaderboard await 뒤에 있어, 쿼터 초과로 그 쓰기가
+          //   throw하면 catch가 삼켜 wave50 업적과 별조각 보상이 통째로 유실됐음.
+          saveService.updateAchievement('wave50', 50);
           try {
             const map = getMapById(currentMap);
             const pokemonUsed = towers.map(t => t.displayName);
@@ -820,7 +824,6 @@ export class GameManager {
               gameTime
             );
             await databaseService.updateLeaderboard(currentMap, gameTime, wave);
-            saveService.updateAchievement('wave50', 50);
           } catch (err) {
             console.error('Failed to save Wave 50 clear data:', err);
           }

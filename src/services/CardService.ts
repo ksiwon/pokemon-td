@@ -51,6 +51,8 @@ class CardService {
   private state: CardSaveState;
   private snapshot: CardSaveState;
   private listeners = new Set<Listener>();
+  /** 팩 개봉 재진입 잠금 — 동시/중복 호출로 이중 차감·이중 개봉 방지(동기 플래그). */
+  private opening = false;
 
   constructor() {
     this.state = this.load();
@@ -190,13 +192,28 @@ class CardService {
    */
   async openPack(type: PackType): Promise<PullResult[]> {
     const def = PACK_DEFS[type];
+    if (this.opening) throw new Error('PACK_ALREADY_OPENING');
     if (!this.canAfford(def)) {
       throw new Error('INSUFFICIENT_FUNDS');
     }
+    // 동기 잠금 + 선(先)차감: await 이전에 화폐를 깎아 두 번째 호출이 canAfford에서 걸리게 함.
+    //   (기존엔 preloadRarities await 뒤에 차감 → 두 호출이 모두 통과해 -음수 지갑/이중 개봉 가능)
+    this.opening = true;
+    this.state.wallet[def.currency] -= def.cost;
+    try {
+      return await this._openPackInner(type, def);
+    } catch (e) {
+      // 실패 시 차감 롤백
+      this.state.wallet[def.currency] += def.cost;
+      throw e;
+    } finally {
+      this.opening = false;
+    }
+  }
+
+  private async _openPackInner(type: PackType, def: PackDef): Promise<PullResult[]> {
     // 추첨 리스트 보장(캐시되어 있으면 즉시 반환)
     await pokeAPI.preloadRarities();
-
-    this.state.wallet[def.currency] -= def.cost;
 
     // 천장: 일반팩에서 Gold+ 가뭄이 한계를 넘으면 이번 팩에 Gold+ 보장
     const pityForcesGold = type === 'normal' && this.state.packPity >= NORMAL_PACK_PITY;
@@ -236,8 +253,18 @@ class CardService {
     return results;
   }
 
-  /** 레어도 가중 추첨 1회. minRarity 지정 시 그 등급 이상이 나올 때까지 제한 재추첨. */
+  /** 레어도 가중 추첨 1회. minRarity 지정 시 그 등급 이상만 담긴 하드 풀에서 추첨(보장 확정). */
   private async pickId(rarityBoost: number, minRarity?: Rarity): Promise<{ id: number; rarity: Rarity }> {
+    // minRarity 보장: 소프트 재추첨(40회 후 실패값 반환)이 아니라 해당 등급 이상 풀에서 직접 뽑아
+    //   반드시 보장 등급이 나오도록 함. 풀이 비면(캐시 미구축) 소프트 경로로 폴백.
+    if (minRarity) {
+      const pool = pokeAPI.getIdsAtLeastRarity(rarityRank(minRarity));
+      if (pool.length > 0) {
+        const id = pool[Math.floor(Math.random() * pool.length)];
+        const rarity = await pokeAPI.getRarity(id);
+        return { id, rarity };
+      }
+    }
     const MAX_TRIES = 40;
     let last: { id: number; rarity: Rarity } | null = null;
     for (let i = 0; i < MAX_TRIES; i++) {
@@ -265,7 +292,17 @@ class CardService {
     return this.state.deck.filter(s => !!this.state.collection[s.pokemonId]);
   }
   setDeck(deck: Deck) {
-    this.state.deck = deck.slice(0, 6);
+    // 검증: 중복 포켓몬 제거(같은 uid 충돌 방지) + 유효 행/슬롯만 + 최대 6칸.
+    const seen = new Set<number>();
+    const clean: Deck = [];
+    for (const s of deck.slice(0, 6)) {
+      if (!s || seen.has(s.pokemonId)) continue;
+      if (s.row !== 'front' && s.row !== 'back') continue;
+      if (typeof s.slot !== 'number' || s.slot < 0 || s.slot > 2) continue;
+      seen.add(s.pokemonId);
+      clean.push(s);
+    }
+    this.state.deck = clean;
     this.persist();
   }
 

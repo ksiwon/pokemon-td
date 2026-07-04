@@ -19,7 +19,8 @@ axios.defaults.timeout = 10000;
 
 // ─── 로컬스토리지 캐시 키 ─────────────────────────────────────────
 const LS_STAT_CACHE_KEY = 'pokeapi_stat_cache_v2';
-const LS_WEIGHTED_LIST_KEY = 'pokeapi_weighted_list_v2';
+// v3: 가중치 리스트를 '최종진화 레어도' 기준으로 재산정(라벨=드랍확률 일치). 구버전 own-stat 리스트 무효화.
+const LS_WEIGHTED_LIST_KEY = 'pokeapi_weighted_list_v3';
 
 const getCurrentLanguage = (): 'ko' | 'en' => {
   const lang = localStorage.getItem('language');
@@ -354,10 +355,16 @@ class PokeAPIService {
     await runWithConcurrencyLimit(tasks, MAX_CONCURRENT);
 
     // 가중치 리스트 재계산
+    // [RARITY-FIX] 카드 라벨(getRarity)은 '최종진화' 스탯 기준인데 과거 가중치는 '기초형' 스탯
+    //   기준이라 라벨↔드랍확률이 어긋났다(예: 개구마 → Master 라벨인데 Bronze 확률로 흔하게 드랍).
+    //   가중치도 최종진화 레어도로 통일 → 라벨과 실제 드랍 희소도가 일치. rarityCache도 동일값으로 채워
+    //   세션마다 라벨이 바뀌던 문제(캐시 히트 시 rarityCache 미충전)를 제거.
     const tempWeightedList: Array<{ id: number; weight: number }> = [];
     for (const [id, stat] of this.statCache) {
       if (!EVOLVED_POKEMON_IDS.has(id)) {
-        const rarity = calculateRarity(stat.statTotal);
+        const finalId = getFinalEvolutionId(id);
+        const finalStat = this.statCache.get(finalId);
+        const rarity = calculateRarity(finalStat ? finalStat.statTotal : stat.statTotal);
         this.rarityCache.set(id, rarity);
         tempWeightedList.push({ id, weight: RARITY_WEIGHTS[rarity] });
       }
@@ -373,10 +380,12 @@ class PokeAPIService {
   }
 
   // rarityBoost>0이면 고레어(높은 랭크) 가중치를 끌어올린다(콘테스트 홀). 0이면 기본 분포.
-  async getRandomPokemonIdWithRarity(rarityBoost = 0): Promise<number> {
+  // [DETERMINISM] rng를 넘기면 그 난수원을 사용(트레이너 타워 결정론 시드용). 미지정 시 Math.random.
+  async getRandomPokemonIdWithRarity(rarityBoost = 0, rng?: () => number): Promise<number> {
     if (this.weightedPokemonList.length === 0) {
       await this.preloadRarities();
     }
+    const rand = rng ?? Math.random;
 
     const eff = (p: { id: number; weight: number }) =>
       rarityBoost > 0
@@ -384,12 +393,25 @@ class PokeAPIService {
         : p.weight;
 
     const totalWeight = this.weightedPokemonList.reduce((sum, p) => sum + eff(p), 0);
-    let random = Math.random() * totalWeight;
+    let random = rand() * totalWeight;
     for (const pokemon of this.weightedPokemonList) {
       random -= eff(pokemon);
       if (random <= 0) return pokemon.id;
     }
     return this.weightedPokemonList[0]?.id || 1;
+  }
+
+  /**
+   * [DETERMINISM] 특정 레어도 랭크 이상만 담긴 후보 풀 반환(팩 최소보장·천장용 하드 풀).
+   * 재추첨 루프(pickId)가 40회 시도 후에도 못 맞추는 소프트 보장을 대체한다.
+   */
+  getIdsAtLeastRarity(minRank: number): number[] {
+    const out: number[] = [];
+    for (const p of this.weightedPokemonList) {
+      const rank = WEIGHT_TO_RANK[p.weight] ?? 0;
+      if (rank >= minRank) out.push(p.id);
+    }
+    return out;
   }
 
   getRandomPokemonId(maxGen: number = 9): number {

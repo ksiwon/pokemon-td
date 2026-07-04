@@ -107,7 +107,8 @@ export function buildBattleCard(
     defense: mk(b.defense),
     specialAttack: mk(b.specialAttack),
     specialDefense: mk(b.specialDefense),
-    speed: b.speed,
+    // [FIX] 속도도 별/층 배율 반영 — 고성 유닛이 선공(기존엔 원본 종족 속도라 별이 턴순서에 무영향).
+    speed: Math.max(1, Math.floor(b.speed * starMult)),
     critChance: 0.0625,
     canPenetrate: false, // applySynergies에서 확정
   };
@@ -127,7 +128,8 @@ export function computeSynergies(team: BattleCard[]): ActiveSynergy[] {
   return out;
 }
 
-const tierMult = (tier: number): number => (tier === 1 ? 1.1 : tier >= 2 ? 1.3 : 1.0);
+// [FIX] 6마리(tier3) 브레이크포인트가 tier2와 동일 1.3이라 무의미했음 → 1.5로 차등.
+const tierMult = (tier: number): number => (tier >= 3 ? 1.5 : tier === 2 ? 1.3 : tier === 1 ? 1.1 : 1.0);
 
 /** 팀에 시너지 버프 적용 + 관통 플래그 세팅. (in-place) */
 export function applySynergies(team: BattleCard[]): ActiveSynergy[] {
@@ -264,6 +266,8 @@ class CardBattleService {
    */
   async generateEnemyTeam(floor: number, seed: number): Promise<BattleCard[]> {
     await pokeAPI.preloadRarities().catch(() => {});
+    // [DETERMINISM] 적 포켓몬 선택도 시드 rng로 — Math.random을 쓰면 재도전마다 적팀이 리롤되어
+    //   결정론(동일 덱+동일 층=동일 결과)이 깨지고 약한 적이 나올 때까지 재시도(retry-scum)가 가능했음.
     const rng = mulberry32(seed);
     const isBoss = floor % 10 === 0;
 
@@ -276,10 +280,14 @@ class CardBattleService {
     const team: BattleCard[] = [];
 
     for (let i = 0; i < 6; i++) {
-      const id = await pokeAPI.getRandomPokemonIdWithRarity(rarityBoost);
-      let p: PokemonData;
-      try { p = await pokeAPI.getPokemon(id); }
-      catch { continue; }
+      // 페치 실패(오프라인 등) 시 최대 5회까지 다른 후보로 재시도 — 팀이 6마리 미만이 되면
+      //   simulate가 루프를 안 돌고 즉시 플레이어 승리 처리되어 '무혈 클리어+보상' 버그가 났었음.
+      let p: PokemonData | null = null;
+      for (let tryN = 0; tryN < 5 && !p; tryN++) {
+        const id = await pokeAPI.getRandomPokemonIdWithRarity(rarityBoost, rng);
+        p = await pokeAPI.getPokemon(id).catch(() => null);
+      }
+      if (!p) throw new Error('ENEMY_TEAM_INCOMPLETE');
       // 별 약간의 변동(±1)
       const jitter = rng() < 0.4 ? 1 : 0;
       const stars = Math.min(5, baseStars + (isBoss ? 1 : 0) + jitter);
@@ -287,6 +295,7 @@ class CardBattleService {
       const slot = i % 3;
       team.push(buildBattleCard(p, { stars, row, slot, side: 'enemy', statMult, uid: `enemy-${i}` }));
     }
+    if (team.length < 6) throw new Error('ENEMY_TEAM_INCOMPLETE');
     return team;
   }
 }

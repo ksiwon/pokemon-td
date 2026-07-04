@@ -353,13 +353,13 @@ export class AIPlayer {
 
       if (newLives <= 0) {
         this.isAlive = false;
-        // 탈락 시 lives=0 반영 후 defeated 처리
+        // [C2-FIX] isAlive는 playerDefeated 단일 경로가 확정(순위·전환 처리 포함).
+        //   여기서 isAlive:false를 먼저 쓰면 playerDefeated가 'already dead'로 건너뛰어 순위 누락.
         await multiplayerService.updatePlayerState(this.roomId, this.playerId, {
           wave: round,
           lives: 0,
           money: newMoney,
           towers: this.towers.length,
-          isAlive: false,
         }).catch(() => {});
         await multiplayerService.playerDefeated(this.roomId, this.playerId);
         this.stop();

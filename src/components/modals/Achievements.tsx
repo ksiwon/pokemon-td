@@ -12,6 +12,7 @@ import {
 } from '../../data/achievements';
 import { databaseService } from '../../services/DatabaseService';
 import { saveService } from '../../services/SaveService';
+import { authService } from '../../services/AuthService';
 import { Achievement, AchievementTier, TIER_POINTS } from '../../types/game';
 import { useTranslation } from '../../i18n';
 import { ModalOverlay, ModalBox, MODAL_ACCENT } from '../shared/modal.styles';
@@ -46,17 +47,20 @@ export const AchievementsPanel: React.FC<{ onClose: () => void }> = ({ onClose }
         const localData = saveService.load();
         const localMap = new Map<string, Achievement>(localData.achievements.map(a => [a.id, a]));
 
-        try {
-          const dbAchs = await databaseService.getUserAchievements();
-          for (const dbAch of dbAchs) {
-            const local = localMap.get(dbAch.id);
-            const dbComp = dbAch.completions ?? 0;
-            const localComp = local?.completions ?? 0;
-            if (!local || dbComp > localComp) {
-              localMap.set(dbAch.id, { ...(local ?? dbAch), ...dbAch });
+        // [OFFLINE-FIX] 오프라인 모드에선 Firestore 읽기 자체를 생략(permission-denied 낭비 요청 방지).
+        if (!authService.isOfflineMode()) {
+          try {
+            const dbAchs = await databaseService.getUserAchievements();
+            for (const dbAch of dbAchs) {
+              const local = localMap.get(dbAch.id);
+              const dbComp = dbAch.completions ?? 0;
+              const localComp = local?.completions ?? 0;
+              if (!local || dbComp > localComp) {
+                localMap.set(dbAch.id, { ...(local ?? dbAch), ...dbAch });
+              }
             }
-          }
-        } catch { /* DB 실패 시 로컬만 사용 */ }
+          } catch { /* DB 실패 시 로컬만 사용 */ }
+        }
 
         // UI에 노출하기 전 1회 달성 기준으로 강제 정규화 진행
         let recalculatedAP = 0;

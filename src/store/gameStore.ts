@@ -172,7 +172,9 @@ export const useGameStore = create<GameStore>((set, get) => ({
     const isOnWork = workTiles.some(s => s.x === tx && s.y === ty);
     if (isOnWork) return false;
 
-    const sellPrice = tower.level * 20;
+    // [SELL-FIX] 판매가 = max(레벨가치, 구매가의 절반). 기존엔 level*20만 써서
+    //   갓 산 고레어(예: 250G 전설)를 20G(92% 손실)에 팔게 됐음. sellValue(구매가×0.5)를 하한으로.
+    const sellPrice = Math.max(tower.level * 20, tower.sellValue || 0);
     get().addMoney(sellPrice);
     get().removeTower(id);
     achievementService.onSell();
@@ -251,6 +253,12 @@ export const useGameStore = create<GameStore>((set, get) => ({
     // 동적 import로 순환 참조 방지 (GameManager → gameStore 역방향 의존성)
     import('../game/GameManager').then(({ GameManager }) => {
       GameManager.getInstance().resetState();
+    }).catch(() => {});
+    // [GHOST-FIX] 이전 게임의 미실행 스폰 타이머 취소 + epoch 증가.
+    //   후반 웨이브는 스폰 스케줄이 최대 ~60초까지 이어지는데, 재시작 시 취소하지 않으면
+    //   옛 타이머가 살아남아 '이전 맵 경로'를 가진 유령 적을 새 게임에 밀어 넣어 라이프를 깎았음.
+    import('../game/WaveSystem').then(({ WaveSystem }) => {
+      WaveSystem.getInstance().cancelPendingSpawns();
     }).catch(() => {});
 
     set({
@@ -758,9 +766,19 @@ export const useGameStore = create<GameStore>((set, get) => ({
 
     try {
       const newData = await pokeAPI.getPokemon(fusionData.result);
+      // [FUSION-FIX] 진화와 동일한 '레벨 배율 보존' 방식으로 통일 + specialDefense 누락 보완.
+      //   기존: Math.max(원본스탯, 결과종족값) — 레벨업 배율이 날아가 고레벨 융합체가 오히려 약해질 수 있었고
+      //         specialDefense는 아예 갱신 안 돼 융합 전 값이 남았음.
+      const curData = await pokeAPI.getPokemon(baseTower.pokemonId);
+      const ratio = (cur: number, base: number) => (base > 0 ? cur / base : 1);
+      const newMaxHp          = Math.max(1, Math.floor(newData.stats.hp * ratio(baseTower.maxHp, curData.stats.hp)));
+      const newAttack         = Math.max(1, Math.floor(newData.stats.attack * ratio(baseTower.baseAttack, curData.stats.attack)));
+      const newSpecialAttack  = Math.max(1, Math.floor(newData.stats.specialAttack * ratio(baseTower.specialAttack, curData.stats.specialAttack)));
+      const newDefense        = Math.max(1, Math.floor(newData.stats.defense * ratio(baseTower.defense, curData.stats.defense)));
+      const newSpecialDefense = Math.max(1, Math.floor(newData.stats.specialDefense * ratio(baseTower.specialDefense, curData.stats.specialDefense)));
+      const newSpeed = newData.stats.speed;
 
       const hpRatio = baseTower.currentHp / baseTower.maxHp;
-      const newMaxHp = Math.max(baseTower.maxHp, newData.stats.hp);
 
       updateTower(baseId, {
         pokemonId: newData.id,
@@ -770,11 +788,12 @@ export const useGameStore = create<GameStore>((set, get) => ({
         types: newData.types,
         maxHp: newMaxHp,
         currentHp: Math.floor(newMaxHp * hpRatio),
-        attack: Math.max(baseTower.attack, newData.stats.attack),
-        baseAttack: Math.max(baseTower.baseAttack, newData.stats.attack),
-        specialAttack: Math.max(baseTower.specialAttack, newData.stats.specialAttack),
-        defense: Math.max(baseTower.defense, newData.stats.defense),
-        speed: Math.max(baseTower.speed, newData.stats.speed),
+        attack: newAttack,
+        baseAttack: newAttack,
+        specialAttack: newSpecialAttack,
+        defense: newDefense,
+        specialDefense: newSpecialDefense,
+        speed: newSpeed,
       });
 
       removeTower(materialId);

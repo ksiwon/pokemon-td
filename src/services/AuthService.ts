@@ -70,25 +70,32 @@ class AuthService {
     //   ProtectedRoute가 즉시 통과되고 싱글/스토리 모드를 이용할 수 있음.
     this.restoreOfflineSession();
 
-    onAuthStateChanged(auth, async (firebaseUser) => {
-      console.log('AuthService(onAuthStateChanged):', firebaseUser?.displayName || 'null');
+    // [OFFLINE-FIX] Firebase 초기화가 실패(auth undefined 등)해도 이 싱글톤 생성이 throw하지 않게 방어.
+    //   throw하면 모듈 로드 단계라 앱 전체가 화이트스크린. 위에서 오프라인 세션은 이미 복원됐으므로
+    //   Firebase 구독이 불가능해도 오프라인 플레이는 정상.
+    try {
+      onAuthStateChanged(auth, async (firebaseUser) => {
+        console.log('AuthService(onAuthStateChanged):', firebaseUser?.displayName || 'null');
 
-      if (firebaseUser) {
-        // 실제 Firebase 로그인 성공 → 오프라인 세션보다 우선
-        if (this._isOffline) this.clearOfflineSession();
-        const user = await this.getUserData(firebaseUser);
-        this.currentUser = user;
-        this.notifyListeners(user);
-      } else {
-        // Firebase 유저 없음: 오프라인 세션이 있으면 유지(로그아웃 처리하지 않음)
-        if (this._isOffline && this.currentUser) {
-          this.notifyListeners(this.currentUser);
+        if (firebaseUser) {
+          // 실제 Firebase 로그인 성공 → 오프라인 세션보다 우선
+          if (this._isOffline) this.clearOfflineSession();
+          const user = await this.getUserData(firebaseUser);
+          this.currentUser = user;
+          this.notifyListeners(user);
         } else {
-          this.currentUser = null;
-          this.notifyListeners(null);
+          // Firebase 유저 없음: 오프라인 세션이 있으면 유지(로그아웃 처리하지 않음)
+          if (this._isOffline && this.currentUser) {
+            this.notifyListeners(this.currentUser);
+          } else {
+            this.currentUser = null;
+            this.notifyListeners(null);
+          }
         }
-      }
-    });
+      });
+    } catch (e) {
+      console.error('[AuthService] Firebase auth 구독 실패 — 오프라인 세션만 사용합니다.', e);
+    }
   }
 
   // ─── [FREE-TIER] 오프라인 모드 ────────────────────────────────────────────
