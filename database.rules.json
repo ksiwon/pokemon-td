@@ -5,7 +5,7 @@
       "$roomId": {
         ".read": "auth != null",
         ".write": "auth != null && ((!data.exists() && newData.child('hostId').val() === auth.uid) || data.child('memberIds').child(auth.uid).exists() || data.child('status').val() === 'waiting' || data.child('createdAt').val() < (now - 10800000))",
-        ".validate": "!newData.exists() || (newData.hasChildren(['id','hostId','createdAt']) && (!newData.child('name').exists() || (newData.child('name').isString() && newData.child('name').val().length <= 40)))"
+        ".validate": "!newData.exists() || (newData.hasChildren(['id','hostId','createdAt']) && (!newData.child('name').exists() || (newData.child('name').isString() && newData.child('name').val().length <= 100)))"
       }
     },
     "gameStates": {
