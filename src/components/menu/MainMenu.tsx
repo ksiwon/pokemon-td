@@ -10,7 +10,7 @@ import { Emoji } from '../shared/Emoji';
 import { AchievementsPanel } from '../modals/Achievements';
 import { HallOfFame } from '../modals/HallOfFame';
 import { Rankings } from '../modals/Rankings';
-import { TutorialModal, hasTowerTutorialSeen, hasMultiTutorialSeen, hasStoryTutorialSeen } from '../modals/TutorialModal';
+import { TutorialModal, hasTowerTutorialSeen, hasMultiTutorialSeen, hasStoryTutorialSeen, hasCardsTutorialSeen } from '../modals/TutorialModal';
 
 export const MainMenu = () => {
   const navigate = useNavigate();
@@ -20,7 +20,7 @@ export const MainMenu = () => {
   const [showAchievements, setShowAchievements] = useState(false);
   const [showHallOfFame, setShowHallOfFame] = useState(false);
   const [showRankings, setShowRankings] = useState(false);
-  const [tutorial, setTutorial] = useState<'tower' | 'multi' | 'story' | null>(null);
+  const [tutorial, setTutorial] = useState<'tower' | 'multi' | 'story' | 'cards' | null>(null);
   const [pendingNav, setPendingNav] = useState<string | null>(null);
 
   const handleSignOut = async () => {
@@ -44,8 +44,11 @@ export const MainMenu = () => {
     else navigate('/lobby');
   };
 
-  // 카드 연구소 — 오프라인에서도 동작(로컬 수집/팩깡)
-  const handleCards = () => navigate('/cards');
+  // 미니 포켓 — 오프라인에서도 동작(로컬 수집/팩깡)
+  const handleCards = () => {
+    if (!hasCardsTutorialSeen()) { setPendingNav('/cards'); setTutorial('cards'); }
+    else navigate('/cards');
+  };
 
   // [FREE-TIER] 오프라인 모드: 서버 의존 기능(랭킹/전당) 차단
   const handleRankings = () => {
@@ -118,7 +121,7 @@ export const MainMenu = () => {
               <ModeCardBg $color="rgba(59,130,246,0.06)" />
               <ModeCardBorder $color="#3b82f6" />
               <ModeIconWrap $bg="rgba(59,130,246,0.1)">
-                <ModeEmoji><Emoji glyph="👤" size={26} /></ModeEmoji>
+                <ModeEmoji><Emoji glyph="👤" size={30} /></ModeEmoji>
               </ModeIconWrap>
               <ModeInfo>
                 <ModeName>{t('mainMenu.singlePlay')}</ModeName>
@@ -131,7 +134,7 @@ export const MainMenu = () => {
               <ModeCardBg $color="rgba(245,158,11,0.06)" />
               <ModeCardBorder $color="#f59e0b" />
               <ModeIconWrap $bg="rgba(245,158,11,0.1)">
-                <ModeEmoji><Emoji glyph="⚔️" size={26} /></ModeEmoji>
+                <ModeEmoji><Emoji glyph="⚔️" size={30} /></ModeEmoji>
               </ModeIconWrap>
               <ModeInfo>
                 <ModeName>{t('mainMenu.storyPlay')}</ModeName>
@@ -144,7 +147,7 @@ export const MainMenu = () => {
               <ModeCardBg $color="rgba(16,185,129,0.06)" />
               <ModeCardBorder $color="#10b981" />
               <ModeIconWrap $bg="rgba(16,185,129,0.1)">
-                <ModeEmoji><Emoji glyph="👥" size={26} /></ModeEmoji>
+                <ModeEmoji><Emoji glyph="👥" size={30} /></ModeEmoji>
               </ModeIconWrap>
               <ModeInfo>
                 <ModeName>{t('mainMenu.multiPlay')}</ModeName>
@@ -157,11 +160,11 @@ export const MainMenu = () => {
               <ModeCardBg $color="rgba(192,132,252,0.06)" />
               <ModeCardBorder $color="#c084fc" />
               <ModeIconWrap $bg="rgba(192,132,252,0.1)">
-                <ModeEmoji><Emoji glyph="🃏" size={26} /></ModeEmoji>
+                <ModeEmoji><Emoji glyph="🃏" size={30} /></ModeEmoji>
               </ModeIconWrap>
               <ModeInfo>
-                <ModeName>카드 연구소</ModeName>
-                <ModeDesc>카드를 모으고 오토배틀에 도전하세요</ModeDesc>
+                <ModeName>{t('cards.menu.title')}</ModeName>
+                <ModeDesc>{t('cards.menu.desc')}</ModeDesc>
               </ModeInfo>
               <ModeArrow>→</ModeArrow>
             </ModeCard>
@@ -193,6 +196,9 @@ export const MainMenu = () => {
             </HelpBtn>
             <HelpBtn onClick={() => { setPendingNav(null); setTutorial('multi'); }}>
               ? {t('mainMenu.helpMulti')}
+            </HelpBtn>
+            <HelpBtn onClick={() => { setPendingNav(null); setTutorial('cards'); }}>
+              ? {t('mainMenu.helpCards')}
             </HelpBtn>
           </HelpRow>
         </Main>
@@ -330,18 +336,18 @@ const HeroTitle = styled.h1`
 // ─── Mode Cards ───────────────────────────────────────────────────────────────
 
 const ModeGrid = styled.div`
-  display:grid; grid-template-columns:repeat(3,1fr); gap:14px;
+  display:grid; grid-template-columns:repeat(2,1fr); gap:16px;
   margin-bottom:32px;
-  ${media.tablet} { grid-template-columns:1fr; gap:10px; }
-  ${lMedia.phoneSm} { grid-template-columns:repeat(3,1fr); gap:8px; margin-bottom:14px; }
+  ${media.mobile} { gap:12px; }
+  ${lMedia.phoneSm} { gap:10px; margin-bottom:14px; }
 `;
 
 const ModeCard = styled.button<{ $accent: string; $disabled?: boolean }>`
-  display:flex; align-items:center; gap:14px;
-  padding:20px 18px;
+  display:flex; align-items:center; gap:18px;
+  padding:28px 24px; min-height:104px;
   background:rgba(255,255,255,0.03);
   border:1px solid rgba(255,255,255,0.07);
-  border-radius:14px; cursor:pointer; text-align:left;
+  border-radius:18px; cursor:pointer; text-align:left;
   position:relative; overflow:hidden;
   transition:all 0.22s ease; color:#fff;
   ${p => p.$disabled && css`opacity:0.5; filter:grayscale(0.6);`}
@@ -354,9 +360,8 @@ const ModeCard = styled.button<{ $accent: string; $disabled?: boolean }>`
   }
   &:active { transform:translateY(0); }
 
-  ${media.tablet} { padding:18px 20px; gap:16px; }
-  ${media.mobile} { padding:14px 16px; }
-  ${lMedia.phoneSm} { padding:10px 10px; gap:8px; flex-direction:column; align-items:flex-start; }
+  ${media.mobile} { padding:20px 16px; gap:14px; min-height:84px; }
+  ${lMedia.phoneSm} { padding:14px 12px; gap:12px; min-height:0; }
 `;
 
 const ModeCardBg = styled.div<{ $color: string }>`
@@ -373,35 +378,36 @@ const ModeCardBorder = styled.div<{ $color: string }>`
 `;
 
 const ModeIconWrap = styled.div<{ $bg: string }>`
-  width:46px; height:46px; border-radius:12px;
+  width:58px; height:58px; border-radius:15px;
   background:${p=>p.$bg}; flex-shrink:0;
   display:flex; align-items:center; justify-content:center;
-  ${media.mobile} { width:40px; height:40px; border-radius:10px; }
-  ${lMedia.phoneSm} { width:32px; height:32px; border-radius:8px; }
+  ${media.mobile} { width:48px; height:48px; border-radius:12px; }
+  ${lMedia.phoneSm} { width:40px; height:40px; border-radius:10px; }
 `;
 
 const ModeEmoji = styled.span`
-  font-size:22px;
-  ${media.mobile} { font-size:20px; }
-  ${lMedia.phoneSm} { font-size:16px; }
+  font-size:28px;
+  ${media.mobile} { font-size:24px; }
+  ${lMedia.phoneSm} { font-size:20px; }
 `;
 
 const ModeInfo = styled.div`flex:1; position:relative; z-index:1; min-width:0;`;
 
 const ModeName = styled.div`
-  font-size:16px; font-weight:700; color:#f8fafc;
-  margin-bottom:4px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;
-  ${media.mobile} { font-size:15px; }
-  ${lMedia.phoneSm} { font-size:12px; margin-bottom:2px; white-space:normal; }
+  font-size:19px; font-weight:800; color:#f8fafc;
+  margin-bottom:5px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;
+  ${media.mobile} { font-size:17px; }
+  ${lMedia.phoneSm} { font-size:14px; margin-bottom:2px; white-space:normal; }
 `;
 
 const ModeDesc = styled.div`
-  font-size:12px; color:rgba(255,255,255,0.38); line-height:1.4;
+  font-size:13px; color:rgba(255,255,255,0.4); line-height:1.4;
+  ${media.mobile} { font-size:12px; }
   ${lMedia.phoneSm} { display:none; }
 `;
 
 const ModeArrow = styled.div`
-  font-size:18px; color:rgba(255,255,255,0.2); transition:all 0.2s; flex-shrink:0;
+  font-size:20px; color:rgba(255,255,255,0.2); transition:all 0.2s; flex-shrink:0;
   ${ModeCard}:hover & { color:rgba(255,255,255,0.7); transform:translateX(4px); }
   ${lMedia.phoneSm} { display:none; }
 `;
@@ -456,9 +462,9 @@ const OfflineDesc = styled.div`
 const UtilIcon = styled.span`font-size:16px; ${lMedia.phoneSm}{font-size:14px;}`;
 
 const HelpRow = styled.div`
-  display:grid; grid-template-columns:repeat(3,1fr); gap:8px;
-  ${media.mobile} { gap:6px; }
-  ${lMedia.phoneSm} { gap:6px; }
+  display:grid; grid-template-columns:repeat(4,1fr); gap:8px;
+  ${media.mobile} { grid-template-columns:repeat(2,1fr); gap:6px; }
+  ${lMedia.phoneSm} { grid-template-columns:repeat(2,1fr); gap:6px; }
 `;
 
 const HelpBtn = styled.button`

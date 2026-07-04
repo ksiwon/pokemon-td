@@ -6,7 +6,7 @@
 import { pokeAPI } from '../api/pokeapi';
 import { Rarity } from '../data/evolution';
 import {
-  CardSaveState, CardWallet, CardCollection, PackType, PullResult, Deck,
+  CardSaveState, CardWallet, CardCollection, PackType, PullResult, Deck, DeckRow,
 } from '../types/cards';
 
 const STORAGE_KEY = 'pokemon-td-cards-v1';
@@ -19,6 +19,13 @@ const MERGE_COPIES = 2;
 const NORMAL_PACK_PITY = 20;
 /** 팩 1개당 카드 장수. */
 export const CARDS_PER_PACK = 5;
+/** 신규 유저 스타터 코인 — 노말팩(100) 3회 분량. 0코인 데드락 방지. */
+const STARTER_COINS = 300;
+/**
+ * 신규 유저 스타터 카드 6종 — 0장 데드락 방지(팩 없이도 바로 덱 편성·타워 도전 가능).
+ * 앞 3장=전열, 뒤 3장=후열로 기본 덱까지 자동 구성. 관도 대표 종으로 친숙하게.
+ */
+const STARTER_CARD_IDS = [1, 4, 7, 25, 133, 16]; // 이상해씨·파이리·꼬부기·피카츄·이브이·구구
 
 const RARITY_ORDER: Rarity[] = ['Bronze', 'Silver', 'Gold', 'Diamond', 'Master', 'Legend'];
 const rarityRank = (r: Rarity): number => RARITY_ORDER.indexOf(r);
@@ -40,8 +47,9 @@ export interface PackDef {
 }
 
 export const PACK_DEFS: Record<PackType, PackDef> = {
-  normal:  { type: 'normal',  cost: 150, currency: 'coins',      rarityBoost: 0,   guaranteeMin: 'Silver' },
-  type:    { type: 'type',    cost: 250, currency: 'coins',      rarityBoost: 0.4, guaranteeMin: 'Silver' },
+  // 일반=저가 대량, 타입=선택 타입 지정(고가치·고가), 프리미엄=하드화폐 고레어.
+  normal:  { type: 'normal',  cost: 100, currency: 'coins',      rarityBoost: 0,   guaranteeMin: 'Silver' },
+  type:    { type: 'type',    cost: 300, currency: 'coins',      rarityBoost: 0.4, guaranteeMin: 'Silver' },
   premium: { type: 'premium', cost: 50,  currency: 'starShards', rarityBoost: 1.2, guaranteeMin: 'Gold'   },
 };
 
@@ -63,16 +71,36 @@ class CardService {
     return JSON.parse(JSON.stringify(s));
   }
 
+  // ─── 스타터(신규 유저) ───────────────────────────────────────────────────────
+  /** 스타터 카드 6장 도감. now 기준 미세 시차로 도감 정렬 안정화. */
+  private starterCollection(now: number): CardCollection {
+    const col: CardCollection = {};
+    STARTER_CARD_IDS.forEach((id, i) => {
+      col[id] = { pokemonId: id, stars: 1, copies: 0, obtainedAt: now - i, isNew: true };
+    });
+    return col;
+  }
+
+  /** 스타터 기본 덱 — 앞 3장 전열 / 뒤 3장 후열. */
+  private starterDeck(): Deck {
+    return STARTER_CARD_IDS.map((id, i) => ({
+      pokemonId: id,
+      row: (i < 3 ? 'front' : 'back') as DeckRow,
+      slot: i % 3,
+    }));
+  }
+
   // ─── 영속화 ────────────────────────────────────────────────────────────────
   private defaultState(): CardSaveState {
+    const now = Date.now();
     return {
       version: CURRENT_VERSION,
-      wallet: { coins: 0, starShards: 0 },
-      collection: {},
+      wallet: { coins: STARTER_COINS, starShards: 0 },
+      collection: this.starterCollection(now),
       packPity: 0,
       stats: { packsOpened: 0, totalPulls: 0 },
       towerProgress: 0,
-      deck: [],
+      deck: this.starterDeck(),
     };
   }
 
@@ -82,10 +110,27 @@ class CardService {
       if (raw) {
         const parsed = JSON.parse(raw) as CardSaveState;
         // 얕은 마이그레이션 — 누락 필드 보강
-        return { ...this.defaultState(), ...parsed,
+        const merged: CardSaveState = { ...this.defaultState(), ...parsed,
           wallet: { ...this.defaultState().wallet, ...parsed.wallet },
           stats: { ...this.defaultState().stats, ...parsed.stats },
         };
+        // 스타터 소급 지급: 팩 한 번도 안 열고 도감이 비어있는 '카드 미착수' 저장본 구제.
+        // (스타터 도입 이전에 카드 모드를 연 유저 = 0장 데드락 방지. 카드/덱은 지갑과
+        //  무관하게 지급하고, 코인은 완전 0일 때만 보충해 이미 번 코인을 덮어쓰지 않음.)
+        const neverCollected = merged.stats.packsOpened === 0
+          && Object.keys(merged.collection).length === 0;
+        if (neverCollected) {
+          merged.collection = this.starterCollection(Date.now());
+          if (merged.deck.length === 0) merged.deck = this.starterDeck();
+          if (merged.wallet.coins === 0 && merged.wallet.starShards === 0) {
+            merged.wallet.coins = STARTER_COINS;
+          }
+        } else if (parsed.deck === undefined) {
+          // 레거시 세이브(카드는 보유하나 deck 필드 자체가 없음): defaultState의 스타터 덱이
+          //   병합돼 '안 가진 스타터 카드'가 덱에 뜨는 것 방지 → 빈 덱으로.
+          merged.deck = [];
+        }
+        return merged;
       }
     } catch (e) {
       console.warn('[CardService] load 실패, 기본값 사용', e);
@@ -190,18 +235,21 @@ class CardService {
    * 팩 1개 개봉. 화폐 차감 → 5장 추첨(보장·천장 반영) → 도감 반영 → 저장.
    * 추첨은 pokeAPI의 레어도 가중 리스트를 사용하므로 사전 preloadRarities 권장.
    */
-  async openPack(type: PackType): Promise<PullResult[]> {
+  async openPack(type: PackType, filterType?: string): Promise<PullResult[]> {
     const def = PACK_DEFS[type];
     if (this.opening) throw new Error('PACK_ALREADY_OPENING');
     if (!this.canAfford(def)) {
       throw new Error('INSUFFICIENT_FUNDS');
     }
+    // 타입팩은 반드시 타입 지정 필요
+    const ft = type === 'type' ? filterType : undefined;
+    if (type === 'type' && !ft) throw new Error('TYPE_PACK_NEEDS_TYPE');
     // 동기 잠금 + 선(先)차감: await 이전에 화폐를 깎아 두 번째 호출이 canAfford에서 걸리게 함.
     //   (기존엔 preloadRarities await 뒤에 차감 → 두 호출이 모두 통과해 -음수 지갑/이중 개봉 가능)
     this.opening = true;
     this.state.wallet[def.currency] -= def.cost;
     try {
-      return await this._openPackInner(type, def);
+      return await this._openPackInner(type, def, ft);
     } catch (e) {
       // 실패 시 차감 롤백
       this.state.wallet[def.currency] += def.cost;
@@ -211,7 +259,7 @@ class CardService {
     }
   }
 
-  private async _openPackInner(type: PackType, def: PackDef): Promise<PullResult[]> {
+  private async _openPackInner(type: PackType, def: PackDef, filterType?: string): Promise<PullResult[]> {
     // 추첨 리스트 보장(캐시되어 있으면 즉시 반환)
     await pokeAPI.preloadRarities();
 
@@ -221,20 +269,20 @@ class CardService {
     // 5장 추첨
     const picks: { id: number; rarity: Rarity }[] = [];
     for (let i = 0; i < CARDS_PER_PACK; i++) {
-      picks.push(await this.pickId(def.rarityBoost));
+      picks.push(await this.pickId(def.rarityBoost, undefined, filterType));
     }
 
     // 최소 보장: 팩 내 guaranteeMin 미만뿐이면 가장 낮은 1장을 상향
     const hasGuarantee = picks.some(p => rarityRank(p.rarity) >= rarityRank(def.guaranteeMin));
     if (!hasGuarantee) {
       const worstIdx = this.lowestRarityIdx(picks);
-      picks[worstIdx] = await this.pickId(def.rarityBoost, def.guaranteeMin);
+      picks[worstIdx] = await this.pickId(def.rarityBoost, def.guaranteeMin, filterType);
     }
 
-    // 천장 강제: Gold+ 한 장도 없으면 1장을 Gold로 상향
+    // 천장 강제: Gold+ 한 장도 없으면 1장을 Gold로 상향(일반팩 전용 → filterType 없음)
     if (pityForcesGold && !picks.some(p => rarityRank(p.rarity) >= rarityRank('Gold'))) {
       const worstIdx = this.lowestRarityIdx(picks);
-      picks[worstIdx] = await this.pickId(def.rarityBoost, 'Gold');
+      picks[worstIdx] = await this.pickId(def.rarityBoost, 'Gold', filterType);
     }
 
     // 도감 반영
@@ -253,23 +301,30 @@ class CardService {
     return results;
   }
 
-  /** 레어도 가중 추첨 1회. minRarity 지정 시 그 등급 이상만 담긴 하드 풀에서 추첨(보장 확정). */
-  private async pickId(rarityBoost: number, minRarity?: Rarity): Promise<{ id: number; rarity: Rarity }> {
+  /**
+   * 레어도 가중 추첨 1회. minRarity 지정 시 그 등급 이상만 담긴 하드 풀에서 추첨(보장 확정).
+   * filterType 지정(타입팩) 시 그 타입 카드만 대상.
+   */
+  private async pickId(rarityBoost: number, minRarity?: Rarity, filterType?: string): Promise<{ id: number; rarity: Rarity }> {
     // minRarity 보장: 소프트 재추첨(40회 후 실패값 반환)이 아니라 해당 등급 이상 풀에서 직접 뽑아
     //   반드시 보장 등급이 나오도록 함. 풀이 비면(캐시 미구축) 소프트 경로로 폴백.
     if (minRarity) {
-      const pool = pokeAPI.getIdsAtLeastRarity(rarityRank(minRarity));
+      const pool = filterType
+        ? pokeAPI.getCardIdsOfTypeAtLeastRarity(filterType, rarityRank(minRarity))
+        : pokeAPI.getCardIdsAtLeastRarity(rarityRank(minRarity));
       if (pool.length > 0) {
         const id = pool[Math.floor(Math.random() * pool.length)];
-        const rarity = await pokeAPI.getRarity(id);
+        const rarity = await pokeAPI.getCardRarity(id);
         return { id, rarity };
       }
     }
     const MAX_TRIES = 40;
     let last: { id: number; rarity: Rarity } | null = null;
     for (let i = 0; i < MAX_TRIES; i++) {
-      const id = await pokeAPI.getRandomPokemonIdWithRarity(rarityBoost);
-      const rarity = await pokeAPI.getRarity(id);
+      const id = filterType
+        ? await pokeAPI.getRandomCardIdOfType(filterType, rarityBoost)
+        : await pokeAPI.getRandomCardId(rarityBoost);
+      const rarity = await pokeAPI.getCardRarity(id);
       last = { id, rarity };
       if (!minRarity || rarityRank(rarity) >= rarityRank(minRarity)) return last;
     }

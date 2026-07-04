@@ -33,7 +33,7 @@ interface Props {
 }
 
 export const Shop: React.FC<Props> = ({ embedded = false }) => {
-  const { t, language } = useTranslation();
+  const { t } = useTranslation();
   const { money, useItem, towers, evolvePokemon, isWaveActive } = useGameStore(s => ({
     money:       s.money,
     useItem:     s.useItem,
@@ -278,8 +278,7 @@ export const Shop: React.FC<Props> = ({ embedded = false }) => {
           <ClickableItem onClick={handleBuyExpCandy}>
             <ItemTop>
               <ItemName>{t("shop.expCandyName")}</ItemName>
-              {/* 레벨×50원으로 통일 */}
-              <PriceBadge>{language === "ko" ? "레벨×50원" : "Lv×50G"}</PriceBadge>
+              <PriceBadge>{t("shop.expCandyPrice")}</PriceBadge>
             </ItemTop>
             <ItemDesc>{t("shop.expCandyDesc")}</ItemDesc>
           </ClickableItem>

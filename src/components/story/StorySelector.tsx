@@ -229,7 +229,7 @@ export const StorySelector: React.FC<StorySelectorProps> = ({ onStart }) => {
       <EmptyDetail>
         <EmptyIcon><Emoji glyph="⚔" size={28} /></EmptyIcon>
         <EmptyText>{t('storyUI.selectChapter')}</EmptyText>
-        <EmptyHint>{language === 'en' ? 'Reclaim Johto\'s 8 gyms with underdogs' : '약캐로 성도 8체육관을 탈환하라'}</EmptyHint>
+        <EmptyHint>{t('storyUI.tagline')}</EmptyHint>
       </EmptyDetail>
     );
 
@@ -246,8 +246,8 @@ export const StorySelector: React.FC<StorySelectorProps> = ({ onStart }) => {
         <BackBtn onClick={() => navigate('/')}>←<span className="back-text"> {t('common.back')}</span></BackBtn>
         <HeaderCenter>
           <AegisLabel>POKEMON AEGIS</AegisLabel>
-          <PageTitle>{language === 'en' ? 'Johto, Where People Vanished' : '사람이 사라진 성도지방'}</PageTitle>
-          <PageSubtitle>{language === 'en' ? "The Captain's Johto Drift · Story Mode" : '포대장의 성도 표류기 · Story Mode'}</PageSubtitle>
+          <PageTitle>{t('storyUI.worldTitle')}</PageTitle>
+          <PageSubtitle>{t('storyUI.worldSub')}</PageSubtitle>
         </HeaderCenter>
         <ProgressSummary>
           <ProgressStat>
@@ -366,8 +366,8 @@ export const StorySelector: React.FC<StorySelectorProps> = ({ onStart }) => {
       {showIntro && (
         <IntroOverlay>
           <IntroAegis>POKEMON AEGIS</IntroAegis>
-          <IntroTitle>{language === 'en' ? 'Johto, Where People Vanished' : '사람이 사라진 성도지방'}</IntroTitle>
-          <IntroSub>{language === 'en' ? "The Captain's Johto Drift" : '포대장의 성도 표류기'}</IntroSub>
+          <IntroTitle>{t('storyUI.worldTitle')}</IntroTitle>
+          <IntroSub>{t('storyUI.worldSubShort')}</IntroSub>
         </IntroOverlay>
       )}
     </Root>

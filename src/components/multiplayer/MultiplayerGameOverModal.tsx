@@ -48,8 +48,9 @@ export const MultiplayerGameOverModal = ({
   useEffect(() => {
     if (rewardGiven.current || myPlacement < 1) return;
     rewardGiven.current = true;
-    const coins = Math.max(30, 120 - (myPlacement - 1) * 20);
-    const starShards = myPlacement === 1 ? 15 : myPlacement <= 3 ? 8 : 0;
+    // [경제] 멀티는 미니 포켓 재화의 최대 수급처 — 순위 비례 큰 보상(오토배틀 전 멀티 유도), 최하위도 위로금.
+    const coins = Math.max(80, 300 - (myPlacement - 1) * 45);
+    const starShards = myPlacement === 1 ? 40 : myPlacement <= 3 ? 20 : 8;
     cardService.grantRewards({ coins, starShards });
   }, [myPlacement]);
 

@@ -1,4 +1,12 @@
 {
+  "loading": {
+    "checkingUser": "Checking user info...",
+    "pokemon": "Loading Pokémon data...",
+    "map": "Loading map background...",
+    "almostDone": "Almost there!",
+    "mapDetail": "Loading map background image...",
+    "retryConfirm": "Failed to load game data. Try again?"
+  },
   "common": {
     "close": "Close",
     "cancel": "Cancel",
@@ -190,6 +198,7 @@
   },
   "picker": {
     "loading": "Loading Pokémon...",
+    "fallbackMove": "Tackle",
     "title": "Select Pokémon",
     "subtitle": "Choose 1 of 3 Pokémon.",
     "hp": "HP",
@@ -259,6 +268,7 @@
     "candyDesc": "Increases Level by 1",
     "candyCost": "Lv×25G",
     "expCandyName": "Exp. Candy",
+    "expCandyPrice": "Lv×50G",
     "expCandyDesc": "Match lowest level to next rank",
     "expCandyCost": "Target Lv×50G",
     "categoryStone": "Evolution Stones",
@@ -836,8 +846,8 @@
       },
       "slide3": {
         "title": "TFT Battle Arena",
-        "desc": "During the battle phase, Pokémon move and fight on a 7×4 board in real time!",
-        "d0": "Top 2 rows: opponent's team / Bottom 2 rows: your team",
+        "desc": "During the battle phase, Pokémon move and fight on their own across a 6×6 board in real time!",
+        "d0": "Your team goes in the 2 columns on your side (MY ZONE); the opponent holds the far 2 columns",
         "d1": "Reposition Pokémon during prep time before battle",
         "d2": "Type matchups and stats apply  synergies matter!"
       }
@@ -872,6 +882,37 @@
         "d1": "Free placement except near path/entrance/exit; use Terastal & Friendly Shop tiles (same as Single)",
         "d2": "Strengthen heroes via level-ups, evolution, and moves"
       }
+    },
+    "cards": {
+      "label": "Mini Pocket",
+      "slide0": {
+        "title": "What is Mini Pocket?",
+        "desc": "A Pocket-TCG-style mini auto-battler!\nCollect cards, build a 6-card deck, and climb the tower via auto-battle.",
+        "d0": "Standalone content, fully separate from the main tower defense",
+        "d1": "Playable anywhere — online or offline",
+        "d2": "Battles run automatically — your deck IS your skill"
+      },
+      "slide1": {
+        "title": "Packs & Collection",
+        "desc": "You start with 6 cards and some coins! Jump into the tower right away, or open packs to collect more.\nDuplicate cards merge to raise a card's star rank.",
+        "d0": "Normal / Type / Premium packs — higher tiers boost rare odds",
+        "d1": "Duplicates auto-merge → ⭐ star rank up",
+        "d2": "Earn more coins & shards by clearing tower floors and playing the main game"
+      },
+      "slide2": {
+        "title": "Deck Building & Synergy",
+        "desc": "Place cards across 3 front + 3 back slots (6 total).\nGathering the same type triggers synergy buffs.",
+        "d0": "Front row tanks up front; back row deals from behind",
+        "d1": "Same type 2 / 4 / 6 units → higher synergy tier",
+        "d2": "Some types 'pierce' — striking the enemy back row directly"
+      },
+      "slide3": {
+        "title": "Trainer Tower",
+        "desc": "Auto-battle rival trainers with your deck!\nEnemies grow stronger each floor, with boss floors ahead.",
+        "d0": "Battles are seed-based and deterministic — same deck, same result",
+        "d1": "Clearing a floor rewards coins & star shards",
+        "d2": "Spend rewards on more packs to strengthen your deck"
+      }
     }
   },
   "mainMenu": {
@@ -893,6 +934,7 @@
     "helpSingle": "Single Player Guide",
     "helpStory": "Story Mode Guide",
     "helpMulti": "Multiplayer Guide",
+    "helpCards": "Mini Pocket Guide",
     "gameTitle": "Pokémon Aegis",
     "ratingLabel": "⭐ Rating: {rating}",
     "offlineBadge": "Offline Mode",
@@ -996,6 +1038,149 @@
     "next": "Next ▶",
     "begin": "Start ▶",
     "unlockNext": "Unlock Next Chapter ▶",
-    "finale": "Finale ▶"
+    "finale": "Finale ▶",
+    "tagline": "Reclaim Johto's 8 gyms with underdogs",
+    "worldTitle": "Johto, Where People Vanished",
+    "worldSub": "The Captain's Johto Drift · Story Mode",
+    "worldSubShort": "The Captain's Johto Drift"
+  },
+  "cards": {
+    "menu": {
+      "title": "Mini Pocket",
+      "desc": "A Pocket-TCG-style mini auto-battler"
+    },
+    "rarity": {
+      "Bronze": "Bronze",
+      "Silver": "Silver",
+      "Gold": "Gold",
+      "Diamond": "Diamond",
+      "Master": "Master",
+      "Legend": "Legend"
+    },
+    "filter": {
+      "searchPlaceholder": "Search name / no.",
+      "clear": "Reset",
+      "sortPrefix": "Sort",
+      "allTypes": "All Types",
+      "allRarities": "All Rarities",
+      "resultCount": "{n}/{total}",
+      "sort": {
+        "number": "Dex No.",
+        "rarity": "Rarity",
+        "stars": "Stars",
+        "recent": "Recent",
+        "name": "Name"
+      }
+    },
+    "detail": {
+      "loading": "Loading...",
+      "failed": "Failed to load info.",
+      "baseStats": "Base Stats",
+      "statTotal": "Total",
+      "battleStats": "Battle Stats",
+      "height": "Height",
+      "weight": "Weight"
+    },
+    "common": {
+      "back": "Back"
+    },
+    "packNames": {
+      "normal": "Basic Pack",
+      "type": "Type Pack",
+      "premium": "Premium Pack"
+    },
+    "packDesc": {
+      "normal": "5 cards",
+      "type": "Only your chosen type",
+      "premium": "Higher high-rare rate"
+    },
+    "alerts": {
+      "openFail": "Failed to open pack. Please try again later.",
+      "deckEmpty": "Build a deck first!",
+      "deckLoadFail": "Failed to load deck cards.",
+      "battlePrepError": "An error occurred while preparing the battle."
+    },
+    "lab": {
+      "backToMenu": "← Menu",
+      "packShop": "Pack Shop",
+      "autobattle": "Auto-Battle",
+      "trainerTower": "Trainer Tower",
+      "deckBuild": "Deck",
+      "dex": "Dex",
+      "collected": "{n} collected",
+      "emptyDex": "No cards yet. Open a pack to collect your first card!",
+      "noResults": "No cards match your filters.",
+      "devGrant": "+ Test currency",
+      "drawing": "Drawing...",
+      "floor": "Floor {n}",
+      "slots": "{n}/6"
+    },
+    "pack": {
+      "cardCount": "{n} cards",
+      "pickType": "Choose a Type",
+      "tapToOpen": "Tap to open",
+      "tapResult": "Tap to see results",
+      "tapNext": "Tap for next",
+      "tapReveal": "Tap to reveal",
+      "skip": "Skip ≫",
+      "resultTitle": "Results",
+      "newCount": "New {n}",
+      "starUpCount": "Star-ups {n}",
+      "refundCount": "Refund {n} coins",
+      "confirm": "OK",
+      "plusCoins": "+{n} coins"
+    },
+    "deck": {
+      "title": "Deck",
+      "front": "Front",
+      "back": "Back",
+      "placeHere": "Place here",
+      "save": "Save",
+      "saved": "Saved",
+      "synergyTitle": "Active Synergies",
+      "synergyEmpty": "Gather 2+ of the same type to trigger a synergy",
+      "penetrate": "Piercing active — {types} units hit the enemy back row directly",
+      "owned": "Owned {n}",
+      "poolEmpty": "Open a pack to collect cards first",
+      "placed": "In deck"
+    },
+    "tower": {
+      "title": "Trainer Tower",
+      "floor": "Floor {n}",
+      "bossSuffix": " · Boss",
+      "noDeck": "No deck to send out. Build a deck first.",
+      "deckReady": "Challenging with {n} unit(s).",
+      "bossFloor": "Boss Floor",
+      "start": "Start Battle",
+      "bestReach": "Best: Floor {n}",
+      "preparing": "Preparing opponent...",
+      "enemyTrainer": "Opponent",
+      "myDeck": "My Deck",
+      "skip": "Skip",
+      "victory": "Victory!",
+      "defeat": "Defeat",
+      "clearResult": "Floor {n} cleared · {alive} left",
+      "defeatResult": "{p} vs {e} left",
+      "firstClear": "First Clear",
+      "coins": "+{n} coins",
+      "shards": "+{n} shards",
+      "nextFloor": "Next Floor →",
+      "retry": "Retry",
+      "exit": "Exit"
+    }
+  },
+  "boss": {
+    "incoming": "BOSS INCOMING",
+    "approaching": "BOSS APPROACHING",
+    "taunt": {
+      "1": "Try to withstand my wind-cutting wings.",
+      "2": "Too slow. Care for a taste of my blades?",
+      "3": "Mooo—— here comes the rollout!",
+      "4": "Kihihi... there's no escaping the shadows.",
+      "5": "Fists and torrents — you dodge neither.",
+      "6": "Graaah— steel does not break.",
+      "7": "Freeze where you stand, in the blizzard.",
+      "8": "You dare defy the deep-sea dragon?"
+    }
   }
 }

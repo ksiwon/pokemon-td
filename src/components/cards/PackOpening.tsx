@@ -5,6 +5,7 @@ import { useState, useCallback } from 'react';
 import styled, { keyframes, css } from 'styled-components';
 import { PullResult, PackType } from '../../types/cards';
 import { Rarity } from '../../data/evolution';
+import { useTranslation } from '../../i18n';
 import { CardView } from './CardView';
 
 const rarityRank = (r: Rarity): number =>
@@ -13,20 +14,20 @@ const isRare = (r: Rarity) => rarityRank(r) >= rarityRank('Gold');
 
 type Phase = 'sealed' | 'reveal' | 'summary';
 
-const PACK_LABEL: Record<PackType, string> = {
-  normal: '일반 팩', type: '타입 팩', premium: '고급 팩',
-};
 const PACK_COLOR: Record<PackType, string> = {
   normal: '#60a5fa', type: '#34d399', premium: '#c084fc',
 };
 
 interface Props {
   packType: PackType;
+  /** 타입팩일 때 선택한 타입 슬러그(표시용). */
+  filterType?: string;
   results: PullResult[];
   onClose: () => void;
 }
 
-export const PackOpening = ({ packType, results, onClose }: Props) => {
+export const PackOpening = ({ packType, filterType, results, onClose }: Props) => {
+  const { t } = useTranslation();
   const [phase, setPhase] = useState<Phase>('sealed');
   const [idx, setIdx] = useState(0);          // 현재 공개 중인 카드 인덱스
   const [flipped, setFlipped] = useState(false);
@@ -70,10 +71,10 @@ export const PackOpening = ({ packType, results, onClose }: Props) => {
         <SealedWrap onClick={open}>
           <Pack $color={accent}>
             <PackShine />
-            <PackLabel>{PACK_LABEL[packType]}</PackLabel>
-            <PackSub>{results.length}장</PackSub>
+            <PackLabel>{t(`cards.packNames.${packType}`)}{filterType ? ` · ${t(`types.${filterType}`)}` : ''}</PackLabel>
+            <PackSub>{t('cards.pack.cardCount', { n: results.length })}</PackSub>
           </Pack>
-          <TapHint>탭하여 개봉</TapHint>
+          <TapHint>{t('cards.pack.tapToOpen')}</TapHint>
         </SealedWrap>
       )}
 
@@ -103,22 +104,22 @@ export const PackOpening = ({ packType, results, onClose }: Props) => {
             <RevealTags>
               {results[idx].isNew && <Tag $bg="#ef4444">NEW</Tag>}
               {results[idx].starUp && <Tag $bg="#f59e0b">★ UP → {results[idx].stars}</Tag>}
-              {results[idx].refundCoins > 0 && <Tag $bg="#64748b">+{results[idx].refundCoins} 코인</Tag>}
+              {results[idx].refundCoins > 0 && <Tag $bg="#64748b">{t('cards.pack.plusCoins', { n: results[idx].refundCoins })}</Tag>}
             </RevealTags>
           )}
 
-          <RevealHint>{flipped ? (idx >= results.length - 1 ? '탭하여 결과 보기' : '탭하여 다음') : '탭하여 공개'}</RevealHint>
-          <SkipBtn onClick={(e) => { e.stopPropagation(); skipAll(); }}>건너뛰기 ≫</SkipBtn>
+          <RevealHint>{flipped ? (idx >= results.length - 1 ? t('cards.pack.tapResult') : t('cards.pack.tapNext')) : t('cards.pack.tapReveal')}</RevealHint>
+          <SkipBtn onClick={(e) => { e.stopPropagation(); skipAll(); }}>{t('cards.pack.skip')}</SkipBtn>
         </RevealWrap>
       )}
 
       {phase === 'summary' && (
         <SummaryWrap>
-          <SumTitle>개봉 결과</SumTitle>
+          <SumTitle>{t('cards.pack.resultTitle')}</SumTitle>
           <SumStats>
-            {newCount > 0 && <SumStat $c="#fca5a5">신규 {newCount}</SumStat>}
-            {starUps > 0 && <SumStat $c="#fbbf24">별 상승 {starUps}</SumStat>}
-            {refund > 0 && <SumStat $c="#94a3b8">환급 {refund} 코인</SumStat>}
+            {newCount > 0 && <SumStat $c="#fca5a5">{t('cards.pack.newCount', { n: newCount })}</SumStat>}
+            {starUps > 0 && <SumStat $c="#fbbf24">{t('cards.pack.starUpCount', { n: starUps })}</SumStat>}
+            {refund > 0 && <SumStat $c="#94a3b8">{t('cards.pack.refundCount', { n: refund })}</SumStat>}
           </SumStats>
           <Grid>
             {results.map((r, i) => (
@@ -134,7 +135,7 @@ export const PackOpening = ({ packType, results, onClose }: Props) => {
               </GridCell>
             ))}
           </Grid>
-          <CloseBtn $color={accent} onClick={onClose}>확인</CloseBtn>
+          <CloseBtn $color={accent} onClick={onClose}>{t('cards.pack.confirm')}</CloseBtn>
         </SummaryWrap>
       )}
     </Overlay>

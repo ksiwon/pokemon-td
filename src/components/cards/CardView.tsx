@@ -49,7 +49,7 @@ export const CardView = ({
       setFallbackSprite(p.sprite);
     }).catch(() => {});
     if (!rarityProp) {
-      pokeAPI.getRarity(pokemonId).then(r => { if (alive) setRarity(r); }).catch(() => {});
+      pokeAPI.getCardRarity(pokemonId).then(r => { if (alive) setRarity(r); }).catch(() => {});
     }
     return () => { alive = false; };
   }, [pokemonId, rarityProp]);

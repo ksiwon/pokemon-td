@@ -14,23 +14,11 @@ interface BossCutInProps {
   bossName?: string;
 }
 
-// 챕터별 보스 도발 대사 (ko/en).
-const BOSS_TAUNT: Record<number, { ko: string; en: string }> = {
-  1: { ko: '바람을 가르는 내 날개짓을 버텨봐라.', en: 'Try to withstand my wind-cutting wings.' },
-  2: { ko: '느려터졌군. 낫 맛 좀 볼래?',        en: 'Too slow. Care for a taste of my blades?' },
-  3: { ko: '음메—— 굴러간다아아!',              en: 'Mooo—— here comes the rollout!' },
-  4: { ko: '키히히... 그림자에선 못 빠져나가.',   en: "Kihihi... there's no escaping the shadows." },
-  5: { ko: '주먹과 물살, 둘 다 못 피한다.',       en: 'Fists and torrents — you dodge neither.' },
-  6: { ko: '구오오— 강철은 부서지지 않는다.',     en: 'Graaah— steel does not break.' },
-  7: { ko: '눈보라 속에서 그대로 얼어붙어라.',     en: 'Freeze where you stand, in the blizzard.' },
-  8: { ko: '심해의 용을 거스를 셈인가.',         en: 'You dare defy the deep-sea dragon?' },
-};
-
 const officialArt = (pokemonId: number) =>
   `https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/other/official-artwork/${pokemonId}.png`;
 
 export const BossCutIn: React.FC<BossCutInProps> = ({ chapterNumber, bossName }) => {
-  const { language } = useTranslation();
+  const { t } = useTranslation();
   const enemies = useGameStore(s => s.enemies);
   const wave = useGameStore(s => s.wave);
 
@@ -64,7 +52,7 @@ export const BossCutIn: React.FC<BossCutInProps> = ({ chapterNumber, bossName })
 
   // ── 라이트 배너: 중간 보스 / 싱글·멀티 모든 보스 (상단 작은 알림) ──
   if (tier === 'light') {
-    const label = language === 'en' ? 'BOSS INCOMING' : '보스 출현';
+    const label = t('boss.incoming');
     return (
       <LightRoot>
         <LightBanner>
@@ -76,10 +64,10 @@ export const BossCutIn: React.FC<BossCutInProps> = ({ chapterNumber, bossName })
   }
 
   // ── 웅장 컷인: 스토리 최종 보스 ──
-  const taunt = chapterNumber && BOSS_TAUNT[chapterNumber]
-    ? BOSS_TAUNT[chapterNumber][language === 'en' ? 'en' : 'ko']
+  const taunt = chapterNumber && chapterNumber >= 1 && chapterNumber <= 8
+    ? t(`boss.taunt.${chapterNumber}`)
     : '';
-  const warnLabel = language === 'en' ? 'BOSS APPROACHING' : '보스 출현';
+  const warnLabel = t('boss.approaching');
 
   return (
     <Root>

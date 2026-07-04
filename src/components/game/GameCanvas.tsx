@@ -1129,7 +1129,7 @@ export const GameCanvas: React.FC = () => {
                 eff >= 2   ? 24 : 20;
               return (
                 <Text key={dmg.id} x={dmg.position.x - 20} y={dmg.position.y - 30}
-                  text={dmg.isMiss ? 'MISS' : dmg.value.toString()}
+                  text={dmg.isMiss ? t('game.miss') : dmg.value.toString()}
                   fontSize={fontSize}
                   fill={fill}
                   fontStyle="bold" stroke="#000" strokeWidth={2}
