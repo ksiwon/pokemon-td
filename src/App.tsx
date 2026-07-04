@@ -20,6 +20,7 @@ import { multiplayerService } from "./services/MultiplayerService";
 import { saveService } from "./services/SaveService";
 import { pokeAPI } from './api/pokeapi';
 import { getMapById } from './data/maps';
+import { useTranslation } from './i18n';
 
 import { Emoji } from "./components/shared/Emoji";
 import { LoginScreen } from "./components/auth/LoginScreen";
@@ -104,6 +105,7 @@ function App() {
   const navigate = useNavigate();
   const location = useLocation();
   const resetGame = useGameStore((state) => state.reset);
+  const { t } = useTranslation();
 
   // [QUOTA-FIX] 예전엔 deps에 location.pathname이 있어 '라우트 이동마다' 재구독 → 즉시 콜백이
   //   syncAchievementsFromDB(Firestore 전체 읽기 + 무조건 bulk 쓰기)를 매번 실행, 무료 쿼터를 빠르게 소모했음.
@@ -159,12 +161,12 @@ function App() {
         console.error('Failed to preload game data', err);
         setIsGamePreloading(false);
         // 네트워크 일시 장애 대응: 새로고침 없이 즉시 재시도 가능하게
-        if (window.confirm('게임 데이터 로드에 실패했습니다. 다시 시도할까요?')) {
+        if (window.confirm(t('loading.retryConfirm'))) {
           return handlePreloadAndNavigate(mapId, gameMode, storyData);
         }
       }
     },
-    [resetGame, navigate]
+    [resetGame, navigate, t]
   );
 
   /**
@@ -197,7 +199,7 @@ function App() {
   if (isAuthLoading) {
     return (
       <PreloadingOverlay>
-        <LoadingTitle>유저 정보 확인 중...</LoadingTitle>
+        <LoadingTitle>{t('loading.checkingUser')}</LoadingTitle>
       </PreloadingOverlay>
     );
   }
@@ -209,10 +211,10 @@ function App() {
 
     const almostDone = loadingStage !== 'map' && pct >= 100;
     const stageText = loadingStage === 'map'
-      ? '맵 배경 로딩 중...'
+      ? t('loading.map')
       : almostDone
-        ? '거의 다 됐어요!'
-        : '포켓몬 데이터 로딩 중...';
+        ? t('loading.almostDone')
+        : t('loading.pokemon');
 
     return (
       <PreloadingOverlay>
@@ -222,7 +224,7 @@ function App() {
         </ProgressBarOuter>
         <ProgressText>
           {loadingStage === 'map'
-            ? '맵 배경 이미지를 불러오고 있습니다...'
+            ? t('loading.mapDetail')
             : `${preloadProgress.loaded} / ${preloadProgress.total} (${pct}%)`}
         </ProgressText>
       </PreloadingOverlay>

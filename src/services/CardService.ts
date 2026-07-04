@@ -19,6 +19,8 @@ const MERGE_COPIES = 2;
 const NORMAL_PACK_PITY = 20;
 /** 팩 1개당 카드 장수. */
 export const CARDS_PER_PACK = 5;
+/** 신규 유저 스타터 코인 — 노말팩(150) 2회 분량. 0코인 데드락 방지. */
+const STARTER_COINS = 300;
 
 const RARITY_ORDER: Rarity[] = ['Bronze', 'Silver', 'Gold', 'Diamond', 'Master', 'Legend'];
 const rarityRank = (r: Rarity): number => RARITY_ORDER.indexOf(r);
@@ -67,7 +69,7 @@ class CardService {
   private defaultState(): CardSaveState {
     return {
       version: CURRENT_VERSION,
-      wallet: { coins: 0, starShards: 0 },
+      wallet: { coins: STARTER_COINS, starShards: 0 },
       collection: {},
       packPity: 0,
       stats: { packsOpened: 0, totalPulls: 0 },
@@ -82,10 +84,19 @@ class CardService {
       if (raw) {
         const parsed = JSON.parse(raw) as CardSaveState;
         // 얕은 마이그레이션 — 누락 필드 보강
-        return { ...this.defaultState(), ...parsed,
+        const merged: CardSaveState = { ...this.defaultState(), ...parsed,
           wallet: { ...this.defaultState().wallet, ...parsed.wallet },
           stats: { ...this.defaultState().stats, ...parsed.stats },
         };
+        // 스타터 코인 소급 지급: 팩 한 번도 안 열고 카드/지갑이 완전히 0인 '초기' 저장본이면 1회 지급
+        // (스타터 도입 이전에 카드 모드를 열어 0/0으로 저장된 유저 구제 — 데드락 방지)
+        if (merged.stats.packsOpened === 0
+            && Object.keys(merged.collection).length === 0
+            && merged.wallet.coins === 0
+            && merged.wallet.starShards === 0) {
+          merged.wallet.coins = STARTER_COINS;
+        }
+        return merged;
       }
     } catch (e) {
       console.warn('[CardService] load 실패, 기본값 사용', e);

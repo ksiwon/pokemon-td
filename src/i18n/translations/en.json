@@ -1,4 +1,12 @@
 {
+  "loading": {
+    "checkingUser": "Checking user info...",
+    "pokemon": "Loading Pokémon data...",
+    "map": "Loading map background...",
+    "almostDone": "Almost there!",
+    "mapDetail": "Loading map background image...",
+    "retryConfirm": "Failed to load game data. Try again?"
+  },
   "common": {
     "close": "Close",
     "cancel": "Cancel",
@@ -838,8 +846,8 @@
       },
       "slide3": {
         "title": "TFT Battle Arena",
-        "desc": "During the battle phase, Pokémon move and fight on a 7×4 board in real time!",
-        "d0": "Top 2 rows: opponent's team / Bottom 2 rows: your team",
+        "desc": "During the battle phase, Pokémon move and fight on their own across a 6×6 board in real time!",
+        "d0": "Your team goes in the 2 columns on your side (MY ZONE); the opponent holds the far 2 columns",
         "d1": "Reposition Pokémon during prep time before battle",
         "d2": "Type matchups and stats apply  synergies matter!"
       }
@@ -886,10 +894,10 @@
       },
       "slide1": {
         "title": "Packs & Collection",
-        "desc": "Open card packs with coins & star shards to collect Pokémon.\nDuplicate cards merge to raise a card's star rank.",
+        "desc": "You start with some coins! Open packs to collect Pokémon.\nDuplicate cards merge to raise a card's star rank.",
         "d0": "Normal / Type / Premium packs — higher tiers boost rare odds",
         "d1": "Duplicates auto-merge → ⭐ star rank up",
-        "d2": "Collected cards are logged in your Dex"
+        "d2": "Earn more coins & shards by clearing tower floors and playing the main game"
       },
       "slide2": {
         "title": "Deck Building & Synergy",
