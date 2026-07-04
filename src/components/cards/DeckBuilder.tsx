@@ -3,15 +3,18 @@
 
 import { useEffect, useMemo, useState } from 'react';
 import styled from 'styled-components';
-import { ArrowLeft, Shield, Crosshair, Save } from 'lucide-react';
-import { pokeAPI } from '../../api/pokeapi';
+import { ArrowLeft, Shield, Crosshair, Save, Info } from 'lucide-react';
 import { useTranslation } from '../../i18n';
 import { cardService } from '../../services/CardService';
 import { useCardState } from '../../hooks/useCardState';
+import { useCardMeta } from '../../hooks/useCardMeta';
 import { computeSynergies } from '../../services/CardBattleService';
 import { Deck, DeckRow } from '../../types/cards';
 import { getTypeColor } from '../../utils/typeEffectiveness';
+import { CardFilterState, DEFAULT_CARD_FILTER, applyCardFilter } from '../../utils/cardCatalog';
 import { CardView } from './CardView';
+import { CardControls } from './CardControls';
+import { CardDetailModal } from './CardDetailModal';
 
 type SlotState = { pokemonId: number; stars: number } | null;
 const EMPTY: SlotState[] = [null, null, null, null, null, null]; // [front0,1,2, back0,1,2]
@@ -23,13 +26,25 @@ export const DeckBuilder = ({ onBack }: { onBack: () => void }) => {
   const state = useCardState();
   const [slots, setSlots] = useState<SlotState[]>(EMPTY);
   const [sel, setSel] = useState<number | null>(null);
-  const [typesMap, setTypesMap] = useState<Record<number, string[]>>({});
   const [saved, setSaved] = useState(false);
+  const [filter, setFilter] = useState<CardFilterState>(DEFAULT_CARD_FILTER);
+  const [detailId, setDetailId] = useState<number | null>(null);
 
   const owned = useMemo(
-    () => Object.values(state.collection).sort((a, b) => b.stars - a.stars || b.obtainedAt - a.obtainedAt),
+    () => Object.values(state.collection),
     [state.collection],
   );
+
+  // 보유 카드 이름·타입·레어도 (검색/필터/정렬 + 시너지 + CardView용)
+  const { meta, rarity } = useCardMeta(owned.map(c => c.pokemonId));
+
+  // 필터+정렬 적용된 풀
+  const shownOwned = useMemo(
+    () => applyCardFilter(owned, filter, meta, rarity),
+    [owned, filter, meta, rarity],
+  );
+
+  const detailEntry = detailId != null ? state.collection[detailId] : null;
 
   // 저장된 덱 로드
   useEffect(() => {
@@ -42,31 +57,15 @@ export const DeckBuilder = ({ onBack }: { onBack: () => void }) => {
     setSlots(next);
   }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
-  // 타입 조회(시너지 계산용)
-  useEffect(() => {
-    let alive = true;
-    Promise.all(owned.map(async c => {
-      if (typesMap[c.pokemonId]) return null;
-      const p = await pokeAPI.getPokemon(c.pokemonId).catch(() => null);
-      return p ? ([c.pokemonId, p.types] as const) : null;
-    })).then(pairs => {
-      if (!alive) return;
-      const add: Record<number, string[]> = {};
-      pairs.forEach(p => { if (p) add[p[0]] = p[1]; });
-      if (Object.keys(add).length) setTypesMap(m => ({ ...m, ...add }));
-    });
-    return () => { alive = false; };
-  }, [owned]); // eslint-disable-line react-hooks/exhaustive-deps
-
   const placedIds = useMemo(() => new Set(slots.filter(Boolean).map(s => s!.pokemonId)), [slots]);
 
   // 현재 덱 시너지(타입 알려진 카드만)
   const synergies = useMemo(() => {
     const team = slots.filter(Boolean).map((s, i) => ({
-      uid: `s${i}`, types: typesMap[s!.pokemonId] ?? [],
+      uid: `s${i}`, types: meta[s!.pokemonId]?.types ?? [],
     }));
     return computeSynergies(team as any);
-  }, [slots, typesMap]);
+  }, [slots, meta]);
 
   const flyingPen = synergies.find(s => s.type === 'flying');
   const ghostPen = synergies.find(s => s.type === 'ghost');
@@ -174,15 +173,41 @@ export const DeckBuilder = ({ onBack }: { onBack: () => void }) => {
 
       {/* 보유 카드 */}
       <PoolLabel>{t('cards.deck.owned', { n: owned.length })}</PoolLabel>
+      {owned.length > 0 && (
+        <PoolControls>
+          <CardControls
+            value={filter}
+            onChange={setFilter}
+            resultCount={shownOwned.length}
+            totalCount={owned.length}
+          />
+        </PoolControls>
+      )}
       <Pool>
         {owned.length === 0 && <PoolEmpty>{t('cards.deck.poolEmpty')}</PoolEmpty>}
-        {owned.map(c => (
+        {owned.length > 0 && shownOwned.length === 0 && <PoolEmpty>{t('cards.lab.noResults')}</PoolEmpty>}
+        {shownOwned.map(c => (
           <PoolCard key={c.pokemonId} $placed={placedIds.has(c.pokemonId)} onClick={() => placeCard(c)}>
-            <CardView pokemonId={c.pokemonId} stars={c.stars} size={84} interactive={false} />
+            <CardView pokemonId={c.pokemonId} stars={c.stars} rarity={rarity[c.pokemonId]} size={84} interactive={false} />
             {placedIds.has(c.pokemonId) && <PlacedMark>{t('cards.deck.placed')}</PlacedMark>}
+            <InfoBtn
+              aria-label={t('cards.detail.baseStats')}
+              onClick={e => { e.stopPropagation(); setDetailId(c.pokemonId); }}
+            >
+              <Info size={13} />
+            </InfoBtn>
           </PoolCard>
         ))}
       </Pool>
+
+      {detailEntry && detailId != null && (
+        <CardDetailModal
+          pokemonId={detailId}
+          stars={detailEntry.stars}
+          rarity={rarity[detailId]}
+          onClose={() => setDetailId(null)}
+        />
+      )}
     </Root>
   );
 };
@@ -241,6 +266,7 @@ const PenNote = styled.div`
 `;
 
 const PoolLabel = styled.div`max-width: 720px; margin: 16px auto 8px; padding: 0 16px; font-size: 12px; font-weight: 700; color: rgba(255,255,255,0.4); letter-spacing: 0.08em;`;
+const PoolControls = styled.div`max-width: 720px; margin: 0 auto 12px; padding: 0 16px;`;
 const Pool = styled.div`
   max-width: 720px; margin: 0 auto; padding: 0 16px;
   display: grid; grid-template-columns: repeat(auto-fill, minmax(84px, 1fr)); gap: 12px;
@@ -254,4 +280,11 @@ const PoolCard = styled.div<{ $placed: boolean }>`
 const PlacedMark = styled.div`
   position: absolute; top: 4px; right: 4px; background: #34d399; color: #07090f;
   font-size: 9px; font-weight: 800; padding: 2px 6px; border-radius: 6px;
+`;
+const InfoBtn = styled.button`
+  position: absolute; top: 4px; left: 4px; display: flex; z-index: 2;
+  background: rgba(8,12,20,0.72); border: 1px solid rgba(255,255,255,0.18);
+  border-radius: 50%; color: rgba(255,255,255,0.75); padding: 3px; cursor: pointer;
+  transition: background 0.12s, color 0.12s;
+  &:hover { background: rgba(96,176,255,0.35); color: #fff; }
 `;

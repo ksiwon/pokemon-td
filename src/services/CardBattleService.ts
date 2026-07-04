@@ -84,11 +84,16 @@ export function buildBattleCard(
 ): BattleCard {
   const stars = Math.max(1, Math.min(5, opts.stars));
   const level = levelForStars(stars);
-  const starMult = (1 + (stars - 1) * 0.12) * (opts.statMult ?? 1);
+  // 별 배율(양쪽 공통)과 층 배율(적 전용, statMult)을 분리.
+  const starOnly = 1 + (stars - 1) * 0.12;
+  const fullMult = starOnly * (opts.statMult ?? 1); // HP·공격·특공·속도
+  // [밸런스] 방어/특방엔 '층 배율'을 빼고 별 배율만 적용 → 적 방어가 층마다 부풀어
+  //   플레이어 딜이 무력화되던 '벽'을 완화(플레이어는 statMult=1이라 영향 없음).
+  const defMult = starOnly;
   const b = p.stats;
 
-  const hp = Math.floor((((2 * b.hp) * level) / 100 + level + 10) * starMult);
-  const mk = (base: number) => Math.floor((((2 * base) * level) / 100 + 5) * starMult);
+  const hp = Math.floor((((2 * b.hp) * level) / 100 + level + 10) * fullMult);
+  const mk = (base: number, m: number) => Math.floor((((2 * base) * level) / 100 + 5) * m);
 
   return {
     uid: opts.uid ?? `${opts.side}-${p.id}-${opts.row}-${opts.slot}`,
@@ -103,12 +108,12 @@ export function buildBattleCard(
     level,
     maxHp: hp,
     currentHp: hp,
-    attack: mk(b.attack),
-    defense: mk(b.defense),
-    specialAttack: mk(b.specialAttack),
-    specialDefense: mk(b.specialDefense),
+    attack: mk(b.attack, fullMult),
+    defense: mk(b.defense, defMult),
+    specialAttack: mk(b.specialAttack, fullMult),
+    specialDefense: mk(b.specialDefense, defMult),
     // [FIX] 속도도 별/층 배율 반영 — 고성 유닛이 선공(기존엔 원본 종족 속도라 별이 턴순서에 무영향).
-    speed: Math.max(1, Math.floor(b.speed * starMult)),
+    speed: Math.max(1, Math.floor(b.speed * fullMult)),
     critChance: 0.0625,
     canPenetrate: false, // applySynergies에서 확정
   };
@@ -271,10 +276,15 @@ class CardBattleService {
     const rng = mulberry32(seed);
     const isBoss = floor % 10 === 0;
 
-    // 층별 강도: 별 1~5(층 진행), 스탯 보정 floor 비례
-    const baseStars = Math.min(5, 1 + Math.floor((floor - 1) / 5));
-    const statMult = 1 + floor * 0.04 + (isBoss ? 0.2 : 0);
-    const rarityBoost = Math.min(1.5, floor * 0.05);
+    // [밸런스] "초반 엄청 쉽게 → 층마다 완만 상승" 곡선. (스타터 ★1 덱: 1~9층 여유, 10층 보스가 첫 관문)
+    //   - statMult: 1 밑(0.578)에서 시작해 층당 +0.028 선형 상승(≈16층에 1.0). 플레이어(=1)보다 낮게 출발.
+    //   - 별: 10층 구간당 +1 (1~10층 ★1 … 41층~ ★5). 보스 별 점프·랜덤 지터 제거 → 스파이크 없는 결정적 곡선.
+    //   - rarityBoost: 1~3층은 0(약한 커먼만) → 이후 층당 +0.03. 저층 종족값도 약하게.
+    //   - 보스층은 statMult +0.1만(소폭) — 벽이 아닌 살짝 강한 정도(첫 보스=10층은 여전히 ★1).
+    //   방어/특방엔 층 배율 미적용(buildBattleCard) → 플레이어 딜이 유지돼 '벽'감 완화.
+    const baseStars = Math.min(5, 1 + Math.floor((floor - 1) / 10));
+    const statMult = 0.55 + floor * 0.028 + (isBoss ? 0.1 : 0);
+    const rarityBoost = Math.min(1.2, Math.max(0, floor - 3) * 0.03);
 
     const rows: DeckRow[] = ['front', 'front', 'front', 'back', 'back', 'back'];
     const team: BattleCard[] = [];
@@ -284,16 +294,13 @@ class CardBattleService {
       //   simulate가 루프를 안 돌고 즉시 플레이어 승리 처리되어 '무혈 클리어+보상' 버그가 났었음.
       let p: PokemonData | null = null;
       for (let tryN = 0; tryN < 5 && !p; tryN++) {
-        const id = await pokeAPI.getRandomPokemonIdWithRarity(rarityBoost, rng);
+        const id = await pokeAPI.getRandomCardId(rarityBoost, rng);
         p = await pokeAPI.getPokemon(id).catch(() => null);
       }
       if (!p) throw new Error('ENEMY_TEAM_INCOMPLETE');
-      // 별 약간의 변동(±1)
-      const jitter = rng() < 0.4 ? 1 : 0;
-      const stars = Math.min(5, baseStars + (isBoss ? 1 : 0) + jitter);
       const row = rows[i];
       const slot = i % 3;
-      team.push(buildBattleCard(p, { stars, row, slot, side: 'enemy', statMult, uid: `enemy-${i}` }));
+      team.push(buildBattleCard(p, { stars: baseStars, row, slot, side: 'enemy', statMult, uid: `enemy-${i}` }));
     }
     if (team.length < 6) throw new Error('ENEMY_TEAM_INCOMPLETE');
     return team;

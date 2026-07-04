@@ -786,9 +786,10 @@ export class GameManager {
       const itemChoices = this.buildWaveEndItems(towers, wave);
       setWaveEndItemPick(itemChoices);
 
-      // [카드모드] 웨이브 클리어 코인 — 싱글 전용, 도달 웨이브 비례 소량(져도 도달분 적립됨)
+      // [카드모드][경제] 웨이브 클리어 코인 — 싱글 전용, 도달 웨이브 비례(져도 도달분 적립).
+      //   미니 포켓 재화의 '큰' 수급처가 싱글/멀티가 되도록 웨이브당 코인을 상향.
       if (!isMultiplayer) {
-        cardService.grantRewards({ coins: 2 + Math.floor(wave / 10) });
+        cardService.grantRewards({ coins: 4 + Math.floor(wave / 6) });
       }
 
       // 웨이브 클리어 (싱글플레이 전용)
@@ -804,8 +805,8 @@ export class GameManager {
           wave50Clear: !isStoryClear,  // 일반 모드만 wave50Clear
           storyClear: isStoryClear,    // 스토리 모드 클리어
         });
-        // [카드모드] 클리어 보너스 — 일반/스토리 모두 코인+별조각 지급
-        cardService.grantRewards({ coins: 200, starShards: 30 });
+        // [카드모드][경제] 클리어 보너스 — 싱글 완주는 큰 보상(팩깡 여러 번 분량). 일반/스토리 공통.
+        cardService.grantRewards({ coins: 350, starShards: 50 });
         // [전당등록] 싱글 플레이(일반 모드) 결과만 전당/리더보드에 반영.
         // 스토리 모드 클리어는 전당등록 대상이 아니다.
         if (isNormalClear) {

@@ -42,6 +42,14 @@ export interface PokemonData {
   sprite: string;
   moves: string[];
   abilities: PokemonAbilityData[];
+  /** 도감 설명(현지화). species 데이터에서 파생 — 없으면 ''. */
+  flavorText: string;
+  /** 분류(예: "씨앗 포켓몬"). 현지화. 없으면 ''. */
+  genus: string;
+  /** 키(m). PokeAPI decimetre → m. */
+  heightM: number;
+  /** 몸무게(kg). PokeAPI hectogram → kg. */
+  weightKg: number;
 }
 
 // 웨이브 스폰 전용 경량 캐시 (스탯만 저장, 빠른 조회용)
@@ -97,6 +105,13 @@ class PokeAPIService {
   private learnableMovesCache = new Map<string, string[]>(); // [V8-FIX-5-2] 레벨별 학습 기술 캐시 (id:level)
   private rarityCache = new Map<number, Rarity>();
   private weightedPokemonList: Array<{ id: number; weight: number }> = [];
+  // [카드모드 전용] 미니 포켓은 진화형 포함 전 1025종을 '자기 종족값' 레어도로 추첨.
+  //   본편(PokemonPicker/AIPlayer)이 쓰는 weightedPokemonList(베이스폼만·최종진화 레어도)와 분리 —
+  //   본편 상점이 진화형을 팔아 진화 시스템이 깨지지 않도록. statCache에서 파생(별도 영속 불필요).
+  private cardRarityCache = new Map<number, Rarity>();
+  private cardWeightedList: Array<{ id: number; weight: number }> = [];
+  // [타입팩] 타입 슬러그 → 그 타입을 가진 카드 가중 리스트(statCache.types에서 파생).
+  private cardTypePool = new Map<string, Array<{ id: number; weight: number }>>();
   private preloadPromise: Promise<void> | null = null;
 
   constructor() {
@@ -182,6 +197,18 @@ class PokeAPIService {
       s.names.find((n: any) => n.language.name === 'en');
     const displayName = nameEntry ? nameEntry.name : d.name;
 
+    // 도감 설명 / 분류 — 이미 받은 species 응답에서 파생(추가 요청 없음)
+    const flavorEntry =
+      s.flavor_text_entries?.find((e: any) => e.language.name === lang) ||
+      s.flavor_text_entries?.find((e: any) => e.language.name === 'en');
+    const flavorText = flavorEntry
+      ? String(flavorEntry.flavor_text).replace(/[\f\n\r­]/g, ' ').replace(/\s+/g, ' ').trim()
+      : '';
+    const genusEntry =
+      s.genera?.find((g: any) => g.language.name === lang) ||
+      s.genera?.find((g: any) => g.language.name === 'en');
+    const genus = genusEntry ? genusEntry.genus : '';
+
     const abilities: PokemonAbilityData[] = abilityResponses
       .filter(Boolean)
       .map((abilityRes: any) => {
@@ -246,6 +273,10 @@ class PokeAPIService {
         '',
       moves: [...levelUpMoves, ...otherMoves].slice(0, 20),
       abilities,
+      flavorText,
+      genus,
+      heightM: (d.height ?? 0) / 10,
+      weightKg: (d.weight ?? 0) / 10,
     };
 
     this.pokemonCache.set(cacheKey, pokemon);
@@ -371,6 +402,11 @@ class PokeAPIService {
     }
     this.weightedPokemonList = tempWeightedList;
 
+    // [카드모드] statCache가 완전히 찬 지금 카드 전용 풀도 새로 구축(진화형 포함·자기 종족값).
+    this.cardWeightedList = [];
+    this.cardTypePool.clear();
+    this.ensureCardPool();
+
     // 로컬스토리지에 저장 (다음 실행 시 즉시 복원)
     this.saveStatCacheToLocalStorage();
 
@@ -379,26 +415,34 @@ class PokeAPIService {
     );
   }
 
-  // rarityBoost>0이면 고레어(높은 랭크) 가중치를 끌어올린다(콘테스트 홀). 0이면 기본 분포.
-  // [DETERMINISM] rng를 넘기면 그 난수원을 사용(트레이너 타워 결정론 시드용). 미지정 시 Math.random.
-  async getRandomPokemonIdWithRarity(rarityBoost = 0, rng?: () => number): Promise<number> {
-    if (this.weightedPokemonList.length === 0) {
-      await this.preloadRarities();
-    }
+  // 가중 리스트에서 1마리 추첨. rarityBoost>0이면 고레어(높은 랭크) 가중치를 끌어올린다.
+  private pickWeighted(
+    list: Array<{ id: number; weight: number }>,
+    rarityBoost: number,
+    rng?: () => number,
+  ): number {
     const rand = rng ?? Math.random;
-
     const eff = (p: { id: number; weight: number }) =>
       rarityBoost > 0
         ? p.weight * (1 + rarityBoost * (WEIGHT_TO_RANK[p.weight] ?? 0))
         : p.weight;
-
-    const totalWeight = this.weightedPokemonList.reduce((sum, p) => sum + eff(p), 0);
+    const totalWeight = list.reduce((sum, p) => sum + eff(p), 0);
     let random = rand() * totalWeight;
-    for (const pokemon of this.weightedPokemonList) {
-      random -= eff(pokemon);
-      if (random <= 0) return pokemon.id;
+    for (const p of list) {
+      random -= eff(p);
+      if (random <= 0) return p.id;
     }
-    return this.weightedPokemonList[0]?.id || 1;
+    return list[0]?.id || 1;
+  }
+
+  // rarityBoost>0이면 고레어(높은 랭크) 가중치를 끌어올린다(콘테스트 홀). 0이면 기본 분포.
+  // [DETERMINISM] rng를 넘기면 그 난수원을 사용(트레이너 타워 결정론 시드용). 미지정 시 Math.random.
+  // [본편 전용] 베이스폼만 담긴 weightedPokemonList 사용(진화형 제외).
+  async getRandomPokemonIdWithRarity(rarityBoost = 0, rng?: () => number): Promise<number> {
+    if (this.weightedPokemonList.length === 0) {
+      await this.preloadRarities();
+    }
+    return this.pickWeighted(this.weightedPokemonList, rarityBoost, rng);
   }
 
   /**
@@ -412,6 +456,80 @@ class PokeAPIService {
       if (rank >= minRank) out.push(p.id);
     }
     return out;
+  }
+
+  // ─── [카드모드 전용] 전 1025종 · 자기 종족값 레어도 풀 ────────────────────────
+  /** statCache에서 카드모드 추첨 리스트 구성(진화형 포함, 자기 종족값 레어도). 지연 생성·캐시. */
+  private ensureCardPool(): void {
+    if (this.cardWeightedList.length > 0) return;
+    const out: Array<{ id: number; weight: number }> = [];
+    for (const [id, stat] of this.statCache) {
+      const rarity = calculateRarity(stat.statTotal); // 자기 종족값 기준
+      this.cardRarityCache.set(id, rarity);
+      out.push({ id, weight: RARITY_WEIGHTS[rarity] });
+    }
+    this.cardWeightedList = out;
+  }
+
+  /** [카드모드] 카드 레어도 = 자기 종족값 기준(최종진화 아님). */
+  async getCardRarity(pokemonId: number): Promise<Rarity> {
+    if (this.cardRarityCache.has(pokemonId)) return this.cardRarityCache.get(pokemonId)!;
+    try {
+      const stat = await this.getStatOnly(pokemonId);
+      const rarity = calculateRarity(stat.statTotal);
+      this.cardRarityCache.set(pokemonId, rarity);
+      return rarity;
+    } catch {
+      return 'Bronze';
+    }
+  }
+
+  /** [카드모드] 전 1025종 풀에서 레어도 가중 추첨(팩깡·타워 적팀). rng=결정론 시드. */
+  async getRandomCardId(rarityBoost = 0, rng?: () => number): Promise<number> {
+    if (this.statCache.size === 0) await this.preloadRarities();
+    this.ensureCardPool();
+    return this.pickWeighted(this.cardWeightedList, rarityBoost, rng);
+  }
+
+  /** [카드모드] 특정 레어도 랭크 이상 후보 풀(팩 최소보장·천장용). */
+  getCardIdsAtLeastRarity(minRank: number): number[] {
+    this.ensureCardPool();
+    const out: number[] = [];
+    for (const p of this.cardWeightedList) {
+      const rank = WEIGHT_TO_RANK[p.weight] ?? 0;
+      if (rank >= minRank) out.push(p.id);
+    }
+    return out;
+  }
+
+  // ─── [타입팩] 타입 지정 추첨 ────────────────────────────────────────────────
+  /** 타입별 카드 풀 구성(statCache.types 기준). 지연 생성·캐시. */
+  private ensureCardTypePools(): void {
+    if (this.cardTypePool.size > 0) return;
+    this.ensureCardPool();
+    for (const p of this.cardWeightedList) {
+      const types = this.statCache.get(p.id)?.types ?? [];
+      for (const t of types) {
+        const arr = this.cardTypePool.get(t);
+        if (arr) arr.push(p);
+        else this.cardTypePool.set(t, [p]);
+      }
+    }
+  }
+
+  /** [타입팩] 지정 타입 카드만 레어도 가중 추첨(타입 풀 비면 전체 폴백). */
+  async getRandomCardIdOfType(type: string, rarityBoost = 0, rng?: () => number): Promise<number> {
+    if (this.statCache.size === 0) await this.preloadRarities();
+    this.ensureCardTypePools();
+    const pool = this.cardTypePool.get(type);
+    return this.pickWeighted(pool && pool.length ? pool : this.cardWeightedList, rarityBoost, rng);
+  }
+
+  /** [타입팩] 지정 타입 중 레어도 랭크 이상 후보 풀(최소보장·천장용). */
+  getCardIdsOfTypeAtLeastRarity(type: string, minRank: number): number[] {
+    this.ensureCardTypePools();
+    const pool = this.cardTypePool.get(type) ?? this.cardWeightedList;
+    return pool.filter(p => (WEIGHT_TO_RANK[p.weight] ?? 0) >= minRank).map(p => p.id);
   }
 
   getRandomPokemonId(maxGen: number = 9): number {

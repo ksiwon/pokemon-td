@@ -925,7 +925,7 @@
       },
       "slide1": {
         "title": "팩 뽑기 & 도감",
-        "desc": "처음 오면 스타터 코인을 드려요! 팩을 열어 카드를 모으세요.\n같은 카드가 겹치면 별이 올라 더 강해집니다.",
+        "desc": "처음 오면 스타터 카드 6장과 코인을 드려요! 바로 타워에 도전하거나 팩을 열어 더 모으세요.\n같은 카드가 겹치면 별이 올라 더 강해집니다.",
         "d0": "일반 / 타입 / 고급 3종 팩 — 위로 갈수록 고레어 확률 ↑",
         "d1": "중복 카드는 자동 합성 → ⭐ 등급 상승",
         "d2": "코인·별조각은 타워 클리어와 본편 플레이로 더 모아요"
@@ -1049,6 +1049,38 @@
       "title": "미니 포켓",
       "desc": "Pocket TCG 감성의 미니 오토배틀"
     },
+    "rarity": {
+      "Bronze": "브론즈",
+      "Silver": "실버",
+      "Gold": "골드",
+      "Diamond": "다이아",
+      "Master": "마스터",
+      "Legend": "레전드"
+    },
+    "filter": {
+      "searchPlaceholder": "이름·번호 검색",
+      "clear": "초기화",
+      "sortPrefix": "정렬",
+      "allTypes": "모든 타입",
+      "allRarities": "모든 레어도",
+      "resultCount": "{n}/{total}",
+      "sort": {
+        "number": "도감번호",
+        "rarity": "레어도",
+        "stars": "별",
+        "recent": "최근 획득",
+        "name": "이름"
+      }
+    },
+    "detail": {
+      "loading": "불러오는 중...",
+      "failed": "정보를 불러오지 못했습니다.",
+      "baseStats": "종족값",
+      "statTotal": "총합",
+      "battleStats": "전투 스탯",
+      "height": "키",
+      "weight": "몸무게"
+    },
     "common": {
       "back": "뒤로"
     },
@@ -1059,7 +1091,7 @@
     },
     "packDesc": {
       "normal": "기본 5장",
-      "type": "레어 확률 ↑",
+      "type": "선택한 타입만",
       "premium": "고레어 확률 ↑"
     },
     "alerts": {
@@ -1077,6 +1109,7 @@
       "dex": "도감",
       "collected": "수집 {n}종",
       "emptyDex": "아직 카드가 없습니다. 팩을 열어 첫 카드를 모아보세요!",
+      "noResults": "조건에 맞는 카드가 없습니다.",
       "devGrant": "+ 테스트 화폐",
       "drawing": "추첨 중...",
       "floor": "{n}층",
@@ -1084,6 +1117,7 @@
     },
     "pack": {
       "cardCount": "{n}장",
+      "pickType": "타입 선택",
       "tapToOpen": "탭하여 개봉",
       "tapResult": "탭하여 결과 보기",
       "tapNext": "탭하여 다음",

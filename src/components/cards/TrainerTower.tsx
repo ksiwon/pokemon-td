@@ -67,8 +67,10 @@ export const TrainerTower = ({ onBack }: { onBack: () => void }) => {
       if (res.winner === 'player') {
         const firstClear = currentFloor > cardService.getTowerProgress();
         const boss = currentFloor % 10 === 0;
-        const coins = firstClear ? 40 + currentFloor * 10 : 15 + currentFloor * 3;
-        const shards = firstClear ? (boss ? 25 : currentFloor % 5 === 0 ? 8 : 3) : 0;
+        // [경제] 타워(미니 포켓)는 소액만 — 재화 farm은 싱글/멀티로 유도(오토배틀은 도전·소비 콘텐츠).
+        //   첫클리어도 소량, 재도전은 극소량(파밍 차단).
+        const coins = firstClear ? 10 + currentFloor * 2 : 2 + Math.floor(currentFloor / 2);
+        const shards = firstClear ? (boss ? 5 : currentFloor % 5 === 0 ? 2 : 0) : 0;
         cardService.grantRewards({ coins, starShards: shards });
         if (firstClear) cardService.setTowerProgress(currentFloor);
         rw = { coins, starShards: shards, firstClear };
@@ -152,7 +154,9 @@ export const TrainerTower = ({ onBack }: { onBack: () => void }) => {
   const renderTeam = (order: BattleCard[], side: 'player' | 'enemy') => {
     const front = order.filter(u => u.row === 'front');
     const back = order.filter(u => u.row === 'back');
-    const rows = side === 'enemy' ? [front, back] : [back, front]; // 화면상 마주보게
+    // 전열이 가운데(구분선)에서 마주보도록 — 적:[후열,전열] / 나:[전열,후열].
+    //   (전열이 먼저 맞는 타겟팅과 시각적으로 일치. 예전엔 뒤집혀 후열이 가운데서 부딪혀 보였음)
+    const rows = side === 'enemy' ? [back, front] : [front, back];
     return (
       <Team $side={side}>
         {rows.map((r, i) => (

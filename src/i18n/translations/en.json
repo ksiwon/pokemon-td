@@ -894,7 +894,7 @@
       },
       "slide1": {
         "title": "Packs & Collection",
-        "desc": "You start with some coins! Open packs to collect Pokémon.\nDuplicate cards merge to raise a card's star rank.",
+        "desc": "You start with 6 cards and some coins! Jump into the tower right away, or open packs to collect more.\nDuplicate cards merge to raise a card's star rank.",
         "d0": "Normal / Type / Premium packs — higher tiers boost rare odds",
         "d1": "Duplicates auto-merge → ⭐ star rank up",
         "d2": "Earn more coins & shards by clearing tower floors and playing the main game"
@@ -1049,6 +1049,38 @@
       "title": "Mini Pocket",
       "desc": "A Pocket-TCG-style mini auto-battler"
     },
+    "rarity": {
+      "Bronze": "Bronze",
+      "Silver": "Silver",
+      "Gold": "Gold",
+      "Diamond": "Diamond",
+      "Master": "Master",
+      "Legend": "Legend"
+    },
+    "filter": {
+      "searchPlaceholder": "Search name / no.",
+      "clear": "Reset",
+      "sortPrefix": "Sort",
+      "allTypes": "All Types",
+      "allRarities": "All Rarities",
+      "resultCount": "{n}/{total}",
+      "sort": {
+        "number": "Dex No.",
+        "rarity": "Rarity",
+        "stars": "Stars",
+        "recent": "Recent",
+        "name": "Name"
+      }
+    },
+    "detail": {
+      "loading": "Loading...",
+      "failed": "Failed to load info.",
+      "baseStats": "Base Stats",
+      "statTotal": "Total",
+      "battleStats": "Battle Stats",
+      "height": "Height",
+      "weight": "Weight"
+    },
     "common": {
       "back": "Back"
     },
@@ -1059,7 +1091,7 @@
     },
     "packDesc": {
       "normal": "5 cards",
-      "type": "Higher rare rate",
+      "type": "Only your chosen type",
       "premium": "Higher high-rare rate"
     },
     "alerts": {
@@ -1077,6 +1109,7 @@
       "dex": "Dex",
       "collected": "{n} collected",
       "emptyDex": "No cards yet. Open a pack to collect your first card!",
+      "noResults": "No cards match your filters.",
       "devGrant": "+ Test currency",
       "drawing": "Drawing...",
       "floor": "Floor {n}",
@@ -1084,6 +1117,7 @@
     },
     "pack": {
       "cardCount": "{n} cards",
+      "pickType": "Choose a Type",
       "tapToOpen": "Tap to open",
       "tapResult": "Tap to see results",
       "tapNext": "Tap for next",

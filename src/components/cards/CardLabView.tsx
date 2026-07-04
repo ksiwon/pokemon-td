@@ -9,53 +9,60 @@ import { pokeAPI } from '../../api/pokeapi';
 import { useTranslation } from '../../i18n';
 import { cardService, PACK_DEFS } from '../../services/CardService';
 import { useCardState } from '../../hooks/useCardState';
+import { useCardMeta } from '../../hooks/useCardMeta';
 import { PullResult, PackType } from '../../types/cards';
-import { Rarity } from '../../data/evolution';
+import { CardFilterState, DEFAULT_CARD_FILTER, applyCardFilter } from '../../utils/cardCatalog';
+import { getTypeColor } from '../../utils/typeEffectiveness';
 import { CardView } from './CardView';
+import { CardControls } from './CardControls';
+import { CardDetailModal } from './CardDetailModal';
 import { PackOpening } from './PackOpening';
 import { DeckBuilder } from './DeckBuilder';
 import { TrainerTower } from './TrainerTower';
 
 type SubView = 'hub' | 'deck' | 'tower';
 
+const TYPE_SLUGS = [
+  'normal', 'fire', 'water', 'electric', 'grass', 'ice', 'fighting', 'poison', 'ground',
+  'flying', 'psychic', 'bug', 'rock', 'ghost', 'dragon', 'dark', 'steel', 'fairy',
+];
+
 export const CardLabView = () => {
   const { t } = useTranslation();
   const navigate = useNavigate();
   const state = useCardState();
   const [view, setView] = useState<SubView>('hub');
-  const [opening, setOpening] = useState<{ type: PackType; results: PullResult[] } | null>(null);
+  const [opening, setOpening] = useState<{ type: PackType; results: PullResult[]; filterType?: string } | null>(null);
   const [busy, setBusy] = useState(false);
-  const [rarityMap, setRarityMap] = useState<Record<number, Rarity>>({});
+  const [typePick, setTypePick] = useState(false); // 타입팩 타입 선택 모달
+  const [filter, setFilter] = useState<CardFilterState>(DEFAULT_CARD_FILTER);
+  const [detailId, setDetailId] = useState<number | null>(null);
 
-  // 추첨 리스트 준비(캐시 시 즉시) + 보유 카드 레어도 조회
+  // 추첨 리스트 준비(캐시 시 즉시)
   useEffect(() => { pokeAPI.preloadRarities().catch(() => {}); }, []);
 
   const ownedIds = useMemo(
-    () => Object.values(state.collection).sort((a, b) => b.obtainedAt - a.obtainedAt),
+    () => Object.values(state.collection),
     [state.collection],
   );
 
-  useEffect(() => {
-    let alive = true;
-    Promise.all(ownedIds.map(async c => {
-      if (rarityMap[c.pokemonId]) return null;
-      const r = await pokeAPI.getRarity(c.pokemonId).catch(() => 'Bronze' as Rarity);
-      return [c.pokemonId, r] as const;
-    })).then(pairs => {
-      if (!alive) return;
-      const add: Record<number, Rarity> = {};
-      pairs.forEach(p => { if (p) add[p[0]] = p[1]; });
-      if (Object.keys(add).length) setRarityMap(m => ({ ...m, ...add }));
-    });
-    return () => { alive = false; };
-  }, [ownedIds]); // eslint-disable-line react-hooks/exhaustive-deps
+  // 보유 카드 이름·타입·레어도 (검색/필터/정렬 + CardView용)
+  const { meta, rarity: rarityMap } = useCardMeta(ownedIds.map(c => c.pokemonId));
 
-  const handleOpen = async (type: PackType) => {
+  // 필터+정렬 적용된 표시 목록 (기본: 도감번호 오름차순)
+  const shownCards = useMemo(
+    () => applyCardFilter(ownedIds, filter, meta, rarityMap),
+    [ownedIds, filter, meta, rarityMap],
+  );
+
+  const detailEntry = detailId != null ? state.collection[detailId] : null;
+
+  const doOpen = async (type: PackType, filterType?: string) => {
     if (busy || !cardService.canOpenPack(type)) return;
     setBusy(true);
     try {
-      const results = await cardService.openPack(type);
-      setOpening({ type, results });
+      const results = await cardService.openPack(type, filterType);
+      setOpening({ type, results, filterType });
     } catch (e) {
       console.warn('[CardLab] 개봉 실패', e);
       alert(t('cards.alerts.openFail'));
@@ -63,6 +70,14 @@ export const CardLabView = () => {
       setBusy(false);
     }
   };
+
+  const handleOpen = (type: PackType) => {
+    // 타입팩은 먼저 타입 선택 → 그 타입만 5장. 나머지는 바로 개봉.
+    if (type === 'type') { if (cardService.canOpenPack('type')) setTypePick(true); return; }
+    doOpen(type);
+  };
+
+  const handlePickType = (ty: string) => { setTypePick(false); doOpen('type', ty); };
 
   if (view === 'deck') return <DeckBuilder onBack={() => setView('hub')} />;
   if (view === 'tower') return <TrainerTower onBack={() => setView('hub')} />;
@@ -124,19 +139,31 @@ export const CardLabView = () => {
           {ownedIds.length === 0 ? (
             <Empty>{t('cards.lab.emptyDex')}</Empty>
           ) : (
-            <DexGrid>
-              {ownedIds.map(c => (
-                <CardView
-                  key={c.pokemonId}
-                  pokemonId={c.pokemonId}
-                  stars={c.stars}
-                  rarity={rarityMap[c.pokemonId]}
-                  isNew={c.isNew}
-                  size={108}
-                  onClick={() => cardService.clearNewFlag(c.pokemonId)}
-                />
-              ))}
-            </DexGrid>
+            <>
+              <CardControls
+                value={filter}
+                onChange={setFilter}
+                resultCount={shownCards.length}
+                totalCount={ownedIds.length}
+              />
+              {shownCards.length === 0 ? (
+                <Empty>{t('cards.lab.noResults')}</Empty>
+              ) : (
+                <DexGrid>
+                  {shownCards.map(c => (
+                    <CardView
+                      key={c.pokemonId}
+                      pokemonId={c.pokemonId}
+                      stars={c.stars}
+                      rarity={rarityMap[c.pokemonId]}
+                      isNew={c.isNew}
+                      size={108}
+                      onClick={() => { cardService.clearNewFlag(c.pokemonId); setDetailId(c.pokemonId); }}
+                    />
+                  ))}
+                </DexGrid>
+              )}
+            </>
           )}
         </Section>
 
@@ -148,20 +175,63 @@ export const CardLabView = () => {
         )}
       </Body>
 
+      {typePick && (
+        <TypePickVeil onClick={() => setTypePick(false)}>
+          <TypePickBox onClick={e => e.stopPropagation()}>
+            <TypePickTitle>{t('cards.pack.pickType')}</TypePickTitle>
+            <TypeGrid>
+              {TYPE_SLUGS.map(ty => (
+                <TypeChip key={ty} $c={getTypeColor(ty)} onClick={() => handlePickType(ty)}>
+                  {t(`types.${ty}`)}
+                </TypeChip>
+              ))}
+            </TypeGrid>
+          </TypePickBox>
+        </TypePickVeil>
+      )}
+
       {opening && (
         <PackOpening
           packType={opening.type}
+          filterType={opening.filterType}
           results={opening.results}
           onClose={() => setOpening(null)}
         />
       )}
       {busy && <BusyVeil><Spinner /> {t('cards.lab.drawing')}</BusyVeil>}
+
+      {detailEntry && detailId != null && (
+        <CardDetailModal
+          pokemonId={detailId}
+          stars={detailEntry.stars}
+          rarity={rarityMap[detailId]}
+          onClose={() => setDetailId(null)}
+        />
+      )}
     </Root>
   );
 };
 
 // ─── styled ──────────────────────────────────────────────────────────────────
 const spin = keyframes`to { transform: rotate(360deg); }`;
+
+const TypePickVeil = styled.div`
+  position: fixed; inset: 0; z-index: 3600; display: flex; align-items: center; justify-content: center;
+  background: rgba(4,6,12,0.7); backdrop-filter: blur(4px); padding: 20px;
+`;
+const TypePickBox = styled.div`
+  width: 100%; max-width: 420px; background: radial-gradient(circle at top, #161d33, #0b0f1a);
+  border: 1px solid rgba(255,255,255,0.1); border-radius: 16px; padding: 22px;
+  box-shadow: 0 24px 60px rgba(0,0,0,0.6);
+`;
+const TypePickTitle = styled.h3`font-size: 15px; font-weight: 800; margin: 0 0 14px; text-align: center; color: #f1f5f9;`;
+const TypeGrid = styled.div`display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px;`;
+const TypeChip = styled.button<{ $c: string }>`
+  padding: 10px 6px; border-radius: 10px; border: 1px solid ${p => p.$c}; cursor: pointer;
+  background: ${p => p.$c}22; color: #fff; font-size: 13px; font-weight: 700;
+  transition: transform 0.12s, background 0.12s;
+  &:hover { background: ${p => p.$c}; transform: translateY(-2px); }
+`;
 
 const Root = styled.div`
   min-height: 100vh; background: radial-gradient(circle at top, #11162a, #070910);

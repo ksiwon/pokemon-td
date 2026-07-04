@@ -20,11 +20,13 @@ const PACK_COLOR: Record<PackType, string> = {
 
 interface Props {
   packType: PackType;
+  /** 타입팩일 때 선택한 타입 슬러그(표시용). */
+  filterType?: string;
   results: PullResult[];
   onClose: () => void;
 }
 
-export const PackOpening = ({ packType, results, onClose }: Props) => {
+export const PackOpening = ({ packType, filterType, results, onClose }: Props) => {
   const { t } = useTranslation();
   const [phase, setPhase] = useState<Phase>('sealed');
   const [idx, setIdx] = useState(0);          // 현재 공개 중인 카드 인덱스
@@ -69,7 +71,7 @@ export const PackOpening = ({ packType, results, onClose }: Props) => {
         <SealedWrap onClick={open}>
           <Pack $color={accent}>
             <PackShine />
-            <PackLabel>{t(`cards.packNames.${packType}`)}</PackLabel>
+            <PackLabel>{t(`cards.packNames.${packType}`)}{filterType ? ` · ${t(`types.${filterType}`)}` : ''}</PackLabel>
             <PackSub>{t('cards.pack.cardCount', { n: results.length })}</PackSub>
           </Pack>
           <TapHint>{t('cards.pack.tapToOpen')}</TapHint>
