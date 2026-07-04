@@ -10,7 +10,7 @@
 //   - 모달 닫힘 시 finalizeGame 호출하면 레이팅 업데이트 + finished 표기
 //   - 5분 후 cleanupExpiredRooms가 자동으로 방 삭제
 
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, useRef } from "react";
 import styled, { keyframes } from "styled-components";
 import { Routes, Route, useNavigate, useLocation, Navigate } from 'react-router-dom';
 import { authService } from "./services/AuthService";
@@ -105,24 +105,31 @@ function App() {
   const location = useLocation();
   const resetGame = useGameStore((state) => state.reset);
 
+  // [QUOTA-FIX] 예전엔 deps에 location.pathname이 있어 '라우트 이동마다' 재구독 → 즉시 콜백이
+  //   syncAchievementsFromDB(Firestore 전체 읽기 + 무조건 bulk 쓰기)를 매번 실행, 무료 쿼터를 빠르게 소모했음.
+  //   구독은 1회만 하고, 실제 uid가 바뀔 때만 동기화한다. 로그인 리다이렉트는 window.location으로 현재값 조회.
+  const lastSyncedUidRef = useRef<string | null>(null);
   useEffect(() => {
     const unsubscribe = authService.onAuthStateChange((authedUser) => {
       setUser(authedUser);
       setIsAuthLoading(false);
       if (authedUser) {
-        // [FREE-TIER] 오프라인 모드는 Firestore 동기화 시도하지 않음
-        if (!authService.isOfflineMode()) {
+        // [FREE-TIER] 오프라인 모드는 Firestore 동기화 시도하지 않음. 같은 uid 반복 동기화도 생략.
+        if (!authService.isOfflineMode() && lastSyncedUidRef.current !== authedUser.uid) {
+          lastSyncedUidRef.current = authedUser.uid;
           saveService.syncAchievementsFromDB().catch(err =>
             console.warn('[App] Failed to sync achievements:', err)
           );
         }
-        if (location.pathname === '/login') {
+        if (window.location.pathname === '/login') {
           navigate('/');
         }
+      } else {
+        lastSyncedUidRef.current = null;
       }
     });
     return unsubscribe;
-  }, [navigate, location.pathname]);
+  }, [navigate]);
 
   const handlePreloadAndNavigate = useCallback(
     async (mapId: string, gameMode: 'single' | 'multi', storyData?: object) => {

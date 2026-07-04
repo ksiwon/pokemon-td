@@ -58,9 +58,11 @@ const MAX_ACTIVE_ROOMS = 12;
 //   배틀 보상 및 탈락 처리는 여전히 서버 트랜잭션이 수행하지만,
 //   일반 구매/판매는 클라이언트가 로컬에서 즉시 반영하고 Firebase에 푸시.
 //   레이스 컨디션 방지는 GameLayout의 "로컬 낙관적 갱신 플래그"가 담당.
+// [C2-FIX] isAlive 제거 — 생존 여부는 playerDefeated/leaveRoom 단일 경로만 변경.
+//   클라이언트 동기화가 isAlive:false를 먼저 써서 탈락 순위·레이팅이 누락되던 버그 방지.
 const CLIENT_WRITABLE_PLAYER_FIELDS: Array<keyof PlayerGameState> = [
   'wave', 'towers', 'waveCompleted',
-  'money', 'lives', 'isAlive',
+  'money', 'lives',
 ];
 
 class MultiplayerService {
@@ -191,7 +193,6 @@ class MultiplayerService {
         remove(ref(rtdb, `gameStates/${roomId}`)),
         remove(ref(rtdb, `towerDetails/${roomId}`)),
         remove(ref(rtdb, `battleResults/${roomId}`)),
-        remove(ref(rtdb, `debuffs/${roomId}`)),
         remove(ref(rtdb, `presence/${roomId}`)),
       ]);
       console.log(`[MS] Deleted room and all related data: ${roomId}`);
@@ -280,6 +281,10 @@ class MultiplayerService {
       }
       const isAlreadyPlayer = room.players.some(p => p.userId === user.uid);
       if (isAlreadyPlayer) return room; // 멱등
+      // [SEC] 강퇴당한 유저는 즉시 재입장 불가.
+      if ((room.kickedUserIds ?? []).includes(user.uid)) {
+        joinError = new Error('You were removed from this room'); return room;
+      }
       if (room.players.length >= room.maxPlayers) {
         joinError = new Error('Room is full'); return room;
       }
@@ -474,6 +479,8 @@ class MultiplayerService {
     const room = snapshot.val() as Room;
     if (room.hostId !== user.uid) throw new Error('Only host can start game');
     if (room.players.length < 2) throw new Error('Need at least 2 players');
+    // [M5-FIX] 이미 시작된 방에서 재호출(더블클릭 등) 시 진행 중 gameStates가 초기화되는 것 방지.
+    if (room.status !== 'waiting') throw new Error('Game already started');
     await this.initializePvPGameState(roomId, room.players);
     await update(roomRef, { status: 'starting' });
     setTimeout(async () => {
@@ -514,7 +521,10 @@ class MultiplayerService {
       if (loadingReady[userId]) { updated = true; return gs; }
       loadingReady[userId] = true;
       updated = true;
-      const allLoaded = gs.players.every(p => loadingReady[p.userId] === true);
+      // [C1-FIX] 살아있는(=이탈하지 않은) 플레이어만 로딩 완료 대상으로 요구.
+      //   예전엔 gs.players 전원을 요구 → 로딩 중 이탈/크래시한 사람이 있으면
+      //   나머지가 로딩 화면에 영영 갇혔음. leaveRoom은 isAlive=false로 표시하므로 제외됨.
+      const allLoaded = gs.players.filter(p => p.isAlive).every(p => loadingReady[p.userId] === true);
       if (allLoaded) {
         return {
           ...gs,
@@ -526,6 +536,24 @@ class MultiplayerService {
       return { ...gs, loadingReady };
     });
     return updated;
+  }
+
+  /**
+   * [C1-FIX] 로딩 워치독 — 크래시(leaveRoom 미호출)한 플레이어가 loadingReady를 채우지 않아
+   *   전원이 로딩에 갇히는 경우를 대비한 강제 시작. 아직 loading 페이즈일 때만 waiting_wave로 전환.
+   *   어떤 클라이언트가 호출해도 안전(트랜잭션 멱등).
+   */
+  async forceStartFromLoading(roomId: string): Promise<void> {
+    const gsRef = ref(rtdb, `gameStates/${roomId}`);
+    await runTransaction(gsRef, (gs: MultiplayerGameState | null) => {
+      if (!gs) return gs;
+      if (gs.currentPhase !== 'loading') return gs;
+      return {
+        ...gs,
+        currentPhase: 'waiting_wave' as GamePhase,
+        phaseEndTime: this.now() + FIRST_WAVE_PREP_SECONDS * 1000,
+      };
+    });
   }
 
   async setGamePhase(roomId: string, phase: GamePhase): Promise<void> {
@@ -802,7 +830,22 @@ class MultiplayerService {
           ? { ...p, isAlive: false, placement: placementRank }
           : p
       );
-      return { ...gs, players: updatedPlayers, rankings };
+      const next: MultiplayerGameState = { ...gs, players: updatedPlayers, rankings };
+
+      // [C3-FIX] 웨이브 진행 중 어떤 플레이어가 죽으면 '살아있는 미완료자'가 사라져
+      //   웨이브가 영영 안 끝나던 데드락 방지 — 사망 반영 후 남은 생존자 전원이 이미
+      //   웨이브를 끝냈다면 여기서 다음 페이즈로 전환한다(markWaveCompleted와 동일 규칙).
+      if (gs.currentPhase === 'wave') {
+        const aliveAfter = updatedPlayers.filter(p => p.isAlive);
+        if (aliveAfter.length > 0 && aliveAfter.every(p => p.waveCompleted)) {
+          next.currentPhase =
+            gs.currentRound > 0 && gs.currentRound % BATTLE_WAVE_INTERVAL === 0
+              ? ('waiting_battle' as GamePhase)
+              : ('waiting_wave' as GamePhase);
+          next.phaseEndTime = this.now() + PHASE_COUNTDOWN_SECONDS * 1000;
+        }
+      }
+      return next;
     });
     console.log(`[MS] Player ${userId} defeated at rank ${placementRank}`);
   }
@@ -1313,6 +1356,21 @@ class MultiplayerService {
   async getRoom(roomId: string): Promise<Room | null> {
     const snap = await get(ref(rtdb, `rooms/${roomId}`));
     return snap.exists() ? (snap.val() as Room) : null;
+  }
+
+  /**
+   * [C4-FIX] 프레즌스(접속) 상태 구독. 생존 클라이언트가 장기 연결끊김 플레이어를 몰수(forfeit)해
+   *   게임이 3h TTL까지 멈추지 않게 하는 워치독의 입력. { [userId]: {online, ...} } 형태.
+   */
+  onPresenceUpdate(
+    roomId: string,
+    callback: (presence: Record<string, { online: boolean; joinedAt?: number; lastSeen?: number }>) => void
+  ): () => void {
+    const pRef = ref(rtdb, `presence/${roomId}`);
+    const listener = onValue(pRef, (snap) => {
+      callback(snap.exists() ? snap.val() : {});
+    });
+    return () => off(pRef, 'value', listener);
   }
 
   getCurrentRoomId(): string | null {

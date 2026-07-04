@@ -135,7 +135,8 @@ export const DeckBuilder = ({ onBack }: { onBack: () => void }) => {
       <TopBar>
         <BackBtn onClick={onBack}><ArrowLeft size={16} /> 뒤로</BackBtn>
         <Title>덱 편성 <Count>{count}/6</Count></Title>
-        <SaveBtn $on={count > 0} onClick={save} disabled={count === 0}>
+        {/* 0장 저장도 허용 → 모든 카드 회수(덱 비우기) 가능 */}
+        <SaveBtn $on onClick={save}>
           <Save size={15} /> {saved ? '저장됨' : '저장'}
         </SaveBtn>
       </TopBar>
@@ -154,7 +155,7 @@ export const DeckBuilder = ({ onBack }: { onBack: () => void }) => {
               {synergies.sort((a, b) => b.count - a.count).map(s => (
                 <SynChip key={s.type} $c={getTypeColor(s.type)}>
                   <SynDot $c={getTypeColor(s.type)} />
-                  {s.type} {s.count} <SynTier>·{s.tier === 1 ? '1.1x' : '1.3x'}</SynTier>
+                  {s.type} {s.count} <SynTier>·{s.tier >= 3 ? '1.5x' : s.tier === 2 ? '1.3x' : '1.1x'}</SynTier>
                 </SynChip>
               ))}
             </SynList>

@@ -3,17 +3,31 @@ service cloud.firestore {
   match /databases/{database}/documents {
 
     // ─── 유저 프로필 ─────────────────────────────────────
+    // [SEC] rating은 클라이언트가 쓰지만(서버 권한 없음), 말도 안 되는 값(예: 9,999,999)으로
+    //   PVP 리더보드를 도배하는 것을 상한으로 차단. 정상 ELO는 1000 기준 ±32/게임이라 5000이면 충분.
+    //   (Spark 무료 플랜엔 Cloud Functions가 없어 완전한 서버 검증은 불가 — 이건 '벽 높이기'.)
     match /users/{userId} {
       allow read: if request.auth != null;
-      allow write: if request.auth != null && request.auth.uid == userId;
+      allow write: if request.auth != null && request.auth.uid == userId
+                   && (!('rating' in request.resource.data)
+                       || (request.resource.data.rating is number
+                           && request.resource.data.rating >= 0
+                           && request.resource.data.rating <= 5000));
     }
 
     // ─── 전당등록 ────────────────────────────────────────
     match /hallOfFame/{entry} {
       allow read: if request.auth != null;
       allow create: if request.auth != null
-                    && request.resource.data.userId == request.auth.uid;
-      // 본인 기록만 수정 가능 (악용 방지)
+                    && request.resource.data.userId == request.auth.uid
+                    && request.resource.data.wave is number
+                    && request.resource.data.wave >= 0
+                    && request.resource.data.wave <= 100
+                    && request.resource.data.clearTime is number
+                    && request.resource.data.clearTime >= 0
+                    && (!('pokemonUsed' in request.resource.data)
+                        || request.resource.data.pokemonUsed.size() <= 30);
+      // 본인 기록만 수정/삭제 가능 (악용 방지)
       allow update, delete: if request.auth != null
                             && resource.data.userId == request.auth.uid;
     }
@@ -21,11 +35,19 @@ service cloud.firestore {
     // ─── 리더보드 ────────────────────────────────────────
     match /leaderboards/{entry} {
       allow read: if request.auth != null;
-      // 문서 ID 형식: ${userId}_${mapId}
-      // 본인 ID로 시작하는 문서만 쓰기 가능
+      // 문서 ID 형식: ${userId}_${mapId} — 본인 ID로 시작하는 문서만.
+      // [SEC] highestWave/rating 상한으로 가짜 기록(웨이브 9999 등) 차단.
       allow create, update: if request.auth != null
                             && request.resource.data.userId == request.auth.uid
-                            && entry.matches(request.auth.uid + '_.*');
+                            && entry.matches(request.auth.uid + '_.*')
+                            && (!('highestWave' in request.resource.data)
+                                || (request.resource.data.highestWave is number
+                                    && request.resource.data.highestWave >= 0
+                                    && request.resource.data.highestWave <= 100))
+                            && (!('rating' in request.resource.data)
+                                || (request.resource.data.rating is number
+                                    && request.resource.data.rating >= 0
+                                    && request.resource.data.rating <= 5000));
       allow delete: if request.auth != null
                     && resource.data.userId == request.auth.uid;
     }
@@ -44,11 +66,16 @@ service cloud.firestore {
     }
 
     // ─── AP 랭킹 ────────────────────────────────────────
+    // [SEC] totalAP 상한으로 랭킹 위조 차단(전체 업적 합산 최대치도 수천 수준).
     match /apRankings/{userId} {
       allow read: if request.auth != null;
       allow write: if request.auth != null
                    && request.auth.uid == userId
-                   && request.resource.data.userId == request.auth.uid;
+                   && request.resource.data.userId == request.auth.uid
+                   && (!('totalAP' in request.resource.data)
+                       || (request.resource.data.totalAP is number
+                           && request.resource.data.totalAP >= 0
+                           && request.resource.data.totalAP <= 100000));
     }
 
     // ─── 그 외 모든 경로 차단 ────────────────────────────

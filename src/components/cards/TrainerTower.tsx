@@ -20,6 +20,8 @@ export const TrainerTower = ({ onBack }: { onBack: () => void }) => {
   const deck = useMemo(() => cardService.getDeck(), [state.deck]);
 
   const [phase, setPhase] = useState<Phase>('idle');
+  // 이번 전투에서 실제 싸운 층(스냅샷). 보상 지급으로 towerProgress가 바뀌어도 결과 표기가 안 흔들리게.
+  const [foughtFloor, setFoughtFloor] = useState(floor);
   const [units, setUnits] = useState<Record<string, BattleCard>>({});
   const [playerOrder, setPlayerOrder] = useState<BattleCard[]>([]);
   const [enemyOrder, setEnemyOrder] = useState<BattleCard[]>([]);
@@ -34,6 +36,8 @@ export const TrainerTower = ({ onBack }: { onBack: () => void }) => {
 
   const startBattle = async () => {
     if (deck.length === 0) { alert('먼저 덱을 편성하세요!'); return; }
+    const currentFloor = floor; // 이번 전투 층 고정
+    setFoughtFloor(currentFloor);
     setPhase('loading');
     try {
       // 플레이어 팀 빌드
@@ -47,13 +51,26 @@ export const TrainerTower = ({ onBack }: { onBack: () => void }) => {
       }
       if (player.length === 0) { alert('덱 카드를 불러오지 못했습니다.'); setPhase('idle'); return; }
 
-      const seed = floor * 1000 + 7;
-      const enemy = await cardBattleService.generateEnemyTeam(floor, seed);
+      const seed = currentFloor * 1000 + 7;
+      const enemy = await cardBattleService.generateEnemyTeam(currentFloor, seed);
 
       // 시뮬레이션(사본을 변형) → 로그
       const pSim = player.map(c => ({ ...c }));
       const eSim = enemy.map(c => ({ ...c }));
       const res = cardBattleService.simulate(pSim, eSim, seed);
+
+      // [FIX] 보상은 전투 결과가 확정되는 지금 즉시 지급 → 재생 중 '나가기'로 이탈해도 승리 보상 손실 없음.
+      //   (기존엔 재생 완료 시점 finish에서 지급 → 중도 이탈 시 이긴 전투가 조용히 무효)
+      let rw: Reward | null = null;
+      if (res.winner === 'player') {
+        const firstClear = currentFloor > cardService.getTowerProgress();
+        const boss = currentFloor % 10 === 0;
+        const coins = firstClear ? 40 + currentFloor * 10 : 15 + currentFloor * 3;
+        const shards = firstClear ? (boss ? 25 : currentFloor % 5 === 0 ? 8 : 3) : 0;
+        cardService.grantRewards({ coins, starShards: shards });
+        if (firstClear) cardService.setTowerProgress(currentFloor);
+        rw = { coins, starShards: shards, firstClear };
+      }
 
       // 재생용: 시너지 적용된 사본(pSim/eSim)을 풀피로 리셋
       const all: Record<string, BattleCard> = {};
@@ -69,6 +86,7 @@ export const TrainerTower = ({ onBack }: { onBack: () => void }) => {
       setHpMap(hp0);
       setLog(res.log);
       setResult(res);
+      setReward(rw);
       setStep(0);
       setPhase('battle');
     } catch (e) {
@@ -102,25 +120,18 @@ export const TrainerTower = ({ onBack }: { onBack: () => void }) => {
     finish();
   };
 
+  // 보상은 startBattle에서 이미 지급됨 — 여기선 결과 화면 전환만.
   const finish = () => {
     if (!result || phase === 'result') return;
-    let rw: Reward | null = null;
-    if (result.winner === 'player') {
-      const firstClear = floor > cardService.getTowerProgress();
-      const boss = floor % 10 === 0;
-      const coins = firstClear ? 40 + floor * 10 : 15 + floor * 3;
-      const shards = firstClear ? (boss ? 25 : floor % 5 === 0 ? 8 : 3) : 0;
-      cardService.grantRewards({ coins, starShards: shards });
-      if (firstClear) cardService.setTowerProgress(floor);
-      rw = { coins, starShards: shards, firstClear };
-    }
-    setReward(rw);
     setPhase('result');
   };
 
   const reset = () => {
     setPhase('idle'); setResult(null); setReward(null); setLog([]); setStep(0);
   };
+
+  // 전투/결과 중엔 싸운 층을, 대기 중엔 다음 도전 층을 표시(보상지급 후 층 증가로 인한 표기 흔들림 방지).
+  const headerFloor = (phase === 'battle' || phase === 'result') ? foughtFloor : floor;
 
   // ─── 렌더 ───────────────────────────────────────────────────────
   const renderUnit = (u: BattleCard) => {
@@ -154,7 +165,7 @@ export const TrainerTower = ({ onBack }: { onBack: () => void }) => {
       <TopBar>
         <BackBtn onClick={onBack}><ArrowLeft size={16} /> 뒤로</BackBtn>
         <Title>트레이너 타워</Title>
-        <FloorChip>{floor}층{floor % 10 === 0 ? ' · 보스' : ''}</FloorChip>
+        <FloorChip>{headerFloor}층{headerFloor % 10 === 0 ? ' · 보스' : ''}</FloorChip>
       </TopBar>
 
       {phase === 'idle' && (
@@ -202,7 +213,7 @@ export const TrainerTower = ({ onBack }: { onBack: () => void }) => {
             </ResultTitle>
             <ResultSub>
               {result.winner === 'player'
-                ? `${floor}층 클리어 · 잔존 ${result.playerAlive}마리`
+                ? `${foughtFloor}층 클리어 · 잔존 ${result.playerAlive}마리`
                 : `잔존 ${result.playerAlive} vs ${result.enemyAlive}`}
             </ResultSub>
             {reward && (reward.coins > 0 || reward.starShards > 0) && (

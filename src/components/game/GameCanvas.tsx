@@ -103,7 +103,10 @@ const PokemonImage: React.FC<{
         imageRef.current.cache();
         imageRef.current.filters([Konva.Filters.Grayscale]);
       } else {
+        // [REVIVE-FIX] 필터만 비우면 캐시된 회색조 비트맵이 남아 부활 후에도 회색으로 보임.
+        //   캐시를 해제해 원본 컬러로 다시 렌더.
         imageRef.current.filters([]);
+        imageRef.current.clearCache();
       }
     }
   }, [isFainted, image]);

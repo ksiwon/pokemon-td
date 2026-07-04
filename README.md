@@ -69,8 +69,7 @@
 | 바이(Bye) | 배틀 없이 다음 라운드 진행, 골드 +50 자동 지급 |
 
 #### 🎯 PvP 심화 시스템
-- **실시간 4분할 관전**: `BattlePhaseUI`에서 최대 4명의 상대 맵을 동시에 관전
-- **견제 공격**: 관전 중 디버프 또는 몬스터를 상대 필드에 직접 투입
+- **배틀 페이즈 관전**: `BattlePhaseUI`에서 자신의 매치 TFT 전투를 실시간 관전(사람 매치 완주 보장·워치독 포함)
 - **ELO 레이팅**: 기본값 1000, 승패·상대 레이팅에 따라 등락
 - **연승/연패 보너스**: 2/3/4연속 시 추가 골드 지급으로 역전 기회 제공
 - **스마트 AI 봇**: Easy / Medium / Hard — 인원 부족 시 호스트가 추가 가능
@@ -155,7 +154,6 @@ src/
 │   │   └── StorySelector.tsx         # 챕터 및 스테이지 선택 UI
 │   └── ui/
 │       ├── FloatingSettings.tsx      # 플로팅 설정 버튼
-│       ├── HUD.tsx                   # 게임 HUD (라이프/골드/웨이브/속도)
 │       ├── MapSelector.tsx           # 맵 선택 화면 (8종 맵 카드)
 │       ├── PokemonManager.tsx        # 배치된 포켓몬 관리 패널
 │       ├── PokemonPicker.tsx         # 포켓몬 뽑기/구매 (레어도별 확률)
@@ -343,15 +341,19 @@ firebase deploy --only firestore   # Firestore 규칙 (firestore.rules) — 변�
 - `rooms/{roomId}` — 방 메타데이터, 플레이어 목록, `memberIds`(보안 규칙용 멤버십 맵)
 - `gameStates/{roomId}` — 게임 진행 상태 (페이즈, 라이프, 골드, 순위)
 - `towerDetails/{roomId}/{userId}` — 타워 배치 상세 (배틀 시뮬레이션용)
-- `battleResults/{roomId}` — 라운드별 배틀 결과
-- `debuffs/{roomId}/{userId}` — 견제 공격(디버프) 전달
-- `presence/{roomId}` — 연결 상태 (접속 끊김 감지)
+- `presence/{roomId}` — 연결 상태 (접속 끊김 감지 → 장기 오프라인 시 몰수 처리)
+
+> 참고: 라운드별 배틀 결과는 게임 상태(`gameStates.battleResults`) 안에 트랜잭션으로 저장됩니다.
 
 ### 🔒 보안 규칙
 - **RTDB** (`database.rules.json`): 게임 상태 쓰기는 방 `memberIds`에 속한 참가자로 제한.
-  `towerDetails`·`presence`·`debuffs`의 유저별 경로는 본인(또는 AI) 만 쓰기 가능.
+  `towerDetails`·`presence`의 유저별 경로는 **방 멤버 본인(또는 호스트가 구동하는 AI)** 만 쓰기 가능.
+  존재하지 않는 방에 대한 **오펀 노드 생성 차단**(정리 삭제만 허용)으로 무료 용량 남용 방지.
 - **Firestore** (`firestore.rules`): 유저 문서/리더보드/전당/업적은 본인 소유 문서만 쓰기 가능.
+  `rating`·`highestWave`·`totalAP` 등에 **범위 상한**을 둬 클라이언트 위조 점수의 랭킹 도배를 억제
+  (Spark 무료 플랜엔 Cloud Functions가 없어 완전 서버 검증은 불가 — 클라이언트 신뢰 모델의 한계).
 - 무료 사용량 초과·장애 시 **오프라인 모드**로 자동 폴백하여 싱글/스토리/카드 모드는 계속 이용 가능.
+- **재접속·연결끊김**: `presence` 기반으로 장기 오프라인 참가자를 자동 몰수(forfeit)하여 게임이 멈추지 않도록 하고, 재접속 시 서버 상태에서 라이프·골드·타워를 복원.
 
 ---
 

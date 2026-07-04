@@ -264,6 +264,8 @@ export const GameLayout: React.FC<GameLayoutProps> = ({ onLeaveGame }) => {
   const defeatedRef            = useRef(false);
   // [BUG-1 FIX] lastPhase를 useRef로 관리 (컴포넌트 레벨 let → 리렌더링마다 null 초기화 방지)
   const lastPhaseRef           = useRef<GamePhase | null>(null);
+  // [C4-FIX] 상대별 '연속 오프라인 시작 시각' 기록(연결끊김 몰수 워치독용)
+  const presenceOfflineSinceRef = useRef<Record<string, number>>({});
 
   // ─────────────────────────────────────────────────────────────
   // Effects — V6/V8 멀티플레이어 로직 전체 보존 + BUG-FIX
@@ -282,6 +284,17 @@ export const GameLayout: React.FC<GameLayoutProps> = ({ onLeaveGame }) => {
     });
     return unsub;
   }, [isMultiplayer, multiRoomId, user]);
+
+  // ─── [C1-FIX] 로딩 워치독 ──────────────────────────────────────
+  //   크래시한 플레이어 때문에 로딩이 끝나지 않는 경우, 40초 후 강제로 웨이브 준비 페이즈로 전환.
+  //   markPlayerLoaded의 alive 필터로 대부분 해결되지만, leaveRoom 없이 탭을 닫은 경우 대비.
+  useEffect(() => {
+    if (!isMultiplayer || !multiRoomId || !multiLoading) return;
+    const id = setTimeout(() => {
+      multiplayerService.forceStartFromLoading(multiRoomId).catch(() => {});
+    }, 40000);
+    return () => clearTimeout(id);
+  }, [isMultiplayer, multiRoomId, multiLoading]);
 
   // ─── 페이즈 구독 (웨이브·배틀 전환, AI 시작, Bye 보너스 등) ─────
   useEffect(() => {
@@ -394,7 +407,10 @@ export const GameLayout: React.FC<GameLayoutProps> = ({ onLeaveGame }) => {
         }
         try {
           const restored = await multiplayerService.getPlayerStateForRejoin(multiRoomId, user.uid);
-          if (restored && restored.wave > 0) {
+          // [M4-FIX] wave>0 조건 제거 — 라운드 0(첫 준비) 중 새로고침 시에도 서버가 가진
+          //   실제 골드/타워를 복원해야 함. 예전엔 wave가 아직 0이라 로컬만 500G로 리셋되고
+          //   동기화 루프가 그 500을 다시 밀어올려 골드가 되돌아가는 버그가 있었음.
+          if (restored) {
             console.log("[GameLayout] Restoring state from Firebase:", {
               lives: restored.lives, money: restored.money, wave: restored.wave,
               towers: restored.towerDetails?.length, isAlive: restored.isAlive,
@@ -488,12 +504,14 @@ export const GameLayout: React.FC<GameLayoutProps> = ({ onLeaveGame }) => {
         state.money  !== prevState.money  ||
         state.towers.length !== prevState.towers.length;
       if (!changed) return;
+      // [C2-FIX] isAlive는 여기서 쓰지 않는다. 예전엔 lives=0 순간 이 동기화가 먼저 isAlive:false를
+      //   써버려, 직후 playerDefeated가 'already dead'로 건너뛰어 placement/rankings/ELO가 기록되지 않았음.
+      //   사망 확정은 playerDefeated 단일 경로가 담당(순위·레이팅 정상 기록).
       multiplayerService.updatePlayerState(multiRoomId, user.uid, {
         wave:    state.wave,
         lives:   state.lives,
         money:   state.money,
         towers:  state.towers.length,
-        isAlive: state.lives > 0,
       });
     });
     return unsubscribe;
@@ -605,6 +623,52 @@ export const GameLayout: React.FC<GameLayoutProps> = ({ onLeaveGame }) => {
     return unsubscribe;
   }, [multiRoomId]);
 
+  // ─── [C4-FIX] 연결끊김 몰수 워치독 ───────────────────────────────
+  //   연결이 끊긴(브라우저 종료 등) 인간 플레이어는 isAlive가 true로 얼어붙어, 남은 라이프가
+  //   깎이지 않으면 게임이 영영 안 끝나(3h TTL) 승자·ELO도 확정되지 않았음.
+  //   생존 클라이언트 중 '심판'(살아있는 인간 userId 사전순 1위)이 프레즌스가 90초 이상 연속
+  //   오프라인인 상대를 playerDefeated로 몰수 → 게임 정상 종료. (playerDefeated는 멱등이라 중복 안전)
+  //   재접속하면 프레즌스가 다시 online → 카운터 해제되어 오탈락 없음. 90초 유예로 짧은 끊김은 무시.
+  useEffect(() => {
+    if (!isMultiplayer || !multiRoomId || !user) return;
+    const FORFEIT_MS = 90000;
+    let players: any[] = [];
+    let presence: Record<string, { online: boolean }> = {};
+
+    const evaluate = () => {
+      const nowMs = Date.now();
+      // 오프라인 시작 시각 유지: 살아있고 오프라인인 인간만 기록, 온라인/사망 시 해제
+      for (const p of players) {
+        const online = presence[p.userId]?.online;
+        if (online === false && p.isAlive && !String(p.userId).startsWith('ai_')) {
+          if (!presenceOfflineSinceRef.current[p.userId]) presenceOfflineSinceRef.current[p.userId] = nowMs;
+        } else {
+          delete presenceOfflineSinceRef.current[p.userId];
+        }
+      }
+      if (defeatedRef.current) return;
+      const me = players.find(p => p.userId === user.uid);
+      if (!me || !me.isAlive) return; // 내가 죽었으면 심판 안 함
+      const aliveHumans = players
+        .filter(p => p.isAlive && !String(p.userId).startsWith('ai_'))
+        .sort((a, b) => String(a.userId).localeCompare(String(b.userId)));
+      if (aliveHumans[0]?.userId !== user.uid) return; // 심판만 실행
+      for (const p of players) {
+        if (!p.isAlive || p.userId === user.uid || String(p.userId).startsWith('ai_')) continue;
+        const since = presenceOfflineSinceRef.current[p.userId];
+        if (since && nowMs - since >= FORFEIT_MS) {
+          console.log(`[GameLayout] Forfeiting long-disconnected player ${p.userId}`);
+          multiplayerService.playerDefeated(multiRoomId, p.userId).catch(() => {});
+        }
+      }
+    };
+
+    const unsubP = multiplayerService.onPresenceUpdate(multiRoomId, (pres) => { presence = pres; evaluate(); });
+    const unsubG = multiplayerService.onGameStateUpdate(multiRoomId, (pl) => { players = pl; evaluate(); });
+    const iv = setInterval(evaluate, 15000);
+    return () => { unsubP(); unsubG(); clearInterval(iv); };
+  }, [isMultiplayer, multiRoomId, user]);
+
   // ─── AI 정리 ────────────────────────────────────────────────────
   useEffect(() => {
     return () => { aiPlayerManager.stopAll(); };
@@ -619,6 +683,13 @@ export const GameLayout: React.FC<GameLayoutProps> = ({ onLeaveGame }) => {
   };
 
   const handleOpenPicker = () => {
+    // [STORY-FEE-FIX] 스토리 모드에서 배치 가능한 히어로가 하나도 없으면(전부 배치됨) 20G를 물리지 않는다.
+    //   기존엔 20G 내고 '모두 배치됨' 안내만 보게 됐음 → 안내 화면은 무료로 연다.
+    if (storyAccumulatedPool && storyAccumulatedPool.length > 0) {
+      const placed = new Set(useGameStore.getState().towers.map(t => t.pokemonId));
+      const available = storyAccumulatedPool.filter(id => !placed.has(id));
+      if (available.length === 0) { setShowPicker(true); return; }
+    }
     if (!spendMoney(20)) { alert(t("gameLayout.notEnoughMoneyPicker")); return; }
     setShowPicker(true);
   };
@@ -878,12 +949,16 @@ export const GameLayout: React.FC<GameLayoutProps> = ({ onLeaveGame }) => {
         <MultiplayerGameOverModal
           players={finalPlayers}
           myUserId={user.uid}
-          onClose={() => {
+          onClose={async () => {
             setShowGameOverModal(false);
-            // [NEW-1 FIX] finalizeGame — 레이팅 업데이트 + 방 finished 마킹
-            multiplayerService.finalizeGame(multiRoomId).catch(err =>
-              console.warn("[GameLayout] finalizeGame failed:", err)
-            );
+            // [M2-FIX] finalizeGame(레이팅 계산·기록)을 반드시 await 완료한 뒤 방을 나간다.
+            //   마지막 생존자는 leaveRoom이 방/게임상태를 삭제하는데, 예전엔 await 없이 병행 실행되어
+            //   ELO 쓰기가 삭제와 경합해 조용히 유실될 수 있었음.
+            try {
+              await multiplayerService.finalizeGame(multiRoomId);
+            } catch (err) {
+              console.warn("[GameLayout] finalizeGame failed:", err);
+            }
             handleResetAndLeave();
           }}
         />
@@ -904,7 +979,8 @@ export const GameLayout: React.FC<GameLayoutProps> = ({ onLeaveGame }) => {
       {clerkOrScoutPromptQueue && clerkOrScoutPromptQueue.length > 0 && !waveEndItemPick && <WorkMilestoneModal />}
 
       {/* 3. 진화 확인 (알바 마일스톤 완료 후) */}
-      {evolutionConfirmQueue && evolutionConfirmQueue.length > 0 && !waveEndItemPick && clerkOrScoutPromptQueue.length === 0 && <EvolutionConfirmModal />}
+      {/* [A3-FIX] 웨이브 진행 중엔 전체화면 진화 확인 모달을 띄우지 않는다(입력 차단 → 라이프 누수 방지). 웨이브 종료 후 표시. */}
+      {evolutionConfirmQueue && evolutionConfirmQueue.length > 0 && !isWaveActive && !waveEndItemPick && clerkOrScoutPromptQueue.length === 0 && <EvolutionConfirmModal />}
 
       {/* 4. 스킬 픽커 (진화 확인 완료 후) */}
       {skillChoiceQueue && skillChoiceQueue.length > 0 && !waveEndItemPick && clerkOrScoutPromptQueue.length === 0 && evolutionConfirmQueue.length === 0 && <SkillPicker />}

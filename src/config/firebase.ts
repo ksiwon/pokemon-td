@@ -27,17 +27,40 @@ const firebaseConfig = {
   databaseURL: import.meta.env.VITE_FIREBASE_DATABASE_URL,
 };
 
-const app = initializeApp(firebaseConfig);
-export const auth = getAuth(app);
+// [OFFLINE-FIX] 초기화를 try/catch로 감싼다.
+//   env 누락/오설정 등으로 Firebase SDK 초기화가 throw하면 이 모듈을 import하는 앱 전체가
+//   렌더 이전에 죽어 '화이트스크린'이 됐다(오프라인 모드조차 진입 불가). 오프라인 모드는 Firebase
+//   없이 LocalStorage만으로 동작하므로, 여기서 실패를 삼키고 소비자(AuthService 등)가 각자 방어한다.
+let _app: ReturnType<typeof initializeApp> | undefined;
+let _auth: ReturnType<typeof getAuth> | undefined;
+let _db: ReturnType<typeof initializeFirestore> | undefined;
+let _rtdb: ReturnType<typeof getDatabase> | undefined;
+let _googleProvider: GoogleAuthProvider | undefined;
 
-export const db = initializeFirestore(app, {
-  localCache: persistentLocalCache({
-    tabManager: persistentMultipleTabManager(),
-  }),
-});
+try {
+  _app = initializeApp(firebaseConfig);
+  _auth = getAuth(_app);
+  _db = initializeFirestore(_app, {
+    localCache: persistentLocalCache({
+      tabManager: persistentMultipleTabManager(),
+    }),
+  });
+  _googleProvider = new GoogleAuthProvider();
+} catch (e) {
+  console.error('[firebase] 초기화 실패 — 오프라인 모드로만 이용 가능합니다.', e);
+}
 
-export const rtdb = getDatabase(app);
-export const googleProvider = new GoogleAuthProvider();
+// RTDB는 별도 격리 — databaseURL 미지정 등으로 실패해도 Auth/Firestore(및 오프라인)는 살린다.
+try {
+  if (_app) _rtdb = getDatabase(_app);
+} catch (e) {
+  console.error('[firebase] RTDB 초기화 실패 — 멀티플레이만 비활성화됩니다.', e);
+}
+
+export const auth = _auth as ReturnType<typeof getAuth>;
+export const db = _db as ReturnType<typeof initializeFirestore>;
+export const rtdb = _rtdb as ReturnType<typeof getDatabase>;
+export const googleProvider = _googleProvider as GoogleAuthProvider;
 
 // ─── [FIX-RTDB] RTDB 연결 상태 감시 ────────────────────────────
 // [FREE-TIER] 무료 플랜 동시 연결 100개 한도 보호:

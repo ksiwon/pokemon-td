@@ -103,57 +103,64 @@ export const PokemonPicker: React.FC<{ onClose: () => void; storyHeroPool?: numb
 
   const loadChoices = async () => {
     setIsLoading(true);
+    // [OFFLINE-FIX] try/finally로 감싸 어떤 경로로 실패해도 isLoading이 반드시 해제되게 함.
+    //   (기존엔 getPokemon/getRarity가 reject하면 로딩 스피너가 영영 멈춰 있었음 — PokeAPI 무응답 시)
+    try {
+      // 매 호출마다 스토어에서 최신 towers를 읽어 stale closure 방지
+      const currentTowers = useGameStore.getState().towers;
+      const placedPokemonIds = new Set(currentTowers.map(t => t.pokemonId));
 
-    // 매 호출마다 스토어에서 최신 towers를 읽어 stale closure 방지
-    const currentTowers = useGameStore.getState().towers;
-    const placedPokemonIds = new Set(currentTowers.map(t => t.pokemonId));
+      let ids: number[];
 
-    let ids: number[];
+      if (storyHeroPool && storyHeroPool.length > 0) {
+        // ── 스토리 모드: heroPool에서 중복 없이 선택 ──────────────────────────
+        const available = storyHeroPool.filter(id => !placedPokemonIds.has(id));
 
-    if (storyHeroPool && storyHeroPool.length > 0) {
-      // ── 스토리 모드: heroPool에서 중복 없이 선택 ──────────────────────────
-      const available = storyHeroPool.filter(id => !placedPokemonIds.has(id));
+        // 배치 가능한 후보가 전혀 없으면 → "모두 배치됨" 상태로 전환
+        if (available.length === 0) {
+          setAllPlaced(true);
+          return;
+        }
 
-      // 배치 가능한 후보가 전혀 없으면 → "모두 배치됨" 상태로 전환
-      if (available.length === 0) {
-        setAllPlaced(true);
-        setIsLoading(false);
-        return;
+        setAllPlaced(false);
+        // 풀에서 최대 3개 중복 없이 뽑기
+        const shuffled = [...available].sort(() => Math.random() - 0.5);
+        ids = shuffled.slice(0, 3);
+      } else {
+        // ── 일반 모드: 기존 랜덤 가중치 방식 ─────────────────────────────────
+        // 콘테스트 홀에 포켓몬을 내보냈으면 근무 누적 웨이브만큼 고레어 등장 확률을 끌어올린다.
+        const st = useGameStore.getState();
+        const contestTiles = getFacilityTiles(getMapById(st.currentMap)).contestTiles;
+        const scout = st.towers.find(t =>
+          contestTiles.some(s => s.x === Math.floor(t.position.x / 64) && s.y === Math.floor(t.position.y / 64)));
+        const boost = scout ? rarityBoostFromWaves(scout.shopWavesHeld ?? 0) : 0;
+        const [id1, id2, id3] = await Promise.all([
+          pokeAPI.getRandomPokemonIdWithRarity(boost),
+          pokeAPI.getRandomPokemonIdWithRarity(boost),
+          pokeAPI.getRandomPokemonIdWithRarity(boost),
+        ]);
+        ids = [id1, id2, id3];
       }
 
-      setAllPlaced(false);
-      // 풀에서 최대 3개 중복 없이 뽑기
-      const shuffled = [...available].sort(() => Math.random() - 0.5);
-      ids = shuffled.slice(0, 3);
-    } else {
-      // ── 일반 모드: 기존 랜덤 가중치 방식 ─────────────────────────────────
-      // 콘테스트 홀에 포켓몬을 내보냈으면 근무 누적 웨이브만큼 고레어 등장 확률을 끌어올린다.
-      const st = useGameStore.getState();
-      const contestTiles = getFacilityTiles(getMapById(st.currentMap)).contestTiles;
-      const scout = st.towers.find(t =>
-        contestTiles.some(s => s.x === Math.floor(t.position.x / 64) && s.y === Math.floor(t.position.y / 64)));
-      const boost = scout ? rarityBoostFromWaves(scout.shopWavesHeld ?? 0) : 0;
-      const [id1, id2, id3] = await Promise.all([
-        pokeAPI.getRandomPokemonIdWithRarity(boost),
-        pokeAPI.getRandomPokemonIdWithRarity(boost),
-        pokeAPI.getRandomPokemonIdWithRarity(boost),
-      ]);
-      ids = [id1, id2, id3];
-    }
-    
-    const data = await Promise.all(ids.map(id => pokeAPI.getPokemon(id)));
+      const data = await Promise.all(ids.map(id => pokeAPI.getPokemon(id)));
 
-    const withCostAndRarityAndGender = await Promise.all(data.map(async (p) => {
-      const statTotal = p.stats.hp + p.stats.attack + p.stats.defense + 
-                       p.stats.specialAttack + p.stats.specialDefense + p.stats.speed;
-      const cost = Math.floor(25 + (statTotal / 600) * 200);
-      const rarity = await pokeAPI.getRarity(p.id);
-      const gender = determineGender(p.id);
-      return { data: p, cost, rarity, gender };
-    }));
-    
-    setChoices(withCostAndRarityAndGender);
-    setIsLoading(false);
+      const withCostAndRarityAndGender = await Promise.all(data.map(async (p) => {
+        const statTotal = p.stats.hp + p.stats.attack + p.stats.defense +
+                         p.stats.specialAttack + p.stats.specialDefense + p.stats.speed;
+        const cost = Math.floor(25 + (statTotal / 600) * 200);
+        const rarity = await pokeAPI.getRarity(p.id);
+        const gender = determineGender(p.id);
+        return { data: p, cost, rarity, gender };
+      }));
+
+      setChoices(withCostAndRarityAndGender);
+    } catch (e) {
+      console.error('[PokemonPicker] 포켓몬 후보 로드 실패', e);
+      setChoices([]);
+      alert(t('alerts.skillLoadFailed'));
+    } finally {
+      setIsLoading(false);
+    }
   };
   
   useEffect(() => {
@@ -260,14 +267,18 @@ export const PokemonPicker: React.FC<{ onClose: () => void; storyHeroPool?: numb
       }
       
       // [NEW] Pay-on-Pick Logic
-      // 1. If we are already holding a pokemon (swapping), refund the previous one
-      const currentHeld = useGameStore.getState().pokemonToPlace;
-      if (currentHeld && currentHeld.originalCost) {
-        useGameStore.getState().addMoney(currentHeld.originalCost);
-      }
+      // [SECURITY-FIX] 무한 골드 익스플로잇 차단.
+      //   기존: 보유 포켓몬 환불을 '먼저' 하고 결제 실패 시 그냥 return → 환불금은 남고 보유물도 유지
+      //   → 못 사는 카드를 반복 클릭할 때마다 +환불금이 무한 누적됐음.
+      //   수정: 환불 후 결제가 실패하면 방금 돌려준 환불금을 즉시 회수(롤백)해 순증을 0으로.
+      const store = useGameStore.getState();
+      const currentHeld = store.pokemonToPlace;
+      const refund = (currentHeld && currentHeld.originalCost) ? currentHeld.originalCost : 0;
+      if (refund) store.addMoney(refund);
 
-      // 2. Pay for the new pokemon
-      if (!spendMoney(choice.cost)) {
+      // Pay for the new pokemon
+      if (!store.spendMoney(choice.cost)) {
+        if (refund) store.spendMoney(refund); // 롤백: 방금 준 환불 회수(보유물 변경 없음)
         alert(t('alerts.notEnoughMoneyWithCost', { cost: choice.cost }));
         setIsLoading(false);
         return;
