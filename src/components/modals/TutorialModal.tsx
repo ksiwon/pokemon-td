@@ -20,14 +20,17 @@ const KEYS = {
   tower: 'pokemon-td-tutorial-tower-v1',
   multi: 'pokemon-td-tutorial-multi-v1',
   story: 'pokemon-td-tutorial-story-v1',
+  cards: 'pokemon-td-tutorial-cards-v1',
 } as const;
 
 export const hasTowerTutorialSeen  = () => localStorage.getItem(KEYS.tower) === 'true';
 export const hasMultiTutorialSeen  = () => localStorage.getItem(KEYS.multi) === 'true';
 export const hasStoryTutorialSeen  = () => localStorage.getItem(KEYS.story) === 'true';
+export const hasCardsTutorialSeen  = () => localStorage.getItem(KEYS.cards) === 'true';
 export const markTowerTutorialSeen = () => localStorage.setItem(KEYS.tower, 'true');
 export const markMultiTutorialSeen = () => localStorage.setItem(KEYS.multi, 'true');
 export const markStoryTutorialSeen = () => localStorage.setItem(KEYS.story, 'true');
+export const markCardsTutorialSeen = () => localStorage.setItem(KEYS.cards, 'true');
 
 // ─── 슬라이드 타입 ───────────────────────────────────────────────────────────
 type TFunc = (key: string, params?: Record<string, string | number>) => string;
@@ -170,9 +173,52 @@ const buildStorySlides = (t: TFunc): Slide[] => [
   },
 ];
 
+const buildCardsSlides = (t: TFunc): Slide[] => [
+  {
+    icon: '🃏',
+    title: t('tutorial.cards.slide0.title'),
+    desc:  t('tutorial.cards.slide0.desc'),
+    details: [
+      { icon: '🎴', text: t('tutorial.cards.slide0.d0') },
+      { icon: '📶', text: t('tutorial.cards.slide0.d1') },
+      { icon: '⚙️', text: t('tutorial.cards.slide0.d2') },
+    ],
+  },
+  {
+    icon: '📦',
+    title: t('tutorial.cards.slide1.title'),
+    desc:  t('tutorial.cards.slide1.desc'),
+    details: [
+      { icon: '🎁', text: t('tutorial.cards.slide1.d0') },
+      { icon: '⭐', text: t('tutorial.cards.slide1.d1') },
+      { icon: '📖', text: t('tutorial.cards.slide1.d2') },
+    ],
+  },
+  {
+    icon: '🛡️',
+    title: t('tutorial.cards.slide2.title'),
+    desc:  t('tutorial.cards.slide2.desc'),
+    details: [
+      { icon: '⚔️', text: t('tutorial.cards.slide2.d0') },
+      { icon: '🔗', text: t('tutorial.cards.slide2.d1') },
+      { icon: '🎯', text: t('tutorial.cards.slide2.d2') },
+    ],
+  },
+  {
+    icon: '🗼',
+    title: t('tutorial.cards.slide3.title'),
+    desc:  t('tutorial.cards.slide3.desc'),
+    details: [
+      { icon: '🎲', text: t('tutorial.cards.slide3.d0') },
+      { icon: '🪙', text: t('tutorial.cards.slide3.d1') },
+      { icon: '🔁', text: t('tutorial.cards.slide3.d2') },
+    ],
+  },
+];
+
 // ─── 메인 컴포넌트 ───────────────────────────────────────────────────────────
 interface TutorialModalProps {
-  mode: 'tower' | 'multi' | 'story';
+  mode: 'tower' | 'multi' | 'story' | 'cards';
   onClose: () => void;
   onProceed?: () => void;
 }
@@ -183,6 +229,7 @@ export const TutorialModal: React.FC<TutorialModalProps> = ({ mode, onClose, onP
   // t를 받아 슬라이드 생성 — 언어 변경 시 자동 반영
   const slides = mode === 'tower' ? buildTowerSlides(t)
                : mode === 'multi' ? buildMultiSlides(t)
+               : mode === 'cards' ? buildCardsSlides(t)
                : buildStorySlides(t);
 
   const [page, setPage]         = useState(0);
@@ -190,15 +237,21 @@ export const TutorialModal: React.FC<TutorialModalProps> = ({ mode, onClose, onP
   const [dontShow, setDontShow] = useState(false);
   const [exiting, setExiting]   = useState(false);
 
-  // 모드별 테마색 (tower=청록 / multi=보라 / story=주황)
-  const accent = mode === 'tower' ? '#4fc3f7' : mode === 'multi' ? '#a78bfa' : '#f59e0b';
+  // 모드별 테마색 (tower=청록 / multi=보라 / story=주황 / cards=자홍)
+  const accent = mode === 'tower' ? '#4fc3f7'
+               : mode === 'multi' ? '#a78bfa'
+               : mode === 'cards' ? '#e879f9'
+               : '#f59e0b';
   const grad   = mode === 'tower'
     ? 'linear-gradient(135deg,#0284c7,#0369a1)'
     : mode === 'multi'
     ? 'linear-gradient(135deg,#7c3aed,#6d28d9)'
+    : mode === 'cards'
+    ? 'linear-gradient(135deg,#c026d3,#a21caf)'
     : 'linear-gradient(135deg,#d97706,#b45309)';
   const shadow = mode === 'tower' ? 'rgba(3,105,161,0.55)'
                : mode === 'multi' ? 'rgba(109,40,217,0.55)'
+               : mode === 'cards' ? 'rgba(162,28,175,0.55)'
                : 'rgba(180,83,9,0.55)';
 
   const isLast = page === slides.length - 1;
@@ -209,6 +262,7 @@ export const TutorialModal: React.FC<TutorialModalProps> = ({ mode, onClose, onP
       if (dontShow) {
         if (mode === 'tower')      markTowerTutorialSeen();
         else if (mode === 'multi') markMultiTutorialSeen();
+        else if (mode === 'cards') markCardsTutorialSeen();
         else                       markStoryTutorialSeen();
       }
       if (proceed && onProceed) onProceed();
@@ -228,6 +282,8 @@ export const TutorialModal: React.FC<TutorialModalProps> = ({ mode, onClose, onP
     ? <><Emoji glyph="🏰" size={13} /> {t('tutorial.tower.label').trim()}</>
     : mode === 'multi'
     ? <><Emoji glyph="👥" size={13} /> {t('tutorial.multi.label').trim()}</>
+    : mode === 'cards'
+    ? <><Emoji glyph="🃏" size={13} /> {t('tutorial.cards.label').trim()}</>
     : <><Emoji glyph="📖" size={13} /> {t('tutorial.story.label').trim()}</>;
 
   return (
@@ -237,8 +293,8 @@ export const TutorialModal: React.FC<TutorialModalProps> = ({ mode, onClose, onP
 
         <Header>
           <ModeTag
-            $bg={mode === 'tower' ? 'rgba(3,105,161,0.18)' : mode === 'multi' ? 'rgba(124,58,237,0.18)' : 'rgba(180,83,9,0.18)'}
-            $border={mode === 'tower' ? 'rgba(3,105,161,0.45)' : mode === 'multi' ? 'rgba(124,58,237,0.45)' : 'rgba(180,83,9,0.45)'}
+            $bg={mode === 'tower' ? 'rgba(3,105,161,0.18)' : mode === 'multi' ? 'rgba(124,58,237,0.18)' : mode === 'cards' ? 'rgba(192,38,211,0.18)' : 'rgba(180,83,9,0.18)'}
+            $border={mode === 'tower' ? 'rgba(3,105,161,0.45)' : mode === 'multi' ? 'rgba(124,58,237,0.45)' : mode === 'cards' ? 'rgba(192,38,211,0.45)' : 'rgba(180,83,9,0.45)'}
             $color={accent}
           >
             {modeLabel}

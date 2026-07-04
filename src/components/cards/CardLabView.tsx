@@ -1,5 +1,5 @@
 // src/components/cards/CardLabView.tsx
-// 카드 연구소 허브 — 지갑 / 팩 상점 / 도감 그리드 / (트레이너 타워 진입 — 추후).
+// 미니 포켓 허브 — 지갑 / 팩 상점 / 도감 그리드 / (트레이너 타워 진입 — 추후).
 
 import { useEffect, useMemo, useState } from 'react';
 import styled, { keyframes } from 'styled-components';

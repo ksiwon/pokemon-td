@@ -874,6 +874,37 @@
         "d1": "Free placement except near path/entrance/exit; use Terastal & Friendly Shop tiles (same as Single)",
         "d2": "Strengthen heroes via level-ups, evolution, and moves"
       }
+    },
+    "cards": {
+      "label": "Mini Pocket",
+      "slide0": {
+        "title": "What is Mini Pocket?",
+        "desc": "A Pocket-TCG-style mini auto-battler!\nCollect cards, build a 6-card deck, and climb the tower via auto-battle.",
+        "d0": "Standalone content, fully separate from the main tower defense",
+        "d1": "Playable anywhere — online or offline",
+        "d2": "Battles run automatically — your deck IS your skill"
+      },
+      "slide1": {
+        "title": "Packs & Collection",
+        "desc": "Open card packs with coins & star shards to collect Pokémon.\nDuplicate cards merge to raise a card's star rank.",
+        "d0": "Normal / Type / Premium packs — higher tiers boost rare odds",
+        "d1": "Duplicates auto-merge → ⭐ star rank up",
+        "d2": "Collected cards are logged in your Dex"
+      },
+      "slide2": {
+        "title": "Deck Building & Synergy",
+        "desc": "Place cards across 3 front + 3 back slots (6 total).\nGathering the same type triggers synergy buffs.",
+        "d0": "Front row tanks up front; back row deals from behind",
+        "d1": "Same type 2 / 4 / 6 units → higher synergy tier",
+        "d2": "Some types 'pierce' — striking the enemy back row directly"
+      },
+      "slide3": {
+        "title": "Trainer Tower",
+        "desc": "Auto-battle rival trainers with your deck!\nEnemies grow stronger each floor, with boss floors ahead.",
+        "d0": "Battles are seed-based and deterministic — same deck, same result",
+        "d1": "Clearing a floor rewards coins & star shards",
+        "d2": "Spend rewards on more packs to strengthen your deck"
+      }
     }
   },
   "mainMenu": {
@@ -895,6 +926,7 @@
     "helpSingle": "Single Player Guide",
     "helpStory": "Story Mode Guide",
     "helpMulti": "Multiplayer Guide",
+    "helpCards": "Mini Pocket Guide",
     "gameTitle": "Pokémon Aegis",
     "ratingLabel": "⭐ Rating: {rating}",
     "offlineBadge": "Offline Mode",
@@ -1006,8 +1038,8 @@
   },
   "cards": {
     "menu": {
-      "title": "Card Lab",
-      "desc": "Collect cards and take on auto-battles"
+      "title": "Mini Pocket",
+      "desc": "A Pocket-TCG-style mini auto-battler"
     },
     "common": {
       "back": "Back"

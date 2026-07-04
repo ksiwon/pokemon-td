@@ -119,7 +119,7 @@ src/
 │   │   ├── LoginScreen.tsx      # 로그인 화면 (Google / 게스트 / 오프라인 진입)
 │   │   └── ProtectedRoute.tsx   # 인증 라우트 가드 (오프라인 로컬 유저도 통과)
 │   ├── cards/                   # 🃏 카드 오토배틀 모드 (독립 콘텐츠)
-│   │   ├── CardLabView.tsx      # 카드 연구소 허브 (지갑/팩 상점/도감 + 서브뷰 전환)
+│   │   ├── CardLabView.tsx      # 미니 포켓 허브 (지갑/팩 상점/도감 + 서브뷰 전환)
 │   │   ├── CardView.tsx         # 카드 렌더 (레어도 프레임 + 홀로그래픽 효과)
 │   │   ├── PackOpening.tsx      # 팩 개봉 연출 (봉인→섬광→공개→요약)
 │   │   ├── DeckBuilder.tsx      # 6칸 덱 편성 + 실시간 시너지 계산
