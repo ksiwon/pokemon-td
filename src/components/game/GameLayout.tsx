@@ -1100,6 +1100,9 @@ const TriPane = styled.div`
   /* 데스크탑: 210px 패널 */
   grid-template-columns: 210px 1fr 210px;
   overflow: hidden;
+  /* 중앙 맵이 세로 중앙 정렬될 때 위/아래 레터박스 여백 색을 맵 배경과
+     동일하게(뒤 AppContainer 그라디언트가 비쳐 상/하 색이 달라 보이는 문제 방지) */
+  background: #080e14;
   border-top: 2px solid rgba(80, 140, 220, 0.25);
   border-bottom: 2px solid rgba(80, 140, 220, 0.25);
 
@@ -1272,9 +1275,9 @@ const CenterPanel = styled.div`
   min-width: 0;
   min-height: 0;
   width: 100%;
-  /* [FIX] 큰 화면에서 grid cell 높이가 aspect-ratio 높이보다 클 때
-     맵이 수직 중앙으로 밀려 내려가는 버그 방지 — 상단에 고정 */
-  align-self: start;
+  /* grid cell 높이가 aspect-ratio 높이보다 클 때(가로가 남는 화면) 맵을
+     셀 세로 중앙에 배치 — 위아래 여백을 균등하게. */
+  align-self: center;
 `;
 
 // ── Right Panel ───────────────────────────────────────────────────
