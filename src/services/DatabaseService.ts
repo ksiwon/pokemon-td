@@ -23,6 +23,15 @@ export interface APRankingEntry {
   updatedAt: number;
 }
 
+// ─── 미니 포켓 랭킹 엔트리 타입 (타워 최고층 / 수집 종 수) ─────────────────────
+export interface CardRankingEntry {
+  userId: string;
+  userName: string | null;
+  towerFloor: number;      // 트레이너 타워 최고 클리어 층
+  collectionCount: number; // 도감 보유 종 수
+  updatedAt: number;
+}
+
 class DatabaseService {
 
   // [FREE-TIER] 전역 랭킹/전당 조회 결과 메모리 캐시(TTL 60초).
@@ -30,6 +39,9 @@ class DatabaseService {
   //   읽기 전용·표시용 데이터라 60초 stale은 게임 로직/멀티 통신과 무관.
   private _readCache = new Map<string, { data: unknown; ts: number }>();
   private readonly READ_CACHE_TTL = 60_000;
+
+  // [FREE-TIER] 카드 랭킹 쓰기 중복 방지 — 세션 내 동일 값(층:수집수) 재기록 스킵.
+  private _lastCardRankSync = '';
 
   private async cachedRead<T>(key: string, loader: () => Promise<T>): Promise<T> {
     const hit = this._readCache.get(key);
@@ -474,6 +486,98 @@ class DatabaseService {
       return snapshot.size + 1;
     } catch (err) {
       console.error('getMyPVPRank failed:', err);
+      return null;
+    }
+  }
+
+  // ─── 미니 포켓 랭킹 (타워 최고층 / 수집 종 수) ─────────────────────────────
+  /**
+   * 내 카드 랭킹 문서 갱신. 타워층·수집수는 단조 증가라 기존값 read 없이 overwrite.
+   * [FREE-TIER] 오프라인/비로그인은 쓰지 않음. 세션 내 동일 값이면 재기록 스킵.
+   */
+  async updateCardRanking(towerFloor: number, collectionCount: number): Promise<void> {
+    const user = authService.getCurrentUser();
+    if (!user || authService.isOfflineMode()) return;
+
+    const key = `${towerFloor}:${collectionCount}`;
+    if (key === this._lastCardRankSync) return; // 동일 값 재기록 방지
+
+    const entry: CardRankingEntry = {
+      userId: user.uid,
+      userName: user.displayName,
+      towerFloor,
+      collectionCount,
+      updatedAt: Date.now(),
+    };
+    try {
+      await setDoc(doc(db, 'cardRankings', user.uid), entry);
+      this._lastCardRankSync = key;
+    } catch (err) {
+      console.warn('[DB] updateCardRanking failed:', err);
+    }
+  }
+
+  /** 전체 타워 최고층 랭킹 Top N. */
+  async getTowerRanking(limitCount = 100): Promise<CardRankingEntry[]> {
+    return this.cachedRead(`towerRanking:${limitCount}`, async () => {
+      try {
+        const q = query(
+          collection(db, 'cardRankings'),
+          orderBy('towerFloor', 'desc'),
+          limit(limitCount)
+        );
+        const snapshot = await getDocs(q);
+        return snapshot.docs.map(doc => doc.data() as CardRankingEntry);
+      } catch {
+        return [];
+      }
+    });
+  }
+
+  /** 전체 수집 종 수 랭킹 Top N. */
+  async getCollectionRanking(limitCount = 100): Promise<CardRankingEntry[]> {
+    return this.cachedRead(`collectionRanking:${limitCount}`, async () => {
+      try {
+        const q = query(
+          collection(db, 'cardRankings'),
+          orderBy('collectionCount', 'desc'),
+          limit(limitCount)
+        );
+        const snapshot = await getDocs(q);
+        return snapshot.docs.map(doc => doc.data() as CardRankingEntry);
+      } catch {
+        return [];
+      }
+    });
+  }
+
+  /** 내 타워 최고층 순위 (나보다 높은 층 수 + 1). */
+  async getMyTowerRank(): Promise<number | null> {
+    return this.getMyCardRank('towerFloor');
+  }
+
+  /** 내 수집 종 수 순위 (나보다 많은 종 수 + 1). */
+  async getMyCollectionRank(): Promise<number | null> {
+    return this.getMyCardRank('collectionCount');
+  }
+
+  private async getMyCardRank(field: 'towerFloor' | 'collectionCount'): Promise<number | null> {
+    const user = authService.getCurrentUser();
+    if (!user) return null;
+    try {
+      const myDoc = await getDoc(doc(db, 'cardRankings', user.uid));
+      if (!myDoc.exists()) return null;
+
+      const myValue = (myDoc.data() as CardRankingEntry)[field];
+      const RANK_SCAN_LIMIT = 500;
+      const q = query(
+        collection(db, 'cardRankings'),
+        where(field, '>', myValue),
+        limit(RANK_SCAN_LIMIT)
+      );
+      const snapshot = await getDocs(q);
+      return snapshot.size + 1;
+    } catch {
       return null;
     }
   }

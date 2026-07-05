@@ -4,10 +4,12 @@
 import { useEffect, useMemo, useState } from 'react';
 import styled, { keyframes } from 'styled-components';
 import { useNavigate } from 'react-router-dom';
+import { media } from '../../utils/responsive.utils';
 import { Coins, Sparkles, Package, Layers, Swords } from 'lucide-react';
 import { pokeAPI } from '../../api/pokeapi';
 import { useTranslation } from '../../i18n';
 import { cardService, PACK_DEFS } from '../../services/CardService';
+import { databaseService } from '../../services/DatabaseService';
 import { useCardState } from '../../hooks/useCardState';
 import { useCardMeta } from '../../hooks/useCardMeta';
 import { PullResult, PackType } from '../../types/cards';
@@ -45,6 +47,12 @@ export const CardLabView = () => {
     () => Object.values(state.collection),
     [state.collection],
   );
+
+  // 미니 포켓 랭킹 동기화 — 타워 최고층/수집 종 수가 바뀔 때 Firestore에 반영.
+  // (로그인+온라인일 때만 기록. 오프라인/비로그인은 내부에서 무시. 동일 값은 세션 내 스킵.)
+  useEffect(() => {
+    databaseService.updateCardRanking(state.towerProgress, ownedIds.length).catch(() => {});
+  }, [state.towerProgress, ownedIds.length]);
 
   // 보유 카드 이름·타입·레어도 (검색/필터/정렬 + CardView용)
   const { meta, rarity: rarityMap } = useCardMeta(ownedIds.map(c => c.pokemonId));
@@ -242,23 +250,37 @@ const TopBar = styled.header`
   padding: 14px 22px; border-bottom: 1px solid rgba(255,255,255,0.07);
   background: rgba(255,255,255,0.02); position: sticky; top: 0; z-index: 20;
   backdrop-filter: blur(10px);
+  ${media.tablet} { padding: 12px 16px; gap: 8px; }
+  ${media.mobile} { padding: 10px 12px; gap: 6px; }
 `;
 const BackBtn = styled.button`
+  flex: 0 0 auto;
   background: transparent; border: 1px solid rgba(255,255,255,0.12); color: rgba(255,255,255,0.7);
   padding: 7px 14px; border-radius: 8px; cursor: pointer; font-size: 14px;
+  white-space: nowrap;
   &:hover { background: rgba(255,255,255,0.07); }
+  ${media.mobile} { padding: 6px 10px; font-size: 12px; }
 `;
-const Title = styled.h1`font-size: 18px; font-weight: 800; margin: 0; letter-spacing: -0.01em;`;
-const Wallet = styled.div`display: flex; gap: 8px;`;
+const Title = styled.h1`
+  font-size: 18px; font-weight: 800; margin: 0; letter-spacing: -0.01em;
+  /* 좌우(뒤로/지갑)를 밀어내 넘치지 않도록 필요 시 줄임표 처리. */
+  min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+  ${media.tablet} { font-size: 16px; }
+  ${media.mobile} { font-size: 14px; }
+`;
+const Wallet = styled.div`display: flex; gap: 8px; flex: 0 0 auto; ${media.mobile} { gap: 5px; }`;
 const WChip = styled.div`
   display: flex; align-items: center; gap: 5px; font-size: 14px; font-weight: 700;
   background: rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.08);
-  padding: 6px 12px; border-radius: 100px;
+  padding: 6px 12px; border-radius: 100px; white-space: nowrap;
+  ${media.mobile} { font-size: 12px; padding: 5px 9px; gap: 4px; }
 `;
 
 const Body = styled.main`
   flex: 1; width: 100%; max-width: 960px; margin: 0 auto; padding: 24px 20px 60px;
   display: flex; flex-direction: column; gap: 28px;
+  ${media.tablet} { padding: 20px 16px 48px; gap: 22px; }
+  ${media.mobile} { padding: 16px 12px 40px; gap: 18px; }
 `;
 const Section = styled.section`display: flex; flex-direction: column; gap: 12px;`;
 const SecLabel = styled.div`
