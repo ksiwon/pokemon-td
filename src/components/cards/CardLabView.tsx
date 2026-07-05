@@ -4,10 +4,15 @@
 import { useEffect, useMemo, useState } from 'react';
 import styled, { keyframes } from 'styled-components';
 import { useNavigate } from 'react-router-dom';
-import { Coins, Sparkles, Package, Layers, Swords } from 'lucide-react';
+import { media } from '../../utils/responsive.utils';
+import { Coins, Sparkles, Package, Layers, Swords, Trophy, ChevronRight } from 'lucide-react';
 import { pokeAPI } from '../../api/pokeapi';
 import { useTranslation } from '../../i18n';
 import { cardService, PACK_DEFS } from '../../services/CardService';
+import { databaseService, CardRankingEntry } from '../../services/DatabaseService';
+import { authService } from '../../services/AuthService';
+import { daysUntilSeasonReset } from '../../utils/season';
+import { Rankings } from '../modals/Rankings';
 import { useCardState } from '../../hooks/useCardState';
 import { useCardMeta } from '../../hooks/useCardMeta';
 import { PullResult, PackType } from '../../types/cards';
@@ -37,6 +42,8 @@ export const CardLabView = () => {
   const [typePick, setTypePick] = useState(false); // 타입팩 타입 선택 모달
   const [filter, setFilter] = useState<CardFilterState>(DEFAULT_CARD_FILTER);
   const [detailId, setDetailId] = useState<number | null>(null);
+  const [rankInfo, setRankInfo] = useState<{ towerRank: number | null; collRank: number | null; top3: CardRankingEntry[] } | null>(null);
+  const [showRankings, setShowRankings] = useState(false);
 
   // 추첨 리스트 준비(캐시 시 즉시)
   useEffect(() => { pokeAPI.preloadRarities().catch(() => {}); }, []);
@@ -45,6 +52,31 @@ export const CardLabView = () => {
     () => Object.values(state.collection),
     [state.collection],
   );
+
+  // 미니 포켓 랭킹 동기화 + 허브 순위 위젯 로드.
+  // 통산 수집 랭킹(cardRankings)을 반영한 뒤, 로그인+온라인이면 내 순위/Top3를 읽어온다.
+  // (오프라인/비로그인은 내부에서 무시 → 싱글/스토리 오프라인 동작 무영향. read는 60초 캐시 재활용.)
+  useEffect(() => {
+    let alive = true;
+    (async () => {
+      await databaseService.updateCardRanking(state.towerProgress, ownedIds.length).catch(() => {});
+      if (authService.isOfflineMode() || !authService.getCurrentUser()) {
+        if (alive) setRankInfo(null);
+        return;
+      }
+      try {
+        const [towerRank, collRank, top3] = await Promise.all([
+          databaseService.getMyTowerRank(),
+          databaseService.getMyCollectionRank(),
+          databaseService.getTowerRanking(3),
+        ]);
+        if (alive) setRankInfo({ towerRank, collRank, top3 });
+      } catch {
+        if (alive) setRankInfo(null);
+      }
+    })();
+    return () => { alive = false; };
+  }, [state.towerProgress, ownedIds.length]);
 
   // 보유 카드 이름·타입·레어도 (검색/필터/정렬 + CardView용)
   const { meta, rarity: rarityMap } = useCardMeta(ownedIds.map(c => c.pokemonId));
@@ -94,6 +126,44 @@ export const CardLabView = () => {
       </TopBar>
 
       <Body>
+        {/* 랭킹 위젯 — 이번 주 시즌 타워 + 통산 수집 */}
+        <RankWidget>
+          <RankHead>
+            <RankTitle><Trophy size={15} /> {t('cards.rank.title')}</RankTitle>
+            <SeasonTag>{t('cards.rank.season')} · {t('cards.rank.resetIn', { n: daysUntilSeasonReset() })}</SeasonTag>
+            <ViewAllBtn onClick={() => setShowRankings(true)}>
+              {t('cards.rank.viewAll')} <ChevronRight size={13} />
+            </ViewAllBtn>
+          </RankHead>
+          {rankInfo ? (
+            <>
+              <MyRankRow>
+                <MyRankChip>
+                  <Swords size={13} color="#c084fc" /> {t('cards.rank.tower')}{' '}
+                  <b>{rankInfo.towerRank ? t('cards.rank.rankSuffix', { n: rankInfo.towerRank }) : t('cards.rank.unranked')}</b>
+                </MyRankChip>
+                <MyRankChip>
+                  <Layers size={13} color="#38bdf8" /> {t('cards.rank.coll')}{' '}
+                  <b>{rankInfo.collRank ? t('cards.rank.rankSuffix', { n: rankInfo.collRank }) : t('cards.rank.unranked')}</b>
+                </MyRankChip>
+              </MyRankRow>
+              {rankInfo.top3.length > 0 && (
+                <Podium>
+                  {rankInfo.top3.map((e, i) => (
+                    <PodItem key={e.userId}>
+                      <PodMedal>{i === 0 ? '🥇' : i === 1 ? '🥈' : '🥉'}</PodMedal>
+                      <PodName>{e.userName ?? '???'}</PodName>
+                      <PodVal>{t('cards.rank.floor', { n: e.towerFloor })}</PodVal>
+                    </PodItem>
+                  ))}
+                </Podium>
+              )}
+            </>
+          ) : (
+            <RankHint>{t('cards.rank.loginHint')}</RankHint>
+          )}
+        </RankWidget>
+
         {/* 팩 상점 */}
         <Section>
           <SecLabel><Package size={15} /> {t('cards.lab.packShop')}</SecLabel>
@@ -208,6 +278,8 @@ export const CardLabView = () => {
           onClose={() => setDetailId(null)}
         />
       )}
+
+      {showRankings && <Rankings initialTab="tower" onClose={() => setShowRankings(false)} />}
     </Root>
   );
 };
@@ -233,6 +305,64 @@ const TypeChip = styled.button<{ $c: string }>`
   &:hover { background: ${p => p.$c}; transform: translateY(-2px); }
 `;
 
+// ─── 랭킹 위젯 ────────────────────────────────────────────────────────────────
+const RankWidget = styled.section`
+  display: flex; flex-direction: column; gap: 12px;
+  padding: 16px 18px; border-radius: 14px;
+  background: linear-gradient(160deg, rgba(251,191,36,0.08), rgba(192,132,252,0.05));
+  border: 1px solid rgba(251,191,36,0.18);
+  ${media.mobile} { padding: 13px 14px; gap: 10px; }
+`;
+const RankHead = styled.div`
+  display: flex; align-items: center; gap: 10px; flex-wrap: wrap;
+`;
+const RankTitle = styled.div`
+  display: flex; align-items: center; gap: 7px; font-size: 14px; font-weight: 800; color: #fbbf24;
+`;
+const SeasonTag = styled.span`
+  font-size: 11px; font-weight: 700; color: rgba(255,255,255,0.5);
+  background: rgba(255,255,255,0.06); padding: 3px 9px; border-radius: 100px;
+`;
+const ViewAllBtn = styled.button`
+  margin-left: auto; display: flex; align-items: center; gap: 2px;
+  background: transparent; border: none; color: #c084fc; cursor: pointer;
+  font-size: 12px; font-weight: 700; padding: 4px 6px; border-radius: 6px;
+  &:hover { background: rgba(192,132,252,0.12); }
+`;
+const MyRankRow = styled.div`
+  display: grid; grid-template-columns: repeat(2, 1fr); gap: 10px;
+  ${media.mobile} { gap: 8px; }
+`;
+const MyRankChip = styled.div`
+  display: flex; align-items: center; gap: 6px; font-size: 13px; font-weight: 600; color: rgba(255,255,255,0.75);
+  background: rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.08);
+  padding: 9px 12px; border-radius: 10px;
+  b { color: #f8fafc; font-weight: 800; margin-left: 2px; }
+  ${media.mobile} { font-size: 12px; padding: 8px 10px; }
+`;
+const Podium = styled.div`
+  display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px;
+`;
+const PodItem = styled.div`
+  display: flex; align-items: center; gap: 6px; min-width: 0;
+  background: rgba(255,255,255,0.04); border: 1px solid rgba(255,255,255,0.06);
+  padding: 7px 10px; border-radius: 9px;
+  ${media.mobile} { padding: 6px 8px; gap: 4px; }
+`;
+const PodMedal = styled.span`font-size: 15px; flex: 0 0 auto;`;
+const PodName = styled.span`
+  font-size: 12px; font-weight: 700; color: #e8edf3;
+  overflow: hidden; text-overflow: ellipsis; white-space: nowrap; min-width: 0;
+  ${media.mobile} { font-size: 11px; }
+`;
+const PodVal = styled.span`
+  margin-left: auto; flex: 0 0 auto; font-size: 11px; font-weight: 800; color: #c084fc;
+  font-variant-numeric: tabular-nums;
+`;
+const RankHint = styled.div`
+  font-size: 12.5px; color: rgba(255,255,255,0.45); text-align: center; padding: 6px 0;
+`;
+
 const Root = styled.div`
   min-height: 100vh; background: radial-gradient(circle at top, #11162a, #070910);
   color: #e8edf5; display: flex; flex-direction: column;
@@ -242,23 +372,37 @@ const TopBar = styled.header`
   padding: 14px 22px; border-bottom: 1px solid rgba(255,255,255,0.07);
   background: rgba(255,255,255,0.02); position: sticky; top: 0; z-index: 20;
   backdrop-filter: blur(10px);
+  ${media.tablet} { padding: 12px 16px; gap: 8px; }
+  ${media.mobile} { padding: 10px 12px; gap: 6px; }
 `;
 const BackBtn = styled.button`
+  flex: 0 0 auto;
   background: transparent; border: 1px solid rgba(255,255,255,0.12); color: rgba(255,255,255,0.7);
   padding: 7px 14px; border-radius: 8px; cursor: pointer; font-size: 14px;
+  white-space: nowrap;
   &:hover { background: rgba(255,255,255,0.07); }
+  ${media.mobile} { padding: 6px 10px; font-size: 12px; }
 `;
-const Title = styled.h1`font-size: 18px; font-weight: 800; margin: 0; letter-spacing: -0.01em;`;
-const Wallet = styled.div`display: flex; gap: 8px;`;
+const Title = styled.h1`
+  font-size: 18px; font-weight: 800; margin: 0; letter-spacing: -0.01em;
+  /* 좌우(뒤로/지갑)를 밀어내 넘치지 않도록 필요 시 줄임표 처리. */
+  min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+  ${media.tablet} { font-size: 16px; }
+  ${media.mobile} { font-size: 14px; }
+`;
+const Wallet = styled.div`display: flex; gap: 8px; flex: 0 0 auto; ${media.mobile} { gap: 5px; }`;
 const WChip = styled.div`
   display: flex; align-items: center; gap: 5px; font-size: 14px; font-weight: 700;
   background: rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.08);
-  padding: 6px 12px; border-radius: 100px;
+  padding: 6px 12px; border-radius: 100px; white-space: nowrap;
+  ${media.mobile} { font-size: 12px; padding: 5px 9px; gap: 4px; }
 `;
 
 const Body = styled.main`
   flex: 1; width: 100%; max-width: 960px; margin: 0 auto; padding: 24px 20px 60px;
   display: flex; flex-direction: column; gap: 28px;
+  ${media.tablet} { padding: 20px 16px 48px; gap: 22px; }
+  ${media.mobile} { padding: 16px 12px 40px; gap: 18px; }
 `;
 const Section = styled.section`display: flex; flex-direction: column; gap: 12px;`;
 const SecLabel = styled.div`

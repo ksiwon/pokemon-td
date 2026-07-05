@@ -5,6 +5,7 @@
 
 import { pokeAPI } from '../api/pokeapi';
 import { Rarity } from '../data/evolution';
+import { seasonId } from '../utils/season';
 import {
   CardSaveState, CardWallet, CardCollection, PackType, PullResult, Deck, DeckRow,
 } from '../types/cards';
@@ -101,6 +102,7 @@ class CardService {
       stats: { packsOpened: 0, totalPulls: 0 },
       towerProgress: 0,
       deck: this.starterDeck(),
+      season: { weekId: '', bestFloor: 0 },
     };
   }
 
@@ -364,6 +366,26 @@ class CardService {
   // ─── 트레이너 타워 진행 ───────────────────────────────────────────────────────
   setTowerProgress(floor: number) {
     if (floor > this.state.towerProgress) { this.state.towerProgress = floor; this.persist(); }
+  }
+
+  /** 이번 주 시즌 최고 도달 층(주차 바뀌면 0). 허브 위젯 표시용. */
+  getWeeklyBestFloor(): number {
+    const wk = seasonId();
+    const s = this.state.season;
+    return s && s.weekId === wk ? s.bestFloor : 0;
+  }
+
+  /**
+   * 이번 주 시즌 최고층 갱신. 주차가 바뀌었으면 초기화 후 기록.
+   * 개선됐으면 새 최고층을 반환(=Firestore 시즌 랭킹에 기록할 값), 아니면 null.
+   * 로컬 캐시로 불필요한 Firestore write를 막는다.
+   */
+  recordWeeklyBestFloor(floor: number): number | null {
+    const wk = seasonId();
+    let s = this.state.season;
+    if (!s || s.weekId !== wk) { s = { weekId: wk, bestFloor: 0 }; this.state.season = s; }
+    if (floor > s.bestFloor) { s.bestFloor = floor; this.persist(); return floor; }
+    return null;
   }
 
   // ─── 디버그/개발용 ────────────────────────────────────────────────────────────

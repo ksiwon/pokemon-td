@@ -661,6 +661,8 @@
     "tabMap": "Map Records",
     "tabAP": "AP Ranking",
     "tabRating": "Rating Rankings",
+    "tabTower": "Tower",
+    "tabCollection": "Dex",
     "tabClearTime": " Fastest Clear",
     "tabHighestWave": " Highest Wave",
     "myRank": "My Rank: #{rank}",
@@ -673,8 +675,13 @@
     "colHighestWave": "Highest Wave",
     "colAchCount": "Completions",
     "colAP": "AP",
+    "colFloor": "Best Floor",
+    "colDex": "Species",
     "rankSuffix": "#{rank}",
-    "waveSuffix": "Wave {wave}"
+    "waveSuffix": "Wave {wave}",
+    "floorSuffix": "Floor {n}",
+    "dexSuffix": "{n}",
+    "seasonNote": "🗓 This week's season · resets in {n}d · weekly reset"
   },
   "hallOfFame": {
     "title": " Hall of Fame",
@@ -1114,6 +1121,18 @@
       "drawing": "Drawing...",
       "floor": "Floor {n}",
       "slots": "{n}/6"
+    },
+    "rank": {
+      "title": "Rankings",
+      "season": "This week",
+      "resetIn": "Resets in {n}d",
+      "viewAll": "View all",
+      "tower": "Tower",
+      "coll": "Dex",
+      "rankSuffix": "#{n}",
+      "unranked": "Unranked",
+      "floor": "F{n}",
+      "loginHint": "Sign in to join the weekly season ranking"
     },
     "pack": {
       "cardCount": "{n} cards",

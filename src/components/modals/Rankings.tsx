@@ -3,25 +3,32 @@ import { useState, useEffect } from 'react';
 import styled from 'styled-components';
 import { lMedia, media } from '../../utils/responsive.utils';
 import { Emoji } from '../shared/Emoji';
-import { databaseService, APRankingEntry } from '../../services/DatabaseService';
+import { databaseService, APRankingEntry, CardRankingEntry } from '../../services/DatabaseService';
 import { authService } from '../../services/AuthService';
 import { saveService } from '../../services/SaveService';
+import { cardService } from '../../services/CardService';
+import { daysUntilSeasonReset } from '../../utils/season';
 import { useTranslation } from '../../i18n';
 import {
   ModalOverlay, ModalBox, ModalHeader, ModalTitle, ModalCloseBtn,
   ModalBody, MODAL_ACCENT,
 } from '../shared/modal.styles';
 
-interface RankingsProps { onClose: () => void; }
+interface RankingsProps {
+  onClose: () => void;
+  initialTab?: 'ap' | 'pvp' | 'tower' | 'collection';
+}
 
-export const Rankings = ({ onClose }: RankingsProps) => {
+export const Rankings = ({ onClose, initialTab = 'ap' }: RankingsProps) => {
   const { t } = useTranslation();
 
-  const [activeTab, setActiveTab] = useState<'ap' | 'pvp'>('ap');
+  const [activeTab, setActiveTab] = useState<'ap' | 'pvp' | 'tower' | 'collection'>(initialTab);
   const [apRankings, setApRankings] = useState<APRankingEntry[]>([]);
   const [myApRank, setMyApRank] = useState<number | null>(null);
   const [pvpRankings, setPvpRankings] = useState<any[]>([]);
   const [myPvpRank, setMyPvpRank] = useState<number | null>(null);
+  const [cardRankings, setCardRankings] = useState<CardRankingEntry[]>([]);
+  const [myCardRank, setMyCardRank] = useState<number | null>(null);
   const [loading, setLoading] = useState(false);
   const [currentPage, setCurrentPage] = useState(0);
   const PAGE_SIZE = 10;
@@ -36,13 +43,27 @@ export const Rankings = ({ onClose }: RankingsProps) => {
         ]);
         setApRankings(data);
         setMyApRank(rank);
-      } else {
+      } else if (activeTab === 'pvp') {
         const [data, rank] = await Promise.all([
           databaseService.getPVPRanking(100),
           databaseService.getMyPVPRank(),
         ]);
         setPvpRankings(data);
         setMyPvpRank(rank);
+      } else if (activeTab === 'tower') {
+        const [data, rank] = await Promise.all([
+          databaseService.getTowerRanking(100),
+          databaseService.getMyTowerRank(),
+        ]);
+        setCardRankings(data);
+        setMyCardRank(rank);
+      } else {
+        const [data, rank] = await Promise.all([
+          databaseService.getCollectionRanking(100),
+          databaseService.getMyCollectionRank(),
+        ]);
+        setCardRankings(data);
+        setMyCardRank(rank);
       }
     } catch (err) {
       console.error(err);
@@ -56,7 +77,10 @@ export const Rankings = ({ onClose }: RankingsProps) => {
     loadRankings();
   }, [activeTab]);
 
-  const currentRankings = activeTab === 'ap' ? apRankings : pvpRankings;
+  const currentRankings =
+    activeTab === 'ap' ? apRankings :
+    activeTab === 'pvp' ? pvpRankings :
+    cardRankings;
   const totalPages = Math.ceil(currentRankings.length / PAGE_SIZE);
   const displayedRankings = currentRankings.slice(currentPage * PAGE_SIZE, (currentPage + 1) * PAGE_SIZE);
 
@@ -77,6 +101,12 @@ export const Rankings = ({ onClose }: RankingsProps) => {
           <Tab $active={activeTab === 'pvp'} onClick={() => setActiveTab('pvp')}>
             {t('rankings.tabRating')}
           </Tab>
+          <Tab $active={activeTab === 'tower'} onClick={() => setActiveTab('tower')}>
+            {t('rankings.tabTower')}
+          </Tab>
+          <Tab $active={activeTab === 'collection'} onClick={() => setActiveTab('collection')}>
+            {t('rankings.tabCollection')}
+          </Tab>
         </TabRow>
 
         {activeTab === 'ap' && (
@@ -88,6 +118,19 @@ export const Rankings = ({ onClose }: RankingsProps) => {
         {activeTab === 'pvp' && (
           <MyRankBadgeWrapper>
             <MyRankBadge><Emoji glyph="🎯" size={13} /> {t('rankings.myRank', { rank: myPvpRank !== null ? myPvpRank : '-' })} ({authService.getCurrentUser()?.rating ?? 1000} Rating)</MyRankBadge>
+          </MyRankBadgeWrapper>
+        )}
+
+        {activeTab === 'tower' && (
+          <MyRankBadgeWrapper>
+            <MyRankBadge><Emoji glyph="🎯" size={13} /> {t('rankings.myRank', { rank: myCardRank !== null ? myCardRank : '-' })} ({t('rankings.floorSuffix', { n: cardService.getWeeklyBestFloor() })})</MyRankBadge>
+            <SeasonNote>{t('rankings.seasonNote', { n: daysUntilSeasonReset() })}</SeasonNote>
+          </MyRankBadgeWrapper>
+        )}
+
+        {activeTab === 'collection' && (
+          <MyRankBadgeWrapper>
+            <MyRankBadge><Emoji glyph="🎯" size={13} /> {t('rankings.myRank', { rank: myCardRank !== null ? myCardRank : '-' })} ({t('rankings.dexSuffix', { n: cardService.getOwnedCount() })})</MyRankBadge>
           </MyRankBadgeWrapper>
         )}
         
@@ -122,7 +165,7 @@ export const Rankings = ({ onClose }: RankingsProps) => {
                     );
                   })}
                 </RankingTable>
-              ) : (
+              ) : activeTab === 'pvp' ? (
                 <RankingTable>
                   <TableHead $isAp={false}>
                     <ColRank>{t('rankings.colRank')}</ColRank>
@@ -140,6 +183,32 @@ export const Rankings = ({ onClose }: RankingsProps) => {
                         </ColRank>
                         <ColPlayer>{entry.userName ?? '???'}</ColPlayer>
                         <ColScore $accent><Emoji glyph="⭐" size={13} /> {(entry.rating ?? 1000).toLocaleString()}</ColScore>
+                      </TableRow>
+                    );
+                  })}
+                </RankingTable>
+              ) : (
+                <RankingTable>
+                  <TableHead $isAp={false}>
+                    <ColRank>{t('rankings.colRank')}</ColRank>
+                    <ColPlayer>{t('rankings.colPlayer')}</ColPlayer>
+                    <ColScore>{activeTab === 'tower' ? t('rankings.colFloor') : t('rankings.colDex')}</ColScore>
+                  </TableHead>
+                  {displayedRankings.map((entry, index) => {
+                    const rank = currentPage * PAGE_SIZE + index;
+                    return (
+                      <TableRow key={entry.userId} $top={rank < 3} $isAp={false}>
+                        <ColRank $idx={rank}>
+                          {rank < 3
+                            ? <Emoji glyph={rank === 0 ? '🥇' : rank === 1 ? '🥈' : '🥉'} size={16} />
+                            : t('rankings.rankSuffix', { rank: rank + 1 })}
+                        </ColRank>
+                        <ColPlayer>{entry.userName ?? '???'}</ColPlayer>
+                        <ColScore $accent>
+                          {activeTab === 'tower'
+                            ? <><Emoji glyph="🗼" size={13} /> {t('rankings.floorSuffix', { n: entry.towerFloor ?? 0 })}</>
+                            : <><Emoji glyph="📖" size={13} /> {t('rankings.dexSuffix', { n: entry.collectionCount ?? 0 })}</>}
+                        </ColScore>
                       </TableRow>
                     );
                   })}
@@ -207,6 +276,11 @@ const MyRankBadge = styled.div`
   ${media.mobile} { font-size: 13px; padding: 7px 12px; margin-top: 0; }
 `;
 
+const SeasonNote = styled.div`
+  margin-top: 6px; font-size: 12px; font-weight: 600; color: rgba(251,191,36,0.85);
+  ${media.mobile} { font-size: 11px; }
+`;
+
 const StatusMsg = styled.div<{ $dimmed?: boolean }>`
   display: flex; align-items: center; justify-content: center;
   color: ${p => p.$dimmed ? 'rgba(255,255,255,0.3)' : 'rgba(255,255,255,0.6)'};
@@ -225,6 +299,11 @@ const COLS_M_PVP = '40px 1fr 90px';
 const TabRow = styled.div`
   display: flex; gap: 4px; margin-bottom: 6px;
   padding: 0 24px;
+  /* 탭 4개 — 좁은 화면에서 가로 넘침 방지(가로 스크롤 폴백). */
+  overflow-x: auto; flex-wrap: nowrap;
+  scrollbar-width: none;
+  &::-webkit-scrollbar { display: none; }
+  & > * { flex: 0 0 auto; }
 
   ${media.tablet} { padding: 0 18px; }
   ${media.mobile} { margin-bottom: 4px; padding: 0 14px; }

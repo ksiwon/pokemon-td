@@ -3,10 +3,12 @@
 
 import { useEffect, useMemo, useRef, useState } from 'react';
 import styled, { keyframes, css } from 'styled-components';
+import { media } from '../../utils/responsive.utils';
 import { ArrowLeft, Play, FastForward, ChevronsRight } from 'lucide-react';
 import { pokeAPI } from '../../api/pokeapi';
 import { useTranslation } from '../../i18n';
 import { cardService } from '../../services/CardService';
+import { databaseService } from '../../services/DatabaseService';
 import { useCardState } from '../../hooks/useCardState';
 import {
   cardBattleService, buildBattleCard, BattleCard, BattleResult, BattleLogEntry,
@@ -73,6 +75,10 @@ export const TrainerTower = ({ onBack }: { onBack: () => void }) => {
         const shards = firstClear ? (boss ? 5 : currentFloor % 5 === 0 ? 2 : 0) : 0;
         cardService.grantRewards({ coins, starShards: shards });
         if (firstClear) cardService.setTowerProgress(currentFloor);
+        // [주간 시즌] 이번 주 최고층 갱신 시에만 Firestore 시즌 랭킹 기록(오프라인/비로그인 무시).
+        //   all-time firstClear와 무관 — 매주 다시 오르는 경쟁이므로 이번 주 기준으로 판정.
+        const weeklyBest = cardService.recordWeeklyBestFloor(currentFloor);
+        if (weeklyBest !== null) databaseService.updateTowerSeasonRanking(weeklyBest).catch(() => {});
         rw = { coins, starShards: shards, firstClear };
       }
 
@@ -252,31 +258,51 @@ const TopBar = styled.header`
   display: flex; align-items: center; justify-content: space-between; gap: 12px;
   padding: 14px 22px; border-bottom: 1px solid rgba(255,255,255,0.07); position: sticky; top: 0;
   background: rgba(10,12,22,0.85); backdrop-filter: blur(10px); z-index: 20;
+  ${media.tablet} { padding: 12px 16px; gap: 8px; }
+  ${media.mobile} { padding: 10px 12px; gap: 6px; }
 `;
 const BackBtn = styled.button`
+  flex: 0 0 auto;
   display: flex; align-items: center; gap: 5px; background: transparent;
   border: 1px solid rgba(255,255,255,0.12); color: rgba(255,255,255,0.7);
-  padding: 7px 12px; border-radius: 8px; cursor: pointer; font-size: 14px;
+  padding: 7px 12px; border-radius: 8px; cursor: pointer; font-size: 14px; white-space: nowrap;
   &:hover { background: rgba(255,255,255,0.07); }
+  ${media.mobile} { padding: 6px 9px; font-size: 12px; }
 `;
-const Title = styled.h1`font-size: 17px; font-weight: 800; margin: 0;`;
-const FloorChip = styled.div`font-size: 13px; font-weight: 700; color: #c084fc; background: rgba(192,132,252,0.12); padding: 6px 12px; border-radius: 100px;`;
+const Title = styled.h1`
+  font-size: 17px; font-weight: 800; margin: 0;
+  min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+  ${media.mobile} { font-size: 14px; }
+`;
+const FloorChip = styled.div`
+  flex: 0 0 auto;
+  font-size: 13px; font-weight: 700; color: #c084fc; background: rgba(192,132,252,0.12); padding: 6px 12px; border-radius: 100px; white-space: nowrap;
+  ${media.mobile} { font-size: 12px; padding: 5px 10px; }
+`;
 
-const Center = styled.div`flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 16px; padding: 40px;`;
-const FloorBig = styled.div`font-size: 56px; font-weight: 900; color: #f8fafc; text-shadow: 0 0 24px rgba(192,132,252,0.5);`;
-const FloorDesc = styled.div`font-size: 15px; color: rgba(255,255,255,0.6); text-align: center; display: flex; align-items: center; gap: 8px;`;
+const Center = styled.div`
+  flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 16px; padding: 40px;
+  ${media.mobile} { gap: 12px; padding: 28px 16px; }
+`;
+const FloorBig = styled.div`
+  font-size: 56px; font-weight: 900; color: #f8fafc; text-shadow: 0 0 24px rgba(192,132,252,0.5);
+  ${media.mobile} { font-size: 40px; }
+`;
+const FloorDesc = styled.div`font-size: 15px; color: rgba(255,255,255,0.6); text-align: center; display: flex; align-items: center; gap: 8px; ${media.mobile} { font-size: 13px; }`;
 const BossTag = styled.span`background: #ef4444; color: #fff; font-size: 11px; font-weight: 800; padding: 3px 8px; border-radius: 6px;`;
 const StartBtn = styled.button<{ $on: boolean }>`
   display: flex; align-items: center; gap: 8px; margin-top: 8px; padding: 14px 36px; border-radius: 12px; border: none;
   background: ${p => (p.$on ? 'linear-gradient(135deg,#c084fc,#8b5cf6)' : 'rgba(255,255,255,0.08)')};
   color: ${p => (p.$on ? '#fff' : 'rgba(255,255,255,0.4)')}; font-size: 16px; font-weight: 800;
   cursor: ${p => (p.$on ? 'pointer' : 'not-allowed')}; box-shadow: ${p => (p.$on ? '0 8px 24px rgba(139,92,246,0.4)' : 'none')};
+  ${media.mobile} { padding: 12px 28px; font-size: 15px; }
 `;
 const Hint = styled.div`font-size: 12px; color: rgba(255,255,255,0.35);`;
 
 const Arena = styled.div`
   flex: 1; max-width: 760px; width: 100%; margin: 0 auto; padding: 20px 16px;
   display: flex; flex-direction: column; gap: 10px; position: relative;
+  ${media.mobile} { padding: 14px 8px; }
 `;
 const SideLabel = styled.div<{ $side: 'player' | 'enemy' }>`
   font-size: 12px; font-weight: 700; letter-spacing: 0.1em;

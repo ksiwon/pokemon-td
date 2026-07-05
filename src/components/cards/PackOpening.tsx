@@ -154,7 +154,8 @@ const Overlay = styled.div`
   position: fixed; inset: 0; z-index: 4000;
   background: radial-gradient(circle at center, rgba(15,18,30,0.96), rgba(4,5,10,0.99));
   display: flex; align-items: center; justify-content: center;
-  overflow: hidden;
+  /* 짧은 가로모드 폰에서 카드(≈320px)가 세로로 넘칠 때 스크롤 허용. */
+  overflow: auto; padding: 12px;
 `;
 
 const Flash = styled.div<{ $color: string }>`

@@ -3,6 +3,7 @@
 
 import { useEffect, useMemo, useState } from 'react';
 import styled from 'styled-components';
+import { media } from '../../utils/responsive.utils';
 import { ArrowLeft, Shield, Crosshair, Save, Info } from 'lucide-react';
 import { useTranslation } from '../../i18n';
 import { cardService } from '../../services/CardService';
@@ -218,25 +219,38 @@ const TopBar = styled.header`
   display: flex; align-items: center; justify-content: space-between; gap: 12px;
   padding: 14px 22px; border-bottom: 1px solid rgba(255,255,255,0.07); position: sticky; top: 0;
   background: rgba(10,12,22,0.85); backdrop-filter: blur(10px); z-index: 20;
+  ${media.tablet} { padding: 12px 16px; gap: 8px; }
+  ${media.mobile} { padding: 10px 12px; gap: 6px; }
 `;
 const BackBtn = styled.button`
+  flex: 0 0 auto;
   display: flex; align-items: center; gap: 5px; background: transparent;
   border: 1px solid rgba(255,255,255,0.12); color: rgba(255,255,255,0.7);
-  padding: 7px 12px; border-radius: 8px; cursor: pointer; font-size: 14px;
+  padding: 7px 12px; border-radius: 8px; cursor: pointer; font-size: 14px; white-space: nowrap;
   &:hover { background: rgba(255,255,255,0.07); }
+  ${media.mobile} { padding: 6px 9px; font-size: 12px; }
 `;
-const Title = styled.h1`font-size: 17px; font-weight: 800; margin: 0; display: flex; align-items: center; gap: 8px;`;
-const Count = styled.span`font-size: 13px; color: rgba(255,255,255,0.45); font-weight: 600;`;
+const Title = styled.h1`
+  font-size: 17px; font-weight: 800; margin: 0; display: flex; align-items: center; gap: 8px;
+  min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+  ${media.mobile} { font-size: 14px; gap: 5px; }
+`;
+const Count = styled.span`font-size: 13px; color: rgba(255,255,255,0.45); font-weight: 600; ${media.mobile} { display: none; }`;
 const SaveBtn = styled.button<{ $on: boolean }>`
+  flex: 0 0 auto;
   display: flex; align-items: center; gap: 6px; padding: 8px 16px; border-radius: 8px; border: none;
   background: ${p => (p.$on ? '#34d399' : 'rgba(255,255,255,0.08)')}; color: ${p => (p.$on ? '#07090f' : 'rgba(255,255,255,0.4)')};
-  font-weight: 800; font-size: 14px; cursor: ${p => (p.$on ? 'pointer' : 'not-allowed')};
+  font-weight: 800; font-size: 14px; cursor: ${p => (p.$on ? 'pointer' : 'not-allowed')}; white-space: nowrap;
+  ${media.mobile} { padding: 7px 12px; font-size: 12px; }
 `;
 
-const Field = styled.div`max-width: 720px; margin: 0 auto; padding: 24px 16px 8px; display: flex; flex-direction: column; gap: 16px;`;
+const Field = styled.div`
+  max-width: 720px; margin: 0 auto; padding: 24px 16px 8px; display: flex; flex-direction: column; gap: 16px;
+  ${media.mobile} { padding: 16px 12px 8px; gap: 12px; }
+`;
 const RowWrap = styled.div`display: flex; flex-direction: column; gap: 8px;`;
 const RowLabel = styled.div`display: flex; align-items: center; gap: 6px; font-size: 12px; font-weight: 700; color: rgba(255,255,255,0.5); letter-spacing: 0.08em;`;
-const RowSlots = styled.div`display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px;`;
+const RowSlots = styled.div`display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px; ${media.mobile} { gap: 8px; }`;
 const Slot = styled.div<{ $selected: boolean; $filled: boolean }>`
   aspect-ratio: 1 / 1.3; border-radius: 12px; cursor: pointer;
   display: flex; align-items: center; justify-content: center;
