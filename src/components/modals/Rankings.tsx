@@ -7,18 +7,22 @@ import { databaseService, APRankingEntry, CardRankingEntry } from '../../service
 import { authService } from '../../services/AuthService';
 import { saveService } from '../../services/SaveService';
 import { cardService } from '../../services/CardService';
+import { daysUntilSeasonReset } from '../../utils/season';
 import { useTranslation } from '../../i18n';
 import {
   ModalOverlay, ModalBox, ModalHeader, ModalTitle, ModalCloseBtn,
   ModalBody, MODAL_ACCENT,
 } from '../shared/modal.styles';
 
-interface RankingsProps { onClose: () => void; }
+interface RankingsProps {
+  onClose: () => void;
+  initialTab?: 'ap' | 'pvp' | 'tower' | 'collection';
+}
 
-export const Rankings = ({ onClose }: RankingsProps) => {
+export const Rankings = ({ onClose, initialTab = 'ap' }: RankingsProps) => {
   const { t } = useTranslation();
 
-  const [activeTab, setActiveTab] = useState<'ap' | 'pvp' | 'tower' | 'collection'>('ap');
+  const [activeTab, setActiveTab] = useState<'ap' | 'pvp' | 'tower' | 'collection'>(initialTab);
   const [apRankings, setApRankings] = useState<APRankingEntry[]>([]);
   const [myApRank, setMyApRank] = useState<number | null>(null);
   const [pvpRankings, setPvpRankings] = useState<any[]>([]);
@@ -119,7 +123,8 @@ export const Rankings = ({ onClose }: RankingsProps) => {
 
         {activeTab === 'tower' && (
           <MyRankBadgeWrapper>
-            <MyRankBadge><Emoji glyph="🎯" size={13} /> {t('rankings.myRank', { rank: myCardRank !== null ? myCardRank : '-' })} ({t('rankings.floorSuffix', { n: cardService.getTowerProgress() })})</MyRankBadge>
+            <MyRankBadge><Emoji glyph="🎯" size={13} /> {t('rankings.myRank', { rank: myCardRank !== null ? myCardRank : '-' })} ({t('rankings.floorSuffix', { n: cardService.getWeeklyBestFloor() })})</MyRankBadge>
+            <SeasonNote>{t('rankings.seasonNote', { n: daysUntilSeasonReset() })}</SeasonNote>
           </MyRankBadgeWrapper>
         )}
 
@@ -269,6 +274,11 @@ const MyRankBadge = styled.div`
   background: rgba(79,195,247,0.08); border: 1px solid rgba(79,195,247,0.22);
   border-radius: 8px; color: #4fc3f7; font-size: 14px; font-weight: 700;
   ${media.mobile} { font-size: 13px; padding: 7px 12px; margin-top: 0; }
+`;
+
+const SeasonNote = styled.div`
+  margin-top: 6px; font-size: 12px; font-weight: 600; color: rgba(251,191,36,0.85);
+  ${media.mobile} { font-size: 11px; }
 `;
 
 const StatusMsg = styled.div<{ $dimmed?: boolean }>`

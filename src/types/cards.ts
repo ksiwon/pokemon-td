@@ -71,4 +71,6 @@ export interface CardSaveState {
   towerProgress: number;
   /** 저장된 편성 덱(전투에 출전). */
   deck: Deck;
+  /** 주간 시즌 타워 기록 — weekId(ISO 주차)와 그 주의 최고 도달 층. 주차가 바뀌면 초기화. */
+  season?: { weekId: string; bestFloor: number };
 }

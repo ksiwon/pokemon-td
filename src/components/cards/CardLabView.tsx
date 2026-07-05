@@ -5,11 +5,14 @@ import { useEffect, useMemo, useState } from 'react';
 import styled, { keyframes } from 'styled-components';
 import { useNavigate } from 'react-router-dom';
 import { media } from '../../utils/responsive.utils';
-import { Coins, Sparkles, Package, Layers, Swords } from 'lucide-react';
+import { Coins, Sparkles, Package, Layers, Swords, Trophy, ChevronRight } from 'lucide-react';
 import { pokeAPI } from '../../api/pokeapi';
 import { useTranslation } from '../../i18n';
 import { cardService, PACK_DEFS } from '../../services/CardService';
-import { databaseService } from '../../services/DatabaseService';
+import { databaseService, CardRankingEntry } from '../../services/DatabaseService';
+import { authService } from '../../services/AuthService';
+import { daysUntilSeasonReset } from '../../utils/season';
+import { Rankings } from '../modals/Rankings';
 import { useCardState } from '../../hooks/useCardState';
 import { useCardMeta } from '../../hooks/useCardMeta';
 import { PullResult, PackType } from '../../types/cards';
@@ -39,6 +42,8 @@ export const CardLabView = () => {
   const [typePick, setTypePick] = useState(false); // 타입팩 타입 선택 모달
   const [filter, setFilter] = useState<CardFilterState>(DEFAULT_CARD_FILTER);
   const [detailId, setDetailId] = useState<number | null>(null);
+  const [rankInfo, setRankInfo] = useState<{ towerRank: number | null; collRank: number | null; top3: CardRankingEntry[] } | null>(null);
+  const [showRankings, setShowRankings] = useState(false);
 
   // 추첨 리스트 준비(캐시 시 즉시)
   useEffect(() => { pokeAPI.preloadRarities().catch(() => {}); }, []);
@@ -48,10 +53,29 @@ export const CardLabView = () => {
     [state.collection],
   );
 
-  // 미니 포켓 랭킹 동기화 — 타워 최고층/수집 종 수가 바뀔 때 Firestore에 반영.
-  // (로그인+온라인일 때만 기록. 오프라인/비로그인은 내부에서 무시. 동일 값은 세션 내 스킵.)
+  // 미니 포켓 랭킹 동기화 + 허브 순위 위젯 로드.
+  // 통산 수집 랭킹(cardRankings)을 반영한 뒤, 로그인+온라인이면 내 순위/Top3를 읽어온다.
+  // (오프라인/비로그인은 내부에서 무시 → 싱글/스토리 오프라인 동작 무영향. read는 60초 캐시 재활용.)
   useEffect(() => {
-    databaseService.updateCardRanking(state.towerProgress, ownedIds.length).catch(() => {});
+    let alive = true;
+    (async () => {
+      await databaseService.updateCardRanking(state.towerProgress, ownedIds.length).catch(() => {});
+      if (authService.isOfflineMode() || !authService.getCurrentUser()) {
+        if (alive) setRankInfo(null);
+        return;
+      }
+      try {
+        const [towerRank, collRank, top3] = await Promise.all([
+          databaseService.getMyTowerRank(),
+          databaseService.getMyCollectionRank(),
+          databaseService.getTowerRanking(3),
+        ]);
+        if (alive) setRankInfo({ towerRank, collRank, top3 });
+      } catch {
+        if (alive) setRankInfo(null);
+      }
+    })();
+    return () => { alive = false; };
   }, [state.towerProgress, ownedIds.length]);
 
   // 보유 카드 이름·타입·레어도 (검색/필터/정렬 + CardView용)
@@ -102,6 +126,44 @@ export const CardLabView = () => {
       </TopBar>
 
       <Body>
+        {/* 랭킹 위젯 — 이번 주 시즌 타워 + 통산 수집 */}
+        <RankWidget>
+          <RankHead>
+            <RankTitle><Trophy size={15} /> {t('cards.rank.title')}</RankTitle>
+            <SeasonTag>{t('cards.rank.season')} · {t('cards.rank.resetIn', { n: daysUntilSeasonReset() })}</SeasonTag>
+            <ViewAllBtn onClick={() => setShowRankings(true)}>
+              {t('cards.rank.viewAll')} <ChevronRight size={13} />
+            </ViewAllBtn>
+          </RankHead>
+          {rankInfo ? (
+            <>
+              <MyRankRow>
+                <MyRankChip>
+                  <Swords size={13} color="#c084fc" /> {t('cards.rank.tower')}{' '}
+                  <b>{rankInfo.towerRank ? t('cards.rank.rankSuffix', { n: rankInfo.towerRank }) : t('cards.rank.unranked')}</b>
+                </MyRankChip>
+                <MyRankChip>
+                  <Layers size={13} color="#38bdf8" /> {t('cards.rank.coll')}{' '}
+                  <b>{rankInfo.collRank ? t('cards.rank.rankSuffix', { n: rankInfo.collRank }) : t('cards.rank.unranked')}</b>
+                </MyRankChip>
+              </MyRankRow>
+              {rankInfo.top3.length > 0 && (
+                <Podium>
+                  {rankInfo.top3.map((e, i) => (
+                    <PodItem key={e.userId}>
+                      <PodMedal>{i === 0 ? '🥇' : i === 1 ? '🥈' : '🥉'}</PodMedal>
+                      <PodName>{e.userName ?? '???'}</PodName>
+                      <PodVal>{t('cards.rank.floor', { n: e.towerFloor })}</PodVal>
+                    </PodItem>
+                  ))}
+                </Podium>
+              )}
+            </>
+          ) : (
+            <RankHint>{t('cards.rank.loginHint')}</RankHint>
+          )}
+        </RankWidget>
+
         {/* 팩 상점 */}
         <Section>
           <SecLabel><Package size={15} /> {t('cards.lab.packShop')}</SecLabel>
@@ -216,6 +278,8 @@ export const CardLabView = () => {
           onClose={() => setDetailId(null)}
         />
       )}
+
+      {showRankings && <Rankings initialTab="tower" onClose={() => setShowRankings(false)} />}
     </Root>
   );
 };
@@ -239,6 +303,64 @@ const TypeChip = styled.button<{ $c: string }>`
   background: ${p => p.$c}22; color: #fff; font-size: 13px; font-weight: 700;
   transition: transform 0.12s, background 0.12s;
   &:hover { background: ${p => p.$c}; transform: translateY(-2px); }
+`;
+
+// ─── 랭킹 위젯 ────────────────────────────────────────────────────────────────
+const RankWidget = styled.section`
+  display: flex; flex-direction: column; gap: 12px;
+  padding: 16px 18px; border-radius: 14px;
+  background: linear-gradient(160deg, rgba(251,191,36,0.08), rgba(192,132,252,0.05));
+  border: 1px solid rgba(251,191,36,0.18);
+  ${media.mobile} { padding: 13px 14px; gap: 10px; }
+`;
+const RankHead = styled.div`
+  display: flex; align-items: center; gap: 10px; flex-wrap: wrap;
+`;
+const RankTitle = styled.div`
+  display: flex; align-items: center; gap: 7px; font-size: 14px; font-weight: 800; color: #fbbf24;
+`;
+const SeasonTag = styled.span`
+  font-size: 11px; font-weight: 700; color: rgba(255,255,255,0.5);
+  background: rgba(255,255,255,0.06); padding: 3px 9px; border-radius: 100px;
+`;
+const ViewAllBtn = styled.button`
+  margin-left: auto; display: flex; align-items: center; gap: 2px;
+  background: transparent; border: none; color: #c084fc; cursor: pointer;
+  font-size: 12px; font-weight: 700; padding: 4px 6px; border-radius: 6px;
+  &:hover { background: rgba(192,132,252,0.12); }
+`;
+const MyRankRow = styled.div`
+  display: grid; grid-template-columns: repeat(2, 1fr); gap: 10px;
+  ${media.mobile} { gap: 8px; }
+`;
+const MyRankChip = styled.div`
+  display: flex; align-items: center; gap: 6px; font-size: 13px; font-weight: 600; color: rgba(255,255,255,0.75);
+  background: rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.08);
+  padding: 9px 12px; border-radius: 10px;
+  b { color: #f8fafc; font-weight: 800; margin-left: 2px; }
+  ${media.mobile} { font-size: 12px; padding: 8px 10px; }
+`;
+const Podium = styled.div`
+  display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px;
+`;
+const PodItem = styled.div`
+  display: flex; align-items: center; gap: 6px; min-width: 0;
+  background: rgba(255,255,255,0.04); border: 1px solid rgba(255,255,255,0.06);
+  padding: 7px 10px; border-radius: 9px;
+  ${media.mobile} { padding: 6px 8px; gap: 4px; }
+`;
+const PodMedal = styled.span`font-size: 15px; flex: 0 0 auto;`;
+const PodName = styled.span`
+  font-size: 12px; font-weight: 700; color: #e8edf3;
+  overflow: hidden; text-overflow: ellipsis; white-space: nowrap; min-width: 0;
+  ${media.mobile} { font-size: 11px; }
+`;
+const PodVal = styled.span`
+  margin-left: auto; flex: 0 0 auto; font-size: 11px; font-weight: 800; color: #c084fc;
+  font-variant-numeric: tabular-nums;
+`;
+const RankHint = styled.div`
+  font-size: 12.5px; color: rgba(255,255,255,0.45); text-align: center; padding: 6px 0;
 `;
 
 const Root = styled.div`

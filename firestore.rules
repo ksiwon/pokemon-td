@@ -96,6 +96,20 @@ service cloud.firestore {
                            && request.resource.data.collectionCount <= 2000));
     }
 
+    // ─── 미니 포켓 주간 시즌 타워 랭킹 ───────────────────
+    // seasons/{seasonId}/cardRankings/{uid} — 주차별 서브컬렉션(경로 분리로 자동 리셋).
+    // [SEC] 본인 문서만 쓰기, towerFloor 상한으로 위조 차단.
+    match /seasons/{seasonId}/cardRankings/{userId} {
+      allow read: if request.auth != null;
+      allow write: if request.auth != null
+                   && request.auth.uid == userId
+                   && request.resource.data.userId == request.auth.uid
+                   && (!('towerFloor' in request.resource.data)
+                       || (request.resource.data.towerFloor is number
+                           && request.resource.data.towerFloor >= 0
+                           && request.resource.data.towerFloor <= 100000));
+    }
+
     // ─── 그 외 모든 경로 차단 ────────────────────────────
     // (rooms는 RTDB에 있으므로 Firestore에는 더 이상 정의하지 않음)
     // (pokedex는 사용처가 없으므로 제거됨)

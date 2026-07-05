@@ -669,7 +669,8 @@
     "rankSuffix": "#{rank}위",
     "waveSuffix": "Wave {wave}",
     "floorSuffix": "{n}층",
-    "dexSuffix": "{n}종"
+    "dexSuffix": "{n}종",
+    "seasonNote": "🗓 이번 주 시즌 · 리셋까지 {n}일 · 매주 초기화"
   },
   "hallOfFame": {
     "title": " 전당등록",
@@ -1120,6 +1121,18 @@
       "drawing": "추첨 중...",
       "floor": "{n}층",
       "slots": "{n}/6"
+    },
+    "rank": {
+      "title": "랭킹",
+      "season": "이번 주 시즌",
+      "resetIn": "리셋까지 {n}일",
+      "viewAll": "전체 보기",
+      "tower": "타워",
+      "coll": "수집",
+      "rankSuffix": "#{n}",
+      "unranked": "미등록",
+      "floor": "{n}층",
+      "loginHint": "로그인하면 시즌 랭킹에 참여할 수 있어요"
     },
     "pack": {
       "cardCount": "{n}장",

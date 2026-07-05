@@ -8,6 +8,7 @@ import { ArrowLeft, Play, FastForward, ChevronsRight } from 'lucide-react';
 import { pokeAPI } from '../../api/pokeapi';
 import { useTranslation } from '../../i18n';
 import { cardService } from '../../services/CardService';
+import { databaseService } from '../../services/DatabaseService';
 import { useCardState } from '../../hooks/useCardState';
 import {
   cardBattleService, buildBattleCard, BattleCard, BattleResult, BattleLogEntry,
@@ -74,6 +75,10 @@ export const TrainerTower = ({ onBack }: { onBack: () => void }) => {
         const shards = firstClear ? (boss ? 5 : currentFloor % 5 === 0 ? 2 : 0) : 0;
         cardService.grantRewards({ coins, starShards: shards });
         if (firstClear) cardService.setTowerProgress(currentFloor);
+        // [주간 시즌] 이번 주 최고층 갱신 시에만 Firestore 시즌 랭킹 기록(오프라인/비로그인 무시).
+        //   all-time firstClear와 무관 — 매주 다시 오르는 경쟁이므로 이번 주 기준으로 판정.
+        const weeklyBest = cardService.recordWeeklyBestFloor(currentFloor);
+        if (weeklyBest !== null) databaseService.updateTowerSeasonRanking(weeklyBest).catch(() => {});
         rw = { coins, starShards: shards, firstClear };
       }
 

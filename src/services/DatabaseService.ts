@@ -10,6 +10,7 @@ import { db } from '../config/firebase';
 import { HallOfFameEntry, LeaderboardEntry } from '../types/multiplayer';
 import { Achievement } from '../types/game';
 import { authService } from './AuthService';
+import { seasonId } from '../utils/season';
 
 // [FREE-TIER] 무료 플랜 데이터 보존 한도
 const HALL_OF_FAME_MAX_AGE_DAYS = 60;  // 이 일수보다 오래된 자신의 기록은 삭제 후보
@@ -42,6 +43,7 @@ class DatabaseService {
 
   // [FREE-TIER] 카드 랭킹 쓰기 중복 방지 — 세션 내 동일 값(층:수집수) 재기록 스킵.
   private _lastCardRankSync = '';
+  private _lastSeasonSync = '';
 
   private async cachedRead<T>(key: string, loader: () => Promise<T>): Promise<T> {
     const hit = this._readCache.get(key);
@@ -517,12 +519,41 @@ class DatabaseService {
     }
   }
 
-  /** 전체 타워 최고층 랭킹 Top N. */
+  /**
+   * 이번 주 시즌 타워 최고층 기록.
+   * seasons/{seasonId}/cardRankings/{uid} 서브컬렉션 → 주차가 바뀌면 새 경로 = 자동 리셋.
+   * 호출부(CardService.recordWeeklyBestFloor)가 '이번 주 개선 시에만' floor를 넘겨줌.
+   */
+  async updateTowerSeasonRanking(towerFloor: number): Promise<void> {
+    const user = authService.getCurrentUser();
+    if (!user || authService.isOfflineMode()) return;
+
+    const season = seasonId();
+    const key = `${season}:${towerFloor}`;
+    if (key === this._lastSeasonSync) return;
+
+    const entry: CardRankingEntry = {
+      userId: user.uid,
+      userName: user.displayName,
+      towerFloor,
+      collectionCount: 0, // 시즌 문서는 타워 전용(수집은 통산 cardRankings 사용)
+      updatedAt: Date.now(),
+    };
+    try {
+      await setDoc(doc(db, 'seasons', season, 'cardRankings', user.uid), entry);
+      this._lastSeasonSync = key;
+    } catch (err) {
+      console.warn('[DB] updateTowerSeasonRanking failed:', err);
+    }
+  }
+
+  /** 이번 주 시즌 타워 최고층 랭킹 Top N. */
   async getTowerRanking(limitCount = 100): Promise<CardRankingEntry[]> {
-    return this.cachedRead(`towerRanking:${limitCount}`, async () => {
+    const season = seasonId();
+    return this.cachedRead(`towerRanking:${season}:${limitCount}`, async () => {
       try {
         const q = query(
-          collection(db, 'cardRankings'),
+          collection(db, 'seasons', season, 'cardRankings'),
           orderBy('towerFloor', 'desc'),
           limit(limitCount)
         );
@@ -551,28 +582,42 @@ class DatabaseService {
     });
   }
 
-  /** 내 타워 최고층 순위 (나보다 높은 층 수 + 1). */
+  /** 내 이번 주 시즌 타워 최고층 순위 (나보다 높은 층 수 + 1). */
   async getMyTowerRank(): Promise<number | null> {
-    return this.getMyCardRank('towerFloor');
+    const user = authService.getCurrentUser();
+    if (!user) return null;
+    const season = seasonId();
+    try {
+      const myDoc = await getDoc(doc(db, 'seasons', season, 'cardRankings', user.uid));
+      if (!myDoc.exists()) return null;
+
+      const myValue = (myDoc.data() as CardRankingEntry).towerFloor;
+      const RANK_SCAN_LIMIT = 500;
+      const q = query(
+        collection(db, 'seasons', season, 'cardRankings'),
+        where('towerFloor', '>', myValue),
+        limit(RANK_SCAN_LIMIT)
+      );
+      const snapshot = await getDocs(q);
+      return snapshot.size + 1;
+    } catch {
+      return null;
+    }
   }
 
-  /** 내 수집 종 수 순위 (나보다 많은 종 수 + 1). */
+  /** 내 통산 수집 종 수 순위 (나보다 많은 종 수 + 1). */
   async getMyCollectionRank(): Promise<number | null> {
-    return this.getMyCardRank('collectionCount');
-  }
-
-  private async getMyCardRank(field: 'towerFloor' | 'collectionCount'): Promise<number | null> {
     const user = authService.getCurrentUser();
     if (!user) return null;
     try {
       const myDoc = await getDoc(doc(db, 'cardRankings', user.uid));
       if (!myDoc.exists()) return null;
 
-      const myValue = (myDoc.data() as CardRankingEntry)[field];
+      const myValue = (myDoc.data() as CardRankingEntry).collectionCount;
       const RANK_SCAN_LIMIT = 500;
       const q = query(
         collection(db, 'cardRankings'),
-        where(field, '>', myValue),
+        where('collectionCount', '>', myValue),
         limit(RANK_SCAN_LIMIT)
       );
       const snapshot = await getDocs(q);
