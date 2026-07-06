@@ -50,6 +50,9 @@ export const MainMenu = () => {
     else navigate('/cards');
   };
 
+  // 포켓몬 퀴즈 — PokeAPI만 사용(Firebase 무관). 인터넷 없으면 플레이 화면서 안내.
+  const handleQuiz = () => navigate('/quiz');
+
   // [FREE-TIER] 오프라인 모드: 서버 의존 기능(랭킹/전당) 차단
   const handleRankings = () => {
     if (isOffline) { alert(t('mainMenu.offlineRankingBlocked')); return; }
@@ -165,6 +168,19 @@ export const MainMenu = () => {
               <ModeInfo>
                 <ModeName>{t('cards.menu.title')}</ModeName>
                 <ModeDesc>{t('cards.menu.desc')}</ModeDesc>
+              </ModeInfo>
+              <ModeArrow>→</ModeArrow>
+            </ModeCard>
+
+            <ModeCard $accent="#22d3ee" onClick={handleQuiz} $wide>
+              <ModeCardBg $color="rgba(34,211,238,0.06)" />
+              <ModeCardBorder $color="#22d3ee" />
+              <ModeIconWrap $bg="rgba(34,211,238,0.1)">
+                <ModeEmoji><Emoji glyph="❓" size={30} /></ModeEmoji>
+              </ModeIconWrap>
+              <ModeInfo>
+                <ModeName>{t('quiz.menu.title')}</ModeName>
+                <ModeDesc>{t('quiz.menu.desc')}</ModeDesc>
               </ModeInfo>
               <ModeArrow>→</ModeArrow>
             </ModeCard>
@@ -342,7 +358,7 @@ const ModeGrid = styled.div`
   ${lMedia.phoneSm} { gap:10px; margin-bottom:14px; }
 `;
 
-const ModeCard = styled.button<{ $accent: string; $disabled?: boolean }>`
+const ModeCard = styled.button<{ $accent: string; $disabled?: boolean; $wide?: boolean }>`
   display:flex; align-items:center; gap:18px;
   padding:28px 24px; min-height:104px;
   background:rgba(255,255,255,0.03);
@@ -350,6 +366,7 @@ const ModeCard = styled.button<{ $accent: string; $disabled?: boolean }>`
   border-radius:18px; cursor:pointer; text-align:left;
   position:relative; overflow:hidden;
   transition:all 0.22s ease; color:#fff;
+  ${p => p.$wide && css`grid-column: 1 / -1;`}
   ${p => p.$disabled && css`opacity:0.5; filter:grayscale(0.6);`}
 
   &:hover {

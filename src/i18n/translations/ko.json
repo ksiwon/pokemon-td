@@ -1188,6 +1188,51 @@
       "exit": "나가기"
     }
   },
+  "quiz": {
+    "menu": {
+      "title": "포켓몬 퀴즈",
+      "desc": "실루엣·종족값·타입·도감번호 맞히기"
+    },
+    "hub": {
+      "backToMenu": "← 메뉴",
+      "backHub": "← 퀴즈",
+      "headline": "퀴즈를 골라 도전!",
+      "roundInfo": "한 판 10문제 · 4지선다",
+      "best": "최고 {n}",
+      "bestStreak": "최고 연속 {n}",
+      "onlineNote": "퀴즈 데이터는 PokeAPI에서 실시간으로 불러옵니다 · 인터넷 연결 필요"
+    },
+    "types": {
+      "silhouette": { "name": "누구게?", "desc": "실루엣 보고 이름 맞히기" },
+      "bstDuel": { "name": "종족값 대결", "desc": "총합 더 높은 쪽 고르기" },
+      "type": { "name": "타입 퀴즈", "desc": "포켓몬의 타입 맞히기" },
+      "dexNumber": { "name": "도감번호", "desc": "전국도감 번호 맞히기" }
+    },
+    "play": {
+      "silhouettePrompt": "이 포켓몬은 누구?",
+      "bstDuelPrompt": "종족값 총합이 더 높은 쪽은?",
+      "typePrompt": "{name}의 타입은?",
+      "dexPrompt": "{name}의 전국도감 번호는?",
+      "bstRevealWin": "{name} 승 (종족값 {total})",
+      "progress": "{cur} / {total}",
+      "correct": "정답!",
+      "wrong": "오답",
+      "next": "다음",
+      "seeResult": "결과 보기",
+      "loading": "문제 준비 중...",
+      "loadError": "문제를 불러오지 못했어요. 인터넷 연결을 확인해주세요.",
+      "retryLoad": "다시 시도"
+    },
+    "result": {
+      "title": "결과",
+      "score": "{score} / {total}",
+      "newBest": "최고 기록 갱신!",
+      "best": "최고 {n}",
+      "maxStreak": "최고 연속 {n}",
+      "retry": "다시하기",
+      "exit": "나가기"
+    }
+  },
   "boss": {
     "incoming": "보스 출현",
     "approaching": "보스 출현",
