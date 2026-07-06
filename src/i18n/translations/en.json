@@ -1219,7 +1219,7 @@
     },
     "exam": {
       "name": "Mock Exam",
-      "desc": "20 mixed questions · graded"
+      "desc": "20 expert mixed questions · graded"
     },
     "play": {
       "silhouettePrompt": "Who's that Pokémon?",
@@ -1227,6 +1227,9 @@
       "zoomPrompt": "Which zoomed-in Pokémon?",
       "playCry": "Play sound",
       "flavorFallback": "(No Pokédex entry)",
+      "inputPlaceholder": "Type the Pokémon name",
+      "submit": "Submit",
+      "giveUp": "I don't know",
       "bstDuelPrompt": "Which has the higher base stat total?",
       "typePrompt": "What type is {name}?",
       "dexPrompt": "What is {name}'s National Dex number?",

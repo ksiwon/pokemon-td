@@ -1219,7 +1219,7 @@
     },
     "exam": {
       "name": "수능 모의고사",
-      "desc": "전 종목 랜덤 20문제 · 등급 산출"
+      "desc": "포덕 고인물용 종합 20문제 · 등급 산출"
     },
     "play": {
       "silhouettePrompt": "이 포켓몬은 누구?",
@@ -1227,6 +1227,9 @@
       "zoomPrompt": "확대된 이 포켓몬은?",
       "playCry": "소리 재생",
       "flavorFallback": "(도감 설명 없음)",
+      "inputPlaceholder": "포켓몬 이름 입력",
+      "submit": "제출",
+      "giveUp": "모르겠어요",
       "bstDuelPrompt": "종족값 총합이 더 높은 쪽은?",
       "typePrompt": "{name}의 타입은?",
       "dexPrompt": "{name}의 전국도감 번호는?",

@@ -4,6 +4,7 @@
 
 import { pokeAPI } from '../api/pokeapi';
 import { QuizKind, QuizQuestion, QuizOption, QUIZ_KINDS } from '../types/quiz';
+import { EXAM_BANK, bankToQuestion } from './quizExamBank';
 
 /** 전국도감 최대 번호(9세대 기준). 폼(10001+)은 제외. */
 const MAX_DEX = 1025;
@@ -76,34 +77,36 @@ export interface QuizCtx {
   t: (key: string, params?: Record<string, string | number>) => string;
 }
 
-// ─── 종목별 생성기 ─────────────────────────────────────────────────────────────
-
-/** 🕶 누구게 — 실루엣 보고 이름 4지선다. */
-async function genSilhouette(ctx: QuizCtx): Promise<QuizQuestion> {
-  const id = randDexId();
-  const mon = await pokeAPI.getPokemon(id);
-  const distractorIds = pickDistinctIds(3, new Set([id]));
-  const distractors = await Promise.all(distractorIds.map(d => pokeAPI.getPokemon(d)));
-
-  const tagged = [
-    { label: mon.displayName, correct: true },
-    ...distractors.map(d => ({ label: d.displayName, correct: false })),
-  ];
-  const opts = shuffle(tagged);
-
-  await preloadImages([artUrl(id)]);
-  return {
-    kind: 'silhouette',
-    prompt: ctx.t('quiz.play.silhouettePrompt'),
-    media: { imageUrl: artUrl(id), silhouette: true },
-    options: opts.map(o => ({ label: o.label } as QuizOption)),
-    correctIndex: opts.findIndex(o => o.correct),
-    reveal: { title: mon.displayName, subtitle: dexLabel(id), imageUrl: artUrl(id) },
-  };
+/** 주관식 채점 정규화 — 소문자화 + 공백/구분기호 제거(띄어쓰기·기호 무관). */
+export function normalizeAnswer(s: string): string {
+  return (s || '').normalize('NFC').toLowerCase().replace(/[\s·・.\-'’ㆍ_/]/g, '').trim();
 }
 
-/** ⚔ 종족값 대결 — 둘 중 총합 높은 쪽. */
-async function genBstDuel(ctx: QuizCtx): Promise<QuizQuestion> {
+/** 이름 맞히기 인정 정답 후보(현지화명 + 영문 slug). */
+function acceptNames(mon: { displayName: string; name: string }): string[] {
+  return Array.from(new Set([mon.displayName, mon.name].filter(Boolean)));
+}
+
+// ─── 종목별 생성기 ─────────────────────────────────────────────────────────────
+
+/** 🕶 누구게 — 실루엣 보고 이름. choice=false면 주관식. */
+async function genSilhouette(ctx: QuizCtx, choice: boolean): Promise<QuizQuestion> {
+  const id = randDexId();
+  const mon = await pokeAPI.getPokemon(id);
+  await preloadImages([artUrl(id)]);
+  const base = {
+    kind: 'silhouette' as const,
+    prompt: ctx.t('quiz.play.silhouettePrompt'),
+    media: { imageUrl: artUrl(id), silhouette: true },
+    reveal: { title: mon.displayName, subtitle: dexLabel(id), imageUrl: artUrl(id) },
+  };
+  return choice
+    ? { ...base, answerType: 'choice', ...(await nameOptions(id, mon.displayName)) }
+    : { ...base, answerType: 'text', options: [], correctIndex: -1, accept: acceptNames(mon) };
+}
+
+/** ⚔ 종족값 대결 — 둘 중 총합 높은 쪽(항상 4지선다형 2택). */
+async function genBstDuel(ctx: QuizCtx, _choice: boolean): Promise<QuizQuestion> {
   let a = randDexId();
   let b = randDexId();
   while (b === a) b = randDexId();
@@ -129,6 +132,7 @@ async function genBstDuel(ctx: QuizCtx): Promise<QuizQuestion> {
   return {
     kind: 'bstDuel',
     prompt: ctx.t('quiz.play.bstDuelPrompt'),
+    answerType: 'choice',
     options: [
       { label: monA.displayName, imageUrl: artUrl(a) },
       { label: monB.displayName, imageUrl: artUrl(b) },
@@ -142,8 +146,8 @@ async function genBstDuel(ctx: QuizCtx): Promise<QuizQuestion> {
   };
 }
 
-/** 🧩 타입 — 포켓몬 보고 실제 타입 고르기(오답=미보유 타입). */
-async function genType(ctx: QuizCtx): Promise<QuizQuestion> {
+/** 🧩 타입 — 포켓몬 보고 실제 타입 고르기(오답=미보유 타입). 항상 4지선다. */
+async function genType(ctx: QuizCtx, _choice: boolean): Promise<QuizQuestion> {
   const id = randDexId();
   const mon = await pokeAPI.getPokemon(id);
   const monTypes = mon.types.length ? mon.types : ['normal'];
@@ -156,6 +160,7 @@ async function genType(ctx: QuizCtx): Promise<QuizQuestion> {
     kind: 'type',
     prompt: ctx.t('quiz.play.typePrompt', { name: mon.displayName }),
     media: { imageUrl: artUrl(id) },
+    answerType: 'choice',
     options: opts.map(ty => ({ label: ctx.t(`types.${ty}`) } as QuizOption)),
     correctIndex: opts.indexOf(correctType),
     reveal: {
@@ -166,8 +171,8 @@ async function genType(ctx: QuizCtx): Promise<QuizQuestion> {
   };
 }
 
-/** 🔢 도감번호 — 포켓몬 보고 전국도감 번호 고르기. */
-async function genDexNumber(ctx: QuizCtx): Promise<QuizQuestion> {
+/** 🔢 도감번호 — 포켓몬 보고 전국도감 번호 고르기. 항상 4지선다. */
+async function genDexNumber(ctx: QuizCtx, _choice: boolean): Promise<QuizQuestion> {
   const id = randDexId();
   const mon = await pokeAPI.getPokemon(id);
   const distractors = pickDistinctIds(3, new Set([id]));
@@ -178,6 +183,7 @@ async function genDexNumber(ctx: QuizCtx): Promise<QuizQuestion> {
     kind: 'dexNumber',
     prompt: ctx.t('quiz.play.dexPrompt', { name: mon.displayName }),
     media: { imageUrl: artUrl(id) },
+    answerType: 'choice',
     options: nums.map(n => ({ label: dexLabel(n) } as QuizOption)),
     correctIndex: nums.indexOf(id),
     reveal: { title: mon.displayName, subtitle: dexLabel(id), imageUrl: artUrl(id) },
@@ -196,64 +202,64 @@ async function nameOptions(correctId: number, correctName: string): Promise<{ op
   return { options: opts.map(o => ({ label: o.label } as QuizOption)), correctIndex: opts.findIndex(o => o.correct) };
 }
 
-/** 🔊 울음소리 — cry 듣고 이름 4지선다. */
-async function genCry(ctx: QuizCtx): Promise<QuizQuestion> {
+/** 🔊 울음소리 — cry 듣고 이름. choice=false면 주관식. */
+async function genCry(ctx: QuizCtx, choice: boolean): Promise<QuizQuestion> {
   const id = randDexId();
   const mon = await pokeAPI.getPokemon(id);
-  const { options, correctIndex } = await nameOptions(id, mon.displayName);
   await preloadImages([artUrl(id)]);
-  return {
-    kind: 'cry',
+  const base = {
+    kind: 'cry' as const,
     prompt: ctx.t('quiz.play.cryPrompt'),
     media: { audioUrl: cryUrl(id) },
-    options, correctIndex,
     reveal: { title: mon.displayName, subtitle: dexLabel(id), imageUrl: artUrl(id) },
   };
+  return choice
+    ? { ...base, answerType: 'choice', ...(await nameOptions(id, mon.displayName)) }
+    : { ...base, answerType: 'text', options: [], correctIndex: -1, accept: acceptNames(mon) };
 }
 
-/** 🔍 확대 — 크게 확대한 아트 일부 보고 이름 4지선다. */
-async function genZoom(ctx: QuizCtx): Promise<QuizQuestion> {
+/** 🔍 확대 — 크게 확대한 아트 일부 보고 이름. choice=false면 주관식. */
+async function genZoom(ctx: QuizCtx, choice: boolean): Promise<QuizQuestion> {
   const id = randDexId();
   const mon = await pokeAPI.getPokemon(id);
-  const { options, correctIndex } = await nameOptions(id, mon.displayName);
-  // 확대 중심: 가장자리 잘림 방지 위해 30~70% 범위
   const zoom = { x: 30 + Math.floor(Math.random() * 41), y: 30 + Math.floor(Math.random() * 41) };
   await preloadImages([artUrl(id)]);
-  return {
-    kind: 'zoom',
+  const base = {
+    kind: 'zoom' as const,
     prompt: ctx.t('quiz.play.zoomPrompt'),
     media: { imageUrl: artUrl(id), zoom },
-    options, correctIndex,
     reveal: { title: mon.displayName, subtitle: dexLabel(id), imageUrl: artUrl(id) },
   };
+  return choice
+    ? { ...base, answerType: 'choice', ...(await nameOptions(id, mon.displayName)) }
+    : { ...base, answerType: 'text', options: [], correctIndex: -1, accept: acceptNames(mon) };
 }
 
-/** 📖 도감설명 — 도감 텍스트(이름 가림) 보고 이름 4지선다. */
-async function genFlavor(ctx: QuizCtx): Promise<QuizQuestion> {
+/** 📖 도감설명 — 도감 텍스트(이름 가림) 보고 이름. choice=false면 주관식. */
+async function genFlavor(ctx: QuizCtx, choice: boolean): Promise<QuizQuestion> {
   let id = randDexId();
   let mon = await pokeAPI.getPokemon(id);
-  // 도감설명 없으면 몇 번 다시 뽑기(극히 일부 종 누락 대비)
   for (let tries = 0; tries < 4 && !mon.flavorText; tries++) {
     id = randDexId();
     mon = await pokeAPI.getPokemon(id);
   }
-  // 이름 노출 마스킹(정답 유출 방지) — 현지화 이름과 영문 slug 모두 가림.
-  //   이름에 정규식 특수문자(., -, ' 등)가 있어도 안전하도록 escape.
+  // 이름 노출 마스킹(정답 유출 방지) — 정규식 특수문자 escape.
   const esc = (s: string) => s.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
   const masked = (mon.flavorText || ctx.t('quiz.play.flavorFallback'))
     .replace(new RegExp(esc(mon.displayName), 'gi'), '○○○')
     .replace(new RegExp(esc(mon.name), 'gi'), '○○○');
-  const { options, correctIndex } = await nameOptions(id, mon.displayName);
   await preloadImages([artUrl(id)]);
-  return {
-    kind: 'flavor',
+  const base = {
+    kind: 'flavor' as const,
     prompt: `“${masked}”`,
-    options, correctIndex,
     reveal: { title: mon.displayName, subtitle: dexLabel(id), imageUrl: artUrl(id) },
   };
+  return choice
+    ? { ...base, answerType: 'choice', ...(await nameOptions(id, mon.displayName)) }
+    : { ...base, answerType: 'text', options: [], correctIndex: -1, accept: acceptNames(mon) };
 }
 
-const GENERATORS: Record<QuizKind, (ctx: QuizCtx) => Promise<QuizQuestion>> = {
+const GENERATORS: Record<QuizKind, (ctx: QuizCtx, choice: boolean) => Promise<QuizQuestion>> = {
   silhouette: genSilhouette,
   cry: genCry,
   zoom: genZoom,
@@ -263,13 +269,32 @@ const GENERATORS: Record<QuizKind, (ctx: QuizCtx) => Promise<QuizQuestion>> = {
   flavor: genFlavor,
 };
 
-/** 한 문제 생성. 네트워크 실패 시 throw(호출부에서 재시도 처리). */
+/** 개별 종목 한 문제 — 이름 맞히기류는 주관식. 네트워크 실패 시 throw. */
 export function generateQuestion(kind: QuizKind, ctx: QuizCtx): Promise<QuizQuestion> {
-  return GENERATORS[kind](ctx);
+  return GENERATORS[kind](ctx, false);
 }
 
-/** 수능 모의고사 — 전 종목에서 무작위로 한 문제. */
-export function generateExamQuestion(ctx: QuizCtx): Promise<QuizQuestion> {
+/** 모의고사용 PokeAPI 생성 문제 — 항상 4지선다. */
+function generateExamGenerated(ctx: QuizCtx): Promise<QuizQuestion> {
   const kind = QUIZ_KINDS[Math.floor(Math.random() * QUIZ_KINDS.length)];
-  return GENERATORS[kind](ctx);
+  return GENERATORS[kind](ctx, true);
+}
+
+/**
+ * 수능 모의고사 세션 — 큐레이션 문제은행(고인물 난이도) + PokeAPI 생성 문제 혼합.
+ * 은행 문항은 세션 내 중복 없이 소진(셔플 큐), 나머지는 생성으로 채움. 전부 4지선다.
+ */
+export function createExamSession() {
+  const bankOrder = shuffle(EXAM_BANK.map((_, i) => i));
+  let bankPtr = 0;
+  return {
+    next(ctx: QuizCtx): Promise<QuizQuestion> {
+      const bankLeft = bankPtr < bankOrder.length;
+      // 은행 우선(약 60%), 소진 시 생성으로 대체
+      if (bankLeft && Math.random() < 0.6) {
+        return Promise.resolve(bankToQuestion(bankOrder[bankPtr++]));
+      }
+      return generateExamGenerated(ctx);
+    },
+  };
 }

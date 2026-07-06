@@ -8,7 +8,7 @@ import { ArrowLeft, Check, X, Flame, RotateCcw, Volume2 } from 'lucide-react';
 import { media } from '../../utils/responsive.utils';
 import { useTranslation } from '../../i18n';
 import { QuizMode, QuizQuestion } from '../../types/quiz';
-import { generateQuestion, generateExamQuestion } from '../../services/QuizEngine';
+import { generateQuestion, createExamSession, normalizeAnswer } from '../../services/QuizEngine';
 import { quizService } from '../../services/QuizService';
 import { databaseService } from '../../services/DatabaseService';
 
@@ -35,6 +35,8 @@ export const QuizPlay = ({ mode, onExit }: QuizPlayProps) => {
   const [q, setQ] = useState<QuizQuestion | null>(null);
   const [phase, setPhase] = useState<Phase>('loading');
   const [selected, setSelected] = useState<number | null>(null);
+  const [textValue, setTextValue] = useState('');
+  const [lastCorrect, setLastCorrect] = useState(false);
   const [score, setScore] = useState(0);
   const [streak, setStreak] = useState(0);
   const [maxStreak, setMaxStreak] = useState(0);
@@ -42,8 +44,35 @@ export const QuizPlay = ({ mode, onExit }: QuizPlayProps) => {
 
   const nextRef = useRef<Promise<QuizQuestion> | null>(null);
   const aliveRef = useRef(true);
+  const examSessionRef = useRef<ReturnType<typeof createExamSession> | null>(null);
 
-  const gen = () => (isExam ? generateExamQuestion({ t }) : generateQuestion(mode, { t }));
+  const gen = () => {
+    if (isExam) {
+      if (!examSessionRef.current) examSessionRef.current = createExamSession();
+      return examSessionRef.current.next({ t });
+    }
+    return generateQuestion(mode, { t });
+  };
+
+  /** 정답/오답 확정 — 점수·연속·페이즈 갱신(주관식·객관식 공용). */
+  const commitAnswer = (correct: boolean) => {
+    setLastCorrect(correct);
+    if (correct) {
+      setScore(s => s + 1);
+      const ns = streak + 1;
+      setStreak(ns);
+      setMaxStreak(m => Math.max(m, ns));
+    } else {
+      setStreak(0);
+    }
+    setPhase('revealed');
+  };
+
+  const isAnswerCorrect = (): boolean => {
+    if (!q || !q.accept) return false;
+    const norm = normalizeAnswer(textValue);
+    return norm.length > 0 && q.accept.some(a => normalizeAnswer(a) === norm);
+  };
 
   useEffect(() => {
     aliveRef.current = true;
@@ -54,7 +83,8 @@ export const QuizPlay = ({ mode, onExit }: QuizPlayProps) => {
 
   const reset = async () => {
     setIdx(0); setScore(0); setStreak(0); setMaxStreak(0);
-    setSelected(null); setNewBest(false); setQ(null); setPhase('loading');
+    setSelected(null); setTextValue(''); setNewBest(false); setQ(null); setPhase('loading');
+    examSessionRef.current = isExam ? createExamSession() : null;
     try {
       const first = await gen();
       if (!aliveRef.current) return;
@@ -69,15 +99,17 @@ export const QuizPlay = ({ mode, onExit }: QuizPlayProps) => {
   const onSelect = (i: number) => {
     if (phase !== 'question' || !q) return;
     setSelected(i);
-    if (i === q.correctIndex) {
-      setScore(s => s + 1);
-      const ns = streak + 1;
-      setStreak(ns);
-      setMaxStreak(m => Math.max(m, ns));
-    } else {
-      setStreak(0);
-    }
-    setPhase('revealed');
+    commitAnswer(i === q.correctIndex);
+  };
+
+  const onSubmitText = () => {
+    if (phase !== 'question' || !q) return;
+    commitAnswer(isAnswerCorrect());
+  };
+
+  const onGiveUp = () => {
+    if (phase !== 'question' || !q) return;
+    commitAnswer(false);
   };
 
   const onNext = async () => {
@@ -93,6 +125,7 @@ export const QuizPlay = ({ mode, onExit }: QuizPlayProps) => {
       return;
     }
     setSelected(null);
+    setTextValue('');
     setPhase('loading');
     try {
       const nq = nextRef.current ? await nextRef.current : await gen();
@@ -187,27 +220,47 @@ export const QuizPlay = ({ mode, onExit }: QuizPlayProps) => {
             </MediaWrap>
           )}
 
-          <Options>
-            {q.options.map((opt, i) => {
-              const revealed = phase === 'revealed';
-              const state = !revealed ? 'idle'
-                : i === q.correctIndex ? 'correct'
-                : i === selected ? 'wrong' : 'dim';
-              return (
-                <OptBtn key={i} $state={state} $img={!!opt.imageUrl} disabled={revealed} onClick={() => onSelect(i)}>
-                  {opt.imageUrl && <OptImg src={opt.imageUrl} alt="" draggable={false} />}
-                  {opt.label && <OptLabel>{opt.label}</OptLabel>}
-                  {revealed && i === q.correctIndex && <Mark $ok><Check size={16} /></Mark>}
-                  {revealed && i === selected && i !== q.correctIndex && <Mark><X size={16} /></Mark>}
-                </OptBtn>
-              );
-            })}
-          </Options>
+          {q.answerType === 'text' ? (
+            <TextAnswer>
+              <TextInput
+                value={textValue}
+                onChange={e => setTextValue(e.target.value)}
+                onKeyDown={e => { if (e.key === 'Enter') onSubmitText(); }}
+                placeholder={t('quiz.play.inputPlaceholder')}
+                disabled={phase === 'revealed'}
+                $state={phase === 'revealed' ? (lastCorrect ? 'correct' : 'wrong') : 'idle'}
+                autoFocus
+              />
+              {phase === 'question' && (
+                <TextBtns>
+                  <GiveUpBtn onClick={onGiveUp}>{t('quiz.play.giveUp')}</GiveUpBtn>
+                  <SubmitBtn onClick={onSubmitText} disabled={!textValue.trim()}>{t('quiz.play.submit')}</SubmitBtn>
+                </TextBtns>
+              )}
+            </TextAnswer>
+          ) : (
+            <Options>
+              {q.options.map((opt, i) => {
+                const revealed = phase === 'revealed';
+                const state = !revealed ? 'idle'
+                  : i === q.correctIndex ? 'correct'
+                  : i === selected ? 'wrong' : 'dim';
+                return (
+                  <OptBtn key={i} $state={state} $img={!!opt.imageUrl} disabled={revealed} onClick={() => onSelect(i)}>
+                    {opt.imageUrl && <OptImg src={opt.imageUrl} alt="" draggable={false} />}
+                    {opt.label && <OptLabel>{opt.label}</OptLabel>}
+                    {revealed && i === q.correctIndex && <Mark $ok><Check size={16} /></Mark>}
+                    {revealed && i === selected && i !== q.correctIndex && <Mark><X size={16} /></Mark>}
+                  </OptBtn>
+                );
+              })}
+            </Options>
+          )}
 
           {phase === 'revealed' && (
-            <RevealCard $correct={selected === q.correctIndex}>
-              <RevealVerdict $correct={selected === q.correctIndex}>
-                {selected === q.correctIndex ? <><Check size={16} /> {t('quiz.play.correct')}</> : <><X size={16} /> {t('quiz.play.wrong')}</>}
+            <RevealCard $correct={lastCorrect}>
+              <RevealVerdict $correct={lastCorrect}>
+                {lastCorrect ? <><Check size={16} /> {t('quiz.play.correct')}</> : <><X size={16} /> {t('quiz.play.wrong')}</>}
               </RevealVerdict>
               <RevealBody>
                 {q.reveal.imageUrl && <RevealImg src={q.reveal.imageUrl} alt="" draggable={false} />}
@@ -357,6 +410,34 @@ const Mark = styled.span<{ $ok?: boolean }>`
   position: absolute; top: 6px; right: 6px;
   display: flex; align-items: center; justify-content: center; width: 24px; height: 24px; border-radius: 50%;
   background: ${p => p.$ok ? '#34d399' : '#f87171'}; color: #06202a;
+`;
+
+// ─── 주관식 입력 ───────────────────────────────────────────────────────────────
+const TextAnswer = styled.div`display: flex; flex-direction: column; gap: 12px;`;
+const TextInput = styled.input<{ $state: 'idle' | 'correct' | 'wrong' }>`
+  width: 100%; padding: 16px 18px; border-radius: 12px; font-size: 18px; font-weight: 700;
+  text-align: center; color: #f1f5f9; outline: none;
+  background: rgba(255,255,255,0.05);
+  border: 1.5px solid ${p =>
+    p.$state === 'correct' ? '#34d399'
+    : p.$state === 'wrong' ? '#f87171'
+    : 'rgba(34,211,238,0.4)'};
+  transition: border-color 0.15s;
+  &::placeholder { color: rgba(255,255,255,0.3); font-weight: 500; }
+  &:focus { border-color: ${ACCENT}; }
+  ${media.mobile} { font-size: 16px; padding: 14px 16px; }
+`;
+const TextBtns = styled.div`display: flex; gap: 10px;`;
+const SubmitBtn = styled.button`
+  flex: 1; padding: 14px; border-radius: 12px; border: none; cursor: pointer;
+  background: ${ACCENT}; color: #04222b; font-size: 15px; font-weight: 800;
+  &:disabled { opacity: 0.4; cursor: not-allowed; }
+  &:not(:disabled):hover { filter: brightness(1.08); }
+`;
+const GiveUpBtn = styled.button`
+  flex: 0 0 auto; padding: 14px 20px; border-radius: 12px; cursor: pointer; font-size: 14px; font-weight: 700;
+  background: rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.12); color: rgba(255,255,255,0.6);
+  &:hover { background: rgba(255,255,255,0.1); }
 `;
 
 const RevealCard = styled.div<{ $correct: boolean }>`

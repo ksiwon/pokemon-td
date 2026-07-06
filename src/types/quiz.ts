@@ -38,8 +38,13 @@ export interface QuizQuestion {
     /** 확대 퀴즈: 확대 중심(0~100%). 정답 공개 시 원본 노출. */
     zoom?: { x: number; y: number };
   };
+  /** 답 방식: 4지선다(choice) 또는 직접 입력(text). 모의고사는 항상 choice. */
+  answerType: 'choice' | 'text';
+  /** choice: 보기/정답 인덱스. */
   options: QuizOption[];
   correctIndex: number;
+  /** text: 인정 정답 후보(원문; 채점 시 정규화·띄어쓰기 무관·복수정답). */
+  accept?: string[];
   /** 정답 공개 카드에 표시할 정보. */
   reveal: { title: string; subtitle?: string; imageUrl?: string };
 }
