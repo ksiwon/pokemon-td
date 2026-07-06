@@ -1,26 +1,36 @@
 // src/components/quiz/QuizPlay.tsx
-// 퀴즈 한 라운드(10문제) 진행 — 문제 렌더·즉시 피드백·다음문제 프리페치·결과 정산.
+// 퀴즈 한 라운드 진행 — 개별 종목(10문제) 또는 수능 모의고사(전 종목 혼합 20문제).
+// 문제 렌더(이미지/실루엣/확대/울음소리) · 즉시 피드백 · 다음문제 프리페치 · 결과 정산.
 
 import { useEffect, useRef, useState } from 'react';
 import styled, { keyframes } from 'styled-components';
-import { ArrowLeft, Check, X, Flame, RotateCcw } from 'lucide-react';
+import { ArrowLeft, Check, X, Flame, RotateCcw, Volume2 } from 'lucide-react';
 import { media } from '../../utils/responsive.utils';
 import { useTranslation } from '../../i18n';
-import { QuizKind, QuizQuestion } from '../../types/quiz';
-import { generateQuestion } from '../../services/QuizEngine';
+import { QuizMode, QuizQuestion } from '../../types/quiz';
+import { generateQuestion, generateExamQuestion } from '../../services/QuizEngine';
 import { quizService } from '../../services/QuizService';
-
-const ROUND = 10;
+import { databaseService } from '../../services/DatabaseService';
 
 interface QuizPlayProps {
-  kind: QuizKind;
+  mode: QuizMode;
   onExit: () => void;
 }
 
 type Phase = 'loading' | 'question' | 'revealed' | 'result' | 'error';
 
-export const QuizPlay = ({ kind, onExit }: QuizPlayProps) => {
+/** 정답률 → 수능식 1~9등급. */
+const examGrade = (c: number, total: number): number => {
+  const p = c / total;
+  return p >= 0.95 ? 1 : p >= 0.85 ? 2 : p >= 0.72 ? 3 : p >= 0.58 ? 4
+    : p >= 0.42 ? 5 : p >= 0.28 ? 6 : p >= 0.16 ? 7 : p >= 0.07 ? 8 : 9;
+};
+
+export const QuizPlay = ({ mode, onExit }: QuizPlayProps) => {
   const { t } = useTranslation();
+  const isExam = mode === 'exam';
+  const ROUND = isExam ? 20 : 10;
+
   const [idx, setIdx] = useState(0);
   const [q, setQ] = useState<QuizQuestion | null>(null);
   const [phase, setPhase] = useState<Phase>('loading');
@@ -33,15 +43,14 @@ export const QuizPlay = ({ kind, onExit }: QuizPlayProps) => {
   const nextRef = useRef<Promise<QuizQuestion> | null>(null);
   const aliveRef = useRef(true);
 
-  const gen = () => generateQuestion(kind, { t });
+  const gen = () => (isExam ? generateExamQuestion({ t }) : generateQuestion(mode, { t }));
 
-  // 첫 문제 로드 + 다음 문제 프리페치
   useEffect(() => {
     aliveRef.current = true;
     reset();
     return () => { aliveRef.current = false; };
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [kind]);
+  }, [mode]);
 
   const reset = async () => {
     setIdx(0); setScore(0); setStreak(0); setMaxStreak(0);
@@ -73,8 +82,13 @@ export const QuizPlay = ({ kind, onExit }: QuizPlayProps) => {
 
   const onNext = async () => {
     if (idx + 1 >= ROUND) {
-      const isBest = quizService.recordRound(kind, score, maxStreak);
-      setNewBest(isBest);
+      if (isExam) {
+        const isBest = quizService.recordExam(score, maxStreak);
+        setNewBest(isBest);
+        databaseService.updateQuizRanking(quizService.getExamBest()).catch(() => {});
+      } else {
+        setNewBest(quizService.recordRound(mode, score, maxStreak));
+      }
       setPhase('result');
       return;
     }
@@ -107,6 +121,7 @@ export const QuizPlay = ({ kind, onExit }: QuizPlayProps) => {
 
   // ─── 결과 화면 ───────────────────────────────────────────────────────────────
   if (phase === 'result') {
+    const grade = examGrade(score, ROUND);
     return (
       <Root>
         <TopBar>
@@ -115,9 +130,12 @@ export const QuizPlay = ({ kind, onExit }: QuizPlayProps) => {
           <span style={{ width: 40 }} />
         </TopBar>
         <ResultWrap>
+          {isExam && <GradeBadge $g={grade}>{t('quiz.result.grade', { n: grade })}</GradeBadge>}
           <ResultScore>{t('quiz.result.score', { score, total: ROUND })}</ResultScore>
           {newBest && <NewBest><Flame size={15} /> {t('quiz.result.newBest')}</NewBest>}
-          <ResultStat>{t('quiz.result.best', { n: quizService.getBest(kind) })}</ResultStat>
+          <ResultStat>{isExam
+            ? t('quiz.result.examBest', { n: quizService.getExamBest() })
+            : t('quiz.result.best', { n: quizService.getBest(mode) })}</ResultStat>
           <ResultStat>{t('quiz.result.maxStreak', { n: maxStreak })}</ResultStat>
           <ResultBtns>
             <PrimaryBtn onClick={reset}><RotateCcw size={16} /> {t('quiz.result.retry')}</PrimaryBtn>
@@ -155,18 +173,21 @@ export const QuizPlay = ({ kind, onExit }: QuizPlayProps) => {
         <Body>
           <Prompt>{q.prompt}</Prompt>
 
-          {q.media && (
+          {q.media?.audioUrl && <AudioPlayer url={q.media.audioUrl} label={t('quiz.play.playCry')} />}
+
+          {q.media?.imageUrl && (
             <MediaWrap>
               <MediaImg
                 src={q.media.imageUrl}
                 alt=""
                 $silhouette={!!q.media.silhouette && phase === 'question'}
+                $zoom={q.media.zoom && phase === 'question' ? q.media.zoom : undefined}
                 draggable={false}
               />
             </MediaWrap>
           )}
 
-          <Options $img={q.options.some(o => !!o.imageUrl)}>
+          <Options>
             {q.options.map((opt, i) => {
               const revealed = phase === 'revealed';
               const state = !revealed ? 'idle'
@@ -206,9 +227,28 @@ export const QuizPlay = ({ kind, onExit }: QuizPlayProps) => {
   );
 };
 
+// ─── 울음소리 플레이어 ─────────────────────────────────────────────────────────
+const AudioPlayer = ({ url, label }: { url: string; label: string }) => {
+  const ref = useRef<HTMLAudioElement | null>(null);
+  useEffect(() => {
+    const a = ref.current;
+    if (!a) return;
+    a.currentTime = 0;
+    a.play().catch(() => {}); // 자동재생 차단 시 버튼으로 재생
+  }, [url]);
+  const play = () => { const a = ref.current; if (a) { a.currentTime = 0; a.play().catch(() => {}); } };
+  return (
+    <AudioWrap>
+      <audio ref={ref} src={url} preload="auto" />
+      <SpeakerBtn onClick={play}><Volume2 size={30} /> {label}</SpeakerBtn>
+    </AudioWrap>
+  );
+};
+
 // ─── styled ──────────────────────────────────────────────────────────────────
 const spin = keyframes`to { transform: rotate(360deg); }`;
 const pop = keyframes`0%{transform:scale(0.96);opacity:0}100%{transform:scale(1);opacity:1}`;
+const pulse = keyframes`0%,100%{transform:scale(1)}50%{transform:scale(1.05)}`;
 
 const ACCENT = '#22d3ee';
 
@@ -256,21 +296,35 @@ const Body = styled.main`
   ${media.mobile} { padding: 18px 14px 40px; gap: 14px; }
 `;
 const Prompt = styled.h2`
-  font-size: 20px; font-weight: 800; text-align: center; margin: 0; line-height: 1.35;
-  ${media.mobile} { font-size: 17px; }
+  font-size: 20px; font-weight: 800; text-align: center; margin: 0; line-height: 1.4;
+  word-break: keep-all;
+  ${media.mobile} { font-size: 16px; }
 `;
 const MediaWrap = styled.div`
   display: flex; align-items: center; justify-content: center;
   background: radial-gradient(circle at center, rgba(255,255,255,0.05), transparent 70%);
-  border-radius: 16px; padding: 8px;
+  border-radius: 16px; padding: 8px; overflow: hidden;
 `;
-const MediaImg = styled.img<{ $silhouette: boolean }>`
+const MediaImg = styled.img<{ $silhouette: boolean; $zoom?: { x: number; y: number } }>`
   width: 210px; height: 210px; object-fit: contain;
   filter: ${p => p.$silhouette ? 'brightness(0)' : 'drop-shadow(0 6px 14px rgba(0,0,0,0.5))'};
-  transition: filter 0.35s ease;
+  transform: ${p => p.$zoom ? 'scale(2.8)' : 'scale(1)'};
+  transform-origin: ${p => p.$zoom ? `${p.$zoom.x}% ${p.$zoom.y}%` : 'center'};
+  transition: filter 0.35s ease, transform 0.4s ease;
   ${media.mobile} { width: 160px; height: 160px; }
 `;
-const Options = styled.div<{ $img: boolean }>`
+
+const AudioWrap = styled.div`display: flex; align-items: center; justify-content: center; padding: 18px 0;`;
+const SpeakerBtn = styled.button`
+  display: flex; flex-direction: column; align-items: center; gap: 8px;
+  padding: 26px 40px; border-radius: 18px; cursor: pointer;
+  background: radial-gradient(circle at center, rgba(34,211,238,0.16), rgba(34,211,238,0.04));
+  border: 1.5px solid rgba(34,211,238,0.35); color: ${ACCENT}; font-size: 15px; font-weight: 800;
+  animation: ${pulse} 2s ease-in-out infinite;
+  &:hover { background: rgba(34,211,238,0.22); }
+`;
+
+const Options = styled.div`
   display: grid; grid-template-columns: repeat(2, 1fr); gap: 12px;
   ${media.mobile} { gap: 9px; }
 `;
@@ -338,6 +392,12 @@ const ErrText = styled.div`font-size: 14px; color: rgba(255,255,255,0.6); text-a
 
 const ResultWrap = styled.div`
   flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 12px; padding: 40px 20px;
+`;
+const GradeBadge = styled.div<{ $g: number }>`
+  font-size: 20px; font-weight: 900; padding: 8px 22px; border-radius: 100px;
+  color: ${p => p.$g <= 2 ? '#fbbf24' : p.$g <= 4 ? '#34d399' : p.$g <= 6 ? '#38bdf8' : 'rgba(255,255,255,0.7)'};
+  background: ${p => p.$g <= 2 ? 'rgba(251,191,36,0.12)' : 'rgba(255,255,255,0.06)'};
+  border: 1px solid ${p => p.$g <= 2 ? 'rgba(251,191,36,0.35)' : 'rgba(255,255,255,0.12)'};
 `;
 const ResultScore = styled.div`
   font-size: 44px; font-weight: 900; color: ${ACCENT};

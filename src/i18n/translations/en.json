@@ -663,6 +663,7 @@
     "tabRating": "Rating Rankings",
     "tabTower": "Tower",
     "tabCollection": "Dex",
+    "tabQuiz": "Quiz",
     "tabClearTime": " Fastest Clear",
     "tabHighestWave": " Highest Wave",
     "myRank": "My Rank: #{rank}",
@@ -677,10 +678,12 @@
     "colAP": "AP",
     "colFloor": "Best Floor",
     "colDex": "Species",
+    "colScore": "Score",
     "rankSuffix": "#{rank}",
     "waveSuffix": "Wave {wave}",
     "floorSuffix": "Floor {n}",
     "dexSuffix": "{n}",
+    "scoreSuffix": "{n} pts",
     "seasonNote": "🗓 This week's season · resets in {n}d · weekly reset"
   },
   "hallOfFame": {
@@ -1198,18 +1201,32 @@
       "backHub": "Quiz",
       "headline": "Pick a quiz and play!",
       "roundInfo": "10 questions · 4 choices",
+      "pickQuiz": "Quizzes by type",
       "best": "Best {n}",
+      "examBest": "Best {n}",
+      "myRank": "My rank #{rank}",
       "bestStreak": "Best streak {n}",
       "onlineNote": "Quiz data is loaded live from PokeAPI · internet required"
     },
     "types": {
       "silhouette": { "name": "Who's That?", "desc": "Name the silhouette" },
+      "cry": { "name": "Cry", "desc": "Guess by sound" },
+      "zoom": { "name": "Zoom", "desc": "Guess the zoomed image" },
+      "flavor": { "name": "Dex Entry", "desc": "Guess by description" },
       "bstDuel": { "name": "Base Stat Duel", "desc": "Pick the higher total" },
       "type": { "name": "Type Quiz", "desc": "Guess the Pokémon's type" },
       "dexNumber": { "name": "Dex Number", "desc": "Guess the National Dex no." }
     },
+    "exam": {
+      "name": "Mock Exam",
+      "desc": "20 mixed questions · graded"
+    },
     "play": {
       "silhouettePrompt": "Who's that Pokémon?",
+      "cryPrompt": "Whose cry is this?",
+      "zoomPrompt": "Which zoomed-in Pokémon?",
+      "playCry": "Play sound",
+      "flavorFallback": "(No Pokédex entry)",
       "bstDuelPrompt": "Which has the higher base stat total?",
       "typePrompt": "What type is {name}?",
       "dexPrompt": "What is {name}'s National Dex number?",
@@ -1226,8 +1243,10 @@
     "result": {
       "title": "Results",
       "score": "{score} / {total}",
+      "grade": "Grade {n}",
       "newBest": "New best!",
       "best": "Best {n}",
+      "examBest": "Best {n}",
       "maxStreak": "Best streak {n}",
       "retry": "Play again",
       "exit": "Exit"

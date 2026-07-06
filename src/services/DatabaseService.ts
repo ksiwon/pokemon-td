@@ -33,6 +33,14 @@ export interface CardRankingEntry {
   updatedAt: number;
 }
 
+// ─── 포켓몬 퀴즈 랭킹 엔트리 타입 (수능 모의고사 최고점, 20점 만점) ─────────────
+export interface QuizRankingEntry {
+  userId: string;
+  userName: string | null;
+  examBest: number; // 모의고사 최고 정답 수(0~20)
+  updatedAt: number;
+}
+
 class DatabaseService {
 
   // [FREE-TIER] 전역 랭킹/전당 조회 결과 메모리 캐시(TTL 60초).
@@ -44,6 +52,7 @@ class DatabaseService {
   // [FREE-TIER] 카드 랭킹 쓰기 중복 방지 — 세션 내 동일 값(층:수집수) 재기록 스킵.
   private _lastCardRankSync = '';
   private _lastSeasonSync = '';
+  private _lastQuizSync = -1;
 
   private async cachedRead<T>(key: string, loader: () => Promise<T>): Promise<T> {
     const hit = this._readCache.get(key);
@@ -618,6 +627,65 @@ class DatabaseService {
       const q = query(
         collection(db, 'cardRankings'),
         where('collectionCount', '>', myValue),
+        limit(RANK_SCAN_LIMIT)
+      );
+      const snapshot = await getDocs(q);
+      return snapshot.size + 1;
+    } catch {
+      return null;
+    }
+  }
+
+  // ─── 포켓몬 퀴즈 랭킹 (수능 모의고사 최고점) ───────────────────────────────
+  /** 내 모의고사 최고점 기록. 최고점은 단조 증가라 overwrite. 오프라인/비로그인 무시. */
+  async updateQuizRanking(examBest: number): Promise<void> {
+    const user = authService.getCurrentUser();
+    if (!user || authService.isOfflineMode()) return;
+    if (examBest === this._lastQuizSync) return;
+
+    const entry: QuizRankingEntry = {
+      userId: user.uid,
+      userName: user.displayName,
+      examBest,
+      updatedAt: Date.now(),
+    };
+    try {
+      await setDoc(doc(db, 'quizRankings', user.uid), entry);
+      this._lastQuizSync = examBest;
+    } catch (err) {
+      console.warn('[DB] updateQuizRanking failed:', err);
+    }
+  }
+
+  /** 전체 모의고사 최고점 랭킹 Top N. */
+  async getQuizRanking(limitCount = 100): Promise<QuizRankingEntry[]> {
+    return this.cachedRead(`quizRanking:${limitCount}`, async () => {
+      try {
+        const q = query(
+          collection(db, 'quizRankings'),
+          orderBy('examBest', 'desc'),
+          limit(limitCount)
+        );
+        const snapshot = await getDocs(q);
+        return snapshot.docs.map(doc => doc.data() as QuizRankingEntry);
+      } catch {
+        return [];
+      }
+    });
+  }
+
+  /** 내 모의고사 순위 (나보다 높은 점수 수 + 1). */
+  async getMyQuizRank(): Promise<number | null> {
+    const user = authService.getCurrentUser();
+    if (!user) return null;
+    try {
+      const myDoc = await getDoc(doc(db, 'quizRankings', user.uid));
+      if (!myDoc.exists()) return null;
+      const myValue = (myDoc.data() as QuizRankingEntry).examBest;
+      const RANK_SCAN_LIMIT = 500;
+      const q = query(
+        collection(db, 'quizRankings'),
+        where('examBest', '>', myValue),
         limit(RANK_SCAN_LIMIT)
       );
       const snapshot = await getDocs(q);

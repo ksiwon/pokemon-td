@@ -1,11 +1,23 @@
 // src/types/quiz.ts
 // 포켓몬 퀴즈 모음 전용 타입. TD 본편/카드 모드와 독립.
-// 데이터 소스는 전부 PokeAPI(getPokemon) + 결정적 공식아트 URL.
+// 데이터 소스는 전부 PokeAPI(getPokemon) + 결정적 공식아트/울음소리 URL.
 
-/** MVP 퀴즈 4종. */
-export type QuizKind = 'silhouette' | 'bstDuel' | 'type' | 'dexNumber';
+/** 퀴즈 종목. */
+export type QuizKind =
+  | 'silhouette'   // 실루엣
+  | 'cry'          // 울음소리
+  | 'zoom'         // 확대
+  | 'type'         // 타입
+  | 'bstDuel'      // 종족값 대결
+  | 'dexNumber'    // 도감번호
+  | 'flavor';      // 도감설명
 
-export const QUIZ_KINDS: QuizKind[] = ['silhouette', 'bstDuel', 'type', 'dexNumber'];
+export const QUIZ_KINDS: QuizKind[] = [
+  'silhouette', 'cry', 'zoom', 'type', 'bstDuel', 'dexNumber', 'flavor',
+];
+
+/** 퀴즈 진행 모드: 개별 종목 또는 수능 모의고사(전 종목 혼합). */
+export type QuizMode = QuizKind | 'exam';
 
 /** 보기 1개. 텍스트(라벨) 또는 이미지 버튼(종족값 대결). */
 export interface QuizOption {
@@ -18,19 +30,27 @@ export interface QuizQuestion {
   kind: QuizKind;
   /** 문제 지문(현지화 완료). */
   prompt: string;
-  /** 상단 대표 이미지(실루엣 여부 포함). 종족값 대결은 없음(보기 자체가 이미지). */
-  media?: { imageUrl: string; silhouette?: boolean };
+  /** 대표 미디어. 이미지(실루엣/확대) 또는 오디오(울음소리). 종족값 대결은 없음. */
+  media?: {
+    imageUrl?: string;
+    audioUrl?: string;
+    silhouette?: boolean;
+    /** 확대 퀴즈: 확대 중심(0~100%). 정답 공개 시 원본 노출. */
+    zoom?: { x: number; y: number };
+  };
   options: QuizOption[];
   correctIndex: number;
   /** 정답 공개 카드에 표시할 정보. */
   reveal: { title: string; subtitle?: string; imageUrl?: string };
 }
 
-/** 로컬 영속 상태(localStorage). Firestore 리더보드는 P2. */
+/** 로컬 영속 상태(localStorage). */
 export interface QuizSaveState {
   version: number;
   /** 퀴즈별 최고 점수(정답 수). */
   best: Record<QuizKind, number>;
+  /** 수능 모의고사 최고 점수(정답 수 / 20). */
+  examBest: number;
   /** 총 플레이한 라운드 수. */
   totalRounds: number;
   /** 전 종목 통산 최고 연속 정답. */

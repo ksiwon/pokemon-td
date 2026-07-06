@@ -19,7 +19,7 @@ class QuizService {
   }
 
   private defaultState(): QuizSaveState {
-    return { version: CURRENT_VERSION, best: this.emptyBest(), totalRounds: 0, bestStreak: 0 };
+    return { version: CURRENT_VERSION, best: this.emptyBest(), examBest: 0, totalRounds: 0, bestStreak: 0 };
   }
 
   private load(): QuizSaveState {
@@ -54,6 +54,20 @@ class QuizService {
 
   getBest(kind: QuizKind): number {
     return this.state.best[kind] ?? 0;
+  }
+
+  getExamBest(): number {
+    return this.state.examBest ?? 0;
+  }
+
+  /** 모의고사 정산. 최고점수/최고연속/총라운드 갱신. 반환: 최고점 경신 여부. */
+  recordExam(score: number, maxStreak: number): boolean {
+    const isNewBest = score > (this.state.examBest ?? 0);
+    if (isNewBest) this.state.examBest = score;
+    if (maxStreak > this.state.bestStreak) this.state.bestStreak = maxStreak;
+    this.state.totalRounds += 1;
+    this.persist();
+    return isNewBest;
   }
 
   /** 라운드 종료 정산. 최고점수/최고연속/총라운드 갱신 후 저장.
