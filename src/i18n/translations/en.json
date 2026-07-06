@@ -1054,7 +1054,7 @@
   "cards": {
     "menu": {
       "title": "Mini Pocket",
-      "desc": "A Pocket-TCG-style mini auto-battler"
+      "desc": "A Pocket-TCG-style auto-battler"
     },
     "rarity": {
       "Bronze": "Bronze",
@@ -1191,7 +1191,7 @@
   "quiz": {
     "menu": {
       "title": "Pokémon Quiz",
-      "desc": "Silhouette · Base stats · Type · Dex number"
+      "desc": "Prove your Poké-fandom!"
     },
     "hub": {
       "backToMenu": "← Menu",

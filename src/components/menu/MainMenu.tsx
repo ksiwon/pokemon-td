@@ -330,7 +330,7 @@ const SignOutBtn = styled.button`
 
 const Main = styled.main`
   flex:1; display:flex; flex-direction:column;
-  max-width:900px; width:100%;
+  max-width:1080px; width:100%;
   margin:0 auto; padding:48px 32px 40px;
   animation:${fadeUp} 0.5s ease both; animation-delay:0.1s;
 
@@ -370,7 +370,7 @@ const SecondaryGrid = styled.div`
 
 const ModeCard = styled.button<{ $accent: string; $disabled?: boolean }>`
   display:flex; align-items:center; gap:18px;
-  padding:28px 24px; min-height:104px;
+  padding:22px 20px; min-height:96px;
   background:rgba(255,255,255,0.03);
   border:1px solid rgba(255,255,255,0.07);
   border-radius:18px; cursor:pointer; text-align:left;

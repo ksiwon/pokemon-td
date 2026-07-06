@@ -1054,7 +1054,7 @@
   "cards": {
     "menu": {
       "title": "미니 포켓",
-      "desc": "Pocket TCG 감성의 미니 오토배틀"
+      "desc": "Pocket TCG 감성의 오토배틀"
     },
     "rarity": {
       "Bronze": "브론즈",
@@ -1191,7 +1191,7 @@
   "quiz": {
     "menu": {
       "title": "포켓몬 퀴즈",
-      "desc": "실루엣·종족값·타입·도감번호 맞히기"
+      "desc": "포덕임을 증명하라!"
     },
     "hub": {
       "backToMenu": "← 메뉴",
