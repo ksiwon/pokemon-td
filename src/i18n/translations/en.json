@@ -932,7 +932,7 @@
     "singlePlay": "Single Player",
     "singlePlayDesc": "Solo tower defense experience",
     "multiPlay": "Multiplayer",
-    "multiPlayDesc": "TFT Battle",
+    "multiPlayDesc": "Defense X TFT Battle",
     "myInfo": "My Info",
     "achievements": "Achievements",
     "hallOfFame": "Hall of Fame",
@@ -1195,7 +1195,7 @@
     },
     "hub": {
       "backToMenu": "← Menu",
-      "backHub": "← Quiz",
+      "backHub": "Quiz",
       "headline": "Pick a quiz and play!",
       "roundInfo": "10 questions · 4 choices",
       "best": "Best {n}",

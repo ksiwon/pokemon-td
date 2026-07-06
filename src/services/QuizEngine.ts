@@ -49,6 +49,24 @@ function shuffle<T>(arr: T[]): T[] {
 const statTotal = (s: { hp: number; attack: number; defense: number; specialAttack: number; specialDefense: number; speed: number }) =>
   s.hp + s.attack + s.defense + s.specialAttack + s.specialDefense + s.speed;
 
+/**
+ * 문제에 쓰이는 이미지들을 미리 디코드까지 로드. 로드가 끝나야 문제를 반환 →
+ * 화면에 빈 이미지가 뜨는 것 방지. 깨진/느린 이미지가 퀴즈를 막지 않도록
+ * 개별 onerror + 전체 8초 안전 타임아웃.
+ */
+function preloadImages(urls: string[]): Promise<void> {
+  const uniq = Array.from(new Set(urls.filter(Boolean)));
+  if (uniq.length === 0) return Promise.resolve();
+  const loads = uniq.map(url => new Promise<void>(resolve => {
+    const img = new Image();
+    img.onload = () => resolve();
+    img.onerror = () => resolve();
+    img.src = url;
+  }));
+  const timeout = new Promise<void>(resolve => setTimeout(resolve, 8000));
+  return Promise.race([Promise.all(loads).then(() => undefined), timeout]);
+}
+
 /** 제너레이터 컨텍스트 — 지문/타입 라벨 현지화용 t만 주입. */
 export interface QuizCtx {
   t: (key: string, params?: Record<string, string | number>) => string;
@@ -69,6 +87,7 @@ async function genSilhouette(ctx: QuizCtx): Promise<QuizQuestion> {
   ];
   const opts = shuffle(tagged);
 
+  await preloadImages([artUrl(id)]);
   return {
     kind: 'silhouette',
     prompt: ctx.t('quiz.play.silhouettePrompt'),
@@ -102,6 +121,7 @@ async function genBstDuel(ctx: QuizCtx): Promise<QuizQuestion> {
   const winner = correctIndex === 0 ? monA : monB;
   const winTot = Math.max(totA, totB);
 
+  await preloadImages([artUrl(a), artUrl(b)]);
   return {
     kind: 'bstDuel',
     prompt: ctx.t('quiz.play.bstDuelPrompt'),
@@ -127,6 +147,7 @@ async function genType(ctx: QuizCtx): Promise<QuizQuestion> {
   const wrong = shuffle(TYPE_SLUGS.filter(ty => !monTypes.includes(ty))).slice(0, 3);
   const opts = shuffle([correctType, ...wrong]);
 
+  await preloadImages([artUrl(id)]);
   return {
     kind: 'type',
     prompt: ctx.t('quiz.play.typePrompt', { name: mon.displayName }),
@@ -148,6 +169,7 @@ async function genDexNumber(ctx: QuizCtx): Promise<QuizQuestion> {
   const distractors = pickDistinctIds(3, new Set([id]));
   const nums = shuffle([id, ...distractors]);
 
+  await preloadImages([artUrl(id)]);
   return {
     kind: 'dexNumber',
     prompt: ctx.t('quiz.play.dexPrompt', { name: mon.displayName }),

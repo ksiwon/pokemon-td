@@ -963,7 +963,7 @@
     "singlePlay": "싱글 플레이",
     "singlePlayDesc": "포켓몬 타워 디펜스",
     "multiPlay": "멀티 플레이",
-    "multiPlayDesc": "TFT 배틀",
+    "multiPlayDesc": "디펜스 X TFT 배틀",
     "myInfo": "내 정보",
     "achievements": "업적",
     "hallOfFame": "전당",
@@ -1195,7 +1195,7 @@
     },
     "hub": {
       "backToMenu": "← 메뉴",
-      "backHub": "← 퀴즈",
+      "backHub": "퀴즈",
       "headline": "퀴즈를 골라 도전!",
       "roundInfo": "한 판 10문제 · 4지선다",
       "best": "최고 {n}",

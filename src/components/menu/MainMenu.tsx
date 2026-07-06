@@ -118,8 +118,8 @@ export const MainMenu = () => {
             </OfflineBanner>
           )}
 
-          {/* Primary game mode cards */}
-          <ModeGrid>
+          {/* Primary: 싱글 · 멀티 (위 2개) */}
+          <PrimaryGrid>
             <ModeCard $accent="#3b82f6" onClick={handleSinglePlay}>
               <ModeCardBg $color="rgba(59,130,246,0.06)" />
               <ModeCardBorder $color="#3b82f6" />
@@ -133,19 +133,6 @@ export const MainMenu = () => {
               <ModeArrow>→</ModeArrow>
             </ModeCard>
 
-            <ModeCard $accent="#f59e0b" onClick={handleStoryPlay}>
-              <ModeCardBg $color="rgba(245,158,11,0.06)" />
-              <ModeCardBorder $color="#f59e0b" />
-              <ModeIconWrap $bg="rgba(245,158,11,0.1)">
-                <ModeEmoji><Emoji glyph="⚔️" size={30} /></ModeEmoji>
-              </ModeIconWrap>
-              <ModeInfo>
-                <ModeName>{t('mainMenu.storyPlay')}</ModeName>
-                <ModeDesc>{t('mainMenu.storyPlayDesc')}</ModeDesc>
-              </ModeInfo>
-              <ModeArrow>→</ModeArrow>
-            </ModeCard>
-
             <ModeCard $accent="#10b981" onClick={handleMultiPlay} $disabled={isOffline}>
               <ModeCardBg $color="rgba(16,185,129,0.06)" />
               <ModeCardBorder $color="#10b981" />
@@ -155,6 +142,22 @@ export const MainMenu = () => {
               <ModeInfo>
                 <ModeName>{t('mainMenu.multiPlay')}</ModeName>
                 <ModeDesc>{isOffline ? <><Emoji glyph="🔒" size={12} /> {t('mainMenu.offlineBadge')}</> : t('mainMenu.multiPlayDesc')}</ModeDesc>
+              </ModeInfo>
+              <ModeArrow>→</ModeArrow>
+            </ModeCard>
+          </PrimaryGrid>
+
+          {/* Secondary: 스토리 · 미니 포켓 · 퀴즈 (아래 3개) */}
+          <SecondaryGrid>
+            <ModeCard $accent="#f59e0b" onClick={handleStoryPlay}>
+              <ModeCardBg $color="rgba(245,158,11,0.06)" />
+              <ModeCardBorder $color="#f59e0b" />
+              <ModeIconWrap $bg="rgba(245,158,11,0.1)">
+                <ModeEmoji><Emoji glyph="⚔️" size={30} /></ModeEmoji>
+              </ModeIconWrap>
+              <ModeInfo>
+                <ModeName>{t('mainMenu.storyPlay')}</ModeName>
+                <ModeDesc>{t('mainMenu.storyPlayDesc')}</ModeDesc>
               </ModeInfo>
               <ModeArrow>→</ModeArrow>
             </ModeCard>
@@ -172,7 +175,7 @@ export const MainMenu = () => {
               <ModeArrow>→</ModeArrow>
             </ModeCard>
 
-            <ModeCard $accent="#22d3ee" onClick={handleQuiz} $wide>
+            <ModeCard $accent="#22d3ee" onClick={handleQuiz}>
               <ModeCardBg $color="rgba(34,211,238,0.06)" />
               <ModeCardBorder $color="#22d3ee" />
               <ModeIconWrap $bg="rgba(34,211,238,0.1)">
@@ -184,7 +187,7 @@ export const MainMenu = () => {
               </ModeInfo>
               <ModeArrow>→</ModeArrow>
             </ModeCard>
-          </ModeGrid>
+          </SecondaryGrid>
 
           {/* Utility row */}
           <UtilSection>
@@ -351,14 +354,21 @@ const HeroTitle = styled.h1`
 
 // ─── Mode Cards ───────────────────────────────────────────────────────────────
 
-const ModeGrid = styled.div`
+const PrimaryGrid = styled.div`
   display:grid; grid-template-columns:repeat(2,1fr); gap:16px;
+  margin-bottom:16px;
+  ${media.mobile} { grid-template-columns:1fr; gap:12px; margin-bottom:12px; }
+  ${lMedia.phoneSm} { gap:10px; margin-bottom:10px; }
+`;
+
+const SecondaryGrid = styled.div`
+  display:grid; grid-template-columns:repeat(3,1fr); gap:16px;
   margin-bottom:32px;
-  ${media.mobile} { gap:12px; }
+  ${media.tablet} { grid-template-columns:1fr; gap:12px; margin-bottom:14px; }
   ${lMedia.phoneSm} { gap:10px; margin-bottom:14px; }
 `;
 
-const ModeCard = styled.button<{ $accent: string; $disabled?: boolean; $wide?: boolean }>`
+const ModeCard = styled.button<{ $accent: string; $disabled?: boolean }>`
   display:flex; align-items:center; gap:18px;
   padding:28px 24px; min-height:104px;
   background:rgba(255,255,255,0.03);
@@ -366,7 +376,6 @@ const ModeCard = styled.button<{ $accent: string; $disabled?: boolean; $wide?: b
   border-radius:18px; cursor:pointer; text-align:left;
   position:relative; overflow:hidden;
   transition:all 0.22s ease; color:#fff;
-  ${p => p.$wide && css`grid-column: 1 / -1;`}
   ${p => p.$disabled && css`opacity:0.5; filter:grayscale(0.6);`}
 
   &:hover {
