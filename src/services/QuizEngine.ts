@@ -29,6 +29,16 @@ function randDexId(): number {
   return Math.floor(Math.random() * MAX_DEX) + 1;
 }
 
+/** 정답 포켓몬 id 선택 — used에 없는 것으로(라운드 내 중복 출제 방지) 뽑고 used에 등록. */
+function pickMainId(used?: Set<number>): number {
+  if (!used) return randDexId();
+  let id = randDexId();
+  // used가 전체를 덮을 일은 없음(라운드 최대 50 << 1025). 안전 상한만.
+  for (let tries = 0; used.has(id) && tries < 50; tries++) id = randDexId();
+  used.add(id);
+  return id;
+}
+
 /** exclude에 없는 서로 다른 랜덤 도감번호 n개. */
 function pickDistinctIds(n: number, exclude: Set<number>): number[] {
   const out: number[] = [];
@@ -90,8 +100,8 @@ function acceptNames(mon: { displayName: string; name: string }): string[] {
 // ─── 종목별 생성기 ─────────────────────────────────────────────────────────────
 
 /** 🕶 누구게 — 실루엣 보고 이름. choice=false면 주관식. */
-async function genSilhouette(ctx: QuizCtx, choice: boolean): Promise<QuizQuestion> {
-  const id = randDexId();
+async function genSilhouette(ctx: QuizCtx, choice: boolean, used?: Set<number>): Promise<QuizQuestion> {
+  const id = pickMainId(used);
   const mon = await pokeAPI.getPokemon(id);
   await preloadImages([artUrl(id)]);
   const base = {
@@ -106,10 +116,10 @@ async function genSilhouette(ctx: QuizCtx, choice: boolean): Promise<QuizQuestio
 }
 
 /** ⚔ 종족값 대결 — 둘 중 총합 높은 쪽(항상 4지선다형 2택). */
-async function genBstDuel(ctx: QuizCtx, _choice: boolean): Promise<QuizQuestion> {
-  let a = randDexId();
-  let b = randDexId();
-  while (b === a) b = randDexId();
+async function genBstDuel(ctx: QuizCtx, _choice: boolean, used?: Set<number>): Promise<QuizQuestion> {
+  let a = pickMainId(used);
+  let b = pickMainId(used);
+  while (b === a) b = pickMainId(used);
 
   let [monA, monB] = await Promise.all([pokeAPI.getPokemon(a), pokeAPI.getPokemon(b)]);
   let totA = statTotal(monA.stats);
@@ -117,8 +127,8 @@ async function genBstDuel(ctx: QuizCtx, _choice: boolean): Promise<QuizQuestion>
 
   // 동점이면 b를 한 번 다시 뽑아 무승부 회피(희박).
   if (totA === totB) {
-    let nb = randDexId();
-    while (nb === a) nb = randDexId();
+    let nb = pickMainId(used);
+    while (nb === a) nb = pickMainId(used);
     b = nb;
     monB = await pokeAPI.getPokemon(b);
     totB = statTotal(monB.stats);
@@ -147,8 +157,8 @@ async function genBstDuel(ctx: QuizCtx, _choice: boolean): Promise<QuizQuestion>
 }
 
 /** 🧩 타입 — 포켓몬 보고 실제 타입 고르기(오답=미보유 타입). 항상 4지선다. */
-async function genType(ctx: QuizCtx, _choice: boolean): Promise<QuizQuestion> {
-  const id = randDexId();
+async function genType(ctx: QuizCtx, _choice: boolean, used?: Set<number>): Promise<QuizQuestion> {
+  const id = pickMainId(used);
   const mon = await pokeAPI.getPokemon(id);
   const monTypes = mon.types.length ? mon.types : ['normal'];
   const correctType = monTypes[0];
@@ -172,8 +182,8 @@ async function genType(ctx: QuizCtx, _choice: boolean): Promise<QuizQuestion> {
 }
 
 /** 🔢 도감번호 — 포켓몬 보고 전국도감 번호 고르기. 항상 4지선다. */
-async function genDexNumber(ctx: QuizCtx, _choice: boolean): Promise<QuizQuestion> {
-  const id = randDexId();
+async function genDexNumber(ctx: QuizCtx, _choice: boolean, used?: Set<number>): Promise<QuizQuestion> {
+  const id = pickMainId(used);
   const mon = await pokeAPI.getPokemon(id);
   const distractors = pickDistinctIds(3, new Set([id]));
   const nums = shuffle([id, ...distractors]);
@@ -203,8 +213,8 @@ async function nameOptions(correctId: number, correctName: string): Promise<{ op
 }
 
 /** 🔊 울음소리 — cry 듣고 이름. choice=false면 주관식. */
-async function genCry(ctx: QuizCtx, choice: boolean): Promise<QuizQuestion> {
-  const id = randDexId();
+async function genCry(ctx: QuizCtx, choice: boolean, used?: Set<number>): Promise<QuizQuestion> {
+  const id = pickMainId(used);
   const mon = await pokeAPI.getPokemon(id);
   await preloadImages([artUrl(id)]);
   const base = {
@@ -219,8 +229,8 @@ async function genCry(ctx: QuizCtx, choice: boolean): Promise<QuizQuestion> {
 }
 
 /** 🔍 확대 — 크게 확대한 아트 일부 보고 이름. choice=false면 주관식. */
-async function genZoom(ctx: QuizCtx, choice: boolean): Promise<QuizQuestion> {
-  const id = randDexId();
+async function genZoom(ctx: QuizCtx, choice: boolean, used?: Set<number>): Promise<QuizQuestion> {
+  const id = pickMainId(used);
   const mon = await pokeAPI.getPokemon(id);
   const zoom = { x: 30 + Math.floor(Math.random() * 41), y: 30 + Math.floor(Math.random() * 41) };
   await preloadImages([artUrl(id)]);
@@ -236,11 +246,11 @@ async function genZoom(ctx: QuizCtx, choice: boolean): Promise<QuizQuestion> {
 }
 
 /** 📖 도감설명 — 도감 텍스트(이름 가림) 보고 이름. choice=false면 주관식. */
-async function genFlavor(ctx: QuizCtx, choice: boolean): Promise<QuizQuestion> {
-  let id = randDexId();
+async function genFlavor(ctx: QuizCtx, choice: boolean, used?: Set<number>): Promise<QuizQuestion> {
+  let id = pickMainId(used);
   let mon = await pokeAPI.getPokemon(id);
   for (let tries = 0; tries < 4 && !mon.flavorText; tries++) {
-    id = randDexId();
+    id = pickMainId(used);
     mon = await pokeAPI.getPokemon(id);
   }
   // 이름 노출 마스킹(정답 유출 방지) — 정규식 특수문자 escape.
@@ -259,7 +269,7 @@ async function genFlavor(ctx: QuizCtx, choice: boolean): Promise<QuizQuestion> {
     : { ...base, answerType: 'text', options: [], correctIndex: -1, accept: acceptNames(mon) };
 }
 
-const GENERATORS: Record<QuizKind, (ctx: QuizCtx, choice: boolean) => Promise<QuizQuestion>> = {
+const GENERATORS: Record<QuizKind, (ctx: QuizCtx, choice: boolean, used?: Set<number>) => Promise<QuizQuestion>> = {
   silhouette: genSilhouette,
   cry: genCry,
   zoom: genZoom,
@@ -269,23 +279,23 @@ const GENERATORS: Record<QuizKind, (ctx: QuizCtx, choice: boolean) => Promise<Qu
   flavor: genFlavor,
 };
 
-/** 개별 종목 한 문제 — 이름 맞히기류는 주관식. 네트워크 실패 시 throw. */
-export function generateQuestion(kind: QuizKind, ctx: QuizCtx): Promise<QuizQuestion> {
-  return GENERATORS[kind](ctx, false);
-}
-
-/** 모의고사용 PokeAPI 생성 문제 — 항상 4지선다. */
-function generateExamGenerated(ctx: QuizCtx): Promise<QuizQuestion> {
-  const kind = QUIZ_KINDS[Math.floor(Math.random() * QUIZ_KINDS.length)];
-  return GENERATORS[kind](ctx, true);
+/** 개별 종목 세션 — 라운드 내 정답 포켓몬 중복 출제 방지(used 공유). */
+export function createQuizSession(kind: QuizKind) {
+  const used = new Set<number>();
+  return {
+    next(ctx: QuizCtx): Promise<QuizQuestion> {
+      return GENERATORS[kind](ctx, false, used);
+    },
+  };
 }
 
 /**
  * 수능 모의고사 세션 — 큐레이션 문제은행(고인물 난이도) + PokeAPI 생성 문제 혼합.
- * 은행 문항은 세션 내 중복 없이 소진(셔플 큐), 나머지는 생성으로 채움. 전부 4지선다.
+ * 은행 문항은 중복 없이 소진(셔플 큐), 생성 문항도 포켓몬 중복 방지(used). 전부 4지선다.
  */
 export function createExamSession() {
   const bankOrder = shuffle(EXAM_BANK.map((_, i) => i));
+  const used = new Set<number>();
   let bankPtr = 0;
   return {
     next(ctx: QuizCtx): Promise<QuizQuestion> {
@@ -294,7 +304,8 @@ export function createExamSession() {
       if (bankLeft && Math.random() < 0.6) {
         return Promise.resolve(bankToQuestion(bankOrder[bankPtr++]));
       }
-      return generateExamGenerated(ctx);
+      const genKind = QUIZ_KINDS[Math.floor(Math.random() * QUIZ_KINDS.length)];
+      return GENERATORS[genKind](ctx, true, used);
     },
   };
 }

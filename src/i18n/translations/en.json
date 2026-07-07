@@ -1202,6 +1202,8 @@
       "headline": "Pick a quiz and play!",
       "roundInfo": "10 questions · 4 choices",
       "pickQuiz": "Quizzes by type",
+      "roundSize": "Questions",
+      "qCount": "{n}Q",
       "best": "Best {n}",
       "examBest": "Best {n}",
       "myRank": "My rank #{rank}",

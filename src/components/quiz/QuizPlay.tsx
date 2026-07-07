@@ -7,13 +7,15 @@ import styled, { keyframes } from 'styled-components';
 import { ArrowLeft, Check, X, Flame, RotateCcw, Volume2 } from 'lucide-react';
 import { media } from '../../utils/responsive.utils';
 import { useTranslation } from '../../i18n';
-import { QuizMode, QuizQuestion } from '../../types/quiz';
-import { generateQuestion, createExamSession, normalizeAnswer } from '../../services/QuizEngine';
+import { QuizKind, QuizMode, QuizQuestion } from '../../types/quiz';
+import { createQuizSession, createExamSession, normalizeAnswer } from '../../services/QuizEngine';
 import { quizService } from '../../services/QuizService';
 import { databaseService } from '../../services/DatabaseService';
 
 interface QuizPlayProps {
   mode: QuizMode;
+  /** 개별 종목 문항 수(모의고사는 20 고정). */
+  roundSize?: number;
   onExit: () => void;
 }
 
@@ -26,10 +28,10 @@ const examGrade = (c: number, total: number): number => {
     : p >= 0.42 ? 5 : p >= 0.28 ? 6 : p >= 0.16 ? 7 : p >= 0.07 ? 8 : 9;
 };
 
-export const QuizPlay = ({ mode, onExit }: QuizPlayProps) => {
+export const QuizPlay = ({ mode, roundSize = 10, onExit }: QuizPlayProps) => {
   const { t } = useTranslation();
   const isExam = mode === 'exam';
-  const ROUND = isExam ? 20 : 10;
+  const ROUND = isExam ? 20 : roundSize;
 
   const [idx, setIdx] = useState(0);
   const [q, setQ] = useState<QuizQuestion | null>(null);
@@ -44,14 +46,13 @@ export const QuizPlay = ({ mode, onExit }: QuizPlayProps) => {
 
   const nextRef = useRef<Promise<QuizQuestion> | null>(null);
   const aliveRef = useRef(true);
-  const examSessionRef = useRef<ReturnType<typeof createExamSession> | null>(null);
+  const sessionRef = useRef<ReturnType<typeof createExamSession> | ReturnType<typeof createQuizSession> | null>(null);
 
   const gen = () => {
-    if (isExam) {
-      if (!examSessionRef.current) examSessionRef.current = createExamSession();
-      return examSessionRef.current.next({ t });
+    if (!sessionRef.current) {
+      sessionRef.current = isExam ? createExamSession() : createQuizSession(mode as QuizKind);
     }
-    return generateQuestion(mode, { t });
+    return sessionRef.current.next({ t });
   };
 
   /** 정답/오답 확정 — 점수·연속·페이즈 갱신(주관식·객관식 공용). */
@@ -84,7 +85,7 @@ export const QuizPlay = ({ mode, onExit }: QuizPlayProps) => {
   const reset = async () => {
     setIdx(0); setScore(0); setStreak(0); setMaxStreak(0);
     setSelected(null); setTextValue(''); setNewBest(false); setQ(null); setPhase('loading');
-    examSessionRef.current = isExam ? createExamSession() : null;
+    sessionRef.current = isExam ? createExamSession() : createQuizSession(mode as QuizKind);
     try {
       const first = await gen();
       if (!aliveRef.current) return;
@@ -300,26 +301,29 @@ const AudioPlayer = ({ url, label }: { url: string; label: string }) => {
 
 // ─── styled ──────────────────────────────────────────────────────────────────
 const spin = keyframes`to { transform: rotate(360deg); }`;
-const pop = keyframes`0%{transform:scale(0.96);opacity:0}100%{transform:scale(1);opacity:1}`;
-const pulse = keyframes`0%,100%{transform:scale(1)}50%{transform:scale(1.05)}`;
+const pop = keyframes`0%{transform:translateY(4px);opacity:0}100%{transform:translateY(0);opacity:1}`;
 
 const ACCENT = '#22d3ee';
+const SURFACE = 'rgba(255,255,255,0.035)';
+const SURFACE_HI = 'rgba(255,255,255,0.06)';
+const BORDER = 'rgba(255,255,255,0.09)';
 
 const Root = styled.div`
-  min-height: 100vh; background: radial-gradient(circle at top, #0d1b26, #060a10);
-  color: #e8edf5; display: flex; flex-direction: column;
+  min-height: 100vh; background: #0b0f14;
+  color: #e7edf3; display: flex; flex-direction: column;
 `;
 const TopBar = styled.header`
   display: flex; align-items: center; justify-content: space-between; gap: 10px;
-  padding: 14px 20px; border-bottom: 1px solid rgba(255,255,255,0.07);
-  background: rgba(255,255,255,0.02); position: sticky; top: 0; z-index: 20; backdrop-filter: blur(10px);
+  padding: 14px 20px; border-bottom: 1px solid ${BORDER};
+  background: rgba(11,15,20,0.85); position: sticky; top: 0; z-index: 20; backdrop-filter: blur(10px);
   ${media.mobile} { padding: 10px 12px; gap: 6px; }
 `;
 const BackBtn = styled.button`
   flex: 0 0 auto; display: flex; align-items: center; gap: 5px;
-  background: transparent; border: 1px solid rgba(255,255,255,0.12); color: rgba(255,255,255,0.7);
-  padding: 7px 12px; border-radius: 8px; cursor: pointer; font-size: 14px; white-space: nowrap;
-  &:hover { background: rgba(255,255,255,0.07); }
+  background: transparent; border: 1px solid ${BORDER}; color: rgba(255,255,255,0.65);
+  padding: 7px 12px; border-radius: 9px; cursor: pointer; font-size: 13.5px; white-space: nowrap;
+  transition: background 0.15s, color 0.15s;
+  &:hover { background: ${SURFACE_HI}; color: #fff; }
   ${media.mobile} { padding: 6px 9px; font-size: 12px; }
 `;
 const TopTitle = styled.h1`font-size: 16px; font-weight: 800; margin: 0;`;
@@ -329,14 +333,14 @@ const Progress = styled.div`
 `;
 const ScorePills = styled.div`display: flex; align-items: center; gap: 6px; flex: 0 0 auto;`;
 const ScorePill = styled.div`
-  min-width: 34px; text-align: center; font-size: 14px; font-weight: 800; color: ${ACCENT};
-  background: rgba(34,211,238,0.12); border: 1px solid rgba(34,211,238,0.28);
-  padding: 5px 10px; border-radius: 100px; font-variant-numeric: tabular-nums;
+  min-width: 32px; text-align: center; font-size: 14px; font-weight: 800; color: ${ACCENT};
+  background: rgba(34,211,238,0.1); border: 1px solid rgba(34,211,238,0.25);
+  padding: 5px 10px; border-radius: 8px; font-variant-numeric: tabular-nums;
 `;
 const StreakPill = styled.div`
   display: flex; align-items: center; gap: 3px; font-size: 13px; font-weight: 800; color: #fb923c;
-  background: rgba(251,146,60,0.12); border: 1px solid rgba(251,146,60,0.28);
-  padding: 5px 9px; border-radius: 100px;
+  background: rgba(251,146,60,0.1); border: 1px solid rgba(251,146,60,0.25);
+  padding: 5px 9px; border-radius: 8px;
 `;
 const ProgressBar = styled.div`height: 3px; background: rgba(255,255,255,0.06);`;
 const ProgressFill = styled.div<{ $pct: number }>`
@@ -355,26 +359,25 @@ const Prompt = styled.h2`
 `;
 const MediaWrap = styled.div`
   display: flex; align-items: center; justify-content: center;
-  background: radial-gradient(circle at center, rgba(255,255,255,0.05), transparent 70%);
-  border-radius: 16px; padding: 8px; overflow: hidden;
+  background: ${SURFACE}; border: 1px solid ${BORDER};
+  border-radius: 16px; padding: 12px; overflow: hidden;
 `;
 const MediaImg = styled.img<{ $silhouette: boolean; $zoom?: { x: number; y: number } }>`
   width: 210px; height: 210px; object-fit: contain;
-  filter: ${p => p.$silhouette ? 'brightness(0)' : 'drop-shadow(0 6px 14px rgba(0,0,0,0.5))'};
+  filter: ${p => p.$silhouette ? 'brightness(0)' : 'none'};
   transform: ${p => p.$zoom ? 'scale(2.8)' : 'scale(1)'};
   transform-origin: ${p => p.$zoom ? `${p.$zoom.x}% ${p.$zoom.y}%` : 'center'};
   transition: filter 0.35s ease, transform 0.4s ease;
   ${media.mobile} { width: 160px; height: 160px; }
 `;
 
-const AudioWrap = styled.div`display: flex; align-items: center; justify-content: center; padding: 18px 0;`;
+const AudioWrap = styled.div`display: flex; align-items: center; justify-content: center; padding: 24px 0;`;
 const SpeakerBtn = styled.button`
-  display: flex; flex-direction: column; align-items: center; gap: 8px;
-  padding: 26px 40px; border-radius: 18px; cursor: pointer;
-  background: radial-gradient(circle at center, rgba(34,211,238,0.16), rgba(34,211,238,0.04));
-  border: 1.5px solid rgba(34,211,238,0.35); color: ${ACCENT}; font-size: 15px; font-weight: 800;
-  animation: ${pulse} 2s ease-in-out infinite;
-  &:hover { background: rgba(34,211,238,0.22); }
+  display: flex; flex-direction: column; align-items: center; gap: 10px;
+  padding: 28px 44px; border-radius: 16px; cursor: pointer;
+  background: ${SURFACE}; border: 1px solid rgba(34,211,238,0.3); color: ${ACCENT};
+  font-size: 14px; font-weight: 700; transition: background 0.15s;
+  &:hover { background: rgba(34,211,238,0.1); }
 `;
 
 const Options = styled.div`
@@ -386,18 +389,18 @@ const OptBtn = styled.button<{ $state: 'idle' | 'correct' | 'wrong' | 'dim'; $im
   padding: ${p => p.$img ? '14px 10px' : '16px 14px'};
   min-height: ${p => p.$img ? '150px' : '56px'};
   border-radius: 12px; cursor: pointer; font-size: 15px; font-weight: 700;
-  border: 1.5px solid ${p =>
-    p.$state === 'correct' ? '#34d399'
-    : p.$state === 'wrong' ? '#f87171'
-    : 'rgba(255,255,255,0.1)'};
+  border: 1px solid ${p =>
+    p.$state === 'correct' ? 'rgba(52,211,153,0.6)'
+    : p.$state === 'wrong' ? 'rgba(248,113,113,0.55)'
+    : BORDER};
   background: ${p =>
-    p.$state === 'correct' ? 'rgba(52,211,153,0.14)'
-    : p.$state === 'wrong' ? 'rgba(248,113,113,0.12)'
+    p.$state === 'correct' ? 'rgba(52,211,153,0.12)'
+    : p.$state === 'wrong' ? 'rgba(248,113,113,0.1)'
     : p.$state === 'dim' ? 'rgba(255,255,255,0.02)'
-    : 'rgba(255,255,255,0.05)'};
-  color: #f1f5f9; opacity: ${p => p.$state === 'dim' ? 0.4 : 1};
-  transition: transform 0.12s, background 0.15s, border-color 0.15s;
-  &:not(:disabled):hover { transform: translateY(-2px); border-color: ${ACCENT}88; background: rgba(34,211,238,0.08); }
+    : SURFACE};
+  color: #f1f5f9; opacity: ${p => p.$state === 'dim' ? 0.45 : 1};
+  transition: background 0.15s, border-color 0.15s;
+  &:not(:disabled):hover { border-color: rgba(34,211,238,0.5); background: ${SURFACE_HI}; }
   &:disabled { cursor: default; }
   ${media.mobile} { font-size: 14px; min-height: ${p => p.$img ? '124px' : '50px'}; }
 `;
@@ -444,8 +447,8 @@ const RevealCard = styled.div<{ $correct: boolean }>`
   animation: ${pop} 0.18s ease both;
   display: flex; flex-direction: column; gap: 12px; padding: 16px;
   border-radius: 14px;
-  border: 1px solid ${p => p.$correct ? 'rgba(52,211,153,0.35)' : 'rgba(248,113,113,0.3)'};
-  background: linear-gradient(160deg, ${p => p.$correct ? 'rgba(52,211,153,0.12)' : 'rgba(248,113,113,0.1)'}, rgba(12,18,26,0.6));
+  border: 1px solid ${p => p.$correct ? 'rgba(52,211,153,0.3)' : 'rgba(248,113,113,0.28)'};
+  background: ${p => p.$correct ? 'rgba(52,211,153,0.07)' : 'rgba(248,113,113,0.06)'};
 `;
 const RevealVerdict = styled.div<{ $correct: boolean }>`
   display: flex; align-items: center; gap: 6px; font-size: 15px; font-weight: 800;

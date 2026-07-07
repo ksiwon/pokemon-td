@@ -1202,6 +1202,8 @@
       "headline": "퀴즈를 골라 도전!",
       "roundInfo": "한 판 10문제 · 4지선다",
       "pickQuiz": "종목별 퀴즈",
+      "roundSize": "문항 수",
+      "qCount": "{n}문제",
       "best": "최고 {n}",
       "examBest": "최고 {n}점",
       "myRank": "내 순위 #{rank}",
