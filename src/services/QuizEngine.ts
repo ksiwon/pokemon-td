@@ -3,7 +3,7 @@
 // 공식아트 URL은 도감번호로 결정적 생성(추가 요청 0). 오답 보기 생성·셔플 포함.
 
 import { pokeAPI } from '../api/pokeapi';
-import { QuizKind, QuizQuestion, QuizOption, QUIZ_KINDS } from '../types/quiz';
+import { QuizKind, QuizQuestion, QuizOption } from '../types/quiz';
 import { EXAM_BANK, bankToQuestion } from './quizExamBank';
 
 /** 전국도감 최대 번호(9세대 기준). 폼(10001+)은 제외. */
@@ -290,22 +290,17 @@ export function createQuizSession(kind: QuizKind) {
 }
 
 /**
- * 수능 모의고사 세션 — 큐레이션 문제은행(고인물 난이도) + PokeAPI 생성 문제 혼합.
- * 은행 문항은 중복 없이 소진(셔플 큐), 생성 문항도 포켓몬 중복 방지(used). 전부 4지선다.
+ * 수능 모의고사 세션 — 100% 큐레이션 문제은행(고인물 난이도, 전부 4지선다).
+ * 셔플 큐 순서대로 소진 → 라운드 내 중복 없음(은행 크기 > 라운드 문항 수).
  */
 export function createExamSession() {
-  const bankOrder = shuffle(EXAM_BANK.map((_, i) => i));
-  const used = new Set<number>();
+  let bankOrder = shuffle(EXAM_BANK.map((_, i) => i));
   let bankPtr = 0;
   return {
-    next(ctx: QuizCtx): Promise<QuizQuestion> {
-      const bankLeft = bankPtr < bankOrder.length;
-      // 은행 우선(약 60%), 소진 시 생성으로 대체
-      if (bankLeft && Math.random() < 0.6) {
-        return Promise.resolve(bankToQuestion(bankOrder[bankPtr++]));
-      }
-      const genKind = QUIZ_KINDS[Math.floor(Math.random() * QUIZ_KINDS.length)];
-      return GENERATORS[genKind](ctx, true, used);
+    next(_ctx: QuizCtx): Promise<QuizQuestion> {
+      // 은행보다 문항 수가 많을 때만 재셔플로 순환(현재 은행>라운드라 실제 미발생).
+      if (bankPtr >= bankOrder.length) { bankOrder = shuffle(bankOrder); bankPtr = 0; }
+      return Promise.resolve(bankToQuestion(bankOrder[bankPtr++]));
     },
   };
 }
