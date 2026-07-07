@@ -66,18 +66,68 @@ export const EXAM_BANK: BankQ[] = [
     opts: [{ ko: '장크로다일', en: 'Feraligatr' }, { ko: '블레이범', en: 'Blaziken' }, { ko: '초염몽', en: 'Infernape' }, { ko: '리자몽', en: 'Charizard' }], correct: 0 },
   { q: { ko: '고래왕(윌로드)처럼 몸길이가 14.5m로 매우 큰 포켓몬은?', en: 'Which Pokémon is a huge 14.5 m long?' },
     opts: [{ ko: '고래왕', en: 'Wailord' }, { ko: '잉어킹', en: 'Magikarp' }, { ko: '거북왕', en: 'Blastoise' }, { ko: '이상해꽃', en: 'Venusaur' }], correct: 0 },
+  { q: { ko: '강철 타입이 무효화(0배)하는 공격 타입은?', en: 'Steel is immune (0×) to which attacking type?' },
+    opts: [{ ko: '독', en: 'Poison' }, { ko: '땅', en: 'Ground' }, { ko: '불꽃', en: 'Fire' }, { ko: '격투', en: 'Fighting' }], correct: 0 },
+  { q: { ko: '땅 타입이 무효화(0배)하는 공격 타입은?', en: 'Ground is immune (0×) to which attacking type?' },
+    opts: [{ ko: '전기', en: 'Electric' }, { ko: '물', en: 'Water' }, { ko: '얼음', en: 'Ice' }, { ko: '풀', en: 'Grass' }], correct: 0 },
+  { q: { ko: '비행 타입이 무효화(0배)하는 공격 타입은?', en: 'Flying is immune (0×) to which attacking type?' },
+    opts: [{ ko: '땅', en: 'Ground' }, { ko: '격투', en: 'Fighting' }, { ko: '벌레', en: 'Bug' }, { ko: '풀', en: 'Grass' }], correct: 0 },
+  { q: { ko: '노말 타입에게 효과가 굉장한(2배) 공격 타입은?', en: 'Which type is super-effective (2×) against Normal?' },
+    opts: [{ ko: '격투', en: 'Fighting' }, { ko: '에스퍼', en: 'Psychic' }, { ko: '독', en: 'Poison' }, { ko: '고스트', en: 'Ghost' }], correct: 0 },
+  { q: { ko: '다음 중 얼음 타입의 약점이 아닌 것은?', en: 'Which is NOT a weakness of Ice type?' },
+    opts: [{ ko: '풀', en: 'Grass' }, { ko: '불꽃', en: 'Fire' }, { ko: '바위', en: 'Rock' }, { ko: '강철', en: 'Steel' }], correct: 0 },
+  { q: { ko: '근육몬을 괴력몬으로 진화시키는 방법은?', en: 'How does Machoke evolve into Machamp?' },
+    opts: [{ ko: '통신교환', en: 'Trade' }, { ko: '레벨업', en: 'Level up' }, { ko: '천둥의돌', en: 'Thunder Stone' }, { ko: '높은 친밀도', en: 'High friendship' }], correct: 0 },
+  { q: { ko: '갸라도스의 타입 조합은?', en: "What is Gyarados's typing?" },
+    opts: [{ ko: '물·비행', en: 'Water/Flying' }, { ko: '물', en: 'Water' }, { ko: '물·드래곤', en: 'Water/Dragon' }, { ko: '물·악', en: 'Water/Dark' }], correct: 0 },
+  { q: { ko: '리자몽의 타입 조합은?', en: "What is Charizard's typing?" },
+    opts: [{ ko: '불꽃·비행', en: 'Fire/Flying' }, { ko: '불꽃·드래곤', en: 'Fire/Dragon' }, { ko: '불꽃', en: 'Fire' }, { ko: '불꽃·악', en: 'Fire/Dark' }], correct: 0 },
+  { q: { ko: '마기라스의 타입 조합은?', en: "What is Tyranitar's typing?" },
+    opts: [{ ko: '바위·악', en: 'Rock/Dark' }, { ko: '바위·땅', en: 'Rock/Ground' }, { ko: '악·드래곤', en: 'Dark/Dragon' }, { ko: '바위', en: 'Rock' }], correct: 0 },
+  { q: { ko: '한카리아스의 타입 조합은?', en: "What is Garchomp's typing?" },
+    opts: [{ ko: '드래곤·땅', en: 'Dragon/Ground' }, { ko: '드래곤', en: 'Dragon' }, { ko: '드래곤·비행', en: 'Dragon/Flying' }, { ko: '땅·악', en: 'Ground/Dark' }], correct: 0 },
+  { q: { ko: '다음 중 종족값 총합이 600이 아닌 포켓몬은?', en: 'Which does NOT have a base stat total of 600?' },
+    opts: [{ ko: '갸라도스', en: 'Gyarados' }, { ko: '보만다', en: 'Salamence' }, { ko: '마기라스', en: 'Tyranitar' }, { ko: '메타그로스', en: 'Metagross' }], correct: 0 },
+  { q: { ko: '다음 중 갈라르지방의 모습(리전폼)이 있는 포켓몬은?', en: 'Which has a Galarian form?' },
+    opts: [{ ko: '파오리', en: "Farfetch'd" }, { ko: '피카츄', en: 'Pikachu' }, { ko: '뮤', en: 'Mew' }, { ko: '리자몽', en: 'Charizard' }], correct: 0 },
+  { q: { ko: '뮤츠가 처음 등장한 세대는?', en: 'Which generation introduced Mewtwo?' },
+    opts: [{ ko: '1세대', en: 'Gen 1' }, { ko: '2세대', en: 'Gen 2' }, { ko: '3세대', en: 'Gen 3' }, { ko: '4세대', en: 'Gen 4' }], correct: 0 },
+  { q: { ko: '다음 중 물의 돌로 진화하는 포켓몬은?', en: 'Which evolves using a Water Stone?' },
+    opts: [{ ko: '별가사리', en: 'Staryu' }, { ko: '구구', en: 'Pidgey' }, { ko: '캐터피', en: 'Caterpie' }, { ko: '꼬렛', en: 'Rattata' }], correct: 0 },
+  { q: { ko: '다음 중 불꽃·비행 복합타입인 포켓몬은?', en: 'Which is Fire/Flying type?' },
+    opts: [{ ko: '파이어', en: 'Moltres' }, { ko: '초염몽', en: 'Infernape' }, { ko: '윈디', en: 'Arcanine' }, { ko: '부스터', en: 'Flareon' }], correct: 0 },
+  { q: { ko: '다음 중 에스퍼 타입에게 효과가 굉장한(2배) 공격 타입이 아닌 것은?', en: 'Which is NOT super-effective against Psychic?' },
+    opts: [{ ko: '격투', en: 'Fighting' }, { ko: '벌레', en: 'Bug' }, { ko: '고스트', en: 'Ghost' }, { ko: '악', en: 'Dark' }], correct: 0 },
+  { q: { ko: '다음 중 이른바 "전설의 새" 3마리에 속하지 않는 포켓몬은?', en: 'Which is NOT one of the legendary birds?' },
+    opts: [{ ko: '루기아', en: 'Lugia' }, { ko: '파이어', en: 'Moltres' }, { ko: '썬더', en: 'Zapdos' }, { ko: '프리져', en: 'Articuno' }], correct: 0 },
+  { q: { ko: '잉어킹이 진화하면?', en: 'What does Magikarp evolve into?' },
+    opts: [{ ko: '갸라도스', en: 'Gyarados' }, { ko: '밀로틱', en: 'Milotic' }, { ko: '샤크니아', en: 'Sharpedo' }, { ko: '왕콘치', en: 'Seaking' }], correct: 0 },
+  { q: { ko: '다음 중 격투 타입에게 효과가 굉장한(2배) 공격 타입은?', en: 'Which type is super-effective against Fighting?' },
+    opts: [{ ko: '에스퍼', en: 'Psychic' }, { ko: '바위', en: 'Rock' }, { ko: '노말', en: 'Normal' }, { ko: '악', en: 'Dark' }], correct: 0 },
+  { q: { ko: '다음 중 진화하지 않는(무진화) 포켓몬은?', en: 'Which Pokémon does NOT evolve?' },
+    opts: [{ ko: '켄타로스', en: 'Tauros' }, { ko: '이상해씨', en: 'Bulbasaur' }, { ko: '꼬부기', en: 'Squirtle' }, { ko: '파이리', en: 'Charmander' }], correct: 0 },
+  { q: { ko: '다음 중 타입에 드래곤이 포함되지 않는 포켓몬은?', en: 'Which Pokémon is NOT part Dragon type?' },
+    opts: [{ ko: '갸라도스', en: 'Gyarados' }, { ko: '망나뇽', en: 'Dragonite' }, { ko: '보만다', en: 'Salamence' }, { ko: '한카리아스', en: 'Garchomp' }], correct: 0 },
+  { q: { ko: '나옹이 진화하면?', en: 'What does Meowth evolve into?' },
+    opts: [{ ko: '페르시온', en: 'Persian' }, { ko: '나인테일', en: 'Ninetales' }, { ko: '라이츄', en: 'Raichu' }, { ko: '도라방스', en: 'Purrloin' }], correct: 0 },
 ];
 
-/** 은행 문항 → QuizQuestion(현지화). 셔플은 호출부에서 관리(중복 방지). */
+/** 은행 문항 → QuizQuestion(현지화). 보기 순서 셔플(정답이 항상 첫 보기로 고정되는 것 방지). */
 export function bankToQuestion(index: number): QuizQuestion {
   const lang = curLang();
   const b = EXAM_BANK[index];
+  // Fisher-Yates로 보기 인덱스 셔플 후 정답 위치 재계산.
+  const order = b.opts.map((_, i) => i);
+  for (let i = order.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1));
+    [order[i], order[j]] = [order[j], order[i]];
+  }
   return {
     kind: 'flavor', // 은행 문항은 미디어 없는 지식형 — 렌더는 텍스트 지문+보기
     prompt: b.q[lang],
     answerType: 'choice',
-    options: b.opts.map(o => ({ label: o[lang] })),
-    correctIndex: b.correct,
+    options: order.map(i => ({ label: b.opts[i][lang] })),
+    correctIndex: order.indexOf(b.correct),
     reveal: { title: b.opts[b.correct][lang] },
   };
 }

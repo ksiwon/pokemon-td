@@ -105,6 +105,7 @@ export const QuizPlay = ({ mode, roundSize = 10, onExit }: QuizPlayProps) => {
 
   const onSubmitText = () => {
     if (phase !== 'question' || !q) return;
+    if (!textValue.trim()) return; // 빈 입력 제출/Enter 무시
     commitAnswer(isAnswerCorrect());
   };
 
