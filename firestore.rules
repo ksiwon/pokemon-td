@@ -110,6 +110,19 @@ service cloud.firestore {
                            && request.resource.data.towerFloor <= 100000));
     }
 
+    // ─── 포켓몬 퀴즈 랭킹 (수능 모의고사 최고점, 최대 50점) ──
+    // [SEC] examBest 상한(50)으로 위조 차단. 문항 수 10/30/50 선택 가능.
+    match /quizRankings/{userId} {
+      allow read: if request.auth != null;
+      allow write: if request.auth != null
+                   && request.auth.uid == userId
+                   && request.resource.data.userId == request.auth.uid
+                   && (!('examBest' in request.resource.data)
+                       || (request.resource.data.examBest is number
+                           && request.resource.data.examBest >= 0
+                           && request.resource.data.examBest <= 50));
+    }
+
     // ─── 그 외 모든 경로 차단 ────────────────────────────
     // (rooms는 RTDB에 있으므로 Firestore에는 더 이상 정의하지 않음)
     // (pokedex는 사용처가 없으므로 제거됨)

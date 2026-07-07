@@ -3,10 +3,11 @@ import { useState, useEffect } from 'react';
 import styled from 'styled-components';
 import { lMedia, media } from '../../utils/responsive.utils';
 import { Emoji } from '../shared/Emoji';
-import { databaseService, APRankingEntry, CardRankingEntry } from '../../services/DatabaseService';
+import { databaseService, APRankingEntry, CardRankingEntry, QuizRankingEntry } from '../../services/DatabaseService';
 import { authService } from '../../services/AuthService';
 import { saveService } from '../../services/SaveService';
 import { cardService } from '../../services/CardService';
+import { quizService } from '../../services/QuizService';
 import { daysUntilSeasonReset } from '../../utils/season';
 import { useTranslation } from '../../i18n';
 import {
@@ -16,19 +17,21 @@ import {
 
 interface RankingsProps {
   onClose: () => void;
-  initialTab?: 'ap' | 'pvp' | 'tower' | 'collection';
+  initialTab?: 'ap' | 'pvp' | 'tower' | 'collection' | 'quiz';
 }
 
 export const Rankings = ({ onClose, initialTab = 'ap' }: RankingsProps) => {
   const { t } = useTranslation();
 
-  const [activeTab, setActiveTab] = useState<'ap' | 'pvp' | 'tower' | 'collection'>(initialTab);
+  const [activeTab, setActiveTab] = useState<'ap' | 'pvp' | 'tower' | 'collection' | 'quiz'>(initialTab);
   const [apRankings, setApRankings] = useState<APRankingEntry[]>([]);
   const [myApRank, setMyApRank] = useState<number | null>(null);
   const [pvpRankings, setPvpRankings] = useState<any[]>([]);
   const [myPvpRank, setMyPvpRank] = useState<number | null>(null);
   const [cardRankings, setCardRankings] = useState<CardRankingEntry[]>([]);
   const [myCardRank, setMyCardRank] = useState<number | null>(null);
+  const [quizRankings, setQuizRankings] = useState<QuizRankingEntry[]>([]);
+  const [myQuizRank, setMyQuizRank] = useState<number | null>(null);
   const [loading, setLoading] = useState(false);
   const [currentPage, setCurrentPage] = useState(0);
   const PAGE_SIZE = 10;
@@ -57,6 +60,13 @@ export const Rankings = ({ onClose, initialTab = 'ap' }: RankingsProps) => {
         ]);
         setCardRankings(data);
         setMyCardRank(rank);
+      } else if (activeTab === 'quiz') {
+        const [data, rank] = await Promise.all([
+          databaseService.getQuizRanking(100),
+          databaseService.getMyQuizRank(),
+        ]);
+        setQuizRankings(data);
+        setMyQuizRank(rank);
       } else {
         const [data, rank] = await Promise.all([
           databaseService.getCollectionRanking(100),
@@ -80,6 +90,7 @@ export const Rankings = ({ onClose, initialTab = 'ap' }: RankingsProps) => {
   const currentRankings =
     activeTab === 'ap' ? apRankings :
     activeTab === 'pvp' ? pvpRankings :
+    activeTab === 'quiz' ? quizRankings :
     cardRankings;
   const totalPages = Math.ceil(currentRankings.length / PAGE_SIZE);
   const displayedRankings = currentRankings.slice(currentPage * PAGE_SIZE, (currentPage + 1) * PAGE_SIZE);
@@ -107,6 +118,9 @@ export const Rankings = ({ onClose, initialTab = 'ap' }: RankingsProps) => {
           <Tab $active={activeTab === 'collection'} onClick={() => setActiveTab('collection')}>
             {t('rankings.tabCollection')}
           </Tab>
+          <Tab $active={activeTab === 'quiz'} onClick={() => setActiveTab('quiz')}>
+            {t('rankings.tabQuiz')}
+          </Tab>
         </TabRow>
 
         {activeTab === 'ap' && (
@@ -131,6 +145,12 @@ export const Rankings = ({ onClose, initialTab = 'ap' }: RankingsProps) => {
         {activeTab === 'collection' && (
           <MyRankBadgeWrapper>
             <MyRankBadge><Emoji glyph="🎯" size={13} /> {t('rankings.myRank', { rank: myCardRank !== null ? myCardRank : '-' })} ({t('rankings.dexSuffix', { n: cardService.getOwnedCount() })})</MyRankBadge>
+          </MyRankBadgeWrapper>
+        )}
+
+        {activeTab === 'quiz' && (
+          <MyRankBadgeWrapper>
+            <MyRankBadge><Emoji glyph="🎯" size={13} /> {t('rankings.myRank', { rank: myQuizRank !== null ? myQuizRank : '-' })} ({t('rankings.scoreSuffix', { n: quizService.getExamBest() })})</MyRankBadge>
           </MyRankBadgeWrapper>
         )}
         
@@ -183,6 +203,28 @@ export const Rankings = ({ onClose, initialTab = 'ap' }: RankingsProps) => {
                         </ColRank>
                         <ColPlayer>{entry.userName ?? '???'}</ColPlayer>
                         <ColScore $accent><Emoji glyph="⭐" size={13} /> {(entry.rating ?? 1000).toLocaleString()}</ColScore>
+                      </TableRow>
+                    );
+                  })}
+                </RankingTable>
+              ) : activeTab === 'quiz' ? (
+                <RankingTable>
+                  <TableHead $isAp={false}>
+                    <ColRank>{t('rankings.colRank')}</ColRank>
+                    <ColPlayer>{t('rankings.colPlayer')}</ColPlayer>
+                    <ColScore>{t('rankings.colScore')}</ColScore>
+                  </TableHead>
+                  {displayedRankings.map((entry, index) => {
+                    const rank = currentPage * PAGE_SIZE + index;
+                    return (
+                      <TableRow key={entry.userId} $top={rank < 3} $isAp={false}>
+                        <ColRank $idx={rank}>
+                          {rank < 3
+                            ? <Emoji glyph={rank === 0 ? '🥇' : rank === 1 ? '🥈' : '🥉'} size={16} />
+                            : t('rankings.rankSuffix', { rank: rank + 1 })}
+                        </ColRank>
+                        <ColPlayer>{entry.userName ?? '???'}</ColPlayer>
+                        <ColScore $accent><Emoji glyph="🎓" size={13} /> {t('rankings.scoreSuffix', { n: entry.examBest ?? 0 })}</ColScore>
                       </TableRow>
                     );
                   })}

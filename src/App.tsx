@@ -31,6 +31,7 @@ import { GameLayout } from "./components/game/GameLayout";
 import { ProtectedRoute } from "./components/auth/ProtectedRoute";
 import { StorySelector } from './components/story/StorySelector';
 import { CardLabView } from "./components/cards/CardLabView";
+import { QuizView } from "./components/quiz/QuizView";
 import { FloatingSettings } from "./components/ui/FloatingSettings";
 
 const fadeIn = keyframes`from { opacity: 0; } to { opacity: 1; }`;
@@ -276,6 +277,12 @@ function App() {
       <Route path="/cards" element={
         <ProtectedRoute>
           <CardLabView />
+        </ProtectedRoute>
+      } />
+
+      <Route path="/quiz" element={
+        <ProtectedRoute>
+          <QuizView />
         </ProtectedRoute>
       } />
 
