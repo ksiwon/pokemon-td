@@ -1221,7 +1221,7 @@
     },
     "exam": {
       "name": "Mock Exam",
-      "desc": "20 expert mixed questions · graded"
+      "desc": "Expert-level mixed questions · graded"
     },
     "play": {
       "silhouettePrompt": "Who's that Pokémon?",

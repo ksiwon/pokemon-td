@@ -110,6 +110,15 @@ export const EXAM_BANK: BankQ[] = [
     opts: [{ ko: '갸라도스', en: 'Gyarados' }, { ko: '망나뇽', en: 'Dragonite' }, { ko: '보만다', en: 'Salamence' }, { ko: '한카리아스', en: 'Garchomp' }], correct: 0 },
   { q: { ko: '나옹이 진화하면?', en: 'What does Meowth evolve into?' },
     opts: [{ ko: '페르시온', en: 'Persian' }, { ko: '나인테일', en: 'Ninetales' }, { ko: '라이츄', en: 'Raichu' }, { ko: '도라방스', en: 'Purrloin' }], correct: 0 },
+  // ── 고난도(베테랑 함정) ──
+  { q: { ko: '메가리자몽 X의 타입 조합은?', en: 'What is Mega Charizard X\'s typing?' },
+    opts: [{ ko: '불꽃·드래곤', en: 'Fire/Dragon' }, { ko: '불꽃·비행', en: 'Fire/Flying' }, { ko: '불꽃', en: 'Fire' }, { ko: '불꽃·악', en: 'Fire/Dark' }], correct: 0 },
+  { q: { ko: '알로라의 모습 "나시"의 타입 조합은?', en: 'What is Alolan Exeggutor\'s typing?' },
+    opts: [{ ko: '풀·드래곤', en: 'Grass/Dragon' }, { ko: '풀·에스퍼', en: 'Grass/Psychic' }, { ko: '풀·비행', en: 'Grass/Flying' }, { ko: '드래곤·에스퍼', en: 'Dragon/Psychic' }], correct: 0 },
+  { q: { ko: '다음 중 종족값 총합이 가장 낮은 포켓몬은?', en: 'Which has the lowest base stat total?' },
+    opts: [{ ko: '해너츠', en: 'Sunkern' }, { ko: '캐터피', en: 'Caterpie' }, { ko: '잉어킹', en: 'Magikarp' }, { ko: '구구', en: 'Pidgey' }], correct: 0 },
+  { q: { ko: '메가갸라도스의 타입 조합은?', en: 'What is Mega Gyarados\'s typing?' },
+    opts: [{ ko: '물·악', en: 'Water/Dark' }, { ko: '물·비행', en: 'Water/Flying' }, { ko: '물·드래곤', en: 'Water/Dragon' }, { ko: '물', en: 'Water' }], correct: 0 },
 ];
 
 /** 은행 문항 → QuizQuestion(현지화). 보기 순서 셔플(정답이 항상 첫 보기로 고정되는 것 방지). */

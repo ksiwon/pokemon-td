@@ -31,7 +31,7 @@ const examGrade = (c: number, total: number): number => {
 export const QuizPlay = ({ mode, roundSize = 10, onExit }: QuizPlayProps) => {
   const { t } = useTranslation();
   const isExam = mode === 'exam';
-  const ROUND = isExam ? 20 : roundSize;
+  const ROUND = roundSize; // 전 모드 공통 문항 수(10/30/50)
 
   const [idx, setIdx] = useState(0);
   const [q, setQ] = useState<QuizQuestion | null>(null);

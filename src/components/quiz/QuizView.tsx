@@ -55,6 +55,18 @@ export const QuizView = () => {
       </TopBar>
 
       <Body>
+        {/* 문항 수(전 모드 공통) */}
+        <RoundRow>
+          <RoundLabel>{t('quiz.hub.roundSize')}</RoundLabel>
+          <Segmented>
+            {ROUND_SIZES.map(n => (
+              <SegBtn key={n} $active={roundSize === n} onClick={() => setRoundSize(n)}>
+                {t('quiz.hub.qCount', { n })}
+              </SegBtn>
+            ))}
+          </Segmented>
+        </RoundRow>
+
         {/* 수능 모의고사 */}
         <ExamCard onClick={() => setPlay('exam')}>
           <ExamIcon><GraduationCap size={26} /></ExamIcon>
@@ -68,18 +80,6 @@ export const QuizView = () => {
           </ExamMeta>
           <Chevron><ChevronRight size={18} /></Chevron>
         </ExamCard>
-
-        {/* 문항 수 */}
-        <RoundRow>
-          <RoundLabel>{t('quiz.hub.roundSize')}</RoundLabel>
-          <Segmented>
-            {ROUND_SIZES.map(n => (
-              <SegBtn key={n} $active={roundSize === n} onClick={() => setRoundSize(n)}>
-                {t('quiz.hub.qCount', { n })}
-              </SegBtn>
-            ))}
-          </Segmented>
-        </RoundRow>
 
         <SectionLabel>{t('quiz.hub.pickQuiz')}</SectionLabel>
         <Grid>
