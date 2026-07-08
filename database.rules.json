@@ -2,6 +2,7 @@
   "rules": {
     "rooms": {
       ".read": "auth != null",
+      ".indexOn": ["status", "createdAt"],
       "$roomId": {
         ".read": "auth != null",
         ".write": "auth != null && ((!data.exists() && newData.child('hostId').val() === auth.uid) || data.child('memberIds').child(auth.uid).exists() || data.child('status').val() === 'waiting' || data.child('createdAt').val() < (now - 10800000))",
