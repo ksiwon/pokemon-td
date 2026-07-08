@@ -5,7 +5,7 @@ import { useEffect, useMemo, useState } from 'react';
 import styled, { keyframes } from 'styled-components';
 import { useNavigate } from 'react-router-dom';
 import { media } from '../../utils/responsive.utils';
-import { Coins, Sparkles, Package, Layers, Swords, Trophy, ChevronRight } from 'lucide-react';
+import { Coins, Sparkles, Package, Layers, Swords, Trophy, ChevronRight, Users } from 'lucide-react';
 import { pokeAPI } from '../../api/pokeapi';
 import { useTranslation } from '../../i18n';
 import { cardService, PACK_DEFS } from '../../services/CardService';
@@ -24,8 +24,9 @@ import { CardDetailModal } from './CardDetailModal';
 import { PackOpening } from './PackOpening';
 import { DeckBuilder } from './DeckBuilder';
 import { TrainerTower } from './TrainerTower';
+import { RandomBattle } from './RandomBattle';
 
-type SubView = 'hub' | 'deck' | 'tower';
+type SubView = 'hub' | 'deck' | 'tower' | 'pvp';
 
 const TYPE_SLUGS = [
   'normal', 'fire', 'water', 'electric', 'grass', 'ice', 'fighting', 'poison', 'ground',
@@ -113,6 +114,7 @@ export const CardLabView = () => {
 
   if (view === 'deck') return <DeckBuilder onBack={() => setView('hub')} />;
   if (view === 'tower') return <TrainerTower onBack={() => setView('hub')} />;
+  if (view === 'pvp') return <RandomBattle onBack={() => setView('hub')} />;
 
   return (
     <Root>
@@ -193,6 +195,9 @@ export const CardLabView = () => {
           <ModeRow>
             <ModeBtn onClick={() => setView('tower')}>
               <Swords size={18} /> {t('cards.lab.trainerTower')} <FloorBadge>{t('cards.lab.floor', { n: state.towerProgress + 1 })}</FloorBadge>
+            </ModeBtn>
+            <ModeBtn onClick={() => setView('pvp')}>
+              <Users size={18} /> {t('cards.lab.randomBattle')} <FloorBadge>{t('cards.lab.pvpRecord', { w: cardService.getPvpRecord().wins, l: cardService.getPvpRecord().losses })}</FloorBadge>
             </ModeBtn>
             <ModeBtn onClick={() => setView('deck')}>
               <Layers size={18} /> {t('cards.lab.deckBuild')} <FloorBadge>{t('cards.lab.slots', { n: cardService.getDeck().length })}</FloorBadge>

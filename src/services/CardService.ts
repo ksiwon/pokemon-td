@@ -363,6 +363,26 @@ class CardService {
     this.persist();
   }
 
+  /** 덱 + 보유 별 스냅샷 — 랜덤 대전 발행/전투 빌드용. */
+  getDeckWithStars(): { pokemonId: number; stars: number; row: DeckRow; slot: number }[] {
+    return this.getDeck().map(s => ({
+      ...s,
+      stars: this.state.collection[s.pokemonId]?.stars ?? 1,
+    }));
+  }
+
+  // ─── 랜덤 대전(비동기 PvP) 전적 ──────────────────────────────────────────────
+  getPvpRecord(): { wins: number; losses: number } {
+    return { wins: this.state.pvp?.wins ?? 0, losses: this.state.pvp?.losses ?? 0 };
+  }
+
+  recordPvpResult(win: boolean) {
+    const rec = this.state.pvp ?? { wins: 0, losses: 0 };
+    if (win) rec.wins += 1; else rec.losses += 1;
+    this.state.pvp = rec;
+    this.persist();
+  }
+
   // ─── 트레이너 타워 진행 ───────────────────────────────────────────────────────
   setTowerProgress(floor: number) {
     if (floor > this.state.towerProgress) { this.state.towerProgress = floor; this.persist(); }

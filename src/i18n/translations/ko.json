@@ -1115,6 +1115,8 @@
       "packShop": "팩 상점",
       "autobattle": "오토배틀",
       "trainerTower": "트레이너 타워",
+      "randomBattle": "랜덤 대전",
+      "pvpRecord": "{w}승 {l}패",
       "deckBuild": "덱 편성",
       "dex": "도감",
       "collected": "수집 {n}종",
@@ -1189,6 +1191,31 @@
       "nextFloor": "다음 층 →",
       "retry": "다시 도전",
       "exit": "나가기"
+    },
+    "pvp": {
+      "title": "랜덤 대전",
+      "desc": "편성된 {n}마리로 무작위 플레이어의 덱에 도전합니다.",
+      "find": "상대 찾기",
+      "searching": "상대를 찾는 중...",
+      "noOpponent": "아직 매칭 가능한 상대가 없습니다. 다른 플레이어가 덱을 등록하면 대전할 수 있어요.",
+      "opponentLoadFail": "상대 덱을 불러오지 못했습니다. 다시 시도해주세요.",
+      "loginNeeded": "로그인하면 다른 플레이어와 대전할 수 있어요",
+      "hint": "매칭하면 내 덱이 대전 풀에 등록돼 다른 플레이어의 상대로 등장합니다. 전투는 자동으로 진행돼요.",
+      "record": "{w}승 {l}패",
+      "opponentDeck": "{name}의 덱",
+      "unknownPlayer": "이름없는 트레이너",
+      "vsResult": "vs {name} · 잔존 {p} : {e}",
+      "rematch": "다시 매칭"
+    },
+    "battleLog": {
+      "title": "전투 기록",
+      "turn": "{n}턴",
+      "crit": "급소!",
+      "superEffective": "효과 굉장",
+      "notEffective": "효과 별로",
+      "immune": "효과 없음",
+      "fainted": "{name} 쓰러짐!",
+      "waiting": "전투 시작을 기다리는 중..."
     }
   },
   "quiz": {

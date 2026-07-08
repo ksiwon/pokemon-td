@@ -123,6 +123,23 @@ service cloud.firestore {
                            && request.resource.data.examBest <= 50));
     }
 
+    // ─── 미니 포켓 랜덤 대전 덱 스냅샷 ────────────────────
+    // 비동기 PvP: 모든 로그인 유저가 읽고(매칭), 본인 덱만 발행.
+    // [SEC] deck 크기 상한 6. stars 등 항목별 값은 룰에서 리스트 순회가 불가하므로
+    //   전투 빌드 시 클라이언트가 clamp(buildBattleCard가 별 1~5 강제) — 위조해도 ★5 초과 불가.
+    match /cardDecks/{userId} {
+      allow read: if request.auth != null;
+      allow write: if request.auth != null
+                   && request.auth.uid == userId
+                   && request.resource.data.userId == request.auth.uid
+                   && request.resource.data.deck is list
+                   && request.resource.data.deck.size() >= 1
+                   && request.resource.data.deck.size() <= 6
+                   && request.resource.data.rand is number
+                   && request.resource.data.rand >= 0
+                   && request.resource.data.rand <= 1;
+    }
+
     // ─── 그 외 모든 경로 차단 ────────────────────────────
     // (rooms는 RTDB에 있으므로 Firestore에는 더 이상 정의하지 않음)
     // (pokedex는 사용처가 없으므로 제거됨)

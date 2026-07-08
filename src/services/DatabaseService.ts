@@ -4,7 +4,8 @@
 //   - 정리는 게임 클리어 후 20% 확률로 실행 (쿼터 낭비 방지)
 import {
   doc, setDoc, getDoc, collection, query, where, orderBy,
-  limit, getDocs, addDoc, updateDoc, deleteDoc, writeBatch
+  limit, getDocs, addDoc, updateDoc, deleteDoc, writeBatch,
+  getCountFromServer,
 } from 'firebase/firestore';
 import { db } from '../config/firebase';
 import { HallOfFameEntry, LeaderboardEntry } from '../types/multiplayer';
@@ -33,21 +34,38 @@ export interface CardRankingEntry {
   updatedAt: number;
 }
 
-// ─── 포켓몬 퀴즈 랭킹 엔트리 타입 (수능 모의고사 최고점, 20점 만점) ─────────────
+// ─── 포켓몬 퀴즈 랭킹 엔트리 타입 (수능 모의고사 최고점, 최대 50점) ─────────────
 export interface QuizRankingEntry {
   userId: string;
   userName: string | null;
-  examBest: number; // 모의고사 최고 정답 수(0~20)
+  examBest: number; // 모의고사 최고 정답 수(0~50, 문항 수 10/30/50)
+  updatedAt: number;
+}
+
+// ─── 미니 포켓 랜덤 대전용 덱 스냅샷 ────────────────────────────────────────────
+// 비동기 PvP: 상대의 저장된 덱 스냅샷을 읽어와 로컬에서 오토배틀. 실시간 통신 없음.
+export interface CardDeckDoc {
+  userId: string;
+  userName: string | null;
+  deck: { pokemonId: number; stars: number; row: 'front' | 'back'; slot: number }[];
+  /** 대략적 전투력 표시용(별 합계). */
+  power: number;
+  /** 랜덤 매칭 키(0~1). 발행 시마다 리롤되어 매칭 분포를 섞는다. */
+  rand: number;
   updatedAt: number;
 }
 
 class DatabaseService {
 
-  // [FREE-TIER] 전역 랭킹/전당 조회 결과 메모리 캐시(TTL 60초).
-  //   모달을 반복해서 여닫을 때 동일 쿼리를 재실행하지 않아 Firestore read를 절감.
-  //   읽기 전용·표시용 데이터라 60초 stale은 게임 로직/멀티 통신과 무관.
-  private _readCache = new Map<string, { data: unknown; ts: number }>();
-  private readonly READ_CACHE_TTL = 60_000;
+  // [FREE-TIER] 전역 랭킹/전당 조회 결과 캐시.
+  //   메모리 + localStorage 2계층, TTL 10분 — 새로고침/재방문에도 Firestore read 0.
+  //   읽기 전용·표시용 데이터라 10분 stale은 게임 로직/멀티 통신과 무관하며,
+  //   내 기록 갱신 시 invalidateCache()로 해당 키를 즉시 무효화해 체감 지연을 줄임.
+  //   빈 결과([])는 실패/오프라인일 수 있어 60초만 캐시하고 localStorage엔 남기지 않음.
+  private _readCache = new Map<string, { data: unknown; ts: number; ttl: number }>();
+  private readonly READ_CACHE_TTL = 10 * 60_000;
+  private readonly EMPTY_CACHE_TTL = 60_000;
+  private readonly LS_CACHE_PREFIX = 'ptd-fscache:';
 
   // [FREE-TIER] 카드 랭킹 쓰기 중복 방지 — 세션 내 동일 값(층:수집수) 재기록 스킵.
   private _lastCardRankSync = '';
@@ -56,12 +74,59 @@ class DatabaseService {
 
   private async cachedRead<T>(key: string, loader: () => Promise<T>): Promise<T> {
     const hit = this._readCache.get(key);
-    if (hit && Date.now() - hit.ts < this.READ_CACHE_TTL) {
+    if (hit && Date.now() - hit.ts < hit.ttl) {
       return hit.data as T;
     }
+    // localStorage 계층 (세션/새로고침 간 유지)
+    try {
+      const raw = localStorage.getItem(this.LS_CACHE_PREFIX + key);
+      if (raw) {
+        const entry = JSON.parse(raw) as { data: T; ts: number };
+        if (Date.now() - entry.ts < this.READ_CACHE_TTL) {
+          this._readCache.set(key, { ...entry, ttl: this.READ_CACHE_TTL });
+          return entry.data;
+        }
+        localStorage.removeItem(this.LS_CACHE_PREFIX + key);
+      }
+    } catch { /* ignore */ }
+
     const data = await loader();
-    this._readCache.set(key, { data, ts: Date.now() });
+    const isEmpty = Array.isArray(data) && data.length === 0;
+    this._readCache.set(key, {
+      data, ts: Date.now(),
+      ttl: isEmpty ? this.EMPTY_CACHE_TTL : this.READ_CACHE_TTL,
+    });
+    if (!isEmpty) {
+      try {
+        localStorage.setItem(this.LS_CACHE_PREFIX + key, JSON.stringify({ data, ts: Date.now() }));
+      } catch { /* quota 초과 등 — 무시 */ }
+    }
     return data;
+  }
+
+  /** 내 기록 쓰기 직후 관련 랭킹 캐시 무효화 (키 prefix 매칭). */
+  private invalidateCache(...prefixes: string[]): void {
+    for (const key of Array.from(this._readCache.keys())) {
+      if (prefixes.some(p => key.startsWith(p))) this._readCache.delete(key);
+    }
+    try {
+      for (let i = localStorage.length - 1; i >= 0; i--) {
+        const k = localStorage.key(i);
+        if (!k || !k.startsWith(this.LS_CACHE_PREFIX)) continue;
+        const bare = k.slice(this.LS_CACHE_PREFIX.length);
+        if (prefixes.some(p => bare.startsWith(p))) localStorage.removeItem(k);
+      }
+    } catch { /* ignore */ }
+  }
+
+  /**
+   * [FIX-QUOTA] "내 순위" 계산 공통 헬퍼 — 집계 카운트 쿼리 사용.
+   * 기존 getDocs().size는 문서를 최대 500개 실제 다운로드(=최대 500 read)했지만,
+   * getCountFromServer는 인덱스 항목 1000개당 1 read로 집계만 받아온다.
+   */
+  private async countPlusOne(q: ReturnType<typeof query>): Promise<number> {
+    const agg = await getCountFromServer(q);
+    return agg.data().count + 1;
   }
 
   async addHallOfFameEntry(
@@ -85,6 +150,7 @@ class DatabaseService {
       timestamp: Date.now(),
     };
     await addDoc(collection(db, 'hallOfFame'), entry);
+    this.invalidateCache('hof:');
 
     // [FREE-TIER] 20% 확률로 오래된 기록 정리 (매번 실행 시 Firestore 쿼터 낭비)
     if (Math.random() < 0.2) {
@@ -253,6 +319,7 @@ class DatabaseService {
 
     if (!docSnap.exists()) {
       await setDoc(docRef, newEntry);
+      this.invalidateCache('mapLb:', 'highestWave:');
       return;
     }
 
@@ -261,10 +328,12 @@ class DatabaseService {
     if (clearTime !== undefined) {
       if (!existing.clearTime || clearTime < existing.clearTime) {
         await setDoc(docRef, newEntry);
+        this.invalidateCache('mapLb:', 'highestWave:');
       }
     } else {
       if (highestWave > (existing.highestWave ?? 0)) {
         await setDoc(docRef, { ...existing, highestWave, timestamp: Date.now() });
+        this.invalidateCache('mapLb:', 'highestWave:');
       }
     }
   }
@@ -300,7 +369,7 @@ class DatabaseService {
     const userValue = sortBy === 'clearTime' ? userData.clearTime : userData.highestWave;
     if (!userValue) return null;
 
-    // [FIX-QUOTA] 전체 컬렉션 스캔 대신 "나보다 나은 기록" 수만 쿼리 (limit 500).
+    // [FIX-QUOTA] "나보다 나은 기록" 수를 집계 카운트로만 조회 (문서 다운로드 0, 1 read).
     // clearTime: 낮을수록 좋음 → 내 값보다 작은 것이 나보다 앞 순위
     // highestWave: 높을수록 좋음 → 내 값보다 큰 것이 나보다 앞 순위
     const betterOp = sortBy === 'clearTime' ? '<' : '>' as const;
@@ -310,13 +379,13 @@ class DatabaseService {
       where(sortBy, betterOp as any, userValue),
       limit(500)
     );
-    const snapshot = await getDocs(q);
-    return snapshot.size + 1;
+    return this.countPlusOne(q);
   }
 
   async updateUserRating(userId: string, newRating: number): Promise<void> {
     const docRef = doc(db, 'users', userId);
     await updateDoc(docRef, { rating: newRating });
+    this.invalidateCache('pvpRanking:');
   }
 
   // ─── [리뉴얼] 업적 저장 — AP 포함 (WriteBatch로 원자적 처리) ───────────────
@@ -348,6 +417,7 @@ class DatabaseService {
     }
 
     await batch.commit();
+    if (totalAP !== undefined) this.invalidateCache('apRanking:');
   }
 
   async updateUserAchievementsBulk(achievements: Achievement[], totalAP: number, achievementCount: number): Promise<void> {
@@ -374,6 +444,7 @@ class DatabaseService {
     batch.set(apRef, apEntry);
 
     await batch.commit();
+    this.invalidateCache('apRanking:');
   }
 
   async getUserAchievements(): Promise<Achievement[]> {
@@ -407,6 +478,7 @@ class DatabaseService {
       updatedAt: Date.now(),
     };
     await setDoc(doc(db, 'apRankings', user.uid), entry);
+    this.invalidateCache('apRanking:');
   }
 
   /**
@@ -440,17 +512,14 @@ class DatabaseService {
       if (!myDoc.exists()) return null;
 
       const myAP = (myDoc.data() as APRankingEntry).totalAP;
-      // 나보다 AP 높은 사람 수 + 1 = 내 순위
-      // [FREE-TIER] limit 상한: 유저 수가 많아져도 read가 폭증하지 않도록 스캔 상한을 둔다.
-      //   상한 도달 시 "상한+" 순위로 표시됨(정확한 순위 대신 하한 보장).
+      // 나보다 AP 높은 사람 수 + 1 = 내 순위 — [FIX-QUOTA] 집계 카운트(1 read)
       const RANK_SCAN_LIMIT = 500;
       const q = query(
         collection(db, 'apRankings'),
         where('totalAP', '>', myAP),
         limit(RANK_SCAN_LIMIT)
       );
-      const snapshot = await getDocs(q);
-      return snapshot.size + 1;
+      return this.countPlusOne(q);
     } catch {
       return null;
     }
@@ -493,8 +562,7 @@ class DatabaseService {
         where('rating', '>', myRating),
         limit(RANK_SCAN_LIMIT)
       );
-      const snapshot = await getDocs(q);
-      return snapshot.size + 1;
+      return this.countPlusOne(q); // [FIX-QUOTA] 집계 카운트(1 read)
     } catch (err) {
       console.error('getMyPVPRank failed:', err);
       return null;
@@ -523,6 +591,7 @@ class DatabaseService {
     try {
       await setDoc(doc(db, 'cardRankings', user.uid), entry);
       this._lastCardRankSync = key;
+      this.invalidateCache('collectionRanking:');
     } catch (err) {
       console.warn('[DB] updateCardRanking failed:', err);
     }
@@ -551,6 +620,7 @@ class DatabaseService {
     try {
       await setDoc(doc(db, 'seasons', season, 'cardRankings', user.uid), entry);
       this._lastSeasonSync = key;
+      this.invalidateCache('towerRanking:');
     } catch (err) {
       console.warn('[DB] updateTowerSeasonRanking failed:', err);
     }
@@ -607,8 +677,7 @@ class DatabaseService {
         where('towerFloor', '>', myValue),
         limit(RANK_SCAN_LIMIT)
       );
-      const snapshot = await getDocs(q);
-      return snapshot.size + 1;
+      return this.countPlusOne(q); // [FIX-QUOTA] 집계 카운트(1 read)
     } catch {
       return null;
     }
@@ -629,8 +698,7 @@ class DatabaseService {
         where('collectionCount', '>', myValue),
         limit(RANK_SCAN_LIMIT)
       );
-      const snapshot = await getDocs(q);
-      return snapshot.size + 1;
+      return this.countPlusOne(q); // [FIX-QUOTA] 집계 카운트(1 read)
     } catch {
       return null;
     }
@@ -652,6 +720,7 @@ class DatabaseService {
     try {
       await setDoc(doc(db, 'quizRankings', user.uid), entry);
       this._lastQuizSync = examBest;
+      this.invalidateCache('quizRanking:');
     } catch (err) {
       console.warn('[DB] updateQuizRanking failed:', err);
     }
@@ -674,6 +743,69 @@ class DatabaseService {
     });
   }
 
+  // ─── 미니 포켓 랜덤 대전 (비동기 PvP 덱 스냅샷) ────────────────────────────
+  private _lastDeckPublish = '';
+
+  /**
+   * 내 덱 스냅샷 발행 — 랜덤 대전 매칭 풀에 등록.
+   * [FREE-TIER] 세션 내 동일 덱 재발행 스킵(쓰기 1회). 오프라인/비로그인 무시.
+   */
+  async publishCardDeck(
+    deck: { pokemonId: number; stars: number; row: 'front' | 'back'; slot: number }[]
+  ): Promise<void> {
+    const user = authService.getCurrentUser();
+    if (!user || authService.isOfflineMode()) return;
+    if (deck.length === 0) return;
+
+    const key = JSON.stringify(deck);
+    if (key === this._lastDeckPublish) return;
+
+    const docData: CardDeckDoc = {
+      userId: user.uid,
+      userName: user.displayName,
+      deck,
+      power: deck.reduce((s, d) => s + d.stars, 0),
+      rand: Math.random(),
+      updatedAt: Date.now(),
+    };
+    try {
+      await setDoc(doc(db, 'cardDecks', user.uid), docData);
+      this._lastDeckPublish = key;
+    } catch (err) {
+      console.warn('[DB] publishCardDeck failed:', err);
+    }
+  }
+
+  /**
+   * 랜덤 상대 덱 1개 조회.
+   * [FREE-TIER] rand 필드 기준 무작위 지점부터 limit(3) — 호출당 최대 6 read.
+   *   (전체 스캔 없이 무작위 표본을 뽑는 Firestore 관용 패턴)
+   */
+  async getRandomOpponentDeck(): Promise<CardDeckDoc | null> {
+    const user = authService.getCurrentUser();
+    if (!user || authService.isOfflineMode()) return null;
+    try {
+      const r = Math.random();
+      const pick = async (op: '>=' | '<', dir: 'asc' | 'desc') => {
+        const q = query(
+          collection(db, 'cardDecks'),
+          where('rand', op, r),
+          orderBy('rand', dir),
+          limit(3)
+        );
+        const snap = await getDocs(q);
+        return snap.docs
+          .map(d => d.data() as CardDeckDoc)
+          .find(d => d.userId !== user.uid && Array.isArray(d.deck) && d.deck.length > 0) ?? null;
+      };
+      // 무작위 지점 이후 → 없으면 반대 방향(순환)
+      return (await pick('>=', 'asc')) ?? (await pick('<', 'desc'));
+    } catch (err) {
+      console.warn('[DB] getRandomOpponentDeck failed:', err);
+      return null;
+    }
+  }
+
   /** 내 모의고사 순위 (나보다 높은 점수 수 + 1). */
   async getMyQuizRank(): Promise<number | null> {
     const user = authService.getCurrentUser();
@@ -688,8 +820,7 @@ class DatabaseService {
         where('examBest', '>', myValue),
         limit(RANK_SCAN_LIMIT)
       );
-      const snapshot = await getDocs(q);
-      return snapshot.size + 1;
+      return this.countPlusOne(q); // [FIX-QUOTA] 집계 카운트(1 read)
     } catch {
       return null;
     }

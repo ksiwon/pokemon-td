@@ -1,32 +1,46 @@
-// src/components/cards/TrainerTower.tsx
-// 트레이너 타워 PvE — 저장된 덱으로 층별 적팀과 오토배틀. 전투 로그를 재생.
+// src/components/cards/RandomBattle.tsx
+// 미니 포켓 랜덤 대전 — 다른 플레이어의 덱 스냅샷(Firestore cardDecks)과 비동기 오토배틀.
+// 실시간 통신 없음: 매칭 시 상대 덱 문서 1개만 읽고(최대 6 read) 전투는 로컬 시뮬레이션.
+// [FREE-TIER] 내 덱 발행은 세션 내 변경 시에만 1 write. 결과는 로컬 전적(localStorage)만 기록.
 
-import { useEffect, useMemo, useRef, useState } from 'react';
+import { useMemo, useRef, useState, useEffect } from 'react';
 import styled, { keyframes, css } from 'styled-components';
 import { media } from '../../utils/responsive.utils';
-import { ArrowLeft, Play, FastForward, ChevronsRight } from 'lucide-react';
+import { ArrowLeft, Swords, FastForward, ChevronsRight, RefreshCw } from 'lucide-react';
 import { pokeAPI } from '../../api/pokeapi';
 import { useTranslation } from '../../i18n';
 import { cardService } from '../../services/CardService';
-import { databaseService } from '../../services/DatabaseService';
+import { databaseService, CardDeckDoc } from '../../services/DatabaseService';
+import { authService } from '../../services/AuthService';
 import { useCardState } from '../../hooks/useCardState';
 import {
   cardBattleService, buildBattleCard, BattleCard, BattleResult, BattleLogEntry,
 } from '../../services/CardBattleService';
 import { BattleLogPanel } from './BattleLogPanel';
 
-type Phase = 'idle' | 'loading' | 'battle' | 'result';
-type Reward = { coins: number; starShards: number; firstClear: boolean };
+type Phase = 'idle' | 'matching' | 'battle' | 'result';
 
-export const TrainerTower = ({ onBack }: { onBack: () => void }) => {
+// 매칭별 결정론 시드(FNV-1a) — 같은 상대 스냅샷과는 항상 같은 결과(재도전 리롤 방지).
+const hashSeed = (s: string): number => {
+  let h = 2166136261 >>> 0;
+  for (let i = 0; i < s.length; i++) {
+    h ^= s.charCodeAt(i);
+    h = Math.imul(h, 16777619);
+  }
+  return h >>> 0;
+};
+
+export const RandomBattle = ({ onBack }: { onBack: () => void }) => {
   const { t } = useTranslation();
   const state = useCardState();
-  const floor = state.towerProgress + 1;
   const deck = useMemo(() => cardService.getDeck(), [state.deck]);
+  const record = cardService.getPvpRecord();
+
+  const user = authService.getCurrentUser();
+  const online = !!user && !authService.isOfflineMode();
 
   const [phase, setPhase] = useState<Phase>('idle');
-  // 이번 전투에서 실제 싸운 층(스냅샷). 보상 지급으로 towerProgress가 바뀌어도 결과 표기가 안 흔들리게.
-  const [foughtFloor, setFoughtFloor] = useState(floor);
+  const [opponent, setOpponent] = useState<CardDeckDoc | null>(null);
   const [units, setUnits] = useState<Record<string, BattleCard>>({});
   const [playerOrder, setPlayerOrder] = useState<BattleCard[]>([]);
   const [enemyOrder, setEnemyOrder] = useState<BattleCard[]>([]);
@@ -34,56 +48,67 @@ export const TrainerTower = ({ onBack }: { onBack: () => void }) => {
   const [step, setStep] = useState(0);
   const [speed, setSpeed] = useState(1);
   const [result, setResult] = useState<BattleResult | null>(null);
-  const [reward, setReward] = useState<Reward | null>(null);
+  const [rewardCoins, setRewardCoins] = useState(0);
   const [hpMap, setHpMap] = useState<Record<string, number>>({});
   const [hit, setHit] = useState<string | null>(null);
   const timer = useRef<number | null>(null);
 
-  const startBattle = async () => {
+  const startMatch = async () => {
+    if (!online) return;
     if (deck.length === 0) { alert(t('cards.alerts.deckEmpty')); return; }
-    const currentFloor = floor; // 이번 전투 층 고정
-    setFoughtFloor(currentFloor);
-    setPhase('loading');
+    setPhase('matching');
     try {
-      // 플레이어 팀 빌드
+      // 1) 내 덱 발행(변경 시에만 실제 write) + 상대 찾기
+      const myDeck = cardService.getDeckWithStars();
+      databaseService.publishCardDeck(myDeck).catch(() => {});
+      const opp = await databaseService.getRandomOpponentDeck();
+      if (!opp) {
+        alert(t('cards.pvp.noOpponent'));
+        setPhase('idle');
+        return;
+      }
+
+      // 2) 내 팀 빌드
       const player: BattleCard[] = [];
-      for (const s of deck) {
-        const entry = state.collection[s.pokemonId];
-        if (!entry) continue;
+      for (const s of myDeck) {
         const p = await pokeAPI.getPokemon(s.pokemonId).catch(() => null);
         if (!p) continue;
-        player.push(buildBattleCard(p, { stars: entry.stars, row: s.row, slot: s.slot, side: 'player', uid: `player-${s.pokemonId}` }));
+        player.push(buildBattleCard(p, {
+          stars: s.stars, row: s.row, slot: s.slot, side: 'player', uid: `player-${s.pokemonId}`,
+        }));
       }
       if (player.length === 0) { alert(t('cards.alerts.deckLoadFail')); setPhase('idle'); return; }
 
-      const seed = currentFloor * 1000 + 7;
-      const enemy = await cardBattleService.generateEnemyTeam(currentFloor, seed);
+      // 3) 상대 팀 빌드 — 스냅샷 값은 buildBattleCard가 별 1~5로 clamp(위조 방어)
+      const enemy: BattleCard[] = [];
+      for (let i = 0; i < Math.min(6, opp.deck.length); i++) {
+        const s = opp.deck[i];
+        if (!s || typeof s.pokemonId !== 'number') continue;
+        const p = await pokeAPI.getPokemon(s.pokemonId).catch(() => null);
+        if (!p) continue;
+        enemy.push(buildBattleCard(p, {
+          stars: s.stars,
+          row: s.row === 'back' ? 'back' : 'front',
+          slot: typeof s.slot === 'number' ? s.slot : i % 3,
+          side: 'enemy',
+          uid: `enemy-${i}`,
+        }));
+      }
+      if (enemy.length === 0) { alert(t('cards.pvp.opponentLoadFail')); setPhase('idle'); return; }
 
-      // 시뮬레이션(사본을 변형) → 로그
+      // 4) 시뮬레이션 — 시드는 매칭 쌍+스냅샷 시각으로 고정(같은 상대 재도전 리롤 방지)
+      const seed = hashSeed(`${user!.uid}|${opp.userId}|${opp.updatedAt}`);
       const pSim = player.map(c => ({ ...c }));
       const eSim = enemy.map(c => ({ ...c }));
       const res = cardBattleService.simulate(pSim, eSim, seed);
 
-      // [FIX] 보상은 전투 결과가 확정되는 지금 즉시 지급 → 재생 중 '나가기'로 이탈해도 승리 보상 손실 없음.
-      //   (기존엔 재생 완료 시점 finish에서 지급 → 중도 이탈 시 이긴 전투가 조용히 무효)
-      let rw: Reward | null = null;
-      if (res.winner === 'player') {
-        const firstClear = currentFloor > cardService.getTowerProgress();
-        const boss = currentFloor % 10 === 0;
-        // [경제] 타워(미니 포켓)는 소액만 — 재화 farm은 싱글/멀티로 유도(오토배틀은 도전·소비 콘텐츠).
-        //   첫클리어도 소량, 재도전은 극소량(파밍 차단).
-        const coins = firstClear ? 10 + currentFloor * 2 : 2 + Math.floor(currentFloor / 2);
-        const shards = firstClear ? (boss ? 5 : currentFloor % 5 === 0 ? 2 : 0) : 0;
-        cardService.grantRewards({ coins, starShards: shards });
-        if (firstClear) cardService.setTowerProgress(currentFloor);
-        // [주간 시즌] 이번 주 최고층 갱신 시에만 Firestore 시즌 랭킹 기록(오프라인/비로그인 무시).
-        //   all-time firstClear와 무관 — 매주 다시 오르는 경쟁이므로 이번 주 기준으로 판정.
-        const weeklyBest = cardService.recordWeeklyBestFloor(currentFloor);
-        if (weeklyBest !== null) databaseService.updateTowerSeasonRanking(weeklyBest).catch(() => {});
-        rw = { coins, starShards: shards, firstClear };
-      }
+      // 5) 보상·전적은 결과 확정 즉시 반영(재생 중 이탈해도 손실 없음)
+      //    [경제] 소액 고정 — 미니 포켓은 파밍 콘텐츠가 아님(타워와 동일 기조).
+      const coins = res.winner === 'player' ? 5 : 1;
+      cardService.grantRewards({ coins });
+      cardService.recordPvpResult(res.winner === 'player');
 
-      // 재생용: 시너지 적용된 사본(pSim/eSim)을 풀피로 리셋
+      // 6) 재생 준비 — 시너지 적용본을 풀피로 리셋
       const all: Record<string, BattleCard> = {};
       const reset = (arr: BattleCard[]) => arr.map(c => { const u = { ...c, currentHp: c.maxHp }; all[u.uid] = u; return u; });
       const pOrder = reset(pSim);
@@ -91,23 +116,24 @@ export const TrainerTower = ({ onBack }: { onBack: () => void }) => {
       const hp0: Record<string, number> = {};
       Object.values(all).forEach(u => { hp0[u.uid] = u.maxHp; });
 
+      setOpponent(opp);
       setUnits(all);
       setPlayerOrder(pOrder);
       setEnemyOrder(eOrder);
       setHpMap(hp0);
       setLog(res.log);
       setResult(res);
-      setReward(rw);
+      setRewardCoins(coins);
       setStep(0);
       setPhase('battle');
     } catch (e) {
-      console.warn('[TrainerTower] 전투 준비 실패', e);
+      console.warn('[RandomBattle] 매칭/전투 준비 실패', e);
       alert(t('cards.alerts.battlePrepError'));
       setPhase('idle');
     }
   };
 
-  // 로그 재생
+  // 로그 재생 (TrainerTower와 동일 패턴)
   useEffect(() => {
     if (phase !== 'battle') return;
     if (step >= log.length) { finish(); return; }
@@ -131,18 +157,14 @@ export const TrainerTower = ({ onBack }: { onBack: () => void }) => {
     finish();
   };
 
-  // 보상은 startBattle에서 이미 지급됨 — 여기선 결과 화면 전환만.
   const finish = () => {
     if (!result || phase === 'result') return;
     setPhase('result');
   };
 
   const reset = () => {
-    setPhase('idle'); setResult(null); setReward(null); setLog([]); setStep(0);
+    setPhase('idle'); setResult(null); setOpponent(null); setLog([]); setStep(0); setRewardCoins(0);
   };
-
-  // 전투/결과 중엔 싸운 층을, 대기 중엔 다음 도전 층을 표시(보상지급 후 층 증가로 인한 표기 흔들림 방지).
-  const headerFloor = (phase === 'battle' || phase === 'result') ? foughtFloor : floor;
 
   // ─── 렌더 ───────────────────────────────────────────────────────
   const renderUnit = (u: BattleCard) => {
@@ -161,8 +183,6 @@ export const TrainerTower = ({ onBack }: { onBack: () => void }) => {
   const renderTeam = (order: BattleCard[], side: 'player' | 'enemy') => {
     const front = order.filter(u => u.row === 'front');
     const back = order.filter(u => u.row === 'back');
-    // 전열이 가운데(구분선)에서 마주보도록 — 적:[후열,전열] / 나:[전열,후열].
-    //   (전열이 먼저 맞는 타겟팅과 시각적으로 일치. 예전엔 뒤집혀 후열이 가운데서 부딪혀 보였음)
     const rows = side === 'enemy' ? [back, front] : [front, back];
     return (
       <Team $side={side}>
@@ -173,36 +193,38 @@ export const TrainerTower = ({ onBack }: { onBack: () => void }) => {
     );
   };
 
+  const oppName = opponent?.userName || t('cards.pvp.unknownPlayer');
+
   return (
     <Root>
       <TopBar>
         <BackBtn onClick={onBack}><ArrowLeft size={16} /> {t('cards.common.back')}</BackBtn>
-        <Title>{t('cards.tower.title')}</Title>
-        <FloorChip>{t('cards.tower.floor', { n: headerFloor })}{headerFloor % 10 === 0 ? t('cards.tower.bossSuffix') : ''}</FloorChip>
+        <Title>{t('cards.pvp.title')}</Title>
+        <RecordChip>{t('cards.pvp.record', { w: record.wins, l: record.losses })}</RecordChip>
       </TopBar>
 
       {phase === 'idle' && (
         <Center>
-          <FloorBig>{t('cards.tower.floor', { n: floor })}</FloorBig>
-          <FloorDesc>
+          <BigIcon><Swords size={44} /></BigIcon>
+          <Desc>
             {deck.length === 0
               ? t('cards.tower.noDeck')
-              : t('cards.tower.deckReady', { n: deck.length })}
-            {floor % 10 === 0 && <BossTag>{t('cards.tower.bossFloor')}</BossTag>}
-          </FloorDesc>
-          <StartBtn $on={deck.length > 0} onClick={startBattle} disabled={deck.length === 0}>
-            <Play size={18} /> {t('cards.tower.start')}
+              : t('cards.pvp.desc', { n: deck.length })}
+          </Desc>
+          {!online && <OfflineHint>{t('cards.pvp.loginNeeded')}</OfflineHint>}
+          <StartBtn $on={online && deck.length > 0} onClick={startMatch} disabled={!online || deck.length === 0}>
+            <Swords size={18} /> {t('cards.pvp.find')}
           </StartBtn>
-          <Hint>{t('cards.tower.bestReach', { n: state.towerProgress })}</Hint>
+          <Hint>{t('cards.pvp.hint')}</Hint>
         </Center>
       )}
 
-      {phase === 'loading' && <Center><FloorDesc>{t('cards.tower.preparing')}</FloorDesc></Center>}
+      {phase === 'matching' && <Center><Desc>{t('cards.pvp.searching')}</Desc></Center>}
 
       {(phase === 'battle' || phase === 'result') && (
         <BattleWrap>
           <Arena>
-            <SideLabel $side="enemy">{t('cards.tower.enemyTrainer')}</SideLabel>
+            <SideLabel $side="enemy">{t('cards.pvp.opponentDeck', { name: oppName })}</SideLabel>
             {renderTeam(enemyOrder, 'enemy')}
             <Divider />
             {renderTeam(playerOrder, 'player')}
@@ -228,21 +250,18 @@ export const TrainerTower = ({ onBack }: { onBack: () => void }) => {
               {result.winner === 'player' ? t('cards.tower.victory') : t('cards.tower.defeat')}
             </ResultTitle>
             <ResultSub>
-              {result.winner === 'player'
-                ? t('cards.tower.clearResult', { n: foughtFloor, alive: result.playerAlive })
-                : t('cards.tower.defeatResult', { p: result.playerAlive, e: result.enemyAlive })}
+              {t('cards.pvp.vsResult', { name: oppName, p: result.playerAlive, e: result.enemyAlive })}
             </ResultSub>
-            {reward && (reward.coins > 0 || reward.starShards > 0) && (
+            {rewardCoins > 0 && (
               <RewardRow>
-                {reward.firstClear && <FirstBadge>{t('cards.tower.firstClear')}</FirstBadge>}
-                {reward.coins > 0 && <Rw $c="#fbbf24">{t('cards.tower.coins', { n: reward.coins })}</Rw>}
-                {reward.starShards > 0 && <Rw $c="#c084fc">{t('cards.tower.shards', { n: reward.starShards })}</Rw>}
+                <Rw $c="#fbbf24">{t('cards.tower.coins', { n: rewardCoins })}</Rw>
               </RewardRow>
             )}
             <ResultBtns>
-              {result.winner === 'player'
-                ? <PrimaryBtn onClick={reset}>{t('cards.tower.nextFloor')}</PrimaryBtn>
-                : <PrimaryBtn onClick={reset}>{t('cards.tower.retry')}</PrimaryBtn>}
+              <PrimaryBtn onClick={() => { reset(); startMatch(); }}>
+                <RefreshCw size={14} style={{ marginRight: 6, verticalAlign: -2 }} />
+                {t('cards.pvp.rematch')}
+              </PrimaryBtn>
               <GhostBtn onClick={onBack}>{t('cards.tower.exit')}</GhostBtn>
             </ResultBtns>
           </ResultCard>
@@ -256,8 +275,8 @@ export const TrainerTower = ({ onBack }: { onBack: () => void }) => {
 const shake = keyframes`0%,100%{transform:translateX(0)}25%{transform:translateX(-4px)}75%{transform:translateX(4px)}`;
 const popIn = keyframes`from{opacity:0;transform:scale(0.85)}to{opacity:1;transform:scale(1)}`;
 
-// ─── styled ──────────────────────────────────────────────────────────────────
-const Root = styled.div`min-height: 100vh; background: radial-gradient(circle at top, #161024, #070910); color: #e8edf5; display: flex; flex-direction: column;`;
+// ─── styled (TrainerTower와 동일 톤) ─────────────────────────────────────────
+const Root = styled.div`min-height: 100vh; background: radial-gradient(circle at top, #101a2e, #070910); color: #e8edf5; display: flex; flex-direction: column;`;
 const TopBar = styled.header`
   display: flex; align-items: center; justify-content: space-between; gap: 12px;
   padding: 14px 22px; border-bottom: 1px solid rgba(255,255,255,0.07); position: sticky; top: 0;
@@ -278,9 +297,9 @@ const Title = styled.h1`
   min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
   ${media.mobile} { font-size: 14px; }
 `;
-const FloorChip = styled.div`
+const RecordChip = styled.div`
   flex: 0 0 auto;
-  font-size: 13px; font-weight: 700; color: #c084fc; background: rgba(192,132,252,0.12); padding: 6px 12px; border-radius: 100px; white-space: nowrap;
+  font-size: 13px; font-weight: 700; color: #7dd3fc; background: rgba(125,211,252,0.12); padding: 6px 12px; border-radius: 100px; white-space: nowrap;
   ${media.mobile} { font-size: 12px; padding: 5px 10px; }
 `;
 
@@ -288,20 +307,20 @@ const Center = styled.div`
   flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 16px; padding: 40px;
   ${media.mobile} { gap: 12px; padding: 28px 16px; }
 `;
-const FloorBig = styled.div`
-  font-size: 56px; font-weight: 900; color: #f8fafc; text-shadow: 0 0 24px rgba(192,132,252,0.5);
-  ${media.mobile} { font-size: 40px; }
+const BigIcon = styled.div`color: #7dd3fc; filter: drop-shadow(0 0 20px rgba(125,211,252,0.5));`;
+const Desc = styled.div`font-size: 15px; color: rgba(255,255,255,0.6); text-align: center; ${media.mobile} { font-size: 13px; }`;
+const OfflineHint = styled.div`
+  font-size: 13px; color: #fbbf24; background: rgba(251,191,36,0.1);
+  border: 1px solid rgba(251,191,36,0.25); padding: 8px 14px; border-radius: 8px;
 `;
-const FloorDesc = styled.div`font-size: 15px; color: rgba(255,255,255,0.6); text-align: center; display: flex; align-items: center; gap: 8px; ${media.mobile} { font-size: 13px; }`;
-const BossTag = styled.span`background: #ef4444; color: #fff; font-size: 11px; font-weight: 800; padding: 3px 8px; border-radius: 6px;`;
 const StartBtn = styled.button<{ $on: boolean }>`
   display: flex; align-items: center; gap: 8px; margin-top: 8px; padding: 14px 36px; border-radius: 12px; border: none;
-  background: ${p => (p.$on ? 'linear-gradient(135deg,#c084fc,#8b5cf6)' : 'rgba(255,255,255,0.08)')};
+  background: ${p => (p.$on ? 'linear-gradient(135deg,#7dd3fc,#3b82f6)' : 'rgba(255,255,255,0.08)')};
   color: ${p => (p.$on ? '#fff' : 'rgba(255,255,255,0.4)')}; font-size: 16px; font-weight: 800;
-  cursor: ${p => (p.$on ? 'pointer' : 'not-allowed')}; box-shadow: ${p => (p.$on ? '0 8px 24px rgba(139,92,246,0.4)' : 'none')};
+  cursor: ${p => (p.$on ? 'pointer' : 'not-allowed')}; box-shadow: ${p => (p.$on ? '0 8px 24px rgba(59,130,246,0.4)' : 'none')};
   ${media.mobile} { padding: 12px 28px; font-size: 15px; }
 `;
-const Hint = styled.div`font-size: 12px; color: rgba(255,255,255,0.35);`;
+const Hint = styled.div`font-size: 12px; color: rgba(255,255,255,0.35); text-align: center; max-width: 340px; line-height: 1.6;`;
 
 const BattleWrap = styled.div`
   flex: 1; width: 100%; max-width: 1080px; margin: 0 auto; padding: 0 16px;
@@ -317,6 +336,7 @@ const SideLabel = styled.div<{ $side: 'player' | 'enemy' }>`
   font-size: 12px; font-weight: 700; letter-spacing: 0.1em;
   color: ${p => (p.$side === 'enemy' ? '#fca5a5' : '#86efac')};
   text-align: ${p => (p.$side === 'enemy' ? 'left' : 'right')};
+  overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
 `;
 const Team = styled.div<{ $side: 'player' | 'enemy' }>`display: flex; flex-direction: column; gap: 12px;`;
 const ArenaRow = styled.div`display: flex; justify-content: center; gap: 18px; min-height: 78px;`;
@@ -359,8 +379,7 @@ const ResultCard = styled.div<{ $win: boolean }>`
 const ResultTitle = styled.div<{ $win: boolean }>`font-size: 34px; font-weight: 900; color: ${p => (p.$win ? '#34d399' : '#f87171')};`;
 const ResultSub = styled.div`font-size: 14px; color: rgba(255,255,255,0.6); margin-top: 6px;`;
 const RewardRow = styled.div`display: flex; gap: 10px; justify-content: center; align-items: center; flex-wrap: wrap; margin-top: 16px;`;
-const FirstBadge = styled.span`background: #fbbf24; color: #07090f; font-size: 11px; font-weight: 800; padding: 3px 8px; border-radius: 6px;`;
 const Rw = styled.span<{ $c: string }>`font-size: 15px; font-weight: 800; color: ${p => p.$c};`;
 const ResultBtns = styled.div`display: flex; gap: 10px; justify-content: center; margin-top: 22px;`;
-const PrimaryBtn = styled.button`padding: 11px 26px; border-radius: 10px; border: none; background: #c084fc; color: #07090f; font-weight: 800; font-size: 15px; cursor: pointer; &:hover{transform:translateY(-2px);} transition: transform 0.15s;`;
+const PrimaryBtn = styled.button`padding: 11px 26px; border-radius: 10px; border: none; background: #7dd3fc; color: #07090f; font-weight: 800; font-size: 15px; cursor: pointer; &:hover{transform:translateY(-2px);} transition: transform 0.15s;`;
 const GhostBtn = styled.button`padding: 11px 22px; border-radius: 10px; border: 1px solid rgba(255,255,255,0.15); background: transparent; color: rgba(255,255,255,0.6); font-weight: 600; font-size: 15px; cursor: pointer; &:hover{background:rgba(255,255,255,0.06);}`;

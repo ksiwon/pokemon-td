@@ -1115,6 +1115,8 @@
       "packShop": "Pack Shop",
       "autobattle": "Auto-Battle",
       "trainerTower": "Trainer Tower",
+      "randomBattle": "Random Battle",
+      "pvpRecord": "{w}W {l}L",
       "deckBuild": "Deck",
       "dex": "Dex",
       "collected": "{n} collected",
@@ -1189,6 +1191,31 @@
       "nextFloor": "Next Floor →",
       "retry": "Retry",
       "exit": "Exit"
+    },
+    "pvp": {
+      "title": "Random Battle",
+      "desc": "Challenge a random player's deck with your {n} unit(s).",
+      "find": "Find Opponent",
+      "searching": "Finding an opponent...",
+      "noOpponent": "No opponents available yet. Battles unlock as other players register their decks.",
+      "opponentLoadFail": "Failed to load the opponent's deck. Please try again.",
+      "loginNeeded": "Sign in to battle other players",
+      "hint": "Matching registers your deck in the battle pool so other players can face it. Battles run automatically.",
+      "record": "{w}W {l}L",
+      "opponentDeck": "{name}'s Deck",
+      "unknownPlayer": "Unknown Trainer",
+      "vsResult": "vs {name} · {p} : {e} left",
+      "rematch": "Rematch"
+    },
+    "battleLog": {
+      "title": "Battle Log",
+      "turn": "Turn {n}",
+      "crit": "Crit!",
+      "superEffective": "Super effective",
+      "notEffective": "Not very effective",
+      "immune": "No effect",
+      "fainted": "{name} fainted!",
+      "waiting": "Waiting for battle to start..."
     }
   },
   "quiz": {
