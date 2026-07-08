@@ -44,6 +44,8 @@ export interface PokemonData {
   abilities: PokemonAbilityData[];
   /** 도감 설명(현지화). species 데이터에서 파생 — 없으면 ''. */
   flavorText: string;
+  /** flavorText가 현재 표시 언어로 존재하는지(ko 모드에서 en 폴백이면 false). 퀴즈 재추첨용. */
+  flavorLocalized: boolean;
   /** 분류(예: "씨앗 포켓몬"). 현지화. 없으면 ''. */
   genus: string;
   /** 키(m). PokeAPI decimetre → m. */
@@ -204,6 +206,8 @@ class PokeAPIService {
     const flavorText = flavorEntry
       ? String(flavorEntry.flavor_text).replace(/[\f\n\r­]/g, ' ').replace(/\s+/g, ' ').trim()
       : '';
+    // 요청 언어로 실제 매칭됐는지(en 폴백이면 false) — 퀴즈에서 미현지화 개체 재추첨에 사용.
+    const flavorLocalized = !!(flavorEntry && flavorEntry.language.name === lang);
     const genusEntry =
       s.genera?.find((g: any) => g.language.name === lang) ||
       s.genera?.find((g: any) => g.language.name === 'en');
@@ -274,6 +278,7 @@ class PokeAPIService {
       moves: [...levelUpMoves, ...otherMoves].slice(0, 20),
       abilities,
       flavorText,
+      flavorLocalized,
       genus,
       heightM: (d.height ?? 0) / 10,
       weightKg: (d.weight ?? 0) / 10,
@@ -315,6 +320,39 @@ class PokeAPIService {
     };
     this.moveCache.set(moveCacheKey, move);
     return move;
+  }
+
+  // ─── [퀴즈 전용] 특성/도구 현지화 이름 조회 (초성 퀴즈용) ─────────────────
+  //   경량: names 배열만 파싱해 { name(slug), displayName(ko우선) } 반환. 언어별 캐시.
+  private abilityNameCache = new Map<string, { name: string; displayName: string }>();
+  private itemNameCache = new Map<string, { name: string; displayName: string }>();
+
+  async getAbilityName(idOrName: number | string): Promise<{ name: string; displayName: string }> {
+    const lang = getCurrentLanguage();
+    const key = `${lang}:${idOrName}`;
+    if (this.abilityNameCache.has(key)) return this.abilityNameCache.get(key)!;
+    const res = await axios.get(`${API_BASE}/ability/${idOrName}`);
+    const d = res.data;
+    const ne =
+      d.names.find((n: any) => n.language.name === lang) ||
+      d.names.find((n: any) => n.language.name === 'en');
+    const entry = { name: d.name as string, displayName: ne ? ne.name : d.name };
+    this.abilityNameCache.set(key, entry);
+    return entry;
+  }
+
+  async getItemName(idOrName: number | string): Promise<{ name: string; displayName: string }> {
+    const lang = getCurrentLanguage();
+    const key = `${lang}:${idOrName}`;
+    if (this.itemNameCache.has(key)) return this.itemNameCache.get(key)!;
+    const res = await axios.get(`${API_BASE}/item/${idOrName}`);
+    const d = res.data;
+    const ne =
+      d.names.find((n: any) => n.language.name === lang) ||
+      d.names.find((n: any) => n.language.name === 'en');
+    const entry = { name: d.name as string, displayName: ne ? ne.name : d.name };
+    this.itemNameCache.set(key, entry);
+    return entry;
   }
 
   async getRarity(basePokemonId: number): Promise<Rarity> {

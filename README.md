@@ -38,6 +38,18 @@
 - **경제 설계**: 미니 포켓 내부 수급(타워)은 **소액**, 큰 재화는 **싱글/멀티**에서 — 오토배틀 전에 본편·멀티를 플레이하도록 유도 (타워 한 층 ~10–50코인 ≪ 멀티 1판 최대 300 ≪ 싱글 완주 ~740)
 - **완전 분리 저장**: 카드 데이터는 `pokemon-td-cards-v1` LocalStorage에 별도 저장 — TD 본편 세이브/업적에 **0 영향**. 보상은 웨이브·맵/스토리 클리어·멀티 결과·업적 달성 시 지급
 
+### 🧠 포켓몬 퀴즈 (Pokémon Quiz) — PokeAPI 소재 지식 퀴즈, 본편과 독립
+- **10개 종목 + 수능 모의고사**: 한 판에 풀 **문항 수(10 / 30 / 50, 기본값 30)** 를 화면 최상단에서 먼저 고르고 도전. 진행 중 우측 상단에 **정답(초록)·오답(빨강) 개수** 실시간 표시
+  - **누구게?**(실루엣), **울음소리**(cry `.ogg` 재생), **확대 퀴즈**(공식아트 ×15 초근접 정사각 크롭), **도감설명**(도감 텍스트·이름 마스킹), **타입 (쉬움/어려움)**, **종족값 대결**, **도감번호**, **초성 (쉬움/어려움)**
+  - **🔡 초성 퀴즈**: 한글 초성만 보고 이름 맞히기(주관식). 소재는 **포켓몬 · 기술 · 특성 · 도구** 4종을 PokeAPI에서 실시간 추첨 — *쉬움*은 유형 힌트 제공, *어려움*은 유형까지 비공개
+  - **🧬 타입 퀴즈**: *쉬움*=포켓몬 보고 (복합)타입 고르기(오답은 한 타입만 다른 유사조합). *어려움*=제시된 타입(1~2개)을 가진 포켓몬 이름 입력(번들된 1025종 타입 인덱스로 즉시 동적 채점)
+  - **⚔️ 종족값 대결**: HigherLower 방식 — 스탯 하나(HP/공/방/특공/특방/스피드)를 지정해 왼쪽 값 공개 후 오른쪽이 더 높은지/낮은지 선택
+  - 실루엣·울음소리·확대·도감설명·초성·타입(어려움)은 **주관식**(띄어쓰기·기호 무관, 복수 정답 인정), 나머지는 4지선다
+- **🎓 수능 모의고사**: 고인물용 큐레이션 문제은행 종합 시험 — 정답률을 **1~9등급**으로 산출
+- **한글 우선 출제**: PokeAPI에 한글 도감설명이 없는 개체(9세대 등)는 자동 제외해 항상 한국어로 출제
+- **로컬 기록**: 종목별 최고 점수·최고 연속 정답을 LocalStorage(`pokemon-td-quiz-v1`)에 저장(본편/카드와 분리). 모의고사 최고점은 Firebase 리더보드에 등재
+- ⚠️ 퀴즈 데이터는 PokeAPI에서 실시간 로드 → **인터넷 연결 필요**
+
 ### 🗺️ 맵 시스템 (8종)
 | 맵 | 난이도 | 특징 |
 | :--- | :--- | :--- |
@@ -158,6 +170,9 @@ src/
 │   │   ├── StoryEnding.tsx           # 스토리 스테이지 클리어/엔딩 연출
 │   │   ├── StoryOpening.tsx          # 스토리 오프닝 대사 (타이핑 효과)
 │   │   └── StorySelector.tsx         # 챕터 및 스테이지 선택 UI
+│   ├── quiz/                         # 🧠 포켓몬 퀴즈 (PokeAPI 소재, 독립)
+│   │   ├── QuizView.tsx              # 퀴즈 허브 (문항 수·종목 선택·모의고사·최고점)
+│   │   └── QuizPlay.tsx              # 라운드 진행 엔진 (문제 렌더·채점·결과)
 │   └── ui/
 │       ├── FloatingSettings.tsx      # 플로팅 설정 버튼
 │       ├── MapSelector.tsx           # 맵 선택 화면 (8종 맵 카드)
@@ -175,6 +190,7 @@ src/
 │   ├── evolutionItems.ts    # 진화 아이템 정의
 │   ├── heldItems.ts         # 지닌도구 12종 정의 (열매/딜증가/피흡)
 │   ├── maps.ts              # 8종 맵 데이터 (경로, 스폰, 테라 타일, 알바 칸)
+│   ├── pokedexTypeIndex.json # 퀴즈 타입(어려움)용 1025종 인덱스 (id·한/영이름·타입)
 │   └── storyChapters.ts     # 스토리 모드 챕터, 대사, 보상, 난이도 데이터
 ├── game/
 │   ├── GameManager.ts       # 핵심 게임 루프 (적 이동, 타워 공격, 투사체, 웨이브 관리)
@@ -197,6 +213,9 @@ src/
 │   ├── DatabaseService.ts   # Firestore (리더보드, 전당 등록)
 │   ├── MultiplayerService.ts # Firebase RTDB 기반 멀티플레이 동기화 (V7)
 │   ├── PvPBattleService.ts  # PvP 매치업 생성 및 배틀 결과 계산
+│   ├── QuizEngine.ts        # 퀴즈 문제 생성기 (종목별 생성·초성 변환·오답·셔플·프리페치)
+│   ├── QuizService.ts       # 퀴즈 로컬 영속 (종목별 최고점/최고 연속) LocalStorage
+│   ├── quizExamBank.ts      # 수능 모의고사 큐레이션 문제은행
 │   ├── SaveService.ts       # LocalStorage 저장/불러오기 (업적, 통계)
 │   ├── SoundService.ts      # Howler.js 오디오 매니저
 │   └── StoryProgressService.ts # 스토리 모드 진행 상태 관리
@@ -205,7 +224,8 @@ src/
 ├── types/
 │   ├── cards.ts             # 카드 모드 타입 (CardSaveState, Deck, PackType 등)
 │   ├── game.ts              # 핵심 타입 (GamePokemon, Enemy, Item, Achievement 등)
-│   └── multiplayer.ts       # 멀티플레이 타입 (Room, PlayerGameState, GamePhase 등)
+│   ├── multiplayer.ts       # 멀티플레이 타입 (Room, PlayerGameState, GamePhase 등)
+│   └── quiz.ts              # 퀴즈 타입 (QuizKind, QuizQuestion, QuizSaveState)
 └── utils/
     ├── abilities.ts         # 특성 효과 계산 (크리티컬, 흡혈, AOE, 속도, 탱크)
     ├── cardCatalog.ts       # 미니 포켓 도감/덱 공용 정렬·필터·검색 로직
@@ -316,10 +336,12 @@ firebase deploy --only firestore   # Firestore 규칙 (firestore.rules) — 변�
 | `/story` | `StorySelector` | 스토리 챕터 및 스테이지 선택 |
 | `/lobby` | `MultiplayerLobby` | 멀티플레이 로비 |
 | `/cards` | `CardLabView` | 카드 오토배틀 모드 (도감/덱/트레이너 타워) |
+| `/quiz` | `QuizView` | 포켓몬 퀴즈 (9종목 + 수능 모의고사) |
 | `/game` | `GameLayout` | 실제 게임 화면 (싱글/멀티/스토리 공통) |
 
 > 모든 라우트는 `ProtectedRoute`로 보호되며, 비인증 사용자는 `/login`으로 리다이렉트됩니다.
 > 오프라인 모드에서는 로컬 유저 세션으로 `/`, `/map-select`, `/story`, `/cards`, `/game`은 이용 가능하나, `/lobby`(멀티)는 차단됩니다.
+> `/quiz`는 진입할 수 있으나 문제 데이터를 PokeAPI에서 실시간으로 받아오므로 **인터넷 연결이 필요**합니다.
 
 ---
 

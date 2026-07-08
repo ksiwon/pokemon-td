@@ -1215,13 +1215,22 @@
       "cry": { "name": "울음소리", "desc": "소리 듣고 맞히기" },
       "zoom": { "name": "확대 퀴즈", "desc": "확대 이미지 맞히기" },
       "flavor": { "name": "도감설명", "desc": "설명 보고 맞히기" },
-      "bstDuel": { "name": "종족값 대결", "desc": "총합 더 높은 쪽 고르기" },
-      "type": { "name": "타입 퀴즈", "desc": "포켓몬의 타입 맞히기" },
-      "dexNumber": { "name": "도감번호", "desc": "전국도감 번호 맞히기" }
+      "bstDuel": { "name": "종족값 대결", "desc": "스탯 하나로 더 높은 쪽 맞히기" },
+      "type": { "name": "타입 (쉬움)", "desc": "포켓몬 보고 타입 고르기" },
+      "typeHard": { "name": "타입 (어려움)", "desc": "제시 타입과 정확히 일치하는 포켓몬 입력" },
+      "dexNumber": { "name": "도감번호", "desc": "전국도감 번호 맞히기" },
+      "chosungEasy": { "name": "초성 (쉬움)", "desc": "유형 힌트 O · 초성 보고 맞히기" },
+      "chosungHard": { "name": "초성 (어려움)", "desc": "유형 힌트 X · 초성만 보고 맞히기" }
     },
     "exam": {
       "name": "수능 모의고사",
       "desc": "포덕 고인물용 종합 시험 · 등급 산출"
+    },
+    "chosung": {
+      "cat": { "pokemon": "포켓몬", "move": "기술", "ability": "특성", "item": "도구" }
+    },
+    "bst": {
+      "stat": { "hp": "HP", "attack": "공격", "defense": "방어", "specialAttack": "특공", "specialDefense": "특방", "speed": "스피드" }
     },
     "play": {
       "silhouettePrompt": "이 포켓몬은 누구?",
@@ -1234,6 +1243,9 @@
       "giveUp": "모르겠어요",
       "bstDuelPrompt": "종족값 총합이 더 높은 쪽은?",
       "typePrompt": "{name}의 타입은?",
+      "typeHardPrompt": "타입이 정확히 「{types}」인 포켓몬을 입력하세요",
+      "typeHardPlaceholder": "포켓몬 이름 입력",
+      "typeHardRevealSub": "예: {name}",
       "dexPrompt": "{name}의 전국도감 번호는?",
       "bstRevealWin": "{name} 승 (종족값 {total})",
       "progress": "{cur} / {total}",
@@ -1243,7 +1255,15 @@
       "seeResult": "결과 보기",
       "loading": "문제 준비 중...",
       "loadError": "문제를 불러오지 못했어요. 인터넷 연결을 확인해주세요.",
-      "retryLoad": "다시 시도"
+      "retryLoad": "다시 시도",
+      "chosungEasyPrompt": "이 {cat} 이름의 초성이에요",
+      "chosungHardPrompt": "이 초성의 정체는 무엇일까요?",
+      "chosungEasyPlaceholder": "{cat} 이름 입력",
+      "chosungHardPlaceholder": "정답 입력",
+      "bstDuelStatPrompt": "「{stat}」이(가) 더 높은 쪽은? · 오른쪽은 왼쪽보다?",
+      "duelMore": "더 많이",
+      "duelLess": "더 적게",
+      "duelReveal": "{ln} {lv}  vs  {rn} {rv}"
     },
     "result": {
       "title": "결과",
