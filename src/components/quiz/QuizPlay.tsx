@@ -4,7 +4,7 @@
 
 import { useEffect, useRef, useState } from 'react';
 import styled, { keyframes } from 'styled-components';
-import { ArrowLeft, Check, X, Flame, RotateCcw, Volume2 } from 'lucide-react';
+import { ArrowLeft, Check, X, Flame, RotateCcw, Volume2, ChevronUp, ChevronDown } from 'lucide-react';
 import { media } from '../../utils/responsive.utils';
 import { useTranslation } from '../../i18n';
 import { QuizKind, QuizMode, QuizQuestion } from '../../types/quiz';
@@ -28,7 +28,7 @@ const examGrade = (c: number, total: number): number => {
     : p >= 0.42 ? 5 : p >= 0.28 ? 6 : p >= 0.16 ? 7 : p >= 0.07 ? 8 : 9;
 };
 
-export const QuizPlay = ({ mode, roundSize = 10, onExit }: QuizPlayProps) => {
+export const QuizPlay = ({ mode, roundSize = 30, onExit }: QuizPlayProps) => {
   const { t } = useTranslation();
   const isExam = mode === 'exam';
   const ROUND = roundSize; // 전 모드 공통 문항 수(10/30/50)
@@ -40,12 +40,14 @@ export const QuizPlay = ({ mode, roundSize = 10, onExit }: QuizPlayProps) => {
   const [textValue, setTextValue] = useState('');
   const [lastCorrect, setLastCorrect] = useState(false);
   const [score, setScore] = useState(0);
+  const [wrong, setWrong] = useState(0);
   const [streak, setStreak] = useState(0);
   const [maxStreak, setMaxStreak] = useState(0);
   const [newBest, setNewBest] = useState(false);
 
   const nextRef = useRef<Promise<QuizQuestion> | null>(null);
   const aliveRef = useRef(true);
+  const navBusyRef = useRef(false); // onNext 재진입 방지(버튼 연타·Enter 중복)
   const sessionRef = useRef<ReturnType<typeof createExamSession> | ReturnType<typeof createQuizSession> | null>(null);
 
   const gen = () => {
@@ -64,15 +66,19 @@ export const QuizPlay = ({ mode, roundSize = 10, onExit }: QuizPlayProps) => {
       setStreak(ns);
       setMaxStreak(m => Math.max(m, ns));
     } else {
+      setWrong(w => w + 1);
       setStreak(0);
     }
     setPhase('revealed');
   };
 
   const isAnswerCorrect = (): boolean => {
-    if (!q || !q.accept) return false;
+    if (!q) return false;
     const norm = normalizeAnswer(textValue);
-    return norm.length > 0 && q.accept.some(a => normalizeAnswer(a) === norm);
+    if (norm.length === 0) return false;
+    if (q.validateText) return q.validateText(norm); // 타입(어려움): 입력 포켓몬이 해당 타입을 갖는지 동적 채점
+    if (!q.accept) return false;
+    return q.accept.some(a => normalizeAnswer(a) === norm);
   };
 
   useEffect(() => {
@@ -83,7 +89,8 @@ export const QuizPlay = ({ mode, roundSize = 10, onExit }: QuizPlayProps) => {
   }, [mode]);
 
   const reset = async () => {
-    setIdx(0); setScore(0); setStreak(0); setMaxStreak(0);
+    navBusyRef.current = false;
+    setIdx(0); setScore(0); setWrong(0); setStreak(0); setMaxStreak(0);
     setSelected(null); setTextValue(''); setNewBest(false); setQ(null); setPhase('loading');
     sessionRef.current = isExam ? createExamSession() : createQuizSession(mode as QuizKind);
     try {
@@ -115,6 +122,8 @@ export const QuizPlay = ({ mode, roundSize = 10, onExit }: QuizPlayProps) => {
   };
 
   const onNext = async () => {
+    if (phase !== 'revealed' || navBusyRef.current) return; // 공개 상태에서만·1회만
+    navBusyRef.current = true;
     if (idx + 1 >= ROUND) {
       if (isExam) {
         const isBest = quizService.recordExam(score, maxStreak);
@@ -124,7 +133,7 @@ export const QuizPlay = ({ mode, roundSize = 10, onExit }: QuizPlayProps) => {
         setNewBest(quizService.recordRound(mode, score, maxStreak));
       }
       setPhase('result');
-      return;
+      return; // 결과 화면 — 재생(reset) 시 navBusyRef 해제
     }
     setSelected(null);
     setTextValue('');
@@ -138,8 +147,37 @@ export const QuizPlay = ({ mode, roundSize = 10, onExit }: QuizPlayProps) => {
       nextRef.current = gen();
     } catch {
       if (aliveRef.current) setPhase('error');
+    } finally {
+      navBusyRef.current = false;
     }
   };
+
+  // 정답 공개(revealed) 상태에서 Enter로 다음 문제(마지막이면 결과)로 진행.
+  //   단, '제출에 쓴 Enter'가 곧바로 다음으로 넘기지 않도록 keyup으로 재무장(arm).
+  //   → 텍스트 제출: Enter로 제출(결과 표시) → 뗐다 다시 Enter로 다음. 객관식(클릭 답변): 첫 Enter로 바로 다음.
+  const onNextRef = useRef(onNext);
+  onNextRef.current = onNext;
+  const phaseRef = useRef(phase);
+  phaseRef.current = phase;
+  const enterArmedRef = useRef(true);
+  useEffect(() => {
+    const onKeyDown = (e: KeyboardEvent) => {
+      if (e.key !== 'Enter') return;
+      // 제출에 쓴 Enter는 입력창 onKeyDown에서 이미 무장 해제됨 → 여기서 다음으로 안 넘어감.
+      if (phaseRef.current === 'revealed' && enterArmedRef.current && !e.repeat) {
+        e.preventDefault();
+        enterArmedRef.current = false; // 소비 — 다음 진행은 Enter를 뗐다(keyup) 다시 눌러야
+        onNextRef.current();
+      }
+    };
+    const onKeyUp = (e: KeyboardEvent) => { if (e.key === 'Enter') enterArmedRef.current = true; };
+    window.addEventListener('keydown', onKeyDown);
+    window.addEventListener('keyup', onKeyUp);
+    return () => {
+      window.removeEventListener('keydown', onKeyDown);
+      window.removeEventListener('keyup', onKeyUp);
+    };
+  }, []);
 
   const retryLoad = async () => {
     setPhase('loading');
@@ -188,7 +226,8 @@ export const QuizPlay = ({ mode, roundSize = 10, onExit }: QuizPlayProps) => {
         <Progress>{t('quiz.play.progress', { cur: Math.min(idx + 1, ROUND), total: ROUND })}</Progress>
         <ScorePills>
           {streak >= 2 && <StreakPill><Flame size={12} /> {streak}</StreakPill>}
-          <ScorePill>{score}</ScorePill>
+          <CorrectPill title={t('quiz.play.correct')}><Check size={13} /> {score}</CorrectPill>
+          <WrongPill title={t('quiz.play.wrong')}><X size={13} /> {wrong}</WrongPill>
         </ScorePills>
       </TopBar>
 
@@ -208,10 +247,16 @@ export const QuizPlay = ({ mode, roundSize = 10, onExit }: QuizPlayProps) => {
         <Body>
           <Prompt>{q.prompt}</Prompt>
 
+          {q.bigText && <BigText>{q.bigText}</BigText>}
+
+          {q.duel ? (
+            <DuelView duel={q.duel} phase={phase} onSelect={onSelect} t={t} />
+          ) : (
+          <>
           {q.media?.audioUrl && <AudioPlayer url={q.media.audioUrl} label={t('quiz.play.playCry')} />}
 
           {q.media?.imageUrl && (
-            <MediaWrap>
+            <MediaWrap $zoom={!!q.media.zoom}>
               <MediaImg
                 src={q.media.imageUrl}
                 alt=""
@@ -227,8 +272,8 @@ export const QuizPlay = ({ mode, roundSize = 10, onExit }: QuizPlayProps) => {
               <TextInput
                 value={textValue}
                 onChange={e => setTextValue(e.target.value)}
-                onKeyDown={e => { if (e.key === 'Enter') onSubmitText(); }}
-                placeholder={t('quiz.play.inputPlaceholder')}
+                onKeyDown={e => { if (e.key === 'Enter') { enterArmedRef.current = false; onSubmitText(); } }}
+                placeholder={q.inputPlaceholder ?? t('quiz.play.inputPlaceholder')}
                 disabled={phase === 'revealed'}
                 $state={phase === 'revealed' ? (lastCorrect ? 'correct' : 'wrong') : 'idle'}
                 autoFocus
@@ -257,6 +302,8 @@ export const QuizPlay = ({ mode, roundSize = 10, onExit }: QuizPlayProps) => {
                 );
               })}
             </Options>
+          )}
+          </>
           )}
 
           {phase === 'revealed' && (
@@ -300,6 +347,49 @@ const AudioPlayer = ({ url, label }: { url: string; label: string }) => {
   );
 };
 
+// ─── 종족값 대결(HigherLower) ─────────────────────────────────────────────────
+const DuelView = ({ duel, phase, onSelect, t }: {
+  duel: NonNullable<QuizQuestion['duel']>;
+  phase: Phase;
+  onSelect: (i: number) => void;
+  t: (key: string, params?: Record<string, string | number>) => string;
+}) => {
+  const revealed = phase === 'revealed';
+  const rightHigher = duel.right.value > duel.left.value;
+  return (
+    <DuelWrap>
+      <DuelPanel>
+        <DuelImg src={duel.left.imageUrl} alt="" draggable={false} />
+        <DuelInfo>
+          <DuelName>“{duel.left.name}”</DuelName>
+          <DuelStatCap>{duel.statLabel}</DuelStatCap>
+          <DuelValue>{duel.left.value}</DuelValue>
+        </DuelInfo>
+      </DuelPanel>
+
+      <VsBadge>VS</VsBadge>
+
+      <DuelPanel>
+        <DuelImg src={duel.right.imageUrl} alt="" draggable={false} />
+        <DuelInfo>
+          <DuelName>“{duel.right.name}”</DuelName>
+          {!revealed ? (
+            <DuelBtns>
+              <DuelBtn $dir="up" onClick={() => onSelect(0)}><ChevronUp size={18} /> {t('quiz.play.duelMore')}</DuelBtn>
+              <DuelBtn $dir="down" onClick={() => onSelect(1)}><ChevronDown size={18} /> {t('quiz.play.duelLess')}</DuelBtn>
+            </DuelBtns>
+          ) : (
+            <>
+              <DuelStatCap>{duel.statLabel}</DuelStatCap>
+              <DuelValue $dir={rightHigher ? 'up' : 'down'}>{duel.right.value}</DuelValue>
+            </>
+          )}
+        </DuelInfo>
+      </DuelPanel>
+    </DuelWrap>
+  );
+};
+
 // ─── styled ──────────────────────────────────────────────────────────────────
 const spin = keyframes`to { transform: rotate(360deg); }`;
 const pop = keyframes`0%{transform:translateY(4px);opacity:0}100%{transform:translateY(0);opacity:1}`;
@@ -333,10 +423,17 @@ const Progress = styled.div`
   ${media.mobile} { font-size: 13px; }
 `;
 const ScorePills = styled.div`display: flex; align-items: center; gap: 6px; flex: 0 0 auto;`;
-const ScorePill = styled.div`
-  min-width: 32px; text-align: center; font-size: 14px; font-weight: 800; color: ${ACCENT};
-  background: rgba(34,211,238,0.1); border: 1px solid rgba(34,211,238,0.25);
-  padding: 5px 10px; border-radius: 8px; font-variant-numeric: tabular-nums;
+const CountPill = styled.div`
+  display: flex; align-items: center; gap: 4px; min-width: 34px; justify-content: center;
+  font-size: 14px; font-weight: 800; padding: 5px 10px; border-radius: 8px;
+  font-variant-numeric: tabular-nums;
+  ${media.mobile} { font-size: 13px; padding: 4px 8px; min-width: 30px; }
+`;
+const CorrectPill = styled(CountPill)`
+  color: #34d399; background: rgba(52,211,153,0.12); border: 1px solid rgba(52,211,153,0.3);
+`;
+const WrongPill = styled(CountPill)`
+  color: #f87171; background: rgba(248,113,113,0.1); border: 1px solid rgba(248,113,113,0.28);
 `;
 const StreakPill = styled.div`
   display: flex; align-items: center; gap: 3px; font-size: 13px; font-weight: 800; color: #fb923c;
@@ -358,15 +455,79 @@ const Prompt = styled.h2`
   word-break: keep-all;
   ${media.mobile} { font-size: 16px; }
 `;
-const MediaWrap = styled.div`
+const BigText = styled.div`
+  text-align: center; font-weight: 900; color: ${ACCENT};
+  font-size: 52px; letter-spacing: 0.18em; line-height: 1.25; word-break: keep-all;
+  padding: 18px 12px; margin: 2px auto; border-radius: 16px;
+  background: rgba(34,211,238,0.06); border: 1px solid rgba(34,211,238,0.22);
+  text-shadow: 0 2px 18px rgba(34,211,238,0.25);
+  ${media.mobile} { font-size: 38px; letter-spacing: 0.14em; padding: 14px 8px; }
+`;
+// ─── 종족값 대결 스타일 ────────────────────────────────────────────────────────
+const DuelWrap = styled.div`
+  position: relative; display: flex; gap: 10px; align-items: stretch;
+  ${media.mobile} { gap: 6px; }
+`;
+const DuelPanel = styled.div`
+  position: relative; flex: 1; min-width: 0; overflow: hidden;
+  border-radius: 16px; border: 1px solid ${BORDER}; background: ${SURFACE};
+  min-height: 300px; display: flex; align-items: center; justify-content: center;
+  ${media.mobile} { min-height: 240px; }
+`;
+const DuelImg = styled.img`
+  position: absolute; inset: 0; margin: auto; width: 80%; height: 80%; object-fit: contain;
+  opacity: 0.92; pointer-events: none;
+`;
+const DuelInfo = styled.div`
+  position: relative; z-index: 1; width: 100%; padding: 16px 12px;
+  display: flex; flex-direction: column; align-items: center; gap: 8px;
+  background: radial-gradient(ellipse at center, rgba(11,15,20,0.78) 0%, rgba(11,15,20,0.4) 68%, transparent 100%);
+`;
+const DuelName = styled.div`
+  font-size: 20px; font-weight: 900; color: #fff; text-align: center; word-break: keep-all;
+  text-shadow: 0 2px 12px rgba(0,0,0,0.85);
+  ${media.mobile} { font-size: 15px; }
+`;
+const DuelStatCap = styled.div`
+  font-size: 12px; font-weight: 700; color: rgba(255,255,255,0.72); letter-spacing: 0.04em;
+`;
+const DuelValue = styled.div<{ $dir?: 'up' | 'down' }>`
+  font-size: 42px; font-weight: 900; font-variant-numeric: tabular-nums; line-height: 1;
+  color: ${p => p.$dir === 'up' ? '#34d399' : p.$dir === 'down' ? '#f87171' : ACCENT};
+  text-shadow: 0 2px 14px rgba(0,0,0,0.6);
+  ${media.mobile} { font-size: 32px; }
+`;
+const DuelBtns = styled.div`display: flex; flex-direction: column; gap: 8px; width: 100%; max-width: 210px;`;
+const DuelBtn = styled.button<{ $dir: 'up' | 'down' }>`
+  display: flex; align-items: center; justify-content: center; gap: 5px;
+  padding: 12px 16px; border-radius: 11px; cursor: pointer; font-size: 15px; font-weight: 800;
+  color: #06202a; border: none;
+  background: ${p => p.$dir === 'up' ? '#34d399' : '#f87171'};
+  transition: filter 0.15s, transform 0.08s;
+  &:hover { filter: brightness(1.08); }
+  &:active { transform: translateY(1px); }
+  ${media.mobile} { padding: 10px 12px; font-size: 14px; }
+`;
+const VsBadge = styled.div`
+  position: absolute; left: 50%; top: 50%; transform: translate(-50%, -50%); z-index: 3;
+  width: 44px; height: 44px; border-radius: 50%;
+  display: flex; align-items: center; justify-content: center;
+  font-size: 14px; font-weight: 900; color: #3a2a05; background: #f5c451;
+  box-shadow: 0 4px 16px rgba(0,0,0,0.55);
+  ${media.mobile} { width: 36px; height: 36px; font-size: 12px; }
+`;
+
+const MediaWrap = styled.div<{ $zoom?: boolean }>`
   display: flex; align-items: center; justify-content: center;
   background: ${SURFACE}; border: 1px solid ${BORDER};
   border-radius: 16px; padding: 12px; overflow: hidden;
+  /* 확대 퀴즈는 크롭 창을 이미지와 같은 정사각형으로(가로로 퍼지지 않게). */
+  ${p => p.$zoom ? 'width: fit-content; margin: 0 auto;' : ''}
 `;
 const MediaImg = styled.img<{ $silhouette: boolean; $zoom?: { x: number; y: number } }>`
   width: 210px; height: 210px; object-fit: contain;
   filter: ${p => p.$silhouette ? 'brightness(0)' : 'none'};
-  transform: ${p => p.$zoom ? 'scale(2.8)' : 'scale(1)'};
+  transform: ${p => p.$zoom ? 'scale(15)' : 'scale(1)'};
   transform-origin: ${p => p.$zoom ? `${p.$zoom.x}% ${p.$zoom.y}%` : 'center'};
   transition: filter 0.35s ease, transform 0.4s ease;
   ${media.mobile} { width: 160px; height: 160px; }

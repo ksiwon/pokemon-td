@@ -5,6 +5,7 @@
 import { pokeAPI } from '../api/pokeapi';
 import { QuizKind, QuizQuestion, QuizOption } from '../types/quiz';
 import { EXAM_BANK, bankToQuestion } from './quizExamBank';
+import POKEDEX_TYPE_INDEX from '../data/pokedexTypeIndex.json';
 
 /** 전국도감 최대 번호(9세대 기준). 폼(10001+)은 제외. */
 const MAX_DEX = 1025;
@@ -52,6 +53,15 @@ function pickDistinctIds(n: number, exclude: Set<number>): number[] {
   return out;
 }
 
+/** target ±spread(도감 범위 내) 중 target 제외한 서로 다른 id n개. 도감번호 오답을 근접값으로. */
+function pickNearbyIds(n: number, target: number, spread: number): number[] {
+  const lo = Math.max(1, target - spread);
+  const hi = Math.min(MAX_DEX, target + spread);
+  const pool: number[] = [];
+  for (let i = lo; i <= hi; i++) if (i !== target) pool.push(i);
+  return shuffle(pool).slice(0, n);
+}
+
 function shuffle<T>(arr: T[]): T[] {
   const a = arr.slice();
   for (let i = a.length - 1; i > 0; i--) {
@@ -60,9 +70,6 @@ function shuffle<T>(arr: T[]): T[] {
   }
   return a;
 }
-
-const statTotal = (s: { hp: number; attack: number; defense: number; specialAttack: number; specialDefense: number; speed: number }) =>
-  s.hp + s.attack + s.defense + s.specialAttack + s.specialDefense + s.speed;
 
 /**
  * 문제에 쓰이는 이미지들을 미리 디코드까지 로드. 로드가 끝나야 문제를 반환 →
@@ -97,6 +104,123 @@ function acceptNames(mon: { displayName: string; name: string }): string[] {
   return Array.from(new Set([mon.displayName, mon.name].filter(Boolean)));
 }
 
+// ─── 초성 퀴즈 유틸 ────────────────────────────────────────────────────────────
+/** 한글 초성 19자(유니코드 초성 인덱스 순). */
+const CHOSUNG = ['ㄱ','ㄲ','ㄴ','ㄷ','ㄸ','ㄹ','ㅁ','ㅂ','ㅃ','ㅅ','ㅆ','ㅇ','ㅈ','ㅉ','ㅊ','ㅋ','ㅌ','ㅍ','ㅎ'];
+
+/** 문자열 → 초성열. 한글 음절은 초성으로, 그 외(숫자·영문·기호)는 그대로 둔다. */
+function toChosung(s: string): string {
+  let out = '';
+  for (const ch of s) {
+    const code = ch.charCodeAt(0);
+    if (code >= 0xac00 && code <= 0xd7a3) out += CHOSUNG[Math.floor((code - 0xac00) / 588)];
+    else out += ch;
+  }
+  return out;
+}
+
+/** 문자열 내 한글 음절 개수. */
+function hangulCount(s: string): number {
+  let n = 0;
+  for (const ch of s) {
+    const c = ch.charCodeAt(0);
+    if (c >= 0xac00 && c <= 0xd7a3) n++;
+  }
+  return n;
+}
+
+/** 초성 퀴즈 후보 자격 — 한글 2음절 이상(1음절은 초성만으론 너무 모호). */
+function isChosungCandidate(name: string): boolean {
+  return !!name && hangulCount(name) >= 2;
+}
+
+type ChosungCat = 'pokemon' | 'move' | 'ability' | 'item';
+
+/** 카테고리 출제 가중치(포켓몬·기술 위주, 도구는 큐레이션 풀). */
+const CHOSUNG_CATS: Array<{ cat: ChosungCat; weight: number }> = [
+  { cat: 'pokemon', weight: 35 },
+  { cat: 'move', weight: 30 },
+  { cat: 'ability', weight: 15 },
+  { cat: 'item', weight: 20 },
+];
+
+function pickChosungCat(): ChosungCat {
+  const total = CHOSUNG_CATS.reduce((s, c) => s + c.weight, 0);
+  let r = Math.random() * total;
+  for (const c of CHOSUNG_CATS) { r -= c.weight; if (r <= 0) return c.cat; }
+  return 'pokemon';
+}
+
+/** 도구 큐레이션 풀 — 한글 이름이 확실하고 유명한 아이템 슬러그(PokeAPI /item/{slug}). */
+const CHOSUNG_ITEM_SLUGS = [
+  'poke-ball','great-ball','ultra-ball','master-ball','premier-ball','quick-ball','dusk-ball','timer-ball',
+  'potion','super-potion','hyper-potion','max-potion','full-restore','revive','max-revive','ether','elixir',
+  'antidote','burn-heal','ice-heal','awakening','paralyze-heal','full-heal',
+  'rare-candy','pp-up','protein','iron','calcium','zinc','carbos','hp-up',
+  'leftovers','choice-band','choice-scarf','choice-specs','life-orb','focus-sash','assault-vest','rocky-helmet',
+  'eviolite','black-sludge','quick-claw','light-clay','mental-herb','wide-lens','scope-lens','muscle-band','wise-glasses',
+  'fire-stone','water-stone','thunder-stone','leaf-stone','moon-stone','sun-stone','dusk-stone','dawn-stone','shiny-stone','ice-stone','everstone',
+  'exp-share','amulet-coin','lucky-egg','soothe-bell','metal-coat','dragon-scale','kings-rock','razor-claw','razor-fang','reaper-cloth','oval-stone',
+  'sitrus-berry','oran-berry','lum-berry','leppa-berry','cheri-berry','chesto-berry','pecha-berry',
+];
+
+/** 카테고리별 랜덤 항목의 현지화 이름 조회. 초성 자격 미달·404 시 재시도, 실패하면 포켓몬으로 폴백. */
+async function fetchChosungEntry(cat: ChosungCat, used?: Set<number>): Promise<{ name: string; en: string; imageUrl?: string }> {
+  for (let tries = 0; tries < 8; tries++) {
+    try {
+      if (cat === 'pokemon') {
+        const id = pickMainId(used);
+        const m = await pokeAPI.getPokemon(id);
+        if (isChosungCandidate(m.displayName)) return { name: m.displayName, en: m.name, imageUrl: artUrl(id) };
+      } else if (cat === 'move') {
+        const id = 1 + Math.floor(Math.random() * 900);
+        const mv = await pokeAPI.getMove(String(id));
+        if (isChosungCandidate(mv.displayName)) return { name: mv.displayName, en: mv.name };
+      } else if (cat === 'ability') {
+        const id = 1 + Math.floor(Math.random() * 300);
+        const ab = await pokeAPI.getAbilityName(id);
+        if (isChosungCandidate(ab.displayName)) return { name: ab.displayName, en: ab.name };
+      } else {
+        const slug = CHOSUNG_ITEM_SLUGS[Math.floor(Math.random() * CHOSUNG_ITEM_SLUGS.length)];
+        const it = await pokeAPI.getItemName(slug);
+        if (isChosungCandidate(it.displayName)) return { name: it.displayName, en: it.name };
+      }
+    } catch {
+      // 빈 id(404)·네트워크 오류 → 다음 시도
+    }
+  }
+  // 폴백: 포켓몬 이름은 전부 한글 2음절+ 이므로 항상 성공.
+  const id = pickMainId(used);
+  const m = await pokeAPI.getPokemon(id);
+  return { name: m.displayName, en: m.name, imageUrl: artUrl(id) };
+}
+
+/** 🔡 초성 — 초성열 보고 이름 맞히기(주관식). easy=유형 힌트 표시, hard=유형 숨김. */
+async function genChosung(ctx: QuizCtx, easy: boolean, used?: Set<number>): Promise<QuizQuestion> {
+  const cat = pickChosungCat();
+  const entry = await fetchChosungEntry(cat, used);
+  const catLabel = ctx.t(`quiz.chosung.cat.${cat}`);
+  await preloadImages(entry.imageUrl ? [entry.imageUrl] : []);
+  const accept = Array.from(new Set([entry.name, entry.en].filter(Boolean)));
+  return {
+    kind: easy ? 'chosungEasy' : 'chosungHard',
+    prompt: easy ? ctx.t('quiz.play.chosungEasyPrompt', { cat: catLabel }) : ctx.t('quiz.play.chosungHardPrompt'),
+    bigText: toChosung(entry.name),
+    answerType: 'text',
+    options: [],
+    correctIndex: -1,
+    accept,
+    inputPlaceholder: easy
+      ? ctx.t('quiz.play.chosungEasyPlaceholder', { cat: catLabel })
+      : ctx.t('quiz.play.chosungHardPlaceholder'),
+    reveal: {
+      title: entry.name,
+      subtitle: entry.en && entry.en !== entry.name ? `${catLabel} · ${entry.en}` : catLabel,
+      imageUrl: entry.imageUrl,
+    },
+  };
+}
+
 // ─── 종목별 생성기 ─────────────────────────────────────────────────────────────
 
 /** 🕶 누구게 — 실루엣 보고 이름. choice=false면 주관식. */
@@ -115,55 +239,71 @@ async function genSilhouette(ctx: QuizCtx, choice: boolean, used?: Set<number>):
     : { ...base, answerType: 'text', options: [], correctIndex: -1, accept: acceptNames(mon) };
 }
 
-/** ⚔ 종족값 대결 — 둘 중 총합 높은 쪽(항상 4지선다형 2택). */
+/** ⚔ 종족값 대결 — HigherLower 방식. 스탯 1개 지정, 왼쪽 값 공개 → 오른쪽이 더 많을지/적을지. */
+const DUEL_STAT_KEYS = ['hp', 'attack', 'defense', 'specialAttack', 'specialDefense', 'speed'] as const;
+
 async function genBstDuel(ctx: QuizCtx, _choice: boolean, used?: Set<number>): Promise<QuizQuestion> {
+  const statKey = DUEL_STAT_KEYS[Math.floor(Math.random() * DUEL_STAT_KEYS.length)];
   let a = pickMainId(used);
   let b = pickMainId(used);
   while (b === a) b = pickMainId(used);
 
   let [monA, monB] = await Promise.all([pokeAPI.getPokemon(a), pokeAPI.getPokemon(b)]);
-  let totA = statTotal(monA.stats);
-  let totB = statTotal(monB.stats);
+  let va = monA.stats[statKey];
+  let vb = monB.stats[statKey];
 
-  // 동점이면 b를 한 번 다시 뽑아 무승부 회피(희박).
-  if (totA === totB) {
+  // 동점이면 오른쪽을 재추첨 — '더 많이/더 적게'가 모호해지지 않도록.
+  for (let tries = 0; va === vb && tries < 6; tries++) {
     let nb = pickMainId(used);
     while (nb === a) nb = pickMainId(used);
     b = nb;
     monB = await pokeAPI.getPokemon(b);
-    totB = statTotal(monB.stats);
+    vb = monB.stats[statKey];
   }
 
-  const correctIndex = totA >= totB ? 0 : 1;
-  const winner = correctIndex === 0 ? monA : monB;
-  const winTot = Math.max(totA, totB);
+  const rightHigher = vb > va; // 오른쪽(B)이 왼쪽(A)보다 높은가
+  const statLabel = ctx.t(`quiz.bst.stat.${statKey}`);
 
   await preloadImages([artUrl(a), artUrl(b)]);
   return {
     kind: 'bstDuel',
-    prompt: ctx.t('quiz.play.bstDuelPrompt'),
+    prompt: ctx.t('quiz.play.bstDuelStatPrompt', { stat: statLabel }),
     answerType: 'choice',
-    options: [
-      { label: monA.displayName, imageUrl: artUrl(a) },
-      { label: monB.displayName, imageUrl: artUrl(b) },
-    ],
-    correctIndex,
+    // 보기: [더 많이(0), 더 적게(1)] — DuelView가 방향 버튼으로 렌더.
+    options: [{ label: ctx.t('quiz.play.duelMore') }, { label: ctx.t('quiz.play.duelLess') }],
+    correctIndex: rightHigher ? 0 : 1,
+    duel: {
+      statLabel,
+      left: { name: monA.displayName, imageUrl: artUrl(a), value: va },
+      right: { name: monB.displayName, imageUrl: artUrl(b), value: vb },
+    },
     reveal: {
-      title: ctx.t('quiz.play.bstRevealWin', { name: winner.displayName, total: winTot }),
-      subtitle: `${monA.displayName} ${totA} · ${monB.displayName} ${totB}`,
-      imageUrl: artUrl(correctIndex === 0 ? a : b),
+      title: ctx.t('quiz.play.duelReveal', { ln: monA.displayName, lv: va, rn: monB.displayName, rv: vb }),
+      subtitle: statLabel,
     },
   };
 }
 
-/** 🧩 타입 — 포켓몬 보고 실제 타입 고르기(오답=미보유 타입). 항상 4지선다. */
+/** 🧩 타입 — 포켓몬의 (복합)타입 조합 고르기. 복합타입은 '한 타입만 다른' 유사 오답. 항상 4지선다. */
 async function genType(ctx: QuizCtx, _choice: boolean, used?: Set<number>): Promise<QuizQuestion> {
   const id = pickMainId(used);
   const mon = await pokeAPI.getPokemon(id);
-  const monTypes = mon.types.length ? mon.types : ['normal'];
-  const correctType = monTypes[0];
-  const wrong = shuffle(TYPE_SLUGS.filter(ty => !monTypes.includes(ty))).slice(0, 3);
-  const opts = shuffle([correctType, ...wrong]);
+  const monTypes = (mon.types.length ? mon.types : ['normal']).slice(0, 2);
+  const wrongPool = shuffle(TYPE_SLUGS.filter(ty => !monTypes.includes(ty)));
+
+  // 정답 = 실제 타입 조합. 복합이면 오답 3개는 '한 타입만' 틀리게(비슷비슷). 단일이면 다른 단일타입.
+  const optionSets: string[][] = [monTypes];
+  if (monTypes.length === 2) {
+    optionSets.push(
+      [monTypes[0], wrongPool[0]], // 뒤 타입만 오답
+      [wrongPool[1], monTypes[1]], // 앞 타입만 오답
+      [monTypes[0], wrongPool[2]], // 뒤 타입만 오답(다른 값)
+    );
+  } else {
+    optionSets.push([wrongPool[0]], [wrongPool[1]], [wrongPool[2]]);
+  }
+  const opts = shuffle(optionSets);
+  const label = (set: string[]) => set.map(ty => ctx.t(`types.${ty}`)).join(' / ');
 
   await preloadImages([artUrl(id)]);
   return {
@@ -171,12 +311,70 @@ async function genType(ctx: QuizCtx, _choice: boolean, used?: Set<number>): Prom
     prompt: ctx.t('quiz.play.typePrompt', { name: mon.displayName }),
     media: { imageUrl: artUrl(id) },
     answerType: 'choice',
-    options: opts.map(ty => ({ label: ctx.t(`types.${ty}`) } as QuizOption)),
-    correctIndex: opts.indexOf(correctType),
+    options: opts.map(set => ({ label: label(set) } as QuizOption)),
+    correctIndex: opts.indexOf(monTypes),
     reveal: {
       title: mon.displayName,
-      subtitle: monTypes.map(ty => ctx.t(`types.${ty}`)).join(' / '),
+      subtitle: label(monTypes),
       imageUrl: artUrl(id),
+    },
+  };
+}
+
+// ─── 타입(어려움) 인덱스 ───────────────────────────────────────────────────────
+//   번들된 1025종 인덱스(id·한/영이름·타입 슬롯순)로 '이름→타입' 동적 채점.
+interface DexTypeEntry { id: number; ko: string; en: string; t: string[] }
+const DEX_TYPE = POKEDEX_TYPE_INDEX as DexTypeEntry[];
+/** 정규화된 이름(한/영) → 보유 타입 집합. */
+const NAME_TO_TYPES = new Map<string, Set<string>>();
+/** '정확한 타이핑'별 풀 — 단일=순수 그 타입만, 복합=정확히 그 2타입만. 타입 순서 표시는 첫 등장 슬롯순. */
+const MONO_TYPINGS: Array<{ types: string[]; pool: DexTypeEntry[] }> = [];
+const DUAL_TYPINGS: Array<{ types: string[]; pool: DexTypeEntry[] }> = [];
+{
+  const byKey = new Map<string, { types: string[]; pool: DexTypeEntry[] }>();
+  for (const e of DEX_TYPE) {
+    const set = new Set(e.t);
+    if (e.ko) NAME_TO_TYPES.set(normalizeAnswer(e.ko), set);
+    if (e.en) NAME_TO_TYPES.set(normalizeAnswer(e.en), set);
+    const key = e.t.length === 1 ? e.t[0] : [...e.t].sort().join('|');
+    let c = byKey.get(key);
+    if (!c) { c = { types: e.t.slice(), pool: [] }; byKey.set(key, c); }
+    c.pool.push(e);
+  }
+  // 단일 18종 + 실제 존재하는 모든 복합 조합(정답 1마리뿐인 희귀 조합도 포함) 전부 출제.
+  for (const c of byKey.values()) (c.types.length === 1 ? MONO_TYPINGS : DUAL_TYPINGS).push(c);
+}
+
+/** 🧬 타입(어려움) — 제시된 타이핑과 '정확히 일치'하는 포켓몬 '이름 입력'(주관식·동적채점).
+ *  단일=순수 그 타입만(고스트→데스니칸 O; 고오스=고스트/독 X), 복합=정확히 그 2타입(램프라=고스트/불꽃).
+ *  단일 18종 + 모든 복합 조합(정답 1마리 조합 포함) 전부 출제, 타이핑 단위 균등 추첨. */
+async function genTypeHard(ctx: QuizCtx, _choice: boolean, _used?: Set<number>): Promise<QuizQuestion> {
+  // 50% 복합 / 50% 단일(둘 다 타이핑 단위 균등). 한쪽이 비면 다른쪽으로 폴백.
+  const useDual = Math.random() < 0.5 && DUAL_TYPINGS.length > 0;
+  const list = (useDual || MONO_TYPINGS.length === 0) ? DUAL_TYPINGS : MONO_TYPINGS;
+  const typing = list[Math.floor(Math.random() * list.length)];
+  const target = typing.types;
+  const label = target.map(ty => ctx.t(`types.${ty}`)).join(' / ');
+  const example = typing.pool[Math.floor(Math.random() * typing.pool.length)];
+  const exampleLabel = `${example.ko} (${example.t.map(ty => ctx.t(`types.${ty}`)).join(' / ')})`;
+
+  await preloadImages([artUrl(example.id)]);
+  return {
+    kind: 'typeHard',
+    prompt: ctx.t('quiz.play.typeHardPrompt', { types: label }),
+    answerType: 'text',
+    options: [],
+    correctIndex: -1,
+    // 입력 포켓몬의 타입 집합이 target과 '정확히' 같아야 정답(부분 포함은 오답).
+    validateText: (norm: string) => {
+      const ts = NAME_TO_TYPES.get(norm);
+      return !!ts && ts.size === target.length && target.every(ty => ts.has(ty));
+    },
+    inputPlaceholder: ctx.t('quiz.play.typeHardPlaceholder'),
+    reveal: {
+      title: label,
+      subtitle: ctx.t('quiz.play.typeHardRevealSub', { name: exampleLabel }),
+      imageUrl: artUrl(example.id),
     },
   };
 }
@@ -185,7 +383,8 @@ async function genType(ctx: QuizCtx, _choice: boolean, used?: Set<number>): Prom
 async function genDexNumber(ctx: QuizCtx, _choice: boolean, used?: Set<number>): Promise<QuizQuestion> {
   const id = pickMainId(used);
   const mon = await pokeAPI.getPokemon(id);
-  const distractors = pickDistinctIds(3, new Set([id]));
+  // 오답 보기를 정답 ±10 범위의 근접 번호로 → 보기들이 비슷비슷해 난이도↑
+  const distractors = pickNearbyIds(3, id, 10);
   const nums = shuffle([id, ...distractors]);
 
   await preloadImages([artUrl(id)]);
@@ -232,7 +431,8 @@ async function genCry(ctx: QuizCtx, choice: boolean, used?: Set<number>): Promis
 async function genZoom(ctx: QuizCtx, choice: boolean, used?: Set<number>): Promise<QuizQuestion> {
   const id = pickMainId(used);
   const mon = await pokeAPI.getPokemon(id);
-  const zoom = { x: 30 + Math.floor(Math.random() * 41), y: 30 + Math.floor(Math.random() * 41) };
+  // scale(10) 고배율이라 원점을 몸통 중심부(38~62%)로 좁혀 빈 배경만 잡히는 걸 방지.
+  const zoom = { x: 38 + Math.floor(Math.random() * 25), y: 38 + Math.floor(Math.random() * 25) };
   await preloadImages([artUrl(id)]);
   const base = {
     kind: 'zoom' as const,
@@ -249,7 +449,8 @@ async function genZoom(ctx: QuizCtx, choice: boolean, used?: Set<number>): Promi
 async function genFlavor(ctx: QuizCtx, choice: boolean, used?: Set<number>): Promise<QuizQuestion> {
   let id = pickMainId(used);
   let mon = await pokeAPI.getPokemon(id);
-  for (let tries = 0; tries < 4 && !mon.flavorText; tries++) {
+  // 한글 도감설명이 있는 개체만 출제 — 9세대 등 미현지화(en 폴백) 개체는 재추첨으로 회피.
+  for (let tries = 0; tries < 8 && (!mon.flavorText || !mon.flavorLocalized); tries++) {
     id = pickMainId(used);
     mon = await pokeAPI.getPokemon(id);
   }
@@ -274,9 +475,12 @@ const GENERATORS: Record<QuizKind, (ctx: QuizCtx, choice: boolean, used?: Set<nu
   cry: genCry,
   zoom: genZoom,
   type: genType,
+  typeHard: genTypeHard,
   bstDuel: genBstDuel,
   dexNumber: genDexNumber,
   flavor: genFlavor,
+  chosungEasy: (ctx, _choice, used) => genChosung(ctx, true, used),
+  chosungHard: (ctx, _choice, used) => genChosung(ctx, false, used),
 };
 
 /** 개별 종목 세션 — 라운드 내 정답 포켓몬 중복 출제 방지(used 공유). */

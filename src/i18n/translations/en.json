@@ -1215,13 +1215,22 @@
       "cry": { "name": "Cry", "desc": "Guess by sound" },
       "zoom": { "name": "Zoom", "desc": "Guess the zoomed image" },
       "flavor": { "name": "Dex Entry", "desc": "Guess by description" },
-      "bstDuel": { "name": "Base Stat Duel", "desc": "Pick the higher total" },
-      "type": { "name": "Type Quiz", "desc": "Guess the Pokémon's type" },
-      "dexNumber": { "name": "Dex Number", "desc": "Guess the National Dex no." }
+      "bstDuel": { "name": "Base Stat Duel", "desc": "Guess which one's stat is higher" },
+      "type": { "name": "Type (Easy)", "desc": "Pick the Pokémon's type" },
+      "typeHard": { "name": "Type (Hard)", "desc": "Name a Pokémon matching the type exactly" },
+      "dexNumber": { "name": "Dex Number", "desc": "Guess the National Dex no." },
+      "chosungEasy": { "name": "Initials (Easy)", "desc": "Category shown · guess from Korean initials" },
+      "chosungHard": { "name": "Initials (Hard)", "desc": "No category · guess from initials only" }
     },
     "exam": {
       "name": "Mock Exam",
       "desc": "Expert-level mixed questions · graded"
+    },
+    "chosung": {
+      "cat": { "pokemon": "Pokémon", "move": "Move", "ability": "Ability", "item": "Item" }
+    },
+    "bst": {
+      "stat": { "hp": "HP", "attack": "Attack", "defense": "Defense", "specialAttack": "Sp. Atk", "specialDefense": "Sp. Def", "speed": "Speed" }
     },
     "play": {
       "silhouettePrompt": "Who's that Pokémon?",
@@ -1234,6 +1243,9 @@
       "giveUp": "I don't know",
       "bstDuelPrompt": "Which has the higher base stat total?",
       "typePrompt": "What type is {name}?",
+      "typeHardPrompt": "Name a Pokémon whose type is exactly「{types}」",
+      "typeHardPlaceholder": "Type a Pokémon name",
+      "typeHardRevealSub": "e.g. {name}",
       "dexPrompt": "What is {name}'s National Dex number?",
       "bstRevealWin": "{name} wins (BST {total})",
       "progress": "{cur} / {total}",
@@ -1243,7 +1255,15 @@
       "seeResult": "See results",
       "loading": "Loading question...",
       "loadError": "Couldn't load the question. Check your internet connection.",
-      "retryLoad": "Retry"
+      "retryLoad": "Retry",
+      "chosungEasyPrompt": "Korean initials of this {cat} name",
+      "chosungHardPrompt": "What do these Korean initials spell?",
+      "chosungEasyPlaceholder": "Type the {cat} name",
+      "chosungHardPlaceholder": "Type your answer",
+      "bstDuelStatPrompt": "Which has higher {stat}? · Is the right one higher than the left?",
+      "duelMore": "Higher",
+      "duelLess": "Lower",
+      "duelReveal": "{ln} {lv}  vs  {rn} {rv}"
     },
     "result": {
       "title": "Results",

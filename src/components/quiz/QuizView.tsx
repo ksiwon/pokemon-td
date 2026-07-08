@@ -4,7 +4,7 @@
 import { useEffect, useMemo, useState } from 'react';
 import styled from 'styled-components';
 import { useNavigate } from 'react-router-dom';
-import { Ghost, Volume2, Search, Shapes, Swords, Hash, ScrollText, GraduationCap, Flame, Trophy, ChevronRight } from 'lucide-react';
+import { Ghost, Volume2, Search, Shapes, Swords, Hash, ScrollText, GraduationCap, Flame, Trophy, ChevronRight, Type, Languages, Combine } from 'lucide-react';
 import { media } from '../../utils/responsive.utils';
 import { useTranslation } from '../../i18n';
 import { QuizKind, QuizMode, QUIZ_KINDS } from '../../types/quiz';
@@ -18,9 +18,12 @@ const ICONS: Record<QuizKind, JSX.Element> = {
   cry: <Volume2 size={20} />,
   zoom: <Search size={20} />,
   type: <Shapes size={20} />,
+  typeHard: <Combine size={20} />,
   bstDuel: <Swords size={20} />,
   dexNumber: <Hash size={20} />,
   flavor: <ScrollText size={20} />,
+  chosungEasy: <Type size={20} />,
+  chosungHard: <Languages size={20} />,
 };
 
 const ROUND_SIZES = [10, 30, 50];
@@ -29,7 +32,7 @@ export const QuizView = () => {
   const { t } = useTranslation();
   const navigate = useNavigate();
   const [play, setPlay] = useState<QuizMode | null>(null);
-  const [roundSize, setRoundSize] = useState(10);
+  const [roundSize, setRoundSize] = useState(30);
   const [rev, setRev] = useState(0);
   const [examRank, setExamRank] = useState<number | null>(null);
 
@@ -54,19 +57,19 @@ export const QuizView = () => {
         <StreakChip><Flame size={13} /> {state.bestStreak}</StreakChip>
       </TopBar>
 
-      <Body>
-        {/* 문항 수(전 모드 공통) */}
-        <RoundRow>
-          <RoundLabel>{t('quiz.hub.roundSize')}</RoundLabel>
-          <Segmented>
-            {ROUND_SIZES.map(n => (
-              <SegBtn key={n} $active={roundSize === n} onClick={() => setRoundSize(n)}>
-                {t('quiz.hub.qCount', { n })}
-              </SegBtn>
-            ))}
-          </Segmented>
-        </RoundRow>
+      {/* 문항 수 — 전 모드 공통, 최상단에 독립 배치 */}
+      <RoundBar>
+        <RoundLabel>{t('quiz.hub.roundSize')}</RoundLabel>
+        <Segmented>
+          {ROUND_SIZES.map(n => (
+            <SegBtn key={n} $active={roundSize === n} onClick={() => setRoundSize(n)}>
+              {t('quiz.hub.qCount', { n })}
+            </SegBtn>
+          ))}
+        </Segmented>
+      </RoundBar>
 
+      <Body>
         {/* 수능 모의고사 */}
         <ExamCard onClick={() => setPlay('exam')}>
           <ExamIcon><GraduationCap size={26} /></ExamIcon>
@@ -137,7 +140,7 @@ const StreakChip = styled.div`
 `;
 
 const Body = styled.main`
-  flex: 1; width: 100%; max-width: 720px; margin: 0 auto; padding: 24px 20px 56px;
+  flex: 1; width: 100%; max-width: 960px; margin: 0 auto; padding: 24px 20px 56px;
   display: flex; flex-direction: column; gap: 16px;
   ${media.mobile} { padding: 18px 14px 44px; gap: 14px; }
 `;
@@ -166,9 +169,11 @@ const MetaChip = styled.div<{ $gold?: boolean }>`
 `;
 const Chevron = styled.div`flex: 0 0 auto; color: rgba(255,255,255,0.3);`;
 
-const RoundRow = styled.div`
-  display: flex; align-items: center; justify-content: space-between; gap: 12px;
-  padding: 4px 2px;
+const RoundBar = styled.div`
+  display: flex; align-items: center; justify-content: center; gap: 14px;
+  padding: 12px 20px; border-bottom: 1px solid ${BORDER};
+  background: rgba(255,255,255,0.02);
+  ${media.mobile} { padding: 10px 14px; gap: 10px; }
 `;
 const RoundLabel = styled.div`font-size: 13px; font-weight: 700; color: rgba(255,255,255,0.55);`;
 const Segmented = styled.div`
@@ -189,7 +194,8 @@ const SectionLabel = styled.div`
   color: rgba(255,255,255,0.35); margin-top: 6px;
 `;
 const Grid = styled.div`
-  display: grid; grid-template-columns: repeat(2, 1fr); gap: 10px;
+  display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px;
+  ${media.tablet} { grid-template-columns: repeat(2, 1fr); }
   ${media.mobile} { grid-template-columns: 1fr; }
 `;
 const QuizCard = styled.button`
