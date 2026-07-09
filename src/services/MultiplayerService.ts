@@ -31,9 +31,9 @@
 
 import {
   ref, set, onValue, push, update, remove, get, off,
-  runTransaction,
+  runTransaction, query, orderByChild, equalTo, endAt, startAt,
 } from 'firebase/database';
-import { rtdb, serverNow, getServerTimeOffset, registerPresence, initRtdbListeners } from '../config/firebase';
+import { rtdb, auth, serverNow, getServerTimeOffset, registerPresence, initRtdbListeners } from '../config/firebase';
 import {
   Room, RoomPlayer, PlayerGameState, AIDifficulty, TowerDetail,
   GamePhase, MultiplayerGameState, RoundMatchup, PvPBattleResult,
@@ -104,75 +104,85 @@ class MultiplayerService {
   }
 
   /**
+   * [FREE-TIER] RTDB REST의 shallow=true로 특정 경로의 최상위 키 목록만 조회.
+   *   SDK get()은 전체 서브트리를 다운로드하지만(방당 수십~수백 KB),
+   *   shallow는 키만 반환하므로 수십 바이트로 끝남. 고아 노드 스캔 전용.
+   * 실패(오프라인/토큰 없음/URL 미설정) 시 null — 호출부는 스캔을 건너뜀.
+   */
+  private async shallowKeys(path: string): Promise<string[] | null> {
+    try {
+      const baseUrl = import.meta.env.VITE_FIREBASE_DATABASE_URL as string | undefined;
+      if (!baseUrl) return null;
+      const token = await auth?.currentUser?.getIdToken();
+      if (!token) return null;
+      const res = await fetch(
+        `${baseUrl.replace(/\/+$/, '')}/${path}.json?shallow=true&auth=${token}`
+      );
+      if (!res.ok) return null;
+      const data = await res.json();
+      if (!data || typeof data !== 'object') return [];
+      return Object.keys(data);
+    } catch {
+      return null;
+    }
+  }
+
+  /**
    * [V5-FIX-MS-2] 만료 방 + 고아 경로(gameStates/towerDetails) + 종료된 방 정리
+   * [FREE-TIER] 전체 트리 다운로드 제거:
+   *   - 만료/종료 방은 서버측 쿼리(orderByChild)로 해당 방만 수신 (평상시 0건 = 몇 바이트).
+   *     database.rules.json의 rooms .indexOn(["status","createdAt"])이 전제 —
+   *     인덱스가 없으면 SDK가 전체를 받아 클라이언트에서 거르므로 절감 효과가 사라진다.
+   *   - 고아 스캔은 shallow REST로 키 목록만 비교.
    */
   private async cleanupExpiredRooms(): Promise<void> {
     try {
       const now = Date.now();
-      const roomsSnap = await get(ref(rtdb, 'rooms'));
-      const existingRoomIds = new Set<string>();
-      const roomsToDelete: string[] = [];
+      const roomsToDelete = new Set<string>();
 
-      if (roomsSnap.exists()) {
-        roomsSnap.forEach((child) => {
+      // 3시간 만료 방 — createdAt이 컷오프 이전인 방만 다운로드
+      const expiredSnap = await get(query(
+        ref(rtdb, 'rooms'),
+        orderByChild('createdAt'),
+        endAt(now - ROOM_EXPIRY_TIME)
+      ));
+      if (expiredSnap.exists()) {
+        expiredSnap.forEach((child) => { roomsToDelete.add(child.key!); });
+      }
+
+      // 종료 후 TTL 지난 방 — status==='finished'인 방만 다운로드
+      const finishedSnap = await get(query(
+        ref(rtdb, 'rooms'),
+        orderByChild('status'),
+        equalTo('finished')
+      ));
+      if (finishedSnap.exists()) {
+        finishedSnap.forEach((child) => {
           const room = child.val() as Room & { finishedAt?: number };
-          existingRoomIds.add(room.id);
-          if (now - room.createdAt > ROOM_EXPIRY_TIME) {
-            roomsToDelete.push(room.id);
-          } else if (room.status === 'finished' && room.finishedAt
-            && now - room.finishedAt > FINISHED_GAME_TTL) {
-            roomsToDelete.push(room.id);
+          if (room.finishedAt && now - room.finishedAt > FINISHED_GAME_TTL) {
+            roomsToDelete.add(child.key!);
           }
         });
       }
 
       for (const roomId of roomsToDelete) await this.deleteRoom(roomId);
 
-      // [FREE-TIER] 고아 노드 스캔은 25% 확률로만 실행.
-      //   로비에 있는 모든 클라이언트가 10분마다 gameStates/towerDetails/battleResults
-      //   전체를 다운로드하면 무료 플랜 대역폭(10GB/월)을 잠식함.
-      //   고아는 드물게 생기므로 확률 스캔으로도 충분히 수렴.
+      // [FREE-TIER] 고아 노드 스캔은 25% 확률로만 실행. 키 목록만 비교하므로
+      //   실행돼도 다운로드는 수십 바이트 수준.
       if (Math.random() >= 0.25) return;
 
-      // [V5-FIX-MS-2] 고아 gameStates 정리
-      const gsSnap = await get(ref(rtdb, 'gameStates'));
-      if (gsSnap.exists()) {
-        const orphans: string[] = [];
-        gsSnap.forEach((child) => {
-          if (!existingRoomIds.has(child.key!) && !roomsToDelete.includes(child.key!)) {
-            orphans.push(child.key!);
-          }
-        });
-        for (const id of orphans) {
-          await remove(ref(rtdb, `gameStates/${id}`)).catch(() => {});
-          console.log(`[MS] Cleaned orphan gameStates/${id}`);
-        }
-      }
+      const roomKeys = await this.shallowKeys('rooms');
+      if (roomKeys === null) return; // REST 불가 → 이번 회차 고아 스캔 생략
+      const aliveRooms = new Set(roomKeys);
 
-      // 고아 towerDetails 정리
-      const tdSnap = await get(ref(rtdb, 'towerDetails'));
-      if (tdSnap.exists()) {
-        const orphans: string[] = [];
-        tdSnap.forEach((child) => {
-          if (!existingRoomIds.has(child.key!) && !roomsToDelete.includes(child.key!)) {
-            orphans.push(child.key!);
+      for (const path of ['gameStates', 'towerDetails', 'battleResults', 'presence']) {
+        const keys = await this.shallowKeys(path);
+        if (!keys) continue;
+        for (const id of keys) {
+          if (!aliveRooms.has(id)) {
+            await remove(ref(rtdb, `${path}/${id}`)).catch(() => {});
+            console.log(`[MS] Cleaned orphan ${path}/${id}`);
           }
-        });
-        for (const id of orphans) {
-          await remove(ref(rtdb, `towerDetails/${id}`)).catch(() => {});
-          console.log(`[MS] Cleaned orphan towerDetails/${id}`);
-        }
-      }
-
-      // 고아 battleResults 정리 (혹시 남아있다면)
-      const brSnap = await get(ref(rtdb, 'battleResults'));
-      if (brSnap.exists()) {
-        const orphans: string[] = [];
-        brSnap.forEach((child) => {
-          if (!existingRoomIds.has(child.key!)) orphans.push(child.key!);
-        });
-        for (const id of orphans) {
-          await remove(ref(rtdb, `battleResults/${id}`)).catch(() => {});
         }
       }
     } catch (error: any) {
@@ -234,7 +244,12 @@ class MultiplayerService {
 
     // [FREE-2] 활성 방 수가 MAX_ACTIVE_ROOMS(12) 이상이면 생성 거부
     // 동시 연결 100개 한도 보호: 12방 * 8명 = 96연결
-    const existingRoomsSnap = await get(ref(rtdb, 'rooms'));
+    // [FREE-TIER] 전체 트리 대신 만료 전(3시간 이내) 방만 서버측 쿼리로 수신
+    const existingRoomsSnap = await get(query(
+      ref(rtdb, 'rooms'),
+      orderByChild('createdAt'),
+      startAt(Date.now() - ROOM_EXPIRY_TIME)
+    ));
     if (existingRoomsSnap.exists()) {
       const activeRooms = Object.values(existingRoomsSnap.val() as Record<string, any>)
         .filter((r: any) => r.status === 'waiting' || r.status === 'playing' || r.status === 'starting');
@@ -349,6 +364,13 @@ class MultiplayerService {
   async leaveRoom(roomId: string): Promise<void> {
     const user = authService.getCurrentUser();
     if (!user) return;
+
+    // [FREE-TIER] 퇴장하는 유저의 스로틀 pending 폐기 — 퇴장 후 지연 쓰기 방지
+    const pendingKey = `${roomId}:${user.uid}`;
+    const pendingTimer = this.playerStateTimers.get(pendingKey);
+    if (pendingTimer) { clearTimeout(pendingTimer); this.playerStateTimers.delete(pendingKey); }
+    this.pendingPlayerState.delete(pendingKey);
+    this.lastPlayerStateWrite.delete(pendingKey); // [FREE-TIER] 스로틀 타임스탬프도 정리(누수 방지)
 
     const roomRef = ref(rtdb, `rooms/${roomId}`);
 
@@ -591,6 +613,9 @@ class MultiplayerService {
    * [V5-FIX-MS-13] 멱등성 보장: 이미 완료된 플레이어는 재호출해도 변경 없음
    */
   async markWaveCompleted(roomId: string, userId: string): Promise<void> {
+    // [FREE-TIER] 스로틀에 묶인 wave/money/lives를 페이즈 전환 판정 전에 반영
+    await this.flushPlayerState(roomId, userId).catch(() => {});
+
     const gsRef = ref(rtdb, `gameStates/${roomId}`);
     let shouldTransition = false;
     let transitionPhase: GamePhase = 'waiting_wave';
@@ -631,9 +656,19 @@ class MultiplayerService {
     }
   }
 
+  // ─── [FREE-TIER] 플레이어 상태 업로드 스로틀 ─────────────────────
+  // money는 적 처치마다 바뀌므로(GameLayout store 구독 → 매 킬 호출) 즉시 쓰기 시
+  // 게임당 수천 번의 전체 gameStates 트랜잭션이 발생했음.
+  // 3초 윈도우로 병합 업로드하고, 정합성이 필요한 시점
+  // (markWaveCompleted / playerDefeated = 페이즈 전환·탈락 판정 직전)에는 flush로 즉시 반영.
+  private readonly PLAYER_STATE_THROTTLE_MS = 3000;
+  private pendingPlayerState = new Map<string, Partial<PlayerGameState>>();
+  private playerStateTimers = new Map<string, ReturnType<typeof setTimeout>>();
+  private lastPlayerStateWrite = new Map<string, number>();
+
   /**
    * [V5-FIX-MS-8] 클라이언트가 업로드 가능한 필드만 허용.
-   * money/lives/isAlive 는 서버 트랜잭션만 수정할 수 있음.
+   * isAlive 는 서버 트랜잭션(playerDefeated/leaveRoom)만 수정할 수 있음.
    */
   async updatePlayerState(
     roomId: string,
@@ -647,19 +682,52 @@ class MultiplayerService {
     }
     if (Object.keys(filtered).length === 0) return;
 
+    const key = `${roomId}:${userId}`;
+    this.pendingPlayerState.set(key, {
+      ...(this.pendingPlayerState.get(key) ?? {}),
+      ...filtered,
+    });
+
+    const elapsed = Date.now() - (this.lastPlayerStateWrite.get(key) ?? 0);
+    if (elapsed >= this.PLAYER_STATE_THROTTLE_MS) {
+      await this.flushPlayerState(roomId, userId);
+    } else if (!this.playerStateTimers.has(key)) {
+      const timer = setTimeout(() => {
+        this.playerStateTimers.delete(key);
+        this.flushPlayerState(roomId, userId).catch(() => {});
+      }, this.PLAYER_STATE_THROTTLE_MS - elapsed);
+      this.playerStateTimers.set(key, timer);
+    }
+  }
+
+  /** 대기 중인 플레이어 상태를 즉시 업로드. 페이즈 전환 전 반드시 호출. */
+  async flushPlayerState(roomId: string, userId: string): Promise<void> {
+    const key = `${roomId}:${userId}`;
+    const timer = this.playerStateTimers.get(key);
+    if (timer) { clearTimeout(timer); this.playerStateTimers.delete(key); }
+
+    const pending = this.pendingPlayerState.get(key);
+    if (!pending || Object.keys(pending).length === 0) return;
+    this.pendingPlayerState.delete(key);
+    this.lastPlayerStateWrite.set(key, Date.now());
+
     const gsRef = ref(rtdb, `gameStates/${roomId}`);
     await runTransaction(gsRef, (gs: MultiplayerGameState | null) => {
       if (!gs) return gs;
       const updatedPlayers = (gs.players || []).map(p =>
-        p.userId === userId ? { ...p, ...filtered } : p
+        p.userId === userId ? { ...p, ...pending } : p
       );
       return { ...gs, players: updatedPlayers };
     });
   }
 
   // ─── 타워 상세 업로드 ──────────────────────────────────────────
+  // [FREE-TIER] 스로틀 500ms → 3000ms. 웨이브 중 타워 HP가 갱신될 때마다
+  // 전체 보드(기술 포함 수십 KB)가 업로드·전파되던 것을 완화.
+  // 정확한 상태가 필요한 시점(웨이브 종료/재접속/배틀 배치)은 flushTowerUpdate/
+  // forcePushTowerDetailsFull/submitTFTPlacements가 즉시 쓰므로 게임 로직 영향 없음.
   private lastTowerUpdate: Map<string, number> = new Map();
-  private towerUpdateThrottle = 500;
+  private towerUpdateThrottle = 3000;
   private towerUpdateTimeouts: Map<string, ReturnType<typeof setTimeout>> = new Map();
 
   /**
@@ -816,6 +884,9 @@ class MultiplayerService {
   }
 
   async playerDefeated(roomId: string, userId: string): Promise<void> {
+    // [FREE-TIER] 스로틀에 묶인 최종 lives/money를 탈락 확정 전에 반영
+    await this.flushPlayerState(roomId, userId).catch(() => {});
+
     const gsRef = ref(rtdb, `gameStates/${roomId}`);
     let placementRank = 0;
     await runTransaction(gsRef, (gs: MultiplayerGameState | null) => {
@@ -1223,21 +1294,24 @@ class MultiplayerService {
   }
 
   // ─── 구독 메서드들 ─────────────────────────────────────────────
+  // [FREE-TIER] 로비 목록은 status==='waiting' 방만 서버측 쿼리로 구독.
+  //   playing/finished 방의 게임 중 변경사항이 로비 대기자 전원에게
+  //   전파되던 다운로드 낭비 제거. (rooms .indexOn 전제)
   onRoomsUpdate(callback: (rooms: Room[]) => void): () => void {
-    const roomsRef = ref(rtdb, 'rooms');
-    const listener = onValue(roomsRef, (snapshot) => {
+    const waitingQuery = query(ref(rtdb, 'rooms'), orderByChild('status'), equalTo('waiting'));
+    const unsubscribe = onValue(waitingQuery, (snapshot) => {
       if (!snapshot.exists()) { callback([]); return; }
       const rooms: Room[] = [];
       const now = Date.now();
       snapshot.forEach((child) => {
         const room = child.val() as Room;
-        if (now - room.createdAt <= ROOM_EXPIRY_TIME && room.status === 'waiting') {
+        if (now - room.createdAt <= ROOM_EXPIRY_TIME) {
           rooms.push(room);
         }
       });
       callback(rooms);
     });
-    return () => off(roomsRef, 'value', listener);
+    return unsubscribe;
   }
 
   onRoomUpdate(roomId: string, callback: (room: Room | null) => void): () => void {

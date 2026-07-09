@@ -5,10 +5,10 @@ import { useEffect, useMemo, useState } from 'react';
 import styled, { keyframes } from 'styled-components';
 import { useNavigate } from 'react-router-dom';
 import { media } from '../../utils/responsive.utils';
-import { Coins, Sparkles, Package, Layers, Swords, Trophy, ChevronRight } from 'lucide-react';
+import { Coins, Sparkles, Package, Layers, Swords, Trophy, ChevronRight, Users, CloudUpload, CloudDownload, X } from 'lucide-react';
 import { pokeAPI } from '../../api/pokeapi';
 import { useTranslation } from '../../i18n';
-import { cardService, PACK_DEFS } from '../../services/CardService';
+import { cardService, PACK_DEFS, seasonRewardForRank } from '../../services/CardService';
 import { databaseService, CardRankingEntry } from '../../services/DatabaseService';
 import { authService } from '../../services/AuthService';
 import { daysUntilSeasonReset } from '../../utils/season';
@@ -24,8 +24,9 @@ import { CardDetailModal } from './CardDetailModal';
 import { PackOpening } from './PackOpening';
 import { DeckBuilder } from './DeckBuilder';
 import { TrainerTower } from './TrainerTower';
+import { RandomBattle } from './RandomBattle';
 
-type SubView = 'hub' | 'deck' | 'tower';
+type SubView = 'hub' | 'deck' | 'tower' | 'pvp';
 
 const TYPE_SLUGS = [
   'normal', 'fire', 'water', 'electric', 'grass', 'ice', 'fighting', 'poison', 'ground',
@@ -44,6 +45,9 @@ export const CardLabView = () => {
   const [detailId, setDetailId] = useState<number | null>(null);
   const [rankInfo, setRankInfo] = useState<{ towerRank: number | null; collRank: number | null; top3: CardRankingEntry[] } | null>(null);
   const [showRankings, setShowRankings] = useState(false);
+  const [notices, setNotices] = useState<string[]>([]); // 도감 마일스톤·시즌 보상 안내 배너
+  const [backupBusy, setBackupBusy] = useState(false);
+  const [lastBackupAt, setLastBackupAt] = useState<number | null>(() => databaseService.getLastBackupAt());
 
   // 추첨 리스트 준비(캐시 시 즉시)
   useEffect(() => { pokeAPI.preloadRarities().catch(() => {}); }, []);
@@ -55,11 +59,14 @@ export const CardLabView = () => {
 
   // 미니 포켓 랭킹 동기화 + 허브 순위 위젯 로드.
   // 통산 수집 랭킹(cardRankings)을 반영한 뒤, 로그인+온라인이면 내 순위/Top3를 읽어온다.
-  // (오프라인/비로그인은 내부에서 무시 → 싱글/스토리 오프라인 동작 무영향. read는 60초 캐시 재활용.)
+  // (오프라인/비로그인은 내부에서 무시 → 싱글/스토리 오프라인 동작 무영향. read는 캐시 재활용.)
+  // deps에 주간 최고층(season.bestFloor) 포함 — 새 주차에 이미 깬 층을 재등반해도
+  //   (towerProgress 불변) 위젯의 내 타워 순위가 즉시 갱신되도록.
+  const weeklyBestFloor = state.season?.bestFloor ?? 0;
   useEffect(() => {
     let alive = true;
     (async () => {
-      await databaseService.updateCardRanking(state.towerProgress, ownedIds.length).catch(() => {});
+      await databaseService.updateCardRanking(ownedIds.length).catch(() => {});
       if (authService.isOfflineMode() || !authService.getCurrentUser()) {
         if (alive) setRankInfo(null);
         return;
@@ -76,7 +83,90 @@ export const CardLabView = () => {
       }
     })();
     return () => { alive = false; };
-  }, [state.towerProgress, ownedIds.length]);
+  }, [weeklyBestFloor, ownedIds.length]);
+
+  // 도감 수집 마일스톤 수령 + 진행 자동 백업(30분 스로틀) — 보유 종 수 변화 시
+  useEffect(() => {
+    const earned = cardService.claimDexMilestones();
+    if (earned.length > 0) {
+      setNotices(n => [
+        ...n,
+        ...earned.map(m => t('cards.notice.dexMilestone', { n: m.threshold, c: m.coins, s: m.starShards })),
+      ]);
+    }
+    databaseService.autoBackupSaves();
+  }, [ownedIds.length]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  // 지난주 시즌 순위 셀프 보상 — 마운트 시 1회(직전 주 참가 기록이 있을 때만 read 발생)
+  useEffect(() => {
+    const pending = cardService.getUnclaimedSeasonWeek();
+    if (!pending) return;
+    if (authService.isOfflineMode() || !authService.getCurrentUser()) return;
+    let alive = true;
+    (async () => {
+      let coins = 0, shards = 0;
+      const parts: string[] = [];
+      try {
+        if (pending.bestFloor > 0) {
+          const rank = await databaseService.getMyPastSeasonRank(pending.weekId, 'tower');
+          const rw = seasonRewardForRank(rank);
+          coins += rw.coins; shards += rw.starShards;
+          parts.push(t('cards.notice.seasonTowerPart', { rank: rank ?? '-', n: pending.bestFloor }));
+        }
+        if (pending.pvpWins > 0) {
+          const rank = await databaseService.getMyPastSeasonRank(pending.weekId, 'pvp');
+          const rw = seasonRewardForRank(rank);
+          coins += rw.coins; shards += rw.starShards;
+          parts.push(t('cards.notice.seasonPvpPart', { rank: rank ?? '-', n: pending.pvpWins }));
+        }
+      } catch {
+        // 순위 조회 네트워크/집계 실패 — 청구를 확정하지 않고 다음 마운트에 재시도(참가상 오확정 방지)
+        return;
+      }
+      // 여기 도달 = 모든 조회가 확정값(순위 또는 미랭크). 1회 수령 확정.
+      cardService.claimSeasonReward(pending.weekId, { coins, starShards: shards });
+      if (alive) {
+        setNotices(n => [
+          ...n,
+          t('cards.notice.seasonReward', { detail: parts.join(' · '), c: coins, s: shards }),
+        ]);
+      }
+    })();
+    return () => { alive = false; };
+  }, []); // eslint-disable-line react-hooks/exhaustive-deps
+
+  // ─── 클라우드 백업/복원 ────────────────────────────────────────
+  const handleBackup = async () => {
+    if (backupBusy) return;
+    setBackupBusy(true);
+    try {
+      const ok = await databaseService.backupSaves();
+      if (ok) setLastBackupAt(Date.now());
+      else alert(t('cards.backup.backupFail'));
+    } finally {
+      setBackupBusy(false);
+    }
+  };
+
+  const handleRestore = async () => {
+    if (backupBusy) return;
+    setBackupBusy(true);
+    try {
+      const backup = await databaseService.fetchBackup();
+      if (!backup) { alert(t('cards.backup.noBackup')); return; }
+      const when = new Date(backup.updatedAt).toLocaleString();
+      const ok = window.confirm(t('cards.backup.restoreConfirm', {
+        time: when,
+        bOwned: backup.ownedCount, bFloor: backup.towerProgress,
+        lOwned: ownedIds.length, lFloor: state.towerProgress,
+      }));
+      if (!ok) return;
+      databaseService.applyBackupToLocal(backup);
+      window.location.reload(); // 서비스 싱글톤 재로드
+    } finally {
+      setBackupBusy(false);
+    }
+  };
 
   // 보유 카드 이름·타입·레어도 (검색/필터/정렬 + CardView용)
   const { meta, rarity: rarityMap } = useCardMeta(ownedIds.map(c => c.pokemonId));
@@ -113,6 +203,7 @@ export const CardLabView = () => {
 
   if (view === 'deck') return <DeckBuilder onBack={() => setView('hub')} />;
   if (view === 'tower') return <TrainerTower onBack={() => setView('hub')} />;
+  if (view === 'pvp') return <RandomBattle onBack={() => setView('hub')} />;
 
   return (
     <Root>
@@ -126,6 +217,20 @@ export const CardLabView = () => {
       </TopBar>
 
       <Body>
+        {/* 보상 안내 배너 — 도감 마일스톤·시즌 순위 보상 */}
+        {notices.length > 0 && (
+          <NoticeStack>
+            {notices.map((msg, i) => (
+              <Notice key={`${i}-${msg}`}>
+                <span>{msg}</span>
+                <NoticeClose onClick={() => setNotices(ns => ns.filter((_, j) => j !== i))}>
+                  <X size={13} />
+                </NoticeClose>
+              </Notice>
+            ))}
+          </NoticeStack>
+        )}
+
         {/* 랭킹 위젯 — 이번 주 시즌 타워 + 통산 수집 */}
         <RankWidget>
           <RankHead>
@@ -153,7 +258,7 @@ export const CardLabView = () => {
                     <PodItem key={e.userId}>
                       <PodMedal>{i === 0 ? '🥇' : i === 1 ? '🥈' : '🥉'}</PodMedal>
                       <PodName>{e.userName ?? '???'}</PodName>
-                      <PodVal>{t('cards.rank.floor', { n: e.towerFloor })}</PodVal>
+                      <PodVal>{t('cards.rank.floor', { n: e.towerFloor ?? 0 })}</PodVal>
                     </PodItem>
                   ))}
                 </Podium>
@@ -193,6 +298,9 @@ export const CardLabView = () => {
           <ModeRow>
             <ModeBtn onClick={() => setView('tower')}>
               <Swords size={18} /> {t('cards.lab.trainerTower')} <FloorBadge>{t('cards.lab.floor', { n: state.towerProgress + 1 })}</FloorBadge>
+            </ModeBtn>
+            <ModeBtn onClick={() => setView('pvp')}>
+              <Users size={18} /> {t('cards.lab.randomBattle')} <FloorBadge>{t('cards.lab.pvpRecord', { w: cardService.getPvpRecord().wins, l: cardService.getPvpRecord().losses })}</FloorBadge>
             </ModeBtn>
             <ModeBtn onClick={() => setView('deck')}>
               <Layers size={18} /> {t('cards.lab.deckBuild')} <FloorBadge>{t('cards.lab.slots', { n: cardService.getDeck().length })}</FloorBadge>
@@ -236,6 +344,24 @@ export const CardLabView = () => {
             </>
           )}
         </Section>
+
+        {/* 클라우드 백업 — 로그인 유저만. 수집/기록이 localStorage 단독이라 유실 안전망 */}
+        {!authService.isOfflineMode() && !!authService.getCurrentUser() && (
+          <BackupBar>
+            <BackupInfo>
+              <CloudUpload size={13} />
+              {lastBackupAt
+                ? t('cards.backup.last', { time: new Date(lastBackupAt).toLocaleString() })
+                : t('cards.backup.never')}
+            </BackupInfo>
+            <BackupBtn onClick={handleBackup} disabled={backupBusy}>
+              <CloudUpload size={13} /> {t('cards.backup.backupBtn')}
+            </BackupBtn>
+            <BackupBtn onClick={handleRestore} disabled={backupBusy}>
+              <CloudDownload size={13} /> {t('cards.backup.restoreBtn')}
+            </BackupBtn>
+          </BackupBar>
+        )}
 
         {/* 개발용 화폐 지급 — dev 서버에서만 노출 (프로덕션 빌드에서 제거됨) */}
         {import.meta.env.DEV && (
@@ -450,6 +576,37 @@ const DexGrid = styled.div`
 const Empty = styled.div`
   padding: 40px; text-align: center; color: rgba(255,255,255,0.4); font-size: 14px;
   border: 1px dashed rgba(255,255,255,0.12); border-radius: 12px;
+`;
+
+const NoticeStack = styled.div`display: flex; flex-direction: column; gap: 8px;`;
+const Notice = styled.div`
+  display: flex; align-items: center; justify-content: space-between; gap: 10px;
+  background: rgba(251,191,36,0.1); border: 1px solid rgba(251,191,36,0.3);
+  color: #fbbf24; font-size: 13px; font-weight: 700;
+  padding: 10px 14px; border-radius: 10px; line-height: 1.5;
+  ${media.mobile} { font-size: 12px; padding: 8px 12px; }
+`;
+const NoticeClose = styled.button`
+  flex: 0 0 auto; display: flex; align-items: center; justify-content: center;
+  background: transparent; border: none; color: rgba(251,191,36,0.7); cursor: pointer;
+  padding: 2px; &:hover { color: #fbbf24; }
+`;
+
+const BackupBar = styled.div`
+  display: flex; align-items: center; justify-content: center; gap: 10px; flex-wrap: wrap;
+  padding: 10px; border: 1px dashed rgba(255,255,255,0.12); border-radius: 10px;
+`;
+const BackupInfo = styled.div`
+  display: flex; align-items: center; gap: 6px;
+  font-size: 12px; color: rgba(255,255,255,0.45);
+`;
+const BackupBtn = styled.button`
+  display: flex; align-items: center; gap: 5px;
+  background: rgba(255,255,255,0.06); border: 1px solid rgba(255,255,255,0.14);
+  color: rgba(255,255,255,0.75); font-size: 12px; font-weight: 700;
+  padding: 6px 12px; border-radius: 8px; cursor: pointer;
+  &:hover { background: rgba(255,255,255,0.12); }
+  &:disabled { opacity: 0.4; cursor: not-allowed; }
 `;
 
 const DevBar = styled.div`display: flex; justify-content: center; opacity: 0.4;`;

@@ -76,4 +76,6 @@ export interface QuizSaveState {
   totalRounds: number;
   /** 전 종목 통산 최고 연속 정답. */
   bestStreak: number;
+  /** 수령한 모의고사 마일스톤(점수 threshold 목록). 1회성 보상 중복 방지. */
+  claimedExamMilestones?: number[];
 }

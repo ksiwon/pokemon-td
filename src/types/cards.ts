@@ -73,4 +73,18 @@ export interface CardSaveState {
   deck: Deck;
   /** 주간 시즌 타워 기록 — weekId(ISO 주차)와 그 주의 최고 도달 층. 주차가 바뀌면 초기화. */
   season?: { weekId: string; bestFloor: number };
+  /** 직전 주 시즌 타워 스냅샷 — 주 경계를 넘겨 플레이해도 지난주 보상 청구 근거를 보존. */
+  prevSeason?: { weekId: string; bestFloor: number };
+  /** 랜덤 대전(비동기 PvP) 통산 전적. */
+  pvp?: { wins: number; losses: number };
+  /** 랜덤 대전 주간 시즌 승수 — weekId가 바뀌면 초기화. */
+  pvpSeason?: { weekId: string; wins: number };
+  /** 직전 주 랜덤 대전 시즌 스냅샷 — 보상 청구 근거 보존용. */
+  prevPvpSeason?: { weekId: string; wins: number };
+  /** 일일 첫 승 보너스(KST 날짜 기준) 수령 상태. */
+  daily?: { dayId: string; winClaimed: boolean };
+  /** 수령한 도감 수집 마일스톤(보유 종 수 threshold 목록). */
+  claimedDexMilestones?: number[];
+  /** 시즌 순위 보상을 수령(또는 만료 처리)한 주차 ID 목록. */
+  claimedSeasonWeeks?: string[];
 }

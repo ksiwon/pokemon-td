@@ -169,6 +169,7 @@ export const DeckBuilder = ({ onBack }: { onBack: () => void }) => {
               })}
             </PenNote>
           )}
+          <EffectLegend>{t('cards.deck.effectLegend')}</EffectLegend>
         </SynergyPanel>
       </Field>
 
@@ -277,6 +278,10 @@ const SynDot = styled.span<{ $c: string }>`width: 8px; height: 8px; border-radiu
 const SynTier = styled.span`color: rgba(255,255,255,0.6); font-weight: 600;`;
 const PenNote = styled.div`
   display: flex; align-items: center; gap: 6px; margin-top: 10px; font-size: 12px; color: #fca5a5; font-weight: 600;
+`;
+
+const EffectLegend = styled.div`
+  margin-top: 10px; font-size: 11px; line-height: 1.6; color: rgba(255,255,255,0.4);
 `;
 
 const PoolLabel = styled.div`max-width: 720px; margin: 16px auto 8px; padding: 0 16px; font-size: 12px; font-weight: 700; color: rgba(255,255,255,0.4); letter-spacing: 0.08em;`;

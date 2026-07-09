@@ -5,12 +5,14 @@
 
 import { pokeAPI } from '../api/pokeapi';
 import { Rarity } from '../data/evolution';
-import { seasonId } from '../utils/season';
+import { seasonId, dayId } from '../utils/season';
 import {
   CardSaveState, CardWallet, CardCollection, PackType, PullResult, Deck, DeckRow,
 } from '../types/cards';
 
-const STORAGE_KEY = 'pokemon-td-cards-v1';
+/** 미니 포켓 저장 키. 백업/복원(DatabaseService)이 같은 키를 참조하므로 단일 출처. */
+export const CARD_STORAGE_KEY = 'pokemon-td-cards-v1';
+const STORAGE_KEY = CARD_STORAGE_KEY;
 const CURRENT_VERSION = 1;
 
 const MAX_STARS = 5;
@@ -363,6 +365,127 @@ class CardService {
     this.persist();
   }
 
+  /** 덱 + 보유 별 스냅샷 — 랜덤 대전 발행/전투 빌드용. */
+  getDeckWithStars(): { pokemonId: number; stars: number; row: DeckRow; slot: number }[] {
+    return this.getDeck().map(s => ({
+      ...s,
+      stars: this.state.collection[s.pokemonId]?.stars ?? 1,
+    }));
+  }
+
+  // ─── 랜덤 대전(비동기 PvP) 전적 ──────────────────────────────────────────────
+  getPvpRecord(): { wins: number; losses: number } {
+    return { wins: this.state.pvp?.wins ?? 0, losses: this.state.pvp?.losses ?? 0 };
+  }
+
+  /** 이번 주 랜덤 대전 승수(주차 바뀌면 0). 랭킹 배지 표시용. */
+  getWeeklyPvpWins(): number {
+    const wk = seasonId();
+    const s = this.state.pvpSeason;
+    return s && s.weekId === wk ? s.wins : 0;
+  }
+
+  /**
+   * 대전 결과 기록(통산 + 주간). 승리 시 이번 주 누적 승수를 반환
+   * (=Firestore 주간 랭킹에 기록할 값), 패배면 null.
+   */
+  recordPvpResult(win: boolean): number | null {
+    const rec = this.state.pvp ?? { wins: 0, losses: 0 };
+    if (win) rec.wins += 1; else rec.losses += 1;
+    this.state.pvp = rec;
+
+    let weeklyWins: number | null = null;
+    if (win) {
+      const wk = seasonId();
+      let s = this.state.pvpSeason;
+      if (!s || s.weekId !== wk) {
+        // 주 경계 통과 — 미청구 직전 주 승수를 스냅샷(보상 근거 보존)
+        if (s && s.wins > 0 && !(this.state.claimedSeasonWeeks ?? []).includes(s.weekId)) {
+          this.state.prevPvpSeason = { weekId: s.weekId, wins: s.wins };
+        }
+        s = { weekId: wk, wins: 0 }; this.state.pvpSeason = s;
+      }
+      s.wins += 1;
+      weeklyWins = s.wins;
+    }
+    this.persist();
+    return weeklyWins;
+  }
+
+  // ─── 일일 첫 승 보너스 ────────────────────────────────────────────────────────
+  // [경제] 소액 고정(30코인+1별조각) — 매일 접속할 이유를 만드는 리텐션 훅.
+  //   타워 승리/랜덤 대전 승리 공통 1회(KST 자정 리셋, 시즌과 동일 앵커).
+  claimDailyFirstWin(): { coins: number; starShards: number } | null {
+    const today = dayId();
+    const d = this.state.daily;
+    if (d && d.dayId === today && d.winClaimed) return null;
+
+    this.state.daily = { dayId: today, winClaimed: true };
+    const reward = { coins: 30, starShards: 1 };
+    this.state.wallet.coins += reward.coins;
+    this.state.wallet.starShards += reward.starShards;
+    this.persist();
+    return reward;
+  }
+
+  // ─── 도감 수집 마일스톤 (1회성) ───────────────────────────────────────────────
+  // [경제] 1025종 수집의 중간 목표. 퀴즈 마일스톤과 동일 패턴(수령 목록 영속).
+  private static readonly DEX_MILESTONES: Array<{ threshold: number; coins: number; starShards: number }> = [
+    { threshold: 10, coins: 30, starShards: 0 },
+    { threshold: 25, coins: 50, starShards: 3 },
+    { threshold: 50, coins: 80, starShards: 5 },
+    { threshold: 100, coins: 120, starShards: 10 },
+    { threshold: 200, coins: 160, starShards: 15 },
+    { threshold: 300, coins: 200, starShards: 20 },
+    { threshold: 500, coins: 300, starShards: 30 },
+    { threshold: 750, coins: 400, starShards: 40 },
+    { threshold: 1025, coins: 1000, starShards: 100 }, // 도감 완성
+  ];
+
+  /** 보유 종 수 기준 새로 도달한 도감 마일스톤 수령. 반환: 이번에 받은 목록. */
+  claimDexMilestones(): Array<{ threshold: number; coins: number; starShards: number }> {
+    const owned = this.getOwnedCount();
+    const claimed = new Set(this.state.claimedDexMilestones ?? []);
+    const earned = CardService.DEX_MILESTONES.filter(m => owned >= m.threshold && !claimed.has(m.threshold));
+    if (earned.length === 0) return [];
+
+    earned.forEach(m => claimed.add(m.threshold));
+    this.state.claimedDexMilestones = Array.from(claimed).sort((a, b) => a - b);
+    this.state.wallet.coins += earned.reduce((s, m) => s + m.coins, 0);
+    this.state.wallet.starShards += earned.reduce((s, m) => s + m.starShards, 0);
+    this.persist();
+    return earned;
+  }
+
+  // ─── 지난주 시즌 순위 보상 (셀프 수령) ────────────────────────────────────────
+  // 서버(Functions) 없이 클라이언트가 지난주 자기 순위를 읽고 1회 수령.
+  // 직전 주만 대상(그 이전 주 문서는 lazy cleanup으로 삭제됨). 로컬 시즌 캐시가
+  // 참가 증거 — 캐시 유실(기기 변경) 시 수령 불가는 백업 기능으로 완화.
+  getUnclaimedSeasonWeek(): { weekId: string; bestFloor: number; pvpWins: number } | null {
+    const prevWeek = seasonId(new Date(Date.now() - 7 * 24 * 60 * 60 * 1000));
+    if ((this.state.claimedSeasonWeeks ?? []).includes(prevWeek)) return null;
+
+    // 현재 시즌 캐시가 직전 주면 그대로, 아니면(새 주 진입으로 덮어써진 경우) 스냅샷에서 복구
+    const bestFloor = this.state.season?.weekId === prevWeek ? this.state.season.bestFloor
+      : this.state.prevSeason?.weekId === prevWeek ? this.state.prevSeason.bestFloor : 0;
+    const pvpWins = this.state.pvpSeason?.weekId === prevWeek ? this.state.pvpSeason.wins
+      : this.state.prevPvpSeason?.weekId === prevWeek ? this.state.prevPvpSeason.wins : 0;
+    if (bestFloor <= 0 && pvpWins <= 0) return null;
+    return { weekId: prevWeek, bestFloor, pvpWins };
+  }
+
+  /** 시즌 보상 수령 확정 — 주차를 수령 목록에 기록하고 재화 지급. */
+  claimSeasonReward(weekId: string, reward: { coins: number; starShards: number }): void {
+    const claimed = new Set(this.state.claimedSeasonWeeks ?? []);
+    if (claimed.has(weekId)) return;
+    claimed.add(weekId);
+    // 목록 무한 성장 방지 — 최근 8개만 유지(직전 주만 검사하므로 충분)
+    this.state.claimedSeasonWeeks = Array.from(claimed).sort().slice(-8);
+    this.state.wallet.coins += reward.coins;
+    this.state.wallet.starShards += reward.starShards;
+    this.persist();
+  }
+
   // ─── 트레이너 타워 진행 ───────────────────────────────────────────────────────
   setTowerProgress(floor: number) {
     if (floor > this.state.towerProgress) { this.state.towerProgress = floor; this.persist(); }
@@ -383,7 +506,13 @@ class CardService {
   recordWeeklyBestFloor(floor: number): number | null {
     const wk = seasonId();
     let s = this.state.season;
-    if (!s || s.weekId !== wk) { s = { weekId: wk, bestFloor: 0 }; this.state.season = s; }
+    if (!s || s.weekId !== wk) {
+      // 주 경계 통과 — 미청구 직전 주 기록을 스냅샷(뷰가 마운트된 채 새 주 첫 판을 돌려도 보상 근거 보존)
+      if (s && s.bestFloor > 0 && !(this.state.claimedSeasonWeeks ?? []).includes(s.weekId)) {
+        this.state.prevSeason = { weekId: s.weekId, bestFloor: s.bestFloor };
+      }
+      s = { weekId: wk, bestFloor: 0 }; this.state.season = s;
+    }
     if (floor > s.bestFloor) { s.bestFloor = floor; this.persist(); return floor; }
     return null;
   }
@@ -398,3 +527,13 @@ class CardService {
 }
 
 export const cardService = new CardService();
+
+/** 시즌 순위 밴드 → 보상. rank null(조회 실패/문서 없음)이면 참가상.
+ *  [경제] 1위 300코인+30조각 = 멀티 1위와 동급의 주간 원타임. */
+export function seasonRewardForRank(rank: number | null): { coins: number; starShards: number } {
+  if (rank === 1) return { coins: 300, starShards: 30 };
+  if (rank !== null && rank <= 3) return { coins: 200, starShards: 20 };
+  if (rank !== null && rank <= 10) return { coins: 120, starShards: 12 };
+  if (rank !== null && rank <= 50) return { coins: 60, starShards: 6 };
+  return { coins: 30, starShards: 2 }; // 참가상
+}

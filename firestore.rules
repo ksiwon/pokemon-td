@@ -66,7 +66,7 @@ service cloud.firestore {
     }
 
     // ─── AP 랭킹 ────────────────────────────────────────
-    // [SEC] totalAP 상한으로 랭킹 위조 차단(전체 업적 합산 최대치도 수천 수준).
+    // [SEC] totalAP 상한으로 랭킹 위조 차단(전체 업적 합산 최대치도 수천 수준 → 상한 2만).
     match /apRankings/{userId} {
       allow read: if request.auth != null;
       allow write: if request.auth != null
@@ -75,7 +75,7 @@ service cloud.firestore {
                    && (!('totalAP' in request.resource.data)
                        || (request.resource.data.totalAP is number
                            && request.resource.data.totalAP >= 0
-                           && request.resource.data.totalAP <= 100000));
+                           && request.resource.data.totalAP <= 20000));
     }
 
     // ─── 미니 포켓 랭킹 (트레이너 타워 최고층 / 수집 종 수) ──
@@ -89,25 +89,41 @@ service cloud.firestore {
                    && (!('towerFloor' in request.resource.data)
                        || (request.resource.data.towerFloor is number
                            && request.resource.data.towerFloor >= 0
-                           && request.resource.data.towerFloor <= 100000))
+                           && request.resource.data.towerFloor <= 500))
                    && (!('collectionCount' in request.resource.data)
                        || (request.resource.data.collectionCount is number
                            && request.resource.data.collectionCount >= 0
-                           && request.resource.data.collectionCount <= 2000));
+                           && request.resource.data.collectionCount <= 1030));
     }
 
     // ─── 미니 포켓 주간 시즌 타워 랭킹 ───────────────────
     // seasons/{seasonId}/cardRankings/{uid} — 주차별 서브컬렉션(경로 분리로 자동 리셋).
     // [SEC] 본인 문서만 쓰기, towerFloor 상한으로 위조 차단.
+    // delete는 본인 구세즌 문서 lazy cleanup용(클라가 지난 주차 자기 문서 삭제).
     match /seasons/{seasonId}/cardRankings/{userId} {
       allow read: if request.auth != null;
-      allow write: if request.auth != null
+      allow create, update: if request.auth != null
                    && request.auth.uid == userId
                    && request.resource.data.userId == request.auth.uid
                    && (!('towerFloor' in request.resource.data)
                        || (request.resource.data.towerFloor is number
                            && request.resource.data.towerFloor >= 0
-                           && request.resource.data.towerFloor <= 100000));
+                           && request.resource.data.towerFloor <= 500));
+      allow delete: if request.auth != null && request.auth.uid == userId;
+    }
+
+    // ─── 미니 포켓 랜덤 대전 주간 승수 랭킹 ───────────────
+    // seasons/{seasonId}/pvpRankings/{uid} — 타워 시즌과 동일 패턴(주차 경로 자동 리셋).
+    // [SEC] wins 상한으로 위조 차단(주당 수천 판은 비현실적).
+    match /seasons/{seasonId}/pvpRankings/{userId} {
+      allow read: if request.auth != null;
+      allow create, update: if request.auth != null
+                   && request.auth.uid == userId
+                   && request.resource.data.userId == request.auth.uid
+                   && request.resource.data.wins is number
+                   && request.resource.data.wins >= 0
+                   && request.resource.data.wins <= 1000;
+      allow delete: if request.auth != null && request.auth.uid == userId;
     }
 
     // ─── 포켓몬 퀴즈 랭킹 (수능 모의고사 최고점, 최대 50점) ──
@@ -121,6 +137,39 @@ service cloud.firestore {
                        || (request.resource.data.examBest is number
                            && request.resource.data.examBest >= 0
                            && request.resource.data.examBest <= 50));
+    }
+
+    // ─── 미니 포켓 랜덤 대전 덱 스냅샷 ────────────────────
+    // 비동기 PvP: 모든 로그인 유저가 읽고(매칭), 본인 덱만 발행.
+    // [SEC] deck 크기 상한 6. stars 등 항목별 값은 룰에서 리스트 순회가 불가하므로
+    //   전투 빌드 시 클라이언트가 clamp(buildBattleCard가 별 1~5 강제) — 위조해도 ★5 초과 불가.
+    match /cardDecks/{userId} {
+      allow read: if request.auth != null;
+      allow write: if request.auth != null
+                   && request.auth.uid == userId
+                   && request.resource.data.userId == request.auth.uid
+                   && request.resource.data.deck is list
+                   && request.resource.data.deck.size() >= 1
+                   && request.resource.data.deck.size() <= 6
+                   && request.resource.data.rand is number
+                   && request.resource.data.rand >= 0
+                   && request.resource.data.rand <= 1
+                   && (!('power' in request.resource.data)
+                       || (request.resource.data.power is number
+                           && request.resource.data.power >= 0
+                           && request.resource.data.power <= 30));
+    }
+
+    // ─── 클라우드 세이브 백업 ─────────────────────────────
+    // 미니 포켓/퀴즈 로컬 세이브 스냅샷(기기 변경·브라우저 초기화 대비).
+    // 본인만 읽고 쓴다. JSON 문자열 필드 2개 + 표시용 메타.
+    match /backups/{userId} {
+      allow read, delete: if request.auth != null && request.auth.uid == userId;
+      allow create, update: if request.auth != null
+                   && request.auth.uid == userId
+                   && request.resource.data.userId == request.auth.uid
+                   && request.resource.data.cards is string
+                   && request.resource.data.quiz is string;
     }
 
     // ─── 그 외 모든 경로 차단 ────────────────────────────

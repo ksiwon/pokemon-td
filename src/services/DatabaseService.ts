@@ -4,13 +4,16 @@
 //   - 정리는 게임 클리어 후 20% 확률로 실행 (쿼터 낭비 방지)
 import {
   doc, setDoc, getDoc, collection, query, where, orderBy,
-  limit, getDocs, addDoc, updateDoc, deleteDoc, writeBatch
+  limit, getDocs, addDoc, updateDoc, deleteDoc, writeBatch,
+  getCountFromServer,
 } from 'firebase/firestore';
 import { db } from '../config/firebase';
 import { HallOfFameEntry, LeaderboardEntry } from '../types/multiplayer';
 import { Achievement } from '../types/game';
 import { authService } from './AuthService';
 import { seasonId } from '../utils/season';
+import { CARD_STORAGE_KEY } from './CardService';
+import { QUIZ_STORAGE_KEY } from './QuizService';
 
 // [FREE-TIER] 무료 플랜 데이터 보존 한도
 const HALL_OF_FAME_MAX_AGE_DAYS = 60;  // 이 일수보다 오래된 자신의 기록은 삭제 후보
@@ -24,30 +27,58 @@ export interface APRankingEntry {
   updatedAt: number;
 }
 
-// ─── 미니 포켓 랭킹 엔트리 타입 (타워 최고층 / 수집 종 수) ─────────────────────
+// ─── 미니 포켓 랭킹 엔트리 타입 ────────────────────────────────────────────────
+// 두 문서가 이 타입을 공유하되 서로 다른 필드만 채움:
+//   cardRankings/{uid}                 → collectionCount (통산 수집)
+//   seasons/{주차}/cardRankings/{uid}  → towerFloor (주간 타워)
 export interface CardRankingEntry {
   userId: string;
   userName: string | null;
-  towerFloor: number;      // 트레이너 타워 최고 클리어 층
-  collectionCount: number; // 도감 보유 종 수
+  towerFloor?: number;      // 트레이너 타워 주간 최고 클리어 층 (시즌 문서 전용)
+  collectionCount?: number; // 도감 보유 종 수 (통산 문서 전용)
   updatedAt: number;
 }
 
-// ─── 포켓몬 퀴즈 랭킹 엔트리 타입 (수능 모의고사 최고점, 20점 만점) ─────────────
+// ─── 포켓몬 퀴즈 랭킹 엔트리 타입 (수능 모의고사 최고점, 최대 50점) ─────────────
 export interface QuizRankingEntry {
   userId: string;
   userName: string | null;
-  examBest: number; // 모의고사 최고 정답 수(0~20)
+  examBest: number; // 모의고사 최고 정답 수(0~50, 문항 수 10/30/50)
+  updatedAt: number;
+}
+
+// ─── 미니 포켓 랜덤 대전 주간 승수 랭킹 엔트리 ─────────────────────────────────
+export interface PvpSeasonRankingEntry {
+  userId: string;
+  userName: string | null;
+  wins: number; // 이번 주 랜덤 대전 승수
+  updatedAt: number;
+}
+
+// ─── 미니 포켓 랜덤 대전용 덱 스냅샷 ────────────────────────────────────────────
+// 비동기 PvP: 상대의 저장된 덱 스냅샷을 읽어와 로컬에서 오토배틀. 실시간 통신 없음.
+export interface CardDeckDoc {
+  userId: string;
+  userName: string | null;
+  deck: { pokemonId: number; stars: number; row: 'front' | 'back'; slot: number }[];
+  /** 대략적 전투력 표시용(별 합계). */
+  power: number;
+  /** 랜덤 매칭 키(0~1). 발행 시마다 리롤되어 매칭 분포를 섞는다. */
+  rand: number;
   updatedAt: number;
 }
 
 class DatabaseService {
 
-  // [FREE-TIER] 전역 랭킹/전당 조회 결과 메모리 캐시(TTL 60초).
-  //   모달을 반복해서 여닫을 때 동일 쿼리를 재실행하지 않아 Firestore read를 절감.
-  //   읽기 전용·표시용 데이터라 60초 stale은 게임 로직/멀티 통신과 무관.
-  private _readCache = new Map<string, { data: unknown; ts: number }>();
-  private readonly READ_CACHE_TTL = 60_000;
+  // [FREE-TIER] 전역 랭킹/전당 조회 결과 캐시.
+  //   메모리 + localStorage 2계층, TTL 10분 — 새로고침/재방문에도 Firestore read 0.
+  //   읽기 전용·표시용 데이터라 10분 stale은 게임 로직/멀티 통신과 무관하며,
+  //   내 기록 갱신 시 invalidateCache()로 해당 키를 즉시 무효화해 체감 지연을 줄임.
+  //   빈 결과([])는 실패/오프라인일 수 있어 60초만 캐시하고 localStorage엔 남기지 않음.
+  private _readCache = new Map<string, { data: unknown; ts: number; ttl: number }>();
+  private readonly READ_CACHE_TTL = 10 * 60_000;
+  private readonly EMPTY_CACHE_TTL = 60_000;
+  private readonly LS_CACHE_PREFIX = 'ptd-fscache:';
 
   // [FREE-TIER] 카드 랭킹 쓰기 중복 방지 — 세션 내 동일 값(층:수집수) 재기록 스킵.
   private _lastCardRankSync = '';
@@ -56,12 +87,59 @@ class DatabaseService {
 
   private async cachedRead<T>(key: string, loader: () => Promise<T>): Promise<T> {
     const hit = this._readCache.get(key);
-    if (hit && Date.now() - hit.ts < this.READ_CACHE_TTL) {
+    if (hit && Date.now() - hit.ts < hit.ttl) {
       return hit.data as T;
     }
+    // localStorage 계층 (세션/새로고침 간 유지)
+    try {
+      const raw = localStorage.getItem(this.LS_CACHE_PREFIX + key);
+      if (raw) {
+        const entry = JSON.parse(raw) as { data: T; ts: number };
+        if (Date.now() - entry.ts < this.READ_CACHE_TTL) {
+          this._readCache.set(key, { ...entry, ttl: this.READ_CACHE_TTL });
+          return entry.data;
+        }
+        localStorage.removeItem(this.LS_CACHE_PREFIX + key);
+      }
+    } catch { /* ignore */ }
+
     const data = await loader();
-    this._readCache.set(key, { data, ts: Date.now() });
+    const isEmpty = Array.isArray(data) && data.length === 0;
+    this._readCache.set(key, {
+      data, ts: Date.now(),
+      ttl: isEmpty ? this.EMPTY_CACHE_TTL : this.READ_CACHE_TTL,
+    });
+    if (!isEmpty) {
+      try {
+        localStorage.setItem(this.LS_CACHE_PREFIX + key, JSON.stringify({ data, ts: Date.now() }));
+      } catch { /* quota 초과 등 — 무시 */ }
+    }
     return data;
+  }
+
+  /** 내 기록 쓰기 직후 관련 랭킹 캐시 무효화 (키 prefix 매칭). */
+  private invalidateCache(...prefixes: string[]): void {
+    for (const key of Array.from(this._readCache.keys())) {
+      if (prefixes.some(p => key.startsWith(p))) this._readCache.delete(key);
+    }
+    try {
+      for (let i = localStorage.length - 1; i >= 0; i--) {
+        const k = localStorage.key(i);
+        if (!k || !k.startsWith(this.LS_CACHE_PREFIX)) continue;
+        const bare = k.slice(this.LS_CACHE_PREFIX.length);
+        if (prefixes.some(p => bare.startsWith(p))) localStorage.removeItem(k);
+      }
+    } catch { /* ignore */ }
+  }
+
+  /**
+   * [FIX-QUOTA] "내 순위" 계산 공통 헬퍼 — 집계 카운트 쿼리 사용.
+   * 기존 getDocs().size는 문서를 최대 500개 실제 다운로드(=최대 500 read)했지만,
+   * getCountFromServer는 인덱스 항목 1000개당 1 read로 집계만 받아온다.
+   */
+  private async countPlusOne(q: ReturnType<typeof query>): Promise<number> {
+    const agg = await getCountFromServer(q);
+    return agg.data().count + 1;
   }
 
   async addHallOfFameEntry(
@@ -85,6 +163,7 @@ class DatabaseService {
       timestamp: Date.now(),
     };
     await addDoc(collection(db, 'hallOfFame'), entry);
+    this.invalidateCache('hof:');
 
     // [FREE-TIER] 20% 확률로 오래된 기록 정리 (매번 실행 시 Firestore 쿼터 낭비)
     if (Math.random() < 0.2) {
@@ -253,6 +332,7 @@ class DatabaseService {
 
     if (!docSnap.exists()) {
       await setDoc(docRef, newEntry);
+      this.invalidateCache('mapLb:', 'highestWave:');
       return;
     }
 
@@ -261,10 +341,12 @@ class DatabaseService {
     if (clearTime !== undefined) {
       if (!existing.clearTime || clearTime < existing.clearTime) {
         await setDoc(docRef, newEntry);
+        this.invalidateCache('mapLb:', 'highestWave:');
       }
     } else {
       if (highestWave > (existing.highestWave ?? 0)) {
         await setDoc(docRef, { ...existing, highestWave, timestamp: Date.now() });
+        this.invalidateCache('mapLb:', 'highestWave:');
       }
     }
   }
@@ -300,7 +382,7 @@ class DatabaseService {
     const userValue = sortBy === 'clearTime' ? userData.clearTime : userData.highestWave;
     if (!userValue) return null;
 
-    // [FIX-QUOTA] 전체 컬렉션 스캔 대신 "나보다 나은 기록" 수만 쿼리 (limit 500).
+    // [FIX-QUOTA] "나보다 나은 기록" 수를 집계 카운트로만 조회 (문서 다운로드 0, 1 read).
     // clearTime: 낮을수록 좋음 → 내 값보다 작은 것이 나보다 앞 순위
     // highestWave: 높을수록 좋음 → 내 값보다 큰 것이 나보다 앞 순위
     const betterOp = sortBy === 'clearTime' ? '<' : '>' as const;
@@ -310,13 +392,13 @@ class DatabaseService {
       where(sortBy, betterOp as any, userValue),
       limit(500)
     );
-    const snapshot = await getDocs(q);
-    return snapshot.size + 1;
+    return this.countPlusOne(q);
   }
 
   async updateUserRating(userId: string, newRating: number): Promise<void> {
     const docRef = doc(db, 'users', userId);
     await updateDoc(docRef, { rating: newRating });
+    this.invalidateCache('pvpRanking:');
   }
 
   // ─── [리뉴얼] 업적 저장 — AP 포함 (WriteBatch로 원자적 처리) ───────────────
@@ -348,6 +430,7 @@ class DatabaseService {
     }
 
     await batch.commit();
+    if (totalAP !== undefined) this.invalidateCache('apRanking:');
   }
 
   async updateUserAchievementsBulk(achievements: Achievement[], totalAP: number, achievementCount: number): Promise<void> {
@@ -374,6 +457,7 @@ class DatabaseService {
     batch.set(apRef, apEntry);
 
     await batch.commit();
+    this.invalidateCache('apRanking:');
   }
 
   async getUserAchievements(): Promise<Achievement[]> {
@@ -407,6 +491,7 @@ class DatabaseService {
       updatedAt: Date.now(),
     };
     await setDoc(doc(db, 'apRankings', user.uid), entry);
+    this.invalidateCache('apRanking:');
   }
 
   /**
@@ -440,17 +525,14 @@ class DatabaseService {
       if (!myDoc.exists()) return null;
 
       const myAP = (myDoc.data() as APRankingEntry).totalAP;
-      // 나보다 AP 높은 사람 수 + 1 = 내 순위
-      // [FREE-TIER] limit 상한: 유저 수가 많아져도 read가 폭증하지 않도록 스캔 상한을 둔다.
-      //   상한 도달 시 "상한+" 순위로 표시됨(정확한 순위 대신 하한 보장).
+      // 나보다 AP 높은 사람 수 + 1 = 내 순위 — [FIX-QUOTA] 집계 카운트(1 read)
       const RANK_SCAN_LIMIT = 500;
       const q = query(
         collection(db, 'apRankings'),
         where('totalAP', '>', myAP),
         limit(RANK_SCAN_LIMIT)
       );
-      const snapshot = await getDocs(q);
-      return snapshot.size + 1;
+      return this.countPlusOne(q);
     } catch {
       return null;
     }
@@ -493,8 +575,7 @@ class DatabaseService {
         where('rating', '>', myRating),
         limit(RANK_SCAN_LIMIT)
       );
-      const snapshot = await getDocs(q);
-      return snapshot.size + 1;
+      return this.countPlusOne(q); // [FIX-QUOTA] 집계 카운트(1 read)
     } catch (err) {
       console.error('getMyPVPRank failed:', err);
       return null;
@@ -503,26 +584,27 @@ class DatabaseService {
 
   // ─── 미니 포켓 랭킹 (타워 최고층 / 수집 종 수) ─────────────────────────────
   /**
-   * 내 카드 랭킹 문서 갱신. 타워층·수집수는 단조 증가라 기존값 read 없이 overwrite.
+   * 내 수집 랭킹 문서 갱신. 수집 수는 단조 증가라 기존값 read 없이 overwrite.
+   * (towerFloor는 주간 시즌 문서로 이관되어 이 문서에서 제거 — 죽은 필드 정리)
    * [FREE-TIER] 오프라인/비로그인은 쓰지 않음. 세션 내 동일 값이면 재기록 스킵.
    */
-  async updateCardRanking(towerFloor: number, collectionCount: number): Promise<void> {
+  async updateCardRanking(collectionCount: number): Promise<void> {
     const user = authService.getCurrentUser();
     if (!user || authService.isOfflineMode()) return;
 
-    const key = `${towerFloor}:${collectionCount}`;
+    const key = `${collectionCount}`;
     if (key === this._lastCardRankSync) return; // 동일 값 재기록 방지
 
     const entry: CardRankingEntry = {
       userId: user.uid,
       userName: user.displayName,
-      towerFloor,
       collectionCount,
       updatedAt: Date.now(),
     };
     try {
       await setDoc(doc(db, 'cardRankings', user.uid), entry);
       this._lastCardRankSync = key;
+      this.invalidateCache('collectionRanking:');
     } catch (err) {
       console.warn('[DB] updateCardRanking failed:', err);
     }
@@ -544,13 +626,14 @@ class DatabaseService {
     const entry: CardRankingEntry = {
       userId: user.uid,
       userName: user.displayName,
-      towerFloor,
-      collectionCount: 0, // 시즌 문서는 타워 전용(수집은 통산 cardRankings 사용)
+      towerFloor, // 시즌 문서는 타워 전용(수집은 통산 cardRankings 사용)
       updatedAt: Date.now(),
     };
     try {
       await setDoc(doc(db, 'seasons', season, 'cardRankings', user.uid), entry);
       this._lastSeasonSync = key;
+      this.invalidateCache('towerRanking:');
+      this.cleanupMyOldSeasonEntries();
     } catch (err) {
       console.warn('[DB] updateTowerSeasonRanking failed:', err);
     }
@@ -600,15 +683,14 @@ class DatabaseService {
       const myDoc = await getDoc(doc(db, 'seasons', season, 'cardRankings', user.uid));
       if (!myDoc.exists()) return null;
 
-      const myValue = (myDoc.data() as CardRankingEntry).towerFloor;
+      const myValue = (myDoc.data() as CardRankingEntry).towerFloor ?? 0;
       const RANK_SCAN_LIMIT = 500;
       const q = query(
         collection(db, 'seasons', season, 'cardRankings'),
         where('towerFloor', '>', myValue),
         limit(RANK_SCAN_LIMIT)
       );
-      const snapshot = await getDocs(q);
-      return snapshot.size + 1;
+      return this.countPlusOne(q); // [FIX-QUOTA] 집계 카운트(1 read)
     } catch {
       return null;
     }
@@ -622,15 +704,14 @@ class DatabaseService {
       const myDoc = await getDoc(doc(db, 'cardRankings', user.uid));
       if (!myDoc.exists()) return null;
 
-      const myValue = (myDoc.data() as CardRankingEntry).collectionCount;
+      const myValue = (myDoc.data() as CardRankingEntry).collectionCount ?? 0;
       const RANK_SCAN_LIMIT = 500;
       const q = query(
         collection(db, 'cardRankings'),
         where('collectionCount', '>', myValue),
         limit(RANK_SCAN_LIMIT)
       );
-      const snapshot = await getDocs(q);
-      return snapshot.size + 1;
+      return this.countPlusOne(q); // [FIX-QUOTA] 집계 카운트(1 read)
     } catch {
       return null;
     }
@@ -652,6 +733,7 @@ class DatabaseService {
     try {
       await setDoc(doc(db, 'quizRankings', user.uid), entry);
       this._lastQuizSync = examBest;
+      this.invalidateCache('quizRanking:');
     } catch (err) {
       console.warn('[DB] updateQuizRanking failed:', err);
     }
@@ -674,6 +756,295 @@ class DatabaseService {
     });
   }
 
+  // ─── 미니 포켓 주간 시즌 공통: 구세즌 내 문서 lazy cleanup ────────────────
+  // 주차가 바뀌면 새 경로에 쓰므로 지난 주 문서는 영영 남는다(누적). 각 유저가
+  // 시즌 쓰기 시점에 자신의 최근 4주 치 옛 문서를 지워 자연 수렴시킨다.
+  // (보안 룰: 본인 문서 delete만 허용. 존재하지 않는 문서 delete는 무해한 no-op)
+  private _oldSeasonCleanupDone = false;
+
+  private static readonly OLD_SEASON_CLEANUP_LS_KEY = 'ptd-oldseason-cleanup-week';
+  private cleanupMyOldSeasonEntries(): void {
+    if (this._oldSeasonCleanupDone) return;
+    this._oldSeasonCleanupDone = true;
+    const user = authService.getCurrentUser();
+    if (!user || authService.isOfflineMode()) return;
+
+    // [FREE-TIER] 삭제 대상(2~5주 전)은 한 번 지우면 끝 — 주가 바뀌기 전엔 재삭제 불필요.
+    // 세션마다 8 delete(write)를 낭비하지 않도록 '이번 주 이미 정리함'을 localStorage로 게이트.
+    const thisWeek = seasonId();
+    try {
+      if (localStorage.getItem(DatabaseService.OLD_SEASON_CLEANUP_LS_KEY) === thisWeek) return;
+    } catch { /* localStorage 불가 시 그냥 진행 */ }
+
+    // 직전 주(i=1)는 보존 — 시즌 순위 셀프 보상(claimSeasonReward)의 근거 문서.
+    // 2주 이상 지난 것만 삭제.
+    const WEEK_MS = 7 * 24 * 60 * 60 * 1000;
+    for (let i = 2; i <= 5; i++) {
+      const oldSeason = seasonId(new Date(Date.now() - WEEK_MS * i));
+      deleteDoc(doc(db, 'seasons', oldSeason, 'cardRankings', user.uid)).catch(() => {});
+      deleteDoc(doc(db, 'seasons', oldSeason, 'pvpRankings', user.uid)).catch(() => {});
+    }
+    try { localStorage.setItem(DatabaseService.OLD_SEASON_CLEANUP_LS_KEY, thisWeek); } catch { /* ignore */ }
+  }
+
+  /**
+   * 지난 시즌(weekId)의 내 순위 조회 — 시즌 보상 셀프 수령용.
+   * 문서 없으면 null(미랭크 = 참가상 처리). 네트워크/집계 실패는 throw로 전파해
+   * 호출부가 '수령 확정'을 미루고 재시도하도록 함(실패를 참가상으로 오확정 방지). 최대 2 read.
+   */
+  async getMyPastSeasonRank(weekId: string, board: 'tower' | 'pvp'): Promise<number | null> {
+    const user = authService.getCurrentUser();
+    if (!user || authService.isOfflineMode()) return null;
+    const coll = board === 'tower' ? 'cardRankings' : 'pvpRankings';
+    const field = board === 'tower' ? 'towerFloor' : 'wins';
+    const myDoc = await getDoc(doc(db, 'seasons', weekId, coll, user.uid));
+    if (!myDoc.exists()) return null;
+    const myValue = (myDoc.data() as any)[field] ?? 0;
+    const q = query(
+      collection(db, 'seasons', weekId, coll),
+      where(field, '>', myValue),
+      limit(500)
+    );
+    return this.countPlusOne(q);
+  }
+
+  // ─── 미니 포켓 랜덤 대전 주간 승수 랭킹 ────────────────────────────────────
+  private _lastPvpSeasonSync = '';
+
+  /** 이번 주 랜덤 대전 승수 기록. 단조 증가라 read 없이 overwrite. */
+  async updateCardPvpSeasonRanking(wins: number): Promise<void> {
+    const user = authService.getCurrentUser();
+    if (!user || authService.isOfflineMode()) return;
+
+    const season = seasonId();
+    const key = `${season}:${wins}`;
+    if (key === this._lastPvpSeasonSync) return;
+
+    const entry: PvpSeasonRankingEntry = {
+      userId: user.uid,
+      userName: user.displayName,
+      wins,
+      updatedAt: Date.now(),
+    };
+    try {
+      await setDoc(doc(db, 'seasons', season, 'pvpRankings', user.uid), entry);
+      this._lastPvpSeasonSync = key;
+      this.invalidateCache('cardPvpRanking:');
+      this.cleanupMyOldSeasonEntries();
+    } catch (err) {
+      console.warn('[DB] updateCardPvpSeasonRanking failed:', err);
+    }
+  }
+
+  /** 이번 주 랜덤 대전 승수 랭킹 Top N. */
+  async getCardPvpRanking(limitCount = 100): Promise<PvpSeasonRankingEntry[]> {
+    const season = seasonId();
+    return this.cachedRead(`cardPvpRanking:${season}:${limitCount}`, async () => {
+      try {
+        const q = query(
+          collection(db, 'seasons', season, 'pvpRankings'),
+          orderBy('wins', 'desc'),
+          limit(limitCount)
+        );
+        const snapshot = await getDocs(q);
+        return snapshot.docs.map(doc => doc.data() as PvpSeasonRankingEntry);
+      } catch {
+        return [];
+      }
+    });
+  }
+
+  /** 내 이번 주 랜덤 대전 승수 순위 (나보다 승수 많은 사람 수 + 1). */
+  async getMyCardPvpRank(): Promise<number | null> {
+    const user = authService.getCurrentUser();
+    if (!user) return null;
+    const season = seasonId();
+    try {
+      const myDoc = await getDoc(doc(db, 'seasons', season, 'pvpRankings', user.uid));
+      if (!myDoc.exists()) return null;
+
+      const myValue = (myDoc.data() as PvpSeasonRankingEntry).wins;
+      const RANK_SCAN_LIMIT = 500;
+      const q = query(
+        collection(db, 'seasons', season, 'pvpRankings'),
+        where('wins', '>', myValue),
+        limit(RANK_SCAN_LIMIT)
+      );
+      return this.countPlusOne(q); // [FIX-QUOTA] 집계 카운트(1 read)
+    } catch {
+      return null;
+    }
+  }
+
+  // ─── 클라우드 세이브 백업 (미니 포켓 + 퀴즈 localStorage 스냅샷) ──────────
+  // 수집/기록이 localStorage 단독이라 브라우저 초기화·기기 변경 시 전부 소실되는
+  // 문제의 안전망. 문서 1개(backups/{uid})에 JSON 문자열로 저장 — 쿼터 영향 미미.
+  // 저장 키는 각 서비스가 단일 출처로 export — 한쪽만 버전이 바뀌어 백업이 엇나가는 것 방지.
+  private static readonly CARDS_LS_KEY = CARD_STORAGE_KEY;
+  private static readonly QUIZ_LS_KEY = QUIZ_STORAGE_KEY;
+  private static readonly LAST_BACKUP_LS_KEY = 'ptd-last-backup-at';
+  private static readonly AUTO_BACKUP_MIN_INTERVAL_MS = 30 * 60 * 1000; // 30분
+
+  /** 현재 로컬 세이브를 Firestore에 백업. 성공 시 true. */
+  async backupSaves(): Promise<boolean> {
+    const user = authService.getCurrentUser();
+    if (!user || authService.isOfflineMode()) return false;
+
+    const cards = localStorage.getItem(DatabaseService.CARDS_LS_KEY) ?? '';
+    const quiz = localStorage.getItem(DatabaseService.QUIZ_LS_KEY) ?? '';
+    if (!cards && !quiz) return false;
+
+    // 표시용 메타(복원 확인 다이얼로그에서 로컬과 비교)
+    let ownedCount = 0, towerProgress = 0, examBest = 0;
+    try {
+      const c = cards ? JSON.parse(cards) : null;
+      ownedCount = c?.collection ? Object.keys(c.collection).length : 0;
+      towerProgress = c?.towerProgress ?? 0;
+    } catch { /* ignore */ }
+    try {
+      const q = quiz ? JSON.parse(quiz) : null;
+      examBest = q?.examBest ?? 0;
+    } catch { /* ignore */ }
+
+    try {
+      await setDoc(doc(db, 'backups', user.uid), {
+        userId: user.uid,
+        cards, quiz,
+        ownedCount, towerProgress, examBest,
+        updatedAt: Date.now(),
+      });
+      try { localStorage.setItem(DatabaseService.LAST_BACKUP_LS_KEY, String(Date.now())); } catch { /* ignore */ }
+      return true;
+    } catch (err) {
+      console.warn('[DB] backupSaves failed:', err);
+      return false;
+    }
+  }
+
+  /** 진행 마일스톤에서 호출되는 자동 백업 — 30분 스로틀(쓰기 절감). */
+  autoBackupSaves(): void {
+    try {
+      const last = Number(localStorage.getItem(DatabaseService.LAST_BACKUP_LS_KEY) ?? 0);
+      if (Date.now() - last < DatabaseService.AUTO_BACKUP_MIN_INTERVAL_MS) return;
+    } catch { /* ignore */ }
+    this.backupSaves().catch(() => {});
+  }
+
+  /** 마지막 백업 시각(로컬 기록, ms). 없으면 null. */
+  getLastBackupAt(): number | null {
+    try {
+      const v = Number(localStorage.getItem(DatabaseService.LAST_BACKUP_LS_KEY) ?? 0);
+      return v > 0 ? v : null;
+    } catch { return null; }
+  }
+
+  /** 클라우드 백업 조회(복원 확인용 메타 포함). */
+  async fetchBackup(): Promise<{
+    cards: string; quiz: string;
+    ownedCount: number; towerProgress: number; examBest: number; updatedAt: number;
+  } | null> {
+    const user = authService.getCurrentUser();
+    if (!user || authService.isOfflineMode()) return null;
+    try {
+      const snap = await getDoc(doc(db, 'backups', user.uid));
+      if (!snap.exists()) return null;
+      const d = snap.data();
+      return {
+        cards: d.cards ?? '', quiz: d.quiz ?? '',
+        ownedCount: d.ownedCount ?? 0, towerProgress: d.towerProgress ?? 0,
+        examBest: d.examBest ?? 0, updatedAt: d.updatedAt ?? 0,
+      };
+    } catch (err) {
+      console.warn('[DB] fetchBackup failed:', err);
+      return null;
+    }
+  }
+
+  /** 백업 데이터를 로컬에 적용. 호출자가 이후 location.reload()로 서비스 재로드. */
+  applyBackupToLocal(backup: { cards: string; quiz: string }): void {
+    if (backup.cards) localStorage.setItem(DatabaseService.CARDS_LS_KEY, backup.cards);
+    if (backup.quiz) localStorage.setItem(DatabaseService.QUIZ_LS_KEY, backup.quiz);
+  }
+
+  // ─── 미니 포켓 랜덤 대전 (비동기 PvP 덱 스냅샷) ────────────────────────────
+  private _lastDeckPublish = '';
+
+  /**
+   * 내 덱 스냅샷 발행 — 랜덤 대전 매칭 풀에 등록.
+   * [FREE-TIER] 세션 내 동일 덱 재발행 스킵(쓰기 1회). 오프라인/비로그인 무시.
+   */
+  async publishCardDeck(
+    deck: { pokemonId: number; stars: number; row: 'front' | 'back'; slot: number }[]
+  ): Promise<void> {
+    const user = authService.getCurrentUser();
+    if (!user || authService.isOfflineMode()) return;
+    if (deck.length === 0) return;
+
+    const key = JSON.stringify(deck);
+    if (key === this._lastDeckPublish) return;
+
+    const docData: CardDeckDoc = {
+      userId: user.uid,
+      userName: user.displayName,
+      deck,
+      power: deck.reduce((s, d) => s + d.stars, 0),
+      rand: Math.random(),
+      updatedAt: Date.now(),
+    };
+    try {
+      await setDoc(doc(db, 'cardDecks', user.uid), docData);
+      this._lastDeckPublish = key;
+    } catch (err) {
+      console.warn('[DB] publishCardDeck failed:', err);
+    }
+  }
+
+  /**
+   * 랜덤 상대 덱 1개 조회 — 후보 중 전투력(power=별 합) 근접 우선.
+   * [FREE-TIER] rand 필드 기준 무작위 지점부터 limit(5) — 호출당 최대 10 read.
+   *   (전체 스캔·composite index 없이 무작위 표본을 뽑는 Firestore 관용 패턴,
+   *    근접 매칭은 표본 안에서 클라이언트가 고른다)
+   * @param myPower 내 덱 별 합(근접 매칭 기준). 0이면 무작위.
+   * @param excludeIds 최근 대전 상대 uid — 반복 매칭 방지(후보가 이들뿐이면 허용).
+   */
+  async getRandomOpponentDeck(myPower = 0, excludeIds: string[] = []): Promise<CardDeckDoc | null> {
+    const user = authService.getCurrentUser();
+    if (!user || authService.isOfflineMode()) return null;
+    try {
+      const r = Math.random();
+      const fetchSide = async (op: '>=' | '<', dir: 'asc' | 'desc') => {
+        const q = query(
+          collection(db, 'cardDecks'),
+          where('rand', op, r),
+          orderBy('rand', dir),
+          limit(5)
+        );
+        const snap = await getDocs(q);
+        return snap.docs
+          .map(d => d.data() as CardDeckDoc)
+          .filter(d => d.userId !== user.uid && Array.isArray(d.deck) && d.deck.length > 0);
+      };
+
+      let candidates = await fetchSide('>=', 'asc');
+      if (candidates.length === 0) candidates = await fetchSide('<', 'desc');
+      if (candidates.length === 0) return null;
+
+      // 최근 상대 제외 — 단 전부 최근 상대뿐이면 그대로 사용(풀이 작은 초기 배려)
+      const excluded = new Set(excludeIds);
+      const fresh = candidates.filter(d => !excluded.has(d.userId));
+      const pool = fresh.length > 0 ? fresh : candidates;
+
+      // 전투력 근접 순 정렬 후 최상위 선택
+      pool.sort((a, b) =>
+        Math.abs((a.power ?? 0) - myPower) - Math.abs((b.power ?? 0) - myPower)
+      );
+      return pool[0];
+    } catch (err) {
+      console.warn('[DB] getRandomOpponentDeck failed:', err);
+      return null;
+    }
+  }
+
   /** 내 모의고사 순위 (나보다 높은 점수 수 + 1). */
   async getMyQuizRank(): Promise<number | null> {
     const user = authService.getCurrentUser();
@@ -688,8 +1059,7 @@ class DatabaseService {
         where('examBest', '>', myValue),
         limit(RANK_SCAN_LIMIT)
       );
-      const snapshot = await getDocs(q);
-      return snapshot.size + 1;
+      return this.countPlusOne(q); // [FIX-QUOTA] 집계 카운트(1 read)
     } catch {
       return null;
     }

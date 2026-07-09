@@ -662,6 +662,7 @@
     "tabAP": "AP Ranking",
     "tabRating": "Rating Rankings",
     "tabTower": "Tower",
+    "tabCardPvp": "Battles",
     "tabCollection": "Dex",
     "tabQuiz": "Quiz",
     "tabClearTime": " Fastest Clear",
@@ -684,6 +685,8 @@
     "floorSuffix": "Floor {n}",
     "dexSuffix": "{n}",
     "scoreSuffix": "{n} pts",
+    "colWins": "Wins",
+    "winsSuffix": "{n}W",
     "seasonNote": "🗓 This week's season · resets in {n}d · weekly reset"
   },
   "hallOfFame": {
@@ -1115,6 +1118,8 @@
       "packShop": "Pack Shop",
       "autobattle": "Auto-Battle",
       "trainerTower": "Trainer Tower",
+      "randomBattle": "Random Battle",
+      "pvpRecord": "{w}W {l}L",
       "deckBuild": "Deck",
       "dex": "Dex",
       "collected": "{n} collected",
@@ -1162,6 +1167,7 @@
       "synergyTitle": "Active Synergies",
       "synergyEmpty": "Gather 2+ of the same type to trigger a synergy",
       "penetrate": "Piercing active — {types} units hit the enemy back row directly",
+      "effectLegend": "Type synergy effects — Fire: Burn / Poison: Poison / Electric: Paralysis / Ice: Freeze / Grass: Lifesteal / Fighting: Crit rate↑ / Dark: Crit dmg↑ / Flying·Ghost: Piercing",
       "owned": "Owned {n}",
       "poolEmpty": "Open a pack to collect cards first",
       "placed": "In deck"
@@ -1189,6 +1195,55 @@
       "nextFloor": "Next Floor →",
       "retry": "Retry",
       "exit": "Exit"
+    },
+    "pvp": {
+      "title": "Random Battle",
+      "desc": "Challenge a random player's deck with your {n} unit(s).",
+      "find": "Find Opponent",
+      "searching": "Finding an opponent...",
+      "noOpponent": "No opponents available yet. Battles unlock as other players register their decks.",
+      "opponentLoadFail": "Failed to load the opponent's deck. Please try again.",
+      "loginNeeded": "Sign in to battle other players",
+      "hint": "Matching registers your deck in the battle pool so other players can face it. Battles run automatically.",
+      "record": "{w}W {l}L",
+      "opponentDeck": "{name}'s Deck",
+      "unknownPlayer": "Unknown Trainer",
+      "vsResult": "vs {name} · {p} : {e} left",
+      "rematch": "Rematch"
+    },
+    "daily": {
+      "firstWin": "Daily First Win"
+    },
+    "notice": {
+      "dexMilestone": "📖 Dex milestone — {n} species! +{c} coins +{s} shards",
+      "seasonReward": "🏆 Last week's season rewards — {detail} → +{c} coins +{s} shards",
+      "seasonTowerPart": "Tower #{rank} (F{n})",
+      "seasonPvpPart": "Battles #{rank} ({n}W)"
+    },
+    "backup": {
+      "last": "Last backup: {time}",
+      "never": "No backup yet — recommended before switching devices",
+      "backupBtn": "Back up now",
+      "restoreBtn": "Restore",
+      "backupFail": "Backup failed. Please check your connection.",
+      "noBackup": "No cloud backup found.",
+      "restoreConfirm": "Restore from cloud backup ({time})?\n\nBackup: {bOwned} species · Floor {bFloor}\nLocal: {lOwned} species · Floor {lFloor}\n\nRestoring overwrites your current local data."
+    },
+    "battleLog": {
+      "title": "Battle Log",
+      "turn": "Turn {n}",
+      "crit": "Crit!",
+      "superEffective": "Super effective",
+      "notEffective": "Not very effective",
+      "immune": "No effect",
+      "fainted": "{name} fainted!",
+      "waiting": "Waiting for battle to start...",
+      "statusBurn": "Burn",
+      "statusPoison": "Poison",
+      "statusParalyze": "Paralysis",
+      "statusFreeze": "Freeze",
+      "skipAction": "can't act",
+      "heal": "heal"
     }
   },
   "quiz": {
@@ -1270,6 +1325,10 @@
       "score": "{score} / {total}",
       "grade": "Grade {n}",
       "newBest": "New best!",
+      "milestoneTitle": "🎓 Exam milestone reached! (Mini Pocket rewards)",
+      "milestoneAt": "{n}+ points",
+      "rewardCoins": "+{n} coins",
+      "rewardShards": "+{n} shards",
       "best": "Best {n}",
       "examBest": "Best {n}",
       "maxStreak": "Best streak {n}",

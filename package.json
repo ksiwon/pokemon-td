@@ -10,6 +10,7 @@
   },
   "dependencies": {
     "@emailjs/browser": "^4.4.1",
+    "@sentry/react": "^10.64.0",
     "axios": "^1.6.2",
     "firebase": "^12.5.0",
     "howler": "^2.2.4",

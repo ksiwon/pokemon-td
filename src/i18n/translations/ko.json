@@ -651,6 +651,7 @@
     "tabAP": "AP 랭킹",
     "tabRating": "레이팅 랭킹",
     "tabTower": "타워 층",
+    "tabCardPvp": "대전",
     "tabCollection": "수집",
     "tabQuiz": "퀴즈",
     "tabClearTime": " 최단 클리어",
@@ -673,6 +674,8 @@
     "floorSuffix": "{n}층",
     "dexSuffix": "{n}종",
     "scoreSuffix": "{n}점",
+    "colWins": "승수",
+    "winsSuffix": "{n}승",
     "seasonNote": "🗓 이번 주 시즌 · 리셋까지 {n}일 · 매주 초기화"
   },
   "hallOfFame": {
@@ -1115,6 +1118,8 @@
       "packShop": "팩 상점",
       "autobattle": "오토배틀",
       "trainerTower": "트레이너 타워",
+      "randomBattle": "랜덤 대전",
+      "pvpRecord": "{w}승 {l}패",
       "deckBuild": "덱 편성",
       "dex": "도감",
       "collected": "수집 {n}종",
@@ -1162,6 +1167,7 @@
       "synergyTitle": "활성 시너지",
       "synergyEmpty": "같은 타입 2마리 이상 모으면 시너지가 발동합니다",
       "penetrate": "관통 활성 — {types} 유닛이 적 후열 직격",
+      "effectLegend": "타입 시너지 특수효과 — 불: 화상 / 독: 독 / 전기: 마비 / 얼음: 빙결 / 풀: 흡혈 / 격투: 급소율↑ / 악: 급소 배율↑ / 비행·고스트: 관통",
       "owned": "보유 카드 {n}",
       "poolEmpty": "먼저 팩을 열어 카드를 모으세요",
       "placed": "출전"
@@ -1189,6 +1195,55 @@
       "nextFloor": "다음 층 →",
       "retry": "다시 도전",
       "exit": "나가기"
+    },
+    "pvp": {
+      "title": "랜덤 대전",
+      "desc": "편성된 {n}마리로 무작위 플레이어의 덱에 도전합니다.",
+      "find": "상대 찾기",
+      "searching": "상대를 찾는 중...",
+      "noOpponent": "아직 매칭 가능한 상대가 없습니다. 다른 플레이어가 덱을 등록하면 대전할 수 있어요.",
+      "opponentLoadFail": "상대 덱을 불러오지 못했습니다. 다시 시도해주세요.",
+      "loginNeeded": "로그인하면 다른 플레이어와 대전할 수 있어요",
+      "hint": "매칭하면 내 덱이 대전 풀에 등록돼 다른 플레이어의 상대로 등장합니다. 전투는 자동으로 진행돼요.",
+      "record": "{w}승 {l}패",
+      "opponentDeck": "{name}의 덱",
+      "unknownPlayer": "이름없는 트레이너",
+      "vsResult": "vs {name} · 잔존 {p} : {e}",
+      "rematch": "다시 매칭"
+    },
+    "daily": {
+      "firstWin": "일일 첫 승"
+    },
+    "notice": {
+      "dexMilestone": "📖 도감 {n}종 달성! +{c} 코인 +{s} 별조각",
+      "seasonReward": "🏆 지난주 시즌 보상 — {detail} → +{c} 코인 +{s} 별조각",
+      "seasonTowerPart": "타워 {rank}위({n}층)",
+      "seasonPvpPart": "대전 {rank}위({n}승)"
+    },
+    "backup": {
+      "last": "마지막 백업: {time}",
+      "never": "아직 백업 없음 — 기기 변경 대비 백업을 권장해요",
+      "backupBtn": "지금 백업",
+      "restoreBtn": "복원",
+      "backupFail": "백업에 실패했습니다. 네트워크를 확인해주세요.",
+      "noBackup": "클라우드에 저장된 백업이 없습니다.",
+      "restoreConfirm": "클라우드 백업({time})으로 복원할까요?\n\n백업: 도감 {bOwned}종 · 타워 {bFloor}층\n현재: 도감 {lOwned}종 · 타워 {lFloor}층\n\n복원하면 현재 로컬 데이터를 덮어씁니다."
+    },
+    "battleLog": {
+      "title": "전투 기록",
+      "turn": "{n}턴",
+      "crit": "급소!",
+      "superEffective": "효과 굉장",
+      "notEffective": "효과 별로",
+      "immune": "효과 없음",
+      "fainted": "{name} 쓰러짐!",
+      "waiting": "전투 시작을 기다리는 중...",
+      "statusBurn": "화상",
+      "statusPoison": "독",
+      "statusParalyze": "마비",
+      "statusFreeze": "빙결",
+      "skipAction": "행동 불가",
+      "heal": "회복"
     }
   },
   "quiz": {
@@ -1270,6 +1325,10 @@
       "score": "{score} / {total}",
       "grade": "{n}등급",
       "newBest": "최고 기록 갱신!",
+      "milestoneTitle": "🎓 모의고사 마일스톤 달성! (미니 포켓 보상)",
+      "milestoneAt": "{n}점 돌파",
+      "rewardCoins": "+{n} 코인",
+      "rewardShards": "+{n} 별조각",
       "best": "최고 {n}",
       "examBest": "최고 {n}점",
       "maxStreak": "최고 연속 {n}",
