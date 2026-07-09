@@ -9,7 +9,7 @@ import { media } from '../../utils/responsive.utils';
 import { useTranslation } from '../../i18n';
 import { QuizKind, QuizMode, QuizQuestion } from '../../types/quiz';
 import { createQuizSession, createExamSession, normalizeAnswer } from '../../services/QuizEngine';
-import { quizService } from '../../services/QuizService';
+import { quizService, ExamMilestoneReward } from '../../services/QuizService';
 import { databaseService } from '../../services/DatabaseService';
 
 interface QuizPlayProps {
@@ -44,6 +44,7 @@ export const QuizPlay = ({ mode, roundSize = 30, onExit }: QuizPlayProps) => {
   const [streak, setStreak] = useState(0);
   const [maxStreak, setMaxStreak] = useState(0);
   const [newBest, setNewBest] = useState(false);
+  const [milestones, setMilestones] = useState<ExamMilestoneReward[]>([]);
 
   const nextRef = useRef<Promise<QuizQuestion> | null>(null);
   const aliveRef = useRef(true);
@@ -91,7 +92,7 @@ export const QuizPlay = ({ mode, roundSize = 30, onExit }: QuizPlayProps) => {
   const reset = async () => {
     navBusyRef.current = false;
     setIdx(0); setScore(0); setWrong(0); setStreak(0); setMaxStreak(0);
-    setSelected(null); setTextValue(''); setNewBest(false); setQ(null); setPhase('loading');
+    setSelected(null); setTextValue(''); setNewBest(false); setMilestones([]); setQ(null); setPhase('loading');
     sessionRef.current = isExam ? createExamSession() : createQuizSession(mode as QuizKind);
     try {
       const first = await gen();
@@ -128,6 +129,8 @@ export const QuizPlay = ({ mode, roundSize = 30, onExit }: QuizPlayProps) => {
       if (isExam) {
         const isBest = quizService.recordExam(score, maxStreak);
         setNewBest(isBest);
+        // 최고점 갱신으로 새로 도달한 마일스톤 보상(미니 포켓 재화) 1회성 지급
+        setMilestones(quizService.claimExamMilestones());
         databaseService.updateQuizRanking(quizService.getExamBest()).catch(() => {});
       } else {
         setNewBest(quizService.recordRound(mode, score, maxStreak));
@@ -206,6 +209,18 @@ export const QuizPlay = ({ mode, roundSize = 30, onExit }: QuizPlayProps) => {
           {isExam && <GradeBadge $g={grade}>{t('quiz.result.grade', { n: grade })}</GradeBadge>}
           <ResultScore>{t('quiz.result.score', { score, total: ROUND })}</ResultScore>
           {newBest && <NewBest><Flame size={15} /> {t('quiz.result.newBest')}</NewBest>}
+          {milestones.length > 0 && (
+            <MilestoneBox>
+              <MilestoneTitle>{t('quiz.result.milestoneTitle')}</MilestoneTitle>
+              {milestones.map(m => (
+                <MilestoneRow key={m.threshold}>
+                  <span>{t('quiz.result.milestoneAt', { n: m.threshold })}</span>
+                  <MilestoneRw $c="#fbbf24">{t('quiz.result.rewardCoins', { n: m.coins })}</MilestoneRw>
+                  {m.starShards > 0 && <MilestoneRw $c="#c084fc">{t('quiz.result.rewardShards', { n: m.starShards })}</MilestoneRw>}
+                </MilestoneRow>
+              ))}
+            </MilestoneBox>
+          )}
           <ResultStat>{isExam
             ? t('quiz.result.examBest', { n: quizService.getExamBest() })
             : t('quiz.result.best', { n: quizService.getBest(mode) })}</ResultStat>
@@ -654,6 +669,17 @@ const NewBest = styled.div`
   background: rgba(251,191,36,0.12); border: 1px solid rgba(251,191,36,0.3); padding: 6px 14px; border-radius: 100px;
 `;
 const ResultStat = styled.div`font-size: 14px; color: rgba(255,255,255,0.6); font-weight: 600;`;
+const MilestoneBox = styled.div`
+  display: flex; flex-direction: column; gap: 6px; align-items: center;
+  background: rgba(192,132,252,0.08); border: 1px solid rgba(192,132,252,0.25);
+  border-radius: 12px; padding: 12px 20px; margin: 4px 0;
+`;
+const MilestoneTitle = styled.div`font-size: 13px; font-weight: 800; color: #c084fc;`;
+const MilestoneRow = styled.div`
+  display: flex; align-items: center; gap: 10px;
+  font-size: 13px; font-weight: 600; color: rgba(255,255,255,0.7);
+`;
+const MilestoneRw = styled.span<{ $c: string }>`font-weight: 800; color: ${p => p.$c};`;
 const ResultBtns = styled.div`display: flex; gap: 10px; margin-top: 16px;`;
 const PrimaryBtn = styled.button`
   display: flex; align-items: center; gap: 6px; padding: 12px 22px; border-radius: 10px; border: none; cursor: pointer;

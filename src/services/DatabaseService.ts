@@ -25,12 +25,15 @@ export interface APRankingEntry {
   updatedAt: number;
 }
 
-// ─── 미니 포켓 랭킹 엔트리 타입 (타워 최고층 / 수집 종 수) ─────────────────────
+// ─── 미니 포켓 랭킹 엔트리 타입 ────────────────────────────────────────────────
+// 두 문서가 이 타입을 공유하되 서로 다른 필드만 채움:
+//   cardRankings/{uid}                 → collectionCount (통산 수집)
+//   seasons/{주차}/cardRankings/{uid}  → towerFloor (주간 타워)
 export interface CardRankingEntry {
   userId: string;
   userName: string | null;
-  towerFloor: number;      // 트레이너 타워 최고 클리어 층
-  collectionCount: number; // 도감 보유 종 수
+  towerFloor?: number;      // 트레이너 타워 주간 최고 클리어 층 (시즌 문서 전용)
+  collectionCount?: number; // 도감 보유 종 수 (통산 문서 전용)
   updatedAt: number;
 }
 
@@ -39,6 +42,14 @@ export interface QuizRankingEntry {
   userId: string;
   userName: string | null;
   examBest: number; // 모의고사 최고 정답 수(0~50, 문항 수 10/30/50)
+  updatedAt: number;
+}
+
+// ─── 미니 포켓 랜덤 대전 주간 승수 랭킹 엔트리 ─────────────────────────────────
+export interface PvpSeasonRankingEntry {
+  userId: string;
+  userName: string | null;
+  wins: number; // 이번 주 랜덤 대전 승수
   updatedAt: number;
 }
 
@@ -571,20 +582,20 @@ class DatabaseService {
 
   // ─── 미니 포켓 랭킹 (타워 최고층 / 수집 종 수) ─────────────────────────────
   /**
-   * 내 카드 랭킹 문서 갱신. 타워층·수집수는 단조 증가라 기존값 read 없이 overwrite.
+   * 내 수집 랭킹 문서 갱신. 수집 수는 단조 증가라 기존값 read 없이 overwrite.
+   * (towerFloor는 주간 시즌 문서로 이관되어 이 문서에서 제거 — 죽은 필드 정리)
    * [FREE-TIER] 오프라인/비로그인은 쓰지 않음. 세션 내 동일 값이면 재기록 스킵.
    */
-  async updateCardRanking(towerFloor: number, collectionCount: number): Promise<void> {
+  async updateCardRanking(collectionCount: number): Promise<void> {
     const user = authService.getCurrentUser();
     if (!user || authService.isOfflineMode()) return;
 
-    const key = `${towerFloor}:${collectionCount}`;
+    const key = `${collectionCount}`;
     if (key === this._lastCardRankSync) return; // 동일 값 재기록 방지
 
     const entry: CardRankingEntry = {
       userId: user.uid,
       userName: user.displayName,
-      towerFloor,
       collectionCount,
       updatedAt: Date.now(),
     };
@@ -613,14 +624,14 @@ class DatabaseService {
     const entry: CardRankingEntry = {
       userId: user.uid,
       userName: user.displayName,
-      towerFloor,
-      collectionCount: 0, // 시즌 문서는 타워 전용(수집은 통산 cardRankings 사용)
+      towerFloor, // 시즌 문서는 타워 전용(수집은 통산 cardRankings 사용)
       updatedAt: Date.now(),
     };
     try {
       await setDoc(doc(db, 'seasons', season, 'cardRankings', user.uid), entry);
       this._lastSeasonSync = key;
       this.invalidateCache('towerRanking:');
+      this.cleanupMyOldSeasonEntries();
     } catch (err) {
       console.warn('[DB] updateTowerSeasonRanking failed:', err);
     }
@@ -670,7 +681,7 @@ class DatabaseService {
       const myDoc = await getDoc(doc(db, 'seasons', season, 'cardRankings', user.uid));
       if (!myDoc.exists()) return null;
 
-      const myValue = (myDoc.data() as CardRankingEntry).towerFloor;
+      const myValue = (myDoc.data() as CardRankingEntry).towerFloor ?? 0;
       const RANK_SCAN_LIMIT = 500;
       const q = query(
         collection(db, 'seasons', season, 'cardRankings'),
@@ -691,7 +702,7 @@ class DatabaseService {
       const myDoc = await getDoc(doc(db, 'cardRankings', user.uid));
       if (!myDoc.exists()) return null;
 
-      const myValue = (myDoc.data() as CardRankingEntry).collectionCount;
+      const myValue = (myDoc.data() as CardRankingEntry).collectionCount ?? 0;
       const RANK_SCAN_LIMIT = 500;
       const q = query(
         collection(db, 'cardRankings'),
@@ -741,6 +752,94 @@ class DatabaseService {
         return [];
       }
     });
+  }
+
+  // ─── 미니 포켓 주간 시즌 공통: 구세즌 내 문서 lazy cleanup ────────────────
+  // 주차가 바뀌면 새 경로에 쓰므로 지난 주 문서는 영영 남는다(누적). 각 유저가
+  // 시즌 쓰기 시점에 자신의 최근 4주 치 옛 문서를 지워 자연 수렴시킨다.
+  // (보안 룰: 본인 문서 delete만 허용. 존재하지 않는 문서 delete는 무해한 no-op)
+  private _oldSeasonCleanupDone = false;
+
+  private cleanupMyOldSeasonEntries(): void {
+    if (this._oldSeasonCleanupDone) return;
+    this._oldSeasonCleanupDone = true;
+    const user = authService.getCurrentUser();
+    if (!user || authService.isOfflineMode()) return;
+
+    const WEEK_MS = 7 * 24 * 60 * 60 * 1000;
+    for (let i = 1; i <= 4; i++) {
+      const oldSeason = seasonId(new Date(Date.now() - WEEK_MS * i));
+      deleteDoc(doc(db, 'seasons', oldSeason, 'cardRankings', user.uid)).catch(() => {});
+      deleteDoc(doc(db, 'seasons', oldSeason, 'pvpRankings', user.uid)).catch(() => {});
+    }
+  }
+
+  // ─── 미니 포켓 랜덤 대전 주간 승수 랭킹 ────────────────────────────────────
+  private _lastPvpSeasonSync = '';
+
+  /** 이번 주 랜덤 대전 승수 기록. 단조 증가라 read 없이 overwrite. */
+  async updateCardPvpSeasonRanking(wins: number): Promise<void> {
+    const user = authService.getCurrentUser();
+    if (!user || authService.isOfflineMode()) return;
+
+    const season = seasonId();
+    const key = `${season}:${wins}`;
+    if (key === this._lastPvpSeasonSync) return;
+
+    const entry: PvpSeasonRankingEntry = {
+      userId: user.uid,
+      userName: user.displayName,
+      wins,
+      updatedAt: Date.now(),
+    };
+    try {
+      await setDoc(doc(db, 'seasons', season, 'pvpRankings', user.uid), entry);
+      this._lastPvpSeasonSync = key;
+      this.invalidateCache('cardPvpRanking:');
+      this.cleanupMyOldSeasonEntries();
+    } catch (err) {
+      console.warn('[DB] updateCardPvpSeasonRanking failed:', err);
+    }
+  }
+
+  /** 이번 주 랜덤 대전 승수 랭킹 Top N. */
+  async getCardPvpRanking(limitCount = 100): Promise<PvpSeasonRankingEntry[]> {
+    const season = seasonId();
+    return this.cachedRead(`cardPvpRanking:${season}:${limitCount}`, async () => {
+      try {
+        const q = query(
+          collection(db, 'seasons', season, 'pvpRankings'),
+          orderBy('wins', 'desc'),
+          limit(limitCount)
+        );
+        const snapshot = await getDocs(q);
+        return snapshot.docs.map(doc => doc.data() as PvpSeasonRankingEntry);
+      } catch {
+        return [];
+      }
+    });
+  }
+
+  /** 내 이번 주 랜덤 대전 승수 순위 (나보다 승수 많은 사람 수 + 1). */
+  async getMyCardPvpRank(): Promise<number | null> {
+    const user = authService.getCurrentUser();
+    if (!user) return null;
+    const season = seasonId();
+    try {
+      const myDoc = await getDoc(doc(db, 'seasons', season, 'pvpRankings', user.uid));
+      if (!myDoc.exists()) return null;
+
+      const myValue = (myDoc.data() as PvpSeasonRankingEntry).wins;
+      const RANK_SCAN_LIMIT = 500;
+      const q = query(
+        collection(db, 'seasons', season, 'pvpRankings'),
+        where('wins', '>', myValue),
+        limit(RANK_SCAN_LIMIT)
+      );
+      return this.countPlusOne(q); // [FIX-QUOTA] 집계 카운트(1 read)
+    } catch {
+      return null;
+    }
   }
 
   // ─── 미니 포켓 랜덤 대전 (비동기 PvP 덱 스냅샷) ────────────────────────────

@@ -56,11 +56,14 @@ export const CardLabView = () => {
 
   // 미니 포켓 랭킹 동기화 + 허브 순위 위젯 로드.
   // 통산 수집 랭킹(cardRankings)을 반영한 뒤, 로그인+온라인이면 내 순위/Top3를 읽어온다.
-  // (오프라인/비로그인은 내부에서 무시 → 싱글/스토리 오프라인 동작 무영향. read는 60초 캐시 재활용.)
+  // (오프라인/비로그인은 내부에서 무시 → 싱글/스토리 오프라인 동작 무영향. read는 캐시 재활용.)
+  // deps에 주간 최고층(season.bestFloor) 포함 — 새 주차에 이미 깬 층을 재등반해도
+  //   (towerProgress 불변) 위젯의 내 타워 순위가 즉시 갱신되도록.
+  const weeklyBestFloor = state.season?.bestFloor ?? 0;
   useEffect(() => {
     let alive = true;
     (async () => {
-      await databaseService.updateCardRanking(state.towerProgress, ownedIds.length).catch(() => {});
+      await databaseService.updateCardRanking(ownedIds.length).catch(() => {});
       if (authService.isOfflineMode() || !authService.getCurrentUser()) {
         if (alive) setRankInfo(null);
         return;
@@ -77,7 +80,7 @@ export const CardLabView = () => {
       }
     })();
     return () => { alive = false; };
-  }, [state.towerProgress, ownedIds.length]);
+  }, [weeklyBestFloor, ownedIds.length]);
 
   // 보유 카드 이름·타입·레어도 (검색/필터/정렬 + CardView용)
   const { meta, rarity: rarityMap } = useCardMeta(ownedIds.map(c => c.pokemonId));
@@ -155,7 +158,7 @@ export const CardLabView = () => {
                     <PodItem key={e.userId}>
                       <PodMedal>{i === 0 ? '🥇' : i === 1 ? '🥈' : '🥉'}</PodMedal>
                       <PodName>{e.userName ?? '???'}</PodName>
-                      <PodVal>{t('cards.rank.floor', { n: e.towerFloor })}</PodVal>
+                      <PodVal>{t('cards.rank.floor', { n: e.towerFloor ?? 0 })}</PodVal>
                     </PodItem>
                   ))}
                 </Podium>

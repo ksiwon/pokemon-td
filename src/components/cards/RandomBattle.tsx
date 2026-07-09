@@ -106,7 +106,11 @@ export const RandomBattle = ({ onBack }: { onBack: () => void }) => {
       //    [경제] 소액 고정 — 미니 포켓은 파밍 콘텐츠가 아님(타워와 동일 기조).
       const coins = res.winner === 'player' ? 5 : 1;
       cardService.grantRewards({ coins });
-      cardService.recordPvpResult(res.winner === 'player');
+      const weeklyWins = cardService.recordPvpResult(res.winner === 'player');
+      // 주간 승수 랭킹 기록(승리 시에만 값 반환). 오프라인/비로그인은 내부에서 무시.
+      if (weeklyWins !== null) {
+        databaseService.updateCardPvpSeasonRanking(weeklyWins).catch(() => {});
+      }
 
       // 6) 재생 준비 — 시너지 적용본을 풀피로 리셋
       const all: Record<string, BattleCard> = {};
@@ -140,8 +144,11 @@ export const RandomBattle = ({ onBack }: { onBack: () => void }) => {
     timer.current = window.setTimeout(() => {
       const e = log[step];
       setHpMap(m => ({ ...m, [e.targetUid]: e.remainingHp }));
-      setHit(e.targetUid);
-      window.setTimeout(() => setHit(null), 180 / speed);
+      // 피격 흔들림은 데미지 이벤트(attack/dot)에만 — 회복/행동불가는 제외
+      if (!e.kind || e.kind === 'attack' || e.kind === 'dot') {
+        setHit(e.targetUid);
+        window.setTimeout(() => setHit(null), 180 / speed);
+      }
       setStep(s => s + 1);
     }, 620 / speed);
     return () => { if (timer.current) clearTimeout(timer.current); };

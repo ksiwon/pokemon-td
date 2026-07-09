@@ -3,7 +3,7 @@ import { useState, useEffect } from 'react';
 import styled from 'styled-components';
 import { lMedia, media } from '../../utils/responsive.utils';
 import { Emoji } from '../shared/Emoji';
-import { databaseService, APRankingEntry, CardRankingEntry, QuizRankingEntry } from '../../services/DatabaseService';
+import { databaseService, APRankingEntry, CardRankingEntry, QuizRankingEntry, PvpSeasonRankingEntry } from '../../services/DatabaseService';
 import { authService } from '../../services/AuthService';
 import { saveService } from '../../services/SaveService';
 import { cardService } from '../../services/CardService';
@@ -15,15 +15,17 @@ import {
   ModalBody, MODAL_ACCENT,
 } from '../shared/modal.styles';
 
+type RankTab = 'ap' | 'pvp' | 'tower' | 'cardpvp' | 'collection' | 'quiz';
+
 interface RankingsProps {
   onClose: () => void;
-  initialTab?: 'ap' | 'pvp' | 'tower' | 'collection' | 'quiz';
+  initialTab?: RankTab;
 }
 
 export const Rankings = ({ onClose, initialTab = 'ap' }: RankingsProps) => {
   const { t } = useTranslation();
 
-  const [activeTab, setActiveTab] = useState<'ap' | 'pvp' | 'tower' | 'collection' | 'quiz'>(initialTab);
+  const [activeTab, setActiveTab] = useState<RankTab>(initialTab);
   const [apRankings, setApRankings] = useState<APRankingEntry[]>([]);
   const [myApRank, setMyApRank] = useState<number | null>(null);
   const [pvpRankings, setPvpRankings] = useState<any[]>([]);
@@ -32,6 +34,8 @@ export const Rankings = ({ onClose, initialTab = 'ap' }: RankingsProps) => {
   const [myCardRank, setMyCardRank] = useState<number | null>(null);
   const [quizRankings, setQuizRankings] = useState<QuizRankingEntry[]>([]);
   const [myQuizRank, setMyQuizRank] = useState<number | null>(null);
+  const [cardPvpRankings, setCardPvpRankings] = useState<PvpSeasonRankingEntry[]>([]);
+  const [myCardPvpRank, setMyCardPvpRank] = useState<number | null>(null);
   const [loading, setLoading] = useState(false);
   const [currentPage, setCurrentPage] = useState(0);
   const PAGE_SIZE = 10;
@@ -60,6 +64,13 @@ export const Rankings = ({ onClose, initialTab = 'ap' }: RankingsProps) => {
         ]);
         setCardRankings(data);
         setMyCardRank(rank);
+      } else if (activeTab === 'cardpvp') {
+        const [data, rank] = await Promise.all([
+          databaseService.getCardPvpRanking(100),
+          databaseService.getMyCardPvpRank(),
+        ]);
+        setCardPvpRankings(data);
+        setMyCardPvpRank(rank);
       } else if (activeTab === 'quiz') {
         const [data, rank] = await Promise.all([
           databaseService.getQuizRanking(100),
@@ -90,6 +101,7 @@ export const Rankings = ({ onClose, initialTab = 'ap' }: RankingsProps) => {
   const currentRankings =
     activeTab === 'ap' ? apRankings :
     activeTab === 'pvp' ? pvpRankings :
+    activeTab === 'cardpvp' ? cardPvpRankings :
     activeTab === 'quiz' ? quizRankings :
     cardRankings;
   const totalPages = Math.ceil(currentRankings.length / PAGE_SIZE);
@@ -115,6 +127,9 @@ export const Rankings = ({ onClose, initialTab = 'ap' }: RankingsProps) => {
           <Tab $active={activeTab === 'tower'} onClick={() => setActiveTab('tower')}>
             {t('rankings.tabTower')}
           </Tab>
+          <Tab $active={activeTab === 'cardpvp'} onClick={() => setActiveTab('cardpvp')}>
+            {t('rankings.tabCardPvp')}
+          </Tab>
           <Tab $active={activeTab === 'collection'} onClick={() => setActiveTab('collection')}>
             {t('rankings.tabCollection')}
           </Tab>
@@ -138,6 +153,13 @@ export const Rankings = ({ onClose, initialTab = 'ap' }: RankingsProps) => {
         {activeTab === 'tower' && (
           <MyRankBadgeWrapper>
             <MyRankBadge><Emoji glyph="🎯" size={13} /> {t('rankings.myRank', { rank: myCardRank !== null ? myCardRank : '-' })} ({t('rankings.floorSuffix', { n: cardService.getWeeklyBestFloor() })})</MyRankBadge>
+            <SeasonNote>{t('rankings.seasonNote', { n: daysUntilSeasonReset() })}</SeasonNote>
+          </MyRankBadgeWrapper>
+        )}
+
+        {activeTab === 'cardpvp' && (
+          <MyRankBadgeWrapper>
+            <MyRankBadge><Emoji glyph="🎯" size={13} /> {t('rankings.myRank', { rank: myCardPvpRank !== null ? myCardPvpRank : '-' })} ({t('rankings.winsSuffix', { n: cardService.getWeeklyPvpWins() })})</MyRankBadge>
             <SeasonNote>{t('rankings.seasonNote', { n: daysUntilSeasonReset() })}</SeasonNote>
           </MyRankBadgeWrapper>
         )}
@@ -203,6 +225,28 @@ export const Rankings = ({ onClose, initialTab = 'ap' }: RankingsProps) => {
                         </ColRank>
                         <ColPlayer>{entry.userName ?? '???'}</ColPlayer>
                         <ColScore $accent><Emoji glyph="⭐" size={13} /> {(entry.rating ?? 1000).toLocaleString()}</ColScore>
+                      </TableRow>
+                    );
+                  })}
+                </RankingTable>
+              ) : activeTab === 'cardpvp' ? (
+                <RankingTable>
+                  <TableHead $isAp={false}>
+                    <ColRank>{t('rankings.colRank')}</ColRank>
+                    <ColPlayer>{t('rankings.colPlayer')}</ColPlayer>
+                    <ColScore>{t('rankings.colWins')}</ColScore>
+                  </TableHead>
+                  {displayedRankings.map((entry, index) => {
+                    const rank = currentPage * PAGE_SIZE + index;
+                    return (
+                      <TableRow key={entry.userId} $top={rank < 3} $isAp={false}>
+                        <ColRank $idx={rank}>
+                          {rank < 3
+                            ? <Emoji glyph={rank === 0 ? '🥇' : rank === 1 ? '🥈' : '🥉'} size={16} />
+                            : t('rankings.rankSuffix', { rank: rank + 1 })}
+                        </ColRank>
+                        <ColPlayer>{entry.userName ?? '???'}</ColPlayer>
+                        <ColScore $accent><Emoji glyph="⚔️" size={13} /> {t('rankings.winsSuffix', { n: entry.wins ?? 0 })}</ColScore>
                       </TableRow>
                     );
                   })}

@@ -7,7 +7,11 @@ import styled from 'styled-components';
 import { ScrollText } from 'lucide-react';
 import { media } from '../../utils/responsive.utils';
 import { useTranslation } from '../../i18n';
-import { BattleCard, BattleLogEntry } from '../../services/CardBattleService';
+import { BattleCard, BattleLogEntry, StatusKind } from '../../services/CardBattleService';
+
+const STATUS_COLOR: Record<StatusKind, string> = {
+  burn: '#f97316', poison: '#a855f7', paralyze: '#eab308', freeze: '#38bdf8',
+};
 
 interface Props {
   log: BattleLogEntry[];
@@ -28,6 +32,8 @@ export const BattleLogPanel = ({ log, units, count }: Props) => {
     if (el) el.scrollTop = el.scrollHeight;
   }, [shown.length]);
 
+  const statusName = (s: StatusKind) => t(`cards.battleLog.status${s.charAt(0).toUpperCase() + s.slice(1)}`);
+
   const rows = useMemo(() => {
     const out: JSX.Element[] = [];
     let lastTurn = 0;
@@ -38,18 +44,49 @@ export const BattleLogPanel = ({ log, units, count }: Props) => {
       }
       const atk = units[e.attackerUid];
       const tgt = units[e.targetUid];
-      out.push(
-        <Line key={i}>
-          <Name $side={atk?.side ?? 'player'}>{atk?.name ?? '???'}</Name>
-          <Arrow>→</Arrow>
-          <Name $side={tgt?.side ?? 'enemy'}>{tgt?.name ?? '???'}</Name>
-          <Dmg $crit={e.isCrit}>-{e.damage}</Dmg>
-          {e.isCrit && <Badge $c="#fbbf24">{t('cards.battleLog.crit')}</Badge>}
-          {e.effectiveness >= 2 && <Badge $c="#34d399">{t('cards.battleLog.superEffective')}</Badge>}
-          {e.effectiveness > 0 && e.effectiveness <= 0.5 && <Badge $c="#94a3b8">{t('cards.battleLog.notEffective')}</Badge>}
-          {e.effectiveness === 0 && <Badge $c="#64748b">{t('cards.battleLog.immune')}</Badge>}
-        </Line>,
-      );
+
+      if (e.kind === 'dot' && e.status) {
+        // 지속피해 틱: [대상] [화상/독] -N
+        out.push(
+          <Line key={i}>
+            <Name $side={tgt?.side ?? 'enemy'}>{tgt?.name ?? '???'}</Name>
+            <Badge $c={STATUS_COLOR[e.status]}>{statusName(e.status)}</Badge>
+            <Dmg $crit={false}>-{e.damage}</Dmg>
+          </Line>,
+        );
+      } else if (e.kind === 'skip' && e.status) {
+        // 마비/빙결: [대상] [마비] 행동 불가
+        out.push(
+          <Line key={i}>
+            <Name $side={tgt?.side ?? 'enemy'}>{tgt?.name ?? '???'}</Name>
+            <Badge $c={STATUS_COLOR[e.status]}>{statusName(e.status)}</Badge>
+            <SkipText>{t('cards.battleLog.skipAction')}</SkipText>
+          </Line>,
+        );
+      } else if (e.kind === 'heal') {
+        // 흡혈 회복: [유닛] +N 회복
+        out.push(
+          <Line key={i}>
+            <Name $side={tgt?.side ?? 'player'}>{tgt?.name ?? '???'}</Name>
+            <HealText>+{e.damage} {t('cards.battleLog.heal')}</HealText>
+          </Line>,
+        );
+      } else {
+        out.push(
+          <Line key={i}>
+            <Name $side={atk?.side ?? 'player'}>{atk?.name ?? '???'}</Name>
+            <Arrow>→</Arrow>
+            <Name $side={tgt?.side ?? 'enemy'}>{tgt?.name ?? '???'}</Name>
+            <Dmg $crit={e.isCrit}>-{e.damage}</Dmg>
+            {e.isCrit && <Badge $c="#fbbf24">{t('cards.battleLog.crit')}</Badge>}
+            {e.effectiveness >= 2 && <Badge $c="#34d399">{t('cards.battleLog.superEffective')}</Badge>}
+            {e.effectiveness > 0 && e.effectiveness <= 0.5 && <Badge $c="#94a3b8">{t('cards.battleLog.notEffective')}</Badge>}
+            {e.effectiveness === 0 && <Badge $c="#64748b">{t('cards.battleLog.immune')}</Badge>}
+            {e.inflicted && <Badge $c={STATUS_COLOR[e.inflicted]}>{statusName(e.inflicted)}</Badge>}
+          </Line>,
+        );
+      }
+
       if (e.fainted) {
         out.push(
           <FaintLine key={`f${i}`}>
@@ -113,3 +150,5 @@ const Badge = styled.span<{ $c: string }>`
 const FaintLine = styled.div`
   font-size: 11px; font-weight: 700; color: #f87171; padding-left: 8px;
 `;
+const SkipText = styled.span`font-size: 11px; font-weight: 700; color: rgba(255,255,255,0.5);`;
+const HealText = styled.span`font-size: 12px; font-weight: 800; color: #34d399;`;

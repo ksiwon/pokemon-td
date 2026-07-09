@@ -75,4 +75,6 @@ export interface CardSaveState {
   season?: { weekId: string; bestFloor: number };
   /** 랜덤 대전(비동기 PvP) 통산 전적. */
   pvp?: { wins: number; losses: number };
+  /** 랜덤 대전 주간 시즌 승수 — weekId가 바뀌면 초기화. */
+  pvpSeason?: { weekId: string; wins: number };
 }

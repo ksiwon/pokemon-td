@@ -23,6 +23,9 @@ function mulberry32(seed: number) {
 
 export type BattleSide = 'player' | 'enemy';
 
+/** 시너지로 부여되는 상태이상 종류. */
+export type StatusKind = 'burn' | 'poison' | 'paralyze' | 'freeze';
+
 export interface BattleCard {
   uid: string;
   pokemonId: number;
@@ -44,6 +47,18 @@ export interface BattleCard {
   critChance: number;
   /** 후열 직격 가능(관통 시너지). */
   canPenetrate: boolean;
+  // ─── 타입 시너지 특수효과 (applySynergies에서 확정) ───
+  /** 급소 배율(악 시너지로 상승, 기본 1.5). */
+  critMult?: number;
+  /** 공격 적중 시 부여하는 상태이상(불=화상/독=독/전기=마비/얼음=빙결). */
+  inflicts?: StatusKind;
+  inflictChance?: number;
+  /** 준 데미지 대비 회복 비율(풀 시너지). */
+  lifestealPct?: number;
+  // ─── 전투 중 런타임 상태 (simulate 내부 전용) ───
+  _burnTurns?: number;
+  _poisonTurns?: number;
+  _stunned?: StatusKind | null;
 }
 
 export interface BattleLogEntry {
@@ -55,6 +70,12 @@ export interface BattleLogEntry {
   effectiveness: number;
   fainted: boolean;
   remainingHp: number;
+  /** 로그 종류. 생략 시 'attack'(하위호환). dot=지속피해 틱, skip=행동불가, heal=흡혈 회복. */
+  kind?: 'attack' | 'dot' | 'skip' | 'heal';
+  /** attack에서 이번 타격으로 부여한 상태이상. */
+  inflicted?: StatusKind;
+  /** dot/skip의 원인 상태이상. */
+  status?: StatusKind;
 }
 
 export interface BattleResult {
@@ -136,7 +157,21 @@ export function computeSynergies(team: BattleCard[]): ActiveSynergy[] {
 // [FIX] 6마리(tier3) 브레이크포인트가 tier2와 동일 1.3이라 무의미했음 → 1.5로 차등.
 const tierMult = (tier: number): number => (tier >= 3 ? 1.5 : tier === 2 ? 1.3 : tier === 1 ? 1.1 : 1.0);
 
-/** 팀에 시너지 버프 적용 + 관통 플래그 세팅. (in-place) */
+// ─── 타입 시너지 특수효과 티어 테이블 (인덱스 = tier 0~3) ─────────────────
+// [밸런스] 시뮬 비교로 확정(변경 전후 도달층 델타 측정). 상태이상 부여는 확률형이라
+//   양 팀 대칭 적용 시에도 타입 스택 덱이 상대적으로 이득 — 시너지 전략성 강화 목적.
+const DOT_CHANCE = [0, 0.20, 0.30, 0.45];   // 화상(불)·독(독) 부여 확률
+const STUN_CHANCE = [0, 0.15, 0.22, 0.30];  // 마비(전기)·빙결(얼음) 부여 확률
+const LIFESTEAL_PCT = [0, 0.20, 0.30, 0.45]; // 흡혈(풀) — 준 데미지 대비 회복
+const CRIT_ADD = [0, 0.10, 0.15, 0.25];     // 급소율 가산(격투)
+const CRIT_MULT = [1.5, 1.75, 2.0, 2.25];   // 급소 배율(악)
+/** 화상: 매 턴 최대HP의 5%, 2턴. 독: 매 턴 4%, 3턴. (재부여 시 지속턴 갱신) */
+export const BURN_TICK_PCT = 0.05;
+export const BURN_TURNS = 2;
+export const POISON_TICK_PCT = 0.04;
+export const POISON_TURNS = 3;
+
+/** 팀에 시너지 버프 적용 + 관통/특수효과 플래그 세팅. (in-place) */
 export function applySynergies(team: BattleCard[]): ActiveSynergy[] {
   const synergies = computeSynergies(team);
   const byType = new Map(synergies.map(s => [s.type, s]));
@@ -160,6 +195,27 @@ export function applySynergies(team: BattleCard[]): ActiveSynergy[] {
     c.canPenetrate =
       (!!flying && c.types.includes('flying')) ||
       (!!ghost && c.types.includes('ghost'));
+
+    // ─── 특수효과: 본인 타입이 활성 시너지에 속할 때만 부여(관통과 동일 원칙) ───
+    const tierOf = (ty: string) => (c.types.includes(ty) ? (byType.get(ty)?.tier ?? 0) : 0);
+
+    // 상태이상 부여(우선순위: 불 > 독 > 전기 > 얼음 — 이중타입이 겹칠 때 하나만)
+    const inflictTable: Array<{ ty: string; kind: StatusKind; table: number[] }> = [
+      { ty: 'fire', kind: 'burn', table: DOT_CHANCE },
+      { ty: 'poison', kind: 'poison', table: DOT_CHANCE },
+      { ty: 'electric', kind: 'paralyze', table: STUN_CHANCE },
+      { ty: 'ice', kind: 'freeze', table: STUN_CHANCE },
+    ];
+    c.inflicts = undefined;
+    c.inflictChance = 0;
+    for (const { ty, kind, table } of inflictTable) {
+      const tier = tierOf(ty);
+      if (tier > 0) { c.inflicts = kind; c.inflictChance = table[tier]; break; }
+    }
+
+    c.lifestealPct = LIFESTEAL_PCT[tierOf('grass')] || undefined;
+    c.critChance += CRIT_ADD[tierOf('fighting')];
+    c.critMult = CRIT_MULT[tierOf('dark')];
   }
   return synergies;
 }
@@ -183,13 +239,49 @@ class CardBattleService {
 
     while (sideAlive('player') && sideAlive('enemy') && turn < MAX_TURNS) {
       turn++;
-      // 전 유닛 스피드 내림차순(동률 uid)
+
+      // ─── 1) 턴 시작: 지속피해(화상/독) 틱 — uid순(결정론) ───
+      const afflicted = all
+        .filter(c => c.currentHp > 0 && ((c._burnTurns ?? 0) > 0 || (c._poisonTurns ?? 0) > 0))
+        .sort((a, b) => a.uid.localeCompare(b.uid));
+      for (const c of afflicted) {
+        const tick = (status: StatusKind, pct: number) => {
+          if (c.currentHp <= 0) return;
+          const dmg = Math.max(1, Math.floor(c.maxHp * pct));
+          c.currentHp = Math.max(0, c.currentHp - dmg);
+          log.push({
+            turn, kind: 'dot', status,
+            attackerUid: c.uid, targetUid: c.uid,
+            damage: dmg, isCrit: false, effectiveness: 1,
+            fainted: c.currentHp <= 0, remainingHp: c.currentHp,
+          });
+        };
+        if ((c._burnTurns ?? 0) > 0) { c._burnTurns!--; tick('burn', BURN_TICK_PCT); }
+        if ((c._poisonTurns ?? 0) > 0) { c._poisonTurns!--; tick('poison', POISON_TICK_PCT); }
+      }
+      if (!sideAlive('player') || !sideAlive('enemy')) break;
+
+      // ─── 2) 행동: 전 유닛 스피드 내림차순(동률 uid) ───
       const actors = all
         .filter(c => c.currentHp > 0)
         .sort((a, b) => (b.speed !== a.speed ? b.speed - a.speed : a.uid.localeCompare(b.uid)));
 
       for (const attacker of actors) {
         if (attacker.currentHp <= 0) continue;
+
+        // 마비/빙결: 이번 행동 건너뜀(1회성 소모)
+        if (attacker._stunned) {
+          const status = attacker._stunned;
+          attacker._stunned = null;
+          log.push({
+            turn, kind: 'skip', status,
+            attackerUid: attacker.uid, targetUid: attacker.uid,
+            damage: 0, isCrit: false, effectiveness: 1,
+            fainted: false, remainingHp: attacker.currentHp,
+          });
+          continue;
+        }
+
         const enemies = all.filter(c => c.side !== attacker.side && c.currentHp > 0);
         const target = this.pickTarget(attacker, enemies);
         if (!target) break;
@@ -198,13 +290,40 @@ class CardBattleService {
         target.currentHp = Math.max(0, target.currentHp - damage);
         const fainted = target.currentHp <= 0;
 
+        // 상태이상 부여(대상 생존 시에만) — rng 소비는 부여 능력 보유자만
+        let inflicted: StatusKind | undefined;
+        if (attacker.inflicts && (attacker.inflictChance ?? 0) > 0 && !fainted) {
+          if (rng() < (attacker.inflictChance ?? 0)) {
+            inflicted = attacker.inflicts;
+            if (inflicted === 'burn') target._burnTurns = BURN_TURNS;
+            else if (inflicted === 'poison') target._poisonTurns = POISON_TURNS;
+            else target._stunned = inflicted; // paralyze | freeze
+          }
+        }
+
         log.push({
           turn,
           attackerUid: attacker.uid,
           targetUid: target.uid,
           damage, isCrit, effectiveness, fainted,
           remainingHp: target.currentHp,
+          ...(inflicted ? { inflicted } : {}),
         });
+
+        // 흡혈(풀 시너지): 준 데미지 비율만큼 회복
+        if (attacker.lifestealPct && damage > 0 && attacker.currentHp > 0 && attacker.currentHp < attacker.maxHp) {
+          const heal = Math.min(
+            attacker.maxHp - attacker.currentHp,
+            Math.max(1, Math.floor(damage * attacker.lifestealPct)),
+          );
+          attacker.currentHp += heal;
+          log.push({
+            turn, kind: 'heal',
+            attackerUid: attacker.uid, targetUid: attacker.uid,
+            damage: heal, isCrit: false, effectiveness: 1,
+            fainted: false, remainingHp: attacker.currentHp,
+          });
+        }
       }
     }
 
@@ -259,7 +378,7 @@ class CardBattleService {
     const level = attacker.level;
     const base = ((2 * level) / 5 + 2) * power * atkStat / Math.max(1, defStat) / 50 + 2;
     let dmg = base * effectiveness * variance * stab;
-    if (isCrit) dmg *= 1.5;
+    if (isCrit) dmg *= attacker.critMult ?? 1.5; // 악 시너지: 급소 배율 상승
 
     return { damage: Math.max(1, Math.floor(dmg)), isCrit, effectiveness };
   }

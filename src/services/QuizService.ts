@@ -3,9 +3,26 @@
 // [FREE-TIER] Firestore 리더보드는 P2. 지금은 완전 오프라인 동작.
 
 import { QuizKind, QuizSaveState, QUIZ_KINDS } from '../types/quiz';
+import { cardService } from './CardService';
 
 const STORAGE_KEY = 'pokemon-td-quiz-v1';
 const CURRENT_VERSION = 1;
+
+/** 모의고사 최고점 1회성 마일스톤 보상(미니 포켓 재화).
+ *  [경제] 일회성 누적 총 660코인+55별조각 — 싱글 완주(350코인+50조각)와 비슷한 규모의
+ *  원타임 보너스. 반복 파밍 불가(최고점 경신 시에만 새 구간 해금). */
+export interface ExamMilestoneReward {
+  threshold: number; // 모의고사 최고 정답 수(최대 50)
+  coins: number;
+  starShards: number;
+}
+const EXAM_MILESTONES: ExamMilestoneReward[] = [
+  { threshold: 10, coins: 50, starShards: 0 },
+  { threshold: 20, coins: 80, starShards: 5 },
+  { threshold: 30, coins: 120, starShards: 10 },
+  { threshold: 40, coins: 160, starShards: 15 },
+  { threshold: 50, coins: 250, starShards: 25 },
+];
 
 class QuizService {
   private state: QuizSaveState;
@@ -68,6 +85,27 @@ class QuizService {
     this.state.totalRounds += 1;
     this.persist();
     return isNewBest;
+  }
+
+  /**
+   * 모의고사 최고점 기준으로 새로 도달한 마일스톤을 수령 처리하고 재화를 지급.
+   * recordExam 직후 호출. 이미 받은 구간은 스킵(1회성). 반환: 이번에 받은 목록(UI 표시용).
+   */
+  claimExamMilestones(): ExamMilestoneReward[] {
+    const best = this.state.examBest ?? 0;
+    const claimed = new Set(this.state.claimedExamMilestones ?? []);
+    const earned = EXAM_MILESTONES.filter(m => best >= m.threshold && !claimed.has(m.threshold));
+    if (earned.length === 0) return [];
+
+    earned.forEach(m => claimed.add(m.threshold));
+    this.state.claimedExamMilestones = Array.from(claimed).sort((a, b) => a - b);
+    this.persist();
+
+    cardService.grantRewards({
+      coins: earned.reduce((s, m) => s + m.coins, 0),
+      starShards: earned.reduce((s, m) => s + m.starShards, 0),
+    });
+    return earned;
   }
 
   /** 라운드 종료 정산. 최고점수/최고연속/총라운드 갱신 후 저장.

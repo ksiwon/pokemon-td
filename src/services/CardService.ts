@@ -376,11 +376,32 @@ class CardService {
     return { wins: this.state.pvp?.wins ?? 0, losses: this.state.pvp?.losses ?? 0 };
   }
 
-  recordPvpResult(win: boolean) {
+  /** 이번 주 랜덤 대전 승수(주차 바뀌면 0). 랭킹 배지 표시용. */
+  getWeeklyPvpWins(): number {
+    const wk = seasonId();
+    const s = this.state.pvpSeason;
+    return s && s.weekId === wk ? s.wins : 0;
+  }
+
+  /**
+   * 대전 결과 기록(통산 + 주간). 승리 시 이번 주 누적 승수를 반환
+   * (=Firestore 주간 랭킹에 기록할 값), 패배면 null.
+   */
+  recordPvpResult(win: boolean): number | null {
     const rec = this.state.pvp ?? { wins: 0, losses: 0 };
     if (win) rec.wins += 1; else rec.losses += 1;
     this.state.pvp = rec;
+
+    let weeklyWins: number | null = null;
+    if (win) {
+      const wk = seasonId();
+      let s = this.state.pvpSeason;
+      if (!s || s.weekId !== wk) { s = { weekId: wk, wins: 0 }; this.state.pvpSeason = s; }
+      s.wins += 1;
+      weeklyWins = s.wins;
+    }
     this.persist();
+    return weeklyWins;
   }
 
   // ─── 트레이너 타워 진행 ───────────────────────────────────────────────────────

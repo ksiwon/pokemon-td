@@ -114,8 +114,11 @@ export const TrainerTower = ({ onBack }: { onBack: () => void }) => {
     timer.current = window.setTimeout(() => {
       const e = log[step];
       setHpMap(m => ({ ...m, [e.targetUid]: e.remainingHp }));
-      setHit(e.targetUid);
-      window.setTimeout(() => setHit(null), 180 / speed);
+      // 피격 흔들림은 데미지 이벤트(attack/dot)에만 — 회복/행동불가는 제외
+      if (!e.kind || e.kind === 'attack' || e.kind === 'dot') {
+        setHit(e.targetUid);
+        window.setTimeout(() => setHit(null), 180 / speed);
+      }
       setStep(s => s + 1);
     }, 620 / speed);
     return () => { if (timer.current) clearTimeout(timer.current); };

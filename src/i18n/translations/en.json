@@ -662,6 +662,7 @@
     "tabAP": "AP Ranking",
     "tabRating": "Rating Rankings",
     "tabTower": "Tower",
+    "tabCardPvp": "Battles",
     "tabCollection": "Dex",
     "tabQuiz": "Quiz",
     "tabClearTime": " Fastest Clear",
@@ -684,6 +685,8 @@
     "floorSuffix": "Floor {n}",
     "dexSuffix": "{n}",
     "scoreSuffix": "{n} pts",
+    "colWins": "Wins",
+    "winsSuffix": "{n}W",
     "seasonNote": "🗓 This week's season · resets in {n}d · weekly reset"
   },
   "hallOfFame": {
@@ -1164,6 +1167,7 @@
       "synergyTitle": "Active Synergies",
       "synergyEmpty": "Gather 2+ of the same type to trigger a synergy",
       "penetrate": "Piercing active — {types} units hit the enemy back row directly",
+      "effectLegend": "Type synergy effects — Fire: Burn / Poison: Poison / Electric: Paralysis / Ice: Freeze / Grass: Lifesteal / Fighting: Crit rate↑ / Dark: Crit dmg↑ / Flying·Ghost: Piercing",
       "owned": "Owned {n}",
       "poolEmpty": "Open a pack to collect cards first",
       "placed": "In deck"
@@ -1215,7 +1219,13 @@
       "notEffective": "Not very effective",
       "immune": "No effect",
       "fainted": "{name} fainted!",
-      "waiting": "Waiting for battle to start..."
+      "waiting": "Waiting for battle to start...",
+      "statusBurn": "Burn",
+      "statusPoison": "Poison",
+      "statusParalyze": "Paralysis",
+      "statusFreeze": "Freeze",
+      "skipAction": "can't act",
+      "heal": "heal"
     }
   },
   "quiz": {
@@ -1297,6 +1307,10 @@
       "score": "{score} / {total}",
       "grade": "Grade {n}",
       "newBest": "New best!",
+      "milestoneTitle": "🎓 Exam milestone reached! (Mini Pocket rewards)",
+      "milestoneAt": "{n}+ points",
+      "rewardCoins": "+{n} coins",
+      "rewardShards": "+{n} shards",
       "best": "Best {n}",
       "examBest": "Best {n}",
       "maxStreak": "Best streak {n}",

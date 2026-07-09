@@ -99,15 +99,31 @@ service cloud.firestore {
     // ─── 미니 포켓 주간 시즌 타워 랭킹 ───────────────────
     // seasons/{seasonId}/cardRankings/{uid} — 주차별 서브컬렉션(경로 분리로 자동 리셋).
     // [SEC] 본인 문서만 쓰기, towerFloor 상한으로 위조 차단.
+    // delete는 본인 구세즌 문서 lazy cleanup용(클라가 지난 주차 자기 문서 삭제).
     match /seasons/{seasonId}/cardRankings/{userId} {
       allow read: if request.auth != null;
-      allow write: if request.auth != null
+      allow create, update: if request.auth != null
                    && request.auth.uid == userId
                    && request.resource.data.userId == request.auth.uid
                    && (!('towerFloor' in request.resource.data)
                        || (request.resource.data.towerFloor is number
                            && request.resource.data.towerFloor >= 0
                            && request.resource.data.towerFloor <= 100000));
+      allow delete: if request.auth != null && request.auth.uid == userId;
+    }
+
+    // ─── 미니 포켓 랜덤 대전 주간 승수 랭킹 ───────────────
+    // seasons/{seasonId}/pvpRankings/{uid} — 타워 시즌과 동일 패턴(주차 경로 자동 리셋).
+    // [SEC] wins 상한으로 위조 차단(주당 수천 판은 비현실적).
+    match /seasons/{seasonId}/pvpRankings/{userId} {
+      allow read: if request.auth != null;
+      allow create, update: if request.auth != null
+                   && request.auth.uid == userId
+                   && request.resource.data.userId == request.auth.uid
+                   && request.resource.data.wins is number
+                   && request.resource.data.wins >= 0
+                   && request.resource.data.wins <= 100000;
+      allow delete: if request.auth != null && request.auth.uid == userId;
     }
 
     // ─── 포켓몬 퀴즈 랭킹 (수능 모의고사 최고점, 최대 50점) ──
