@@ -75,30 +75,26 @@ export const BattleLogPanel = ({ log, units, count }: Props) => {
   const { t } = useTranslation();
   const bodyRef = useRef<HTMLDivElement>(null);
 
-  const shown = useMemo(() => log.slice(0, Math.max(0, count)), [log, count]);
+  const clampedCount = Math.max(0, Math.min(count, log.length));
 
-  // 새 로그가 붙을 때마다 맨 아래로 자동 스크롤
-  useEffect(() => {
-    const el = bodyRef.current;
-    if (el) el.scrollTop = el.scrollHeight;
-  }, [shown.length]);
-
-  const statusName = (s: StatusKind) => t(`cards.battleLog.status${s.charAt(0).toUpperCase() + s.slice(1)}`);
-
-  const rows = useMemo(() => {
-    const out: JSX.Element[] = [];
+  // 로그 엔트리별 element 그룹을 '전체 로그' 기준으로 1회만 생성.
+  // 재생 step(count)마다 전체를 다시 만들던 O(n²)를 O(n)으로 — 노출은 아래 slice로 제어.
+  const groups = useMemo(() => {
+    const statusName = (s: StatusKind) => t(`cards.battleLog.status${s.charAt(0).toUpperCase() + s.slice(1)}`);
+    const out: JSX.Element[][] = [];
     let lastTurn = 0;
-    shown.forEach((e, i) => {
+    log.forEach((e, i) => {
+      const g: JSX.Element[] = [];
       if (e.turn !== lastTurn) {
         lastTurn = e.turn;
-        out.push(<TurnDivider key={`turn-${e.turn}`}>{t('cards.battleLog.turn', { n: e.turn })}</TurnDivider>);
+        g.push(<TurnDivider key={`turn-${e.turn}`}>{t('cards.battleLog.turn', { n: e.turn })}</TurnDivider>);
       }
       const atk = units[e.attackerUid];
       const tgt = units[e.targetUid];
 
       if (e.kind === 'dot' && e.status) {
         // 지속피해 틱: [대상] [화상/독] -N
-        out.push(
+        g.push(
           <Line key={i}>
             <Name $side={tgt?.side ?? 'enemy'}>{tgt?.name ?? '???'}</Name>
             <Badge $c={STATUS_COLOR[e.status]}>{statusName(e.status)}</Badge>
@@ -107,7 +103,7 @@ export const BattleLogPanel = ({ log, units, count }: Props) => {
         );
       } else if (e.kind === 'skip' && e.status) {
         // 마비/빙결: [대상] [마비] 행동 불가
-        out.push(
+        g.push(
           <Line key={i}>
             <Name $side={tgt?.side ?? 'enemy'}>{tgt?.name ?? '???'}</Name>
             <Badge $c={STATUS_COLOR[e.status]}>{statusName(e.status)}</Badge>
@@ -116,14 +112,14 @@ export const BattleLogPanel = ({ log, units, count }: Props) => {
         );
       } else if (e.kind === 'heal') {
         // 흡혈 회복: [유닛] +N 회복
-        out.push(
+        g.push(
           <Line key={i}>
             <Name $side={tgt?.side ?? 'player'}>{tgt?.name ?? '???'}</Name>
             <HealText>+{e.damage} {t('cards.battleLog.heal')}</HealText>
           </Line>,
         );
       } else {
-        out.push(
+        g.push(
           <Line key={i}>
             <Name $side={atk?.side ?? 'player'}>{atk?.name ?? '???'}</Name>
             <Arrow>→</Arrow>
@@ -139,15 +135,25 @@ export const BattleLogPanel = ({ log, units, count }: Props) => {
       }
 
       if (e.fainted) {
-        out.push(
+        g.push(
           <FaintLine key={`f${i}`}>
             {t('cards.battleLog.fainted', { name: tgt?.name ?? '???' })}
           </FaintLine>,
         );
       }
+      out.push(g);
     });
     return out;
-  }, [shown, units, t]);
+  }, [log, units, t]);
+
+  // 재생된 엔트리 수만큼만 노출
+  const rows = useMemo(() => groups.slice(0, clampedCount).flat(), [groups, clampedCount]);
+
+  // 새 로그가 붙을 때마다 맨 아래로 자동 스크롤
+  useEffect(() => {
+    const el = bodyRef.current;
+    if (el) el.scrollTop = el.scrollHeight;
+  }, [clampedCount]);
 
   return (
     <Root>

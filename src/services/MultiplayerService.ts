@@ -370,6 +370,7 @@ class MultiplayerService {
     const pendingTimer = this.playerStateTimers.get(pendingKey);
     if (pendingTimer) { clearTimeout(pendingTimer); this.playerStateTimers.delete(pendingKey); }
     this.pendingPlayerState.delete(pendingKey);
+    this.lastPlayerStateWrite.delete(pendingKey); // [FREE-TIER] 스로틀 타임스탬프도 정리(누수 방지)
 
     const roomRef = ref(rtdb, `rooms/${roomId}`);
 

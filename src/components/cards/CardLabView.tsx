@@ -106,19 +106,24 @@ export const CardLabView = () => {
     (async () => {
       let coins = 0, shards = 0;
       const parts: string[] = [];
-      if (pending.bestFloor > 0) {
-        const rank = await databaseService.getMyPastSeasonRank(pending.weekId, 'tower');
-        const rw = seasonRewardForRank(rank);
-        coins += rw.coins; shards += rw.starShards;
-        parts.push(t('cards.notice.seasonTowerPart', { rank: rank ?? '-', n: pending.bestFloor }));
+      try {
+        if (pending.bestFloor > 0) {
+          const rank = await databaseService.getMyPastSeasonRank(pending.weekId, 'tower');
+          const rw = seasonRewardForRank(rank);
+          coins += rw.coins; shards += rw.starShards;
+          parts.push(t('cards.notice.seasonTowerPart', { rank: rank ?? '-', n: pending.bestFloor }));
+        }
+        if (pending.pvpWins > 0) {
+          const rank = await databaseService.getMyPastSeasonRank(pending.weekId, 'pvp');
+          const rw = seasonRewardForRank(rank);
+          coins += rw.coins; shards += rw.starShards;
+          parts.push(t('cards.notice.seasonPvpPart', { rank: rank ?? '-', n: pending.pvpWins }));
+        }
+      } catch {
+        // 순위 조회 네트워크/집계 실패 — 청구를 확정하지 않고 다음 마운트에 재시도(참가상 오확정 방지)
+        return;
       }
-      if (pending.pvpWins > 0) {
-        const rank = await databaseService.getMyPastSeasonRank(pending.weekId, 'pvp');
-        const rw = seasonRewardForRank(rank);
-        coins += rw.coins; shards += rw.starShards;
-        parts.push(t('cards.notice.seasonPvpPart', { rank: rank ?? '-', n: pending.pvpWins }));
-      }
-      // 수령 확정은 조회 성공/실패와 무관하게 1회(실패 시 참가상 지급으로 관대하게)
+      // 여기 도달 = 모든 조회가 확정값(순위 또는 미랭크). 1회 수령 확정.
       cardService.claimSeasonReward(pending.weekId, { coins, starShards: shards });
       if (alive) {
         setNotices(n => [

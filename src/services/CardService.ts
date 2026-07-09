@@ -10,7 +10,9 @@ import {
   CardSaveState, CardWallet, CardCollection, PackType, PullResult, Deck, DeckRow,
 } from '../types/cards';
 
-const STORAGE_KEY = 'pokemon-td-cards-v1';
+/** 미니 포켓 저장 키. 백업/복원(DatabaseService)이 같은 키를 참조하므로 단일 출처. */
+export const CARD_STORAGE_KEY = 'pokemon-td-cards-v1';
+const STORAGE_KEY = CARD_STORAGE_KEY;
 const CURRENT_VERSION = 1;
 
 const MAX_STARS = 5;
@@ -396,7 +398,13 @@ class CardService {
     if (win) {
       const wk = seasonId();
       let s = this.state.pvpSeason;
-      if (!s || s.weekId !== wk) { s = { weekId: wk, wins: 0 }; this.state.pvpSeason = s; }
+      if (!s || s.weekId !== wk) {
+        // 주 경계 통과 — 미청구 직전 주 승수를 스냅샷(보상 근거 보존)
+        if (s && s.wins > 0 && !(this.state.claimedSeasonWeeks ?? []).includes(s.weekId)) {
+          this.state.prevPvpSeason = { weekId: s.weekId, wins: s.wins };
+        }
+        s = { weekId: wk, wins: 0 }; this.state.pvpSeason = s;
+      }
       s.wins += 1;
       weeklyWins = s.wins;
     }
@@ -457,8 +465,11 @@ class CardService {
     const prevWeek = seasonId(new Date(Date.now() - 7 * 24 * 60 * 60 * 1000));
     if ((this.state.claimedSeasonWeeks ?? []).includes(prevWeek)) return null;
 
-    const bestFloor = this.state.season?.weekId === prevWeek ? this.state.season.bestFloor : 0;
-    const pvpWins = this.state.pvpSeason?.weekId === prevWeek ? this.state.pvpSeason.wins : 0;
+    // 현재 시즌 캐시가 직전 주면 그대로, 아니면(새 주 진입으로 덮어써진 경우) 스냅샷에서 복구
+    const bestFloor = this.state.season?.weekId === prevWeek ? this.state.season.bestFloor
+      : this.state.prevSeason?.weekId === prevWeek ? this.state.prevSeason.bestFloor : 0;
+    const pvpWins = this.state.pvpSeason?.weekId === prevWeek ? this.state.pvpSeason.wins
+      : this.state.prevPvpSeason?.weekId === prevWeek ? this.state.prevPvpSeason.wins : 0;
     if (bestFloor <= 0 && pvpWins <= 0) return null;
     return { weekId: prevWeek, bestFloor, pvpWins };
   }
@@ -495,7 +506,13 @@ class CardService {
   recordWeeklyBestFloor(floor: number): number | null {
     const wk = seasonId();
     let s = this.state.season;
-    if (!s || s.weekId !== wk) { s = { weekId: wk, bestFloor: 0 }; this.state.season = s; }
+    if (!s || s.weekId !== wk) {
+      // 주 경계 통과 — 미청구 직전 주 기록을 스냅샷(뷰가 마운트된 채 새 주 첫 판을 돌려도 보상 근거 보존)
+      if (s && s.bestFloor > 0 && !(this.state.claimedSeasonWeeks ?? []).includes(s.weekId)) {
+        this.state.prevSeason = { weekId: s.weekId, bestFloor: s.bestFloor };
+      }
+      s = { weekId: wk, bestFloor: 0 }; this.state.season = s;
+    }
     if (floor > s.bestFloor) { s.bestFloor = floor; this.persist(); return floor; }
     return null;
   }

@@ -12,6 +12,8 @@ import { HallOfFameEntry, LeaderboardEntry } from '../types/multiplayer';
 import { Achievement } from '../types/game';
 import { authService } from './AuthService';
 import { seasonId } from '../utils/season';
+import { CARD_STORAGE_KEY } from './CardService';
+import { QUIZ_STORAGE_KEY } from './QuizService';
 
 // [FREE-TIER] 무료 플랜 데이터 보존 한도
 const HALL_OF_FAME_MAX_AGE_DAYS = 60;  // 이 일수보다 오래된 자신의 기록은 삭제 후보
@@ -760,11 +762,19 @@ class DatabaseService {
   // (보안 룰: 본인 문서 delete만 허용. 존재하지 않는 문서 delete는 무해한 no-op)
   private _oldSeasonCleanupDone = false;
 
+  private static readonly OLD_SEASON_CLEANUP_LS_KEY = 'ptd-oldseason-cleanup-week';
   private cleanupMyOldSeasonEntries(): void {
     if (this._oldSeasonCleanupDone) return;
     this._oldSeasonCleanupDone = true;
     const user = authService.getCurrentUser();
     if (!user || authService.isOfflineMode()) return;
+
+    // [FREE-TIER] 삭제 대상(2~5주 전)은 한 번 지우면 끝 — 주가 바뀌기 전엔 재삭제 불필요.
+    // 세션마다 8 delete(write)를 낭비하지 않도록 '이번 주 이미 정리함'을 localStorage로 게이트.
+    const thisWeek = seasonId();
+    try {
+      if (localStorage.getItem(DatabaseService.OLD_SEASON_CLEANUP_LS_KEY) === thisWeek) return;
+    } catch { /* localStorage 불가 시 그냥 진행 */ }
 
     // 직전 주(i=1)는 보존 — 시즌 순위 셀프 보상(claimSeasonReward)의 근거 문서.
     // 2주 이상 지난 것만 삭제.
@@ -774,30 +784,28 @@ class DatabaseService {
       deleteDoc(doc(db, 'seasons', oldSeason, 'cardRankings', user.uid)).catch(() => {});
       deleteDoc(doc(db, 'seasons', oldSeason, 'pvpRankings', user.uid)).catch(() => {});
     }
+    try { localStorage.setItem(DatabaseService.OLD_SEASON_CLEANUP_LS_KEY, thisWeek); } catch { /* ignore */ }
   }
 
   /**
    * 지난 시즌(weekId)의 내 순위 조회 — 시즌 보상 셀프 수령용.
-   * 문서 없으면 null(참가상 처리). 집계 카운트라 호출당 최대 2 read.
+   * 문서 없으면 null(미랭크 = 참가상 처리). 네트워크/집계 실패는 throw로 전파해
+   * 호출부가 '수령 확정'을 미루고 재시도하도록 함(실패를 참가상으로 오확정 방지). 최대 2 read.
    */
   async getMyPastSeasonRank(weekId: string, board: 'tower' | 'pvp'): Promise<number | null> {
     const user = authService.getCurrentUser();
     if (!user || authService.isOfflineMode()) return null;
     const coll = board === 'tower' ? 'cardRankings' : 'pvpRankings';
     const field = board === 'tower' ? 'towerFloor' : 'wins';
-    try {
-      const myDoc = await getDoc(doc(db, 'seasons', weekId, coll, user.uid));
-      if (!myDoc.exists()) return null;
-      const myValue = (myDoc.data() as any)[field] ?? 0;
-      const q = query(
-        collection(db, 'seasons', weekId, coll),
-        where(field, '>', myValue),
-        limit(500)
-      );
-      return this.countPlusOne(q);
-    } catch {
-      return null;
-    }
+    const myDoc = await getDoc(doc(db, 'seasons', weekId, coll, user.uid));
+    if (!myDoc.exists()) return null;
+    const myValue = (myDoc.data() as any)[field] ?? 0;
+    const q = query(
+      collection(db, 'seasons', weekId, coll),
+      where(field, '>', myValue),
+      limit(500)
+    );
+    return this.countPlusOne(q);
   }
 
   // ─── 미니 포켓 랜덤 대전 주간 승수 랭킹 ────────────────────────────────────
@@ -871,9 +879,9 @@ class DatabaseService {
   // ─── 클라우드 세이브 백업 (미니 포켓 + 퀴즈 localStorage 스냅샷) ──────────
   // 수집/기록이 localStorage 단독이라 브라우저 초기화·기기 변경 시 전부 소실되는
   // 문제의 안전망. 문서 1개(backups/{uid})에 JSON 문자열로 저장 — 쿼터 영향 미미.
-  // 서비스 결합을 피하려고 localStorage 키를 직접 읽는다(키는 안정적 공개 계약).
-  private static readonly CARDS_LS_KEY = 'pokemon-td-cards-v1';
-  private static readonly QUIZ_LS_KEY = 'pokemon-td-quiz-v1';
+  // 저장 키는 각 서비스가 단일 출처로 export — 한쪽만 버전이 바뀌어 백업이 엇나가는 것 방지.
+  private static readonly CARDS_LS_KEY = CARD_STORAGE_KEY;
+  private static readonly QUIZ_LS_KEY = QUIZ_STORAGE_KEY;
   private static readonly LAST_BACKUP_LS_KEY = 'ptd-last-backup-at';
   private static readonly AUTO_BACKUP_MIN_INTERVAL_MS = 30 * 60 * 1000; // 30분
 

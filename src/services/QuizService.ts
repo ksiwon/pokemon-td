@@ -5,7 +5,9 @@
 import { QuizKind, QuizSaveState, QUIZ_KINDS } from '../types/quiz';
 import { cardService } from './CardService';
 
-const STORAGE_KEY = 'pokemon-td-quiz-v1';
+/** 퀴즈 저장 키. 백업/복원(DatabaseService)이 같은 키를 참조하므로 단일 출처. */
+export const QUIZ_STORAGE_KEY = 'pokemon-td-quiz-v1';
+const STORAGE_KEY = QUIZ_STORAGE_KEY;
 const CURRENT_VERSION = 1;
 
 /** 모의고사 최고점 1회성 마일스톤 보상(미니 포켓 재화).
