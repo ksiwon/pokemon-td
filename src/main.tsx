@@ -5,6 +5,12 @@ import App from './App'
 import './index.css'
 import { I18nProvider } from './i18n'
 import { BrowserRouter } from 'react-router-dom'
+import { initSentry, captureError } from './utils/sentry'
+
+// Sentry 에러 모니터링(프로덕션 + DSN 설정 시에만, 동적 로드).
+// 전역 onerror/unhandledrejection은 Sentry 자체 핸들러가 수집하므로
+// 아래 수동 리스너에서는 중복 보고하지 않는다.
+initSentry()
 
 // [OFFLINE-FIX] 렌더 단계에서 예기치 못한 오류가 나도 화이트스크린 대신 안내 + 새로고침을 보여준다.
 //   (Firebase 등 초기화 실패의 최종 안전망. 모듈-로드 throw는 firebase.ts/AuthService 방어로 별도 차단.)
@@ -21,6 +27,8 @@ class RootErrorBoundary extends React.Component<
   }
   componentDidCatch(error: Error, info: unknown) {
     console.error('[RootErrorBoundary] 렌더 오류:', error, info)
+    // 렌더 오류는 ErrorBoundary가 삼켜서 Sentry 전역 핸들러에 안 잡힘 → 명시적 보고
+    captureError(error, { componentStack: (info as { componentStack?: string })?.componentStack })
   }
   render() {
     if (this.state.error) {
