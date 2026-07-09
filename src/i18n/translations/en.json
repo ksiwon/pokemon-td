@@ -1211,6 +1211,24 @@
       "vsResult": "vs {name} · {p} : {e} left",
       "rematch": "Rematch"
     },
+    "daily": {
+      "firstWin": "Daily First Win"
+    },
+    "notice": {
+      "dexMilestone": "📖 Dex milestone — {n} species! +{c} coins +{s} shards",
+      "seasonReward": "🏆 Last week's season rewards — {detail} → +{c} coins +{s} shards",
+      "seasonTowerPart": "Tower #{rank} (F{n})",
+      "seasonPvpPart": "Battles #{rank} ({n}W)"
+    },
+    "backup": {
+      "last": "Last backup: {time}",
+      "never": "No backup yet — recommended before switching devices",
+      "backupBtn": "Back up now",
+      "restoreBtn": "Restore",
+      "backupFail": "Backup failed. Please check your connection.",
+      "noBackup": "No cloud backup found.",
+      "restoreConfirm": "Restore from cloud backup ({time})?\n\nBackup: {bOwned} species · Floor {bFloor}\nLocal: {lOwned} species · Floor {lFloor}\n\nRestoring overwrites your current local data."
+    },
     "battleLog": {
       "title": "Battle Log",
       "turn": "Turn {n}",

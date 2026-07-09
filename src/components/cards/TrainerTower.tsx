@@ -13,10 +13,13 @@ import { useCardState } from '../../hooks/useCardState';
 import {
   cardBattleService, buildBattleCard, BattleCard, BattleResult, BattleLogEntry,
 } from '../../services/CardBattleService';
-import { BattleLogPanel } from './BattleLogPanel';
+import { BattleLogPanel, nextStatusMap, UnitStatusMap, UnitStatusBadge } from './BattleLogPanel';
 
 type Phase = 'idle' | 'loading' | 'battle' | 'result';
-type Reward = { coins: number; starShards: number; firstClear: boolean };
+type Reward = {
+  coins: number; starShards: number; firstClear: boolean;
+  daily?: { coins: number; starShards: number } | null;
+};
 
 export const TrainerTower = ({ onBack }: { onBack: () => void }) => {
   const { t } = useTranslation();
@@ -37,6 +40,7 @@ export const TrainerTower = ({ onBack }: { onBack: () => void }) => {
   const [reward, setReward] = useState<Reward | null>(null);
   const [hpMap, setHpMap] = useState<Record<string, number>>({});
   const [hit, setHit] = useState<string | null>(null);
+  const [statusMap, setStatusMap] = useState<UnitStatusMap>({});
   const timer = useRef<number | null>(null);
 
   const startBattle = async () => {
@@ -80,7 +84,9 @@ export const TrainerTower = ({ onBack }: { onBack: () => void }) => {
         //   all-time firstClear와 무관 — 매주 다시 오르는 경쟁이므로 이번 주 기준으로 판정.
         const weeklyBest = cardService.recordWeeklyBestFloor(currentFloor);
         if (weeklyBest !== null) databaseService.updateTowerSeasonRanking(weeklyBest).catch(() => {});
-        rw = { coins, starShards: shards, firstClear };
+        // 일일 첫 승 보너스(타워/랜덤대전 공통, KST 자정 리셋)
+        const daily = cardService.claimDailyFirstWin();
+        rw = { coins, starShards: shards, firstClear, daily };
       }
 
       // 재생용: 시너지 적용된 사본(pSim/eSim)을 풀피로 리셋
@@ -95,6 +101,7 @@ export const TrainerTower = ({ onBack }: { onBack: () => void }) => {
       setPlayerOrder(pOrder);
       setEnemyOrder(eOrder);
       setHpMap(hp0);
+      setStatusMap({});
       setLog(res.log);
       setResult(res);
       setReward(rw);
@@ -114,6 +121,7 @@ export const TrainerTower = ({ onBack }: { onBack: () => void }) => {
     timer.current = window.setTimeout(() => {
       const e = log[step];
       setHpMap(m => ({ ...m, [e.targetUid]: e.remainingHp }));
+      setStatusMap(m => nextStatusMap(m, e));
       // 피격 흔들림은 데미지 이벤트(attack/dot)에만 — 회복/행동불가는 제외
       if (!e.kind || e.kind === 'attack' || e.kind === 'dot') {
         setHit(e.targetUid);
@@ -130,6 +138,7 @@ export const TrainerTower = ({ onBack }: { onBack: () => void }) => {
     Object.values(units).forEach(u => { finalHp[u.uid] = u.maxHp; });
     log.forEach(e => { finalHp[e.targetUid] = e.remainingHp; });
     setHpMap(finalHp);
+    setStatusMap({}); // 전투 종료 — 상태 표시 정리
     setStep(log.length);
     finish();
   };
@@ -152,8 +161,10 @@ export const TrainerTower = ({ onBack }: { onBack: () => void }) => {
     const hp = hpMap[u.uid] ?? u.maxHp;
     const pct = Math.max(0, (hp / u.maxHp) * 100);
     const dead = hp <= 0;
+    const status = statusMap[u.uid];
     return (
       <Unit key={u.uid} $dead={dead} $hit={hit === u.uid} $side={u.side}>
+        {status && !dead && <UnitStatusBadge kind={status.kind} />}
         <Sprite src={u.sprite} alt={u.name} draggable={false} $side={u.side} />
         <HpBar><HpFill $pct={pct} $low={pct < 30} /></HpBar>
         <UStars>{'★'.repeat(u.stars)}</UStars>
@@ -242,6 +253,13 @@ export const TrainerTower = ({ onBack }: { onBack: () => void }) => {
                 {reward.starShards > 0 && <Rw $c="#c084fc">{t('cards.tower.shards', { n: reward.starShards })}</Rw>}
               </RewardRow>
             )}
+            {reward?.daily && (
+              <RewardRow>
+                <FirstBadge>{t('cards.daily.firstWin')}</FirstBadge>
+                <Rw $c="#fbbf24">{t('cards.tower.coins', { n: reward.daily.coins })}</Rw>
+                {reward.daily.starShards > 0 && <Rw $c="#c084fc">{t('cards.tower.shards', { n: reward.daily.starShards })}</Rw>}
+              </RewardRow>
+            )}
             <ResultBtns>
               {result.winner === 'player'
                 ? <PrimaryBtn onClick={reset}>{t('cards.tower.nextFloor')}</PrimaryBtn>
@@ -324,6 +342,7 @@ const SideLabel = styled.div<{ $side: 'player' | 'enemy' }>`
 const Team = styled.div<{ $side: 'player' | 'enemy' }>`display: flex; flex-direction: column; gap: 12px;`;
 const ArenaRow = styled.div`display: flex; justify-content: center; gap: 18px; min-height: 78px;`;
 const Unit = styled.div<{ $dead: boolean; $hit: boolean; $side: 'player' | 'enemy' }>`
+  position: relative;
   display: flex; flex-direction: column; align-items: center; gap: 4px; width: 72px;
   opacity: ${p => (p.$dead ? 0.2 : 1)};
   filter: ${p => (p.$dead ? 'grayscale(1)' : 'none')};

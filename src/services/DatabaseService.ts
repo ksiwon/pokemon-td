@@ -766,11 +766,37 @@ class DatabaseService {
     const user = authService.getCurrentUser();
     if (!user || authService.isOfflineMode()) return;
 
+    // 직전 주(i=1)는 보존 — 시즌 순위 셀프 보상(claimSeasonReward)의 근거 문서.
+    // 2주 이상 지난 것만 삭제.
     const WEEK_MS = 7 * 24 * 60 * 60 * 1000;
-    for (let i = 1; i <= 4; i++) {
+    for (let i = 2; i <= 5; i++) {
       const oldSeason = seasonId(new Date(Date.now() - WEEK_MS * i));
       deleteDoc(doc(db, 'seasons', oldSeason, 'cardRankings', user.uid)).catch(() => {});
       deleteDoc(doc(db, 'seasons', oldSeason, 'pvpRankings', user.uid)).catch(() => {});
+    }
+  }
+
+  /**
+   * 지난 시즌(weekId)의 내 순위 조회 — 시즌 보상 셀프 수령용.
+   * 문서 없으면 null(참가상 처리). 집계 카운트라 호출당 최대 2 read.
+   */
+  async getMyPastSeasonRank(weekId: string, board: 'tower' | 'pvp'): Promise<number | null> {
+    const user = authService.getCurrentUser();
+    if (!user || authService.isOfflineMode()) return null;
+    const coll = board === 'tower' ? 'cardRankings' : 'pvpRankings';
+    const field = board === 'tower' ? 'towerFloor' : 'wins';
+    try {
+      const myDoc = await getDoc(doc(db, 'seasons', weekId, coll, user.uid));
+      if (!myDoc.exists()) return null;
+      const myValue = (myDoc.data() as any)[field] ?? 0;
+      const q = query(
+        collection(db, 'seasons', weekId, coll),
+        where(field, '>', myValue),
+        limit(500)
+      );
+      return this.countPlusOne(q);
+    } catch {
+      return null;
     }
   }
 
@@ -842,6 +868,96 @@ class DatabaseService {
     }
   }
 
+  // ─── 클라우드 세이브 백업 (미니 포켓 + 퀴즈 localStorage 스냅샷) ──────────
+  // 수집/기록이 localStorage 단독이라 브라우저 초기화·기기 변경 시 전부 소실되는
+  // 문제의 안전망. 문서 1개(backups/{uid})에 JSON 문자열로 저장 — 쿼터 영향 미미.
+  // 서비스 결합을 피하려고 localStorage 키를 직접 읽는다(키는 안정적 공개 계약).
+  private static readonly CARDS_LS_KEY = 'pokemon-td-cards-v1';
+  private static readonly QUIZ_LS_KEY = 'pokemon-td-quiz-v1';
+  private static readonly LAST_BACKUP_LS_KEY = 'ptd-last-backup-at';
+  private static readonly AUTO_BACKUP_MIN_INTERVAL_MS = 30 * 60 * 1000; // 30분
+
+  /** 현재 로컬 세이브를 Firestore에 백업. 성공 시 true. */
+  async backupSaves(): Promise<boolean> {
+    const user = authService.getCurrentUser();
+    if (!user || authService.isOfflineMode()) return false;
+
+    const cards = localStorage.getItem(DatabaseService.CARDS_LS_KEY) ?? '';
+    const quiz = localStorage.getItem(DatabaseService.QUIZ_LS_KEY) ?? '';
+    if (!cards && !quiz) return false;
+
+    // 표시용 메타(복원 확인 다이얼로그에서 로컬과 비교)
+    let ownedCount = 0, towerProgress = 0, examBest = 0;
+    try {
+      const c = cards ? JSON.parse(cards) : null;
+      ownedCount = c?.collection ? Object.keys(c.collection).length : 0;
+      towerProgress = c?.towerProgress ?? 0;
+    } catch { /* ignore */ }
+    try {
+      const q = quiz ? JSON.parse(quiz) : null;
+      examBest = q?.examBest ?? 0;
+    } catch { /* ignore */ }
+
+    try {
+      await setDoc(doc(db, 'backups', user.uid), {
+        userId: user.uid,
+        cards, quiz,
+        ownedCount, towerProgress, examBest,
+        updatedAt: Date.now(),
+      });
+      try { localStorage.setItem(DatabaseService.LAST_BACKUP_LS_KEY, String(Date.now())); } catch { /* ignore */ }
+      return true;
+    } catch (err) {
+      console.warn('[DB] backupSaves failed:', err);
+      return false;
+    }
+  }
+
+  /** 진행 마일스톤에서 호출되는 자동 백업 — 30분 스로틀(쓰기 절감). */
+  autoBackupSaves(): void {
+    try {
+      const last = Number(localStorage.getItem(DatabaseService.LAST_BACKUP_LS_KEY) ?? 0);
+      if (Date.now() - last < DatabaseService.AUTO_BACKUP_MIN_INTERVAL_MS) return;
+    } catch { /* ignore */ }
+    this.backupSaves().catch(() => {});
+  }
+
+  /** 마지막 백업 시각(로컬 기록, ms). 없으면 null. */
+  getLastBackupAt(): number | null {
+    try {
+      const v = Number(localStorage.getItem(DatabaseService.LAST_BACKUP_LS_KEY) ?? 0);
+      return v > 0 ? v : null;
+    } catch { return null; }
+  }
+
+  /** 클라우드 백업 조회(복원 확인용 메타 포함). */
+  async fetchBackup(): Promise<{
+    cards: string; quiz: string;
+    ownedCount: number; towerProgress: number; examBest: number; updatedAt: number;
+  } | null> {
+    const user = authService.getCurrentUser();
+    if (!user || authService.isOfflineMode()) return null;
+    try {
+      const snap = await getDoc(doc(db, 'backups', user.uid));
+      if (!snap.exists()) return null;
+      const d = snap.data();
+      return {
+        cards: d.cards ?? '', quiz: d.quiz ?? '',
+        ownedCount: d.ownedCount ?? 0, towerProgress: d.towerProgress ?? 0,
+        examBest: d.examBest ?? 0, updatedAt: d.updatedAt ?? 0,
+      };
+    } catch (err) {
+      console.warn('[DB] fetchBackup failed:', err);
+      return null;
+    }
+  }
+
+  /** 백업 데이터를 로컬에 적용. 호출자가 이후 location.reload()로 서비스 재로드. */
+  applyBackupToLocal(backup: { cards: string; quiz: string }): void {
+    if (backup.cards) localStorage.setItem(DatabaseService.CARDS_LS_KEY, backup.cards);
+    if (backup.quiz) localStorage.setItem(DatabaseService.QUIZ_LS_KEY, backup.quiz);
+  }
+
   // ─── 미니 포켓 랜덤 대전 (비동기 PvP 덱 스냅샷) ────────────────────────────
   private _lastDeckPublish = '';
 
@@ -876,29 +992,45 @@ class DatabaseService {
   }
 
   /**
-   * 랜덤 상대 덱 1개 조회.
-   * [FREE-TIER] rand 필드 기준 무작위 지점부터 limit(3) — 호출당 최대 6 read.
-   *   (전체 스캔 없이 무작위 표본을 뽑는 Firestore 관용 패턴)
+   * 랜덤 상대 덱 1개 조회 — 후보 중 전투력(power=별 합) 근접 우선.
+   * [FREE-TIER] rand 필드 기준 무작위 지점부터 limit(5) — 호출당 최대 10 read.
+   *   (전체 스캔·composite index 없이 무작위 표본을 뽑는 Firestore 관용 패턴,
+   *    근접 매칭은 표본 안에서 클라이언트가 고른다)
+   * @param myPower 내 덱 별 합(근접 매칭 기준). 0이면 무작위.
+   * @param excludeIds 최근 대전 상대 uid — 반복 매칭 방지(후보가 이들뿐이면 허용).
    */
-  async getRandomOpponentDeck(): Promise<CardDeckDoc | null> {
+  async getRandomOpponentDeck(myPower = 0, excludeIds: string[] = []): Promise<CardDeckDoc | null> {
     const user = authService.getCurrentUser();
     if (!user || authService.isOfflineMode()) return null;
     try {
       const r = Math.random();
-      const pick = async (op: '>=' | '<', dir: 'asc' | 'desc') => {
+      const fetchSide = async (op: '>=' | '<', dir: 'asc' | 'desc') => {
         const q = query(
           collection(db, 'cardDecks'),
           where('rand', op, r),
           orderBy('rand', dir),
-          limit(3)
+          limit(5)
         );
         const snap = await getDocs(q);
         return snap.docs
           .map(d => d.data() as CardDeckDoc)
-          .find(d => d.userId !== user.uid && Array.isArray(d.deck) && d.deck.length > 0) ?? null;
+          .filter(d => d.userId !== user.uid && Array.isArray(d.deck) && d.deck.length > 0);
       };
-      // 무작위 지점 이후 → 없으면 반대 방향(순환)
-      return (await pick('>=', 'asc')) ?? (await pick('<', 'desc'));
+
+      let candidates = await fetchSide('>=', 'asc');
+      if (candidates.length === 0) candidates = await fetchSide('<', 'desc');
+      if (candidates.length === 0) return null;
+
+      // 최근 상대 제외 — 단 전부 최근 상대뿐이면 그대로 사용(풀이 작은 초기 배려)
+      const excluded = new Set(excludeIds);
+      const fresh = candidates.filter(d => !excluded.has(d.userId));
+      const pool = fresh.length > 0 ? fresh : candidates;
+
+      // 전투력 근접 순 정렬 후 최상위 선택
+      pool.sort((a, b) =>
+        Math.abs((a.power ?? 0) - myPower) - Math.abs((b.power ?? 0) - myPower)
+      );
+      return pool[0];
     } catch (err) {
       console.warn('[DB] getRandomOpponentDeck failed:', err);
       return null;

@@ -77,4 +77,10 @@ export interface CardSaveState {
   pvp?: { wins: number; losses: number };
   /** 랜덤 대전 주간 시즌 승수 — weekId가 바뀌면 초기화. */
   pvpSeason?: { weekId: string; wins: number };
+  /** 일일 첫 승 보너스(KST 날짜 기준) 수령 상태. */
+  daily?: { dayId: string; winClaimed: boolean };
+  /** 수령한 도감 수집 마일스톤(보유 종 수 threshold 목록). */
+  claimedDexMilestones?: number[];
+  /** 시즌 순위 보상을 수령(또는 만료 처리)한 주차 ID 목록. */
+  claimedSeasonWeeks?: string[];
 }

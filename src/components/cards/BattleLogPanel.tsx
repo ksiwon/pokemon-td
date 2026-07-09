@@ -4,14 +4,65 @@
 
 import { useEffect, useMemo, useRef } from 'react';
 import styled from 'styled-components';
-import { ScrollText } from 'lucide-react';
+import { ScrollText, Flame, Skull, Zap, Snowflake } from 'lucide-react';
 import { media } from '../../utils/responsive.utils';
 import { useTranslation } from '../../i18n';
-import { BattleCard, BattleLogEntry, StatusKind } from '../../services/CardBattleService';
+import {
+  BattleCard, BattleLogEntry, StatusKind, BURN_TURNS, POISON_TURNS,
+} from '../../services/CardBattleService';
 
 const STATUS_COLOR: Record<StatusKind, string> = {
   burn: '#f97316', poison: '#a855f7', paralyze: '#eab308', freeze: '#38bdf8',
 };
+
+// ─── 아레나 유닛 상태이상 표시 (TrainerTower/RandomBattle 공용) ────────────────
+/** uid → 현재 걸린 상태이상(재생 시점 기준). */
+export type UnitStatusMap = Record<string, { kind: StatusKind; ticksLeft: number } | undefined>;
+
+/** 로그 엔트리 1개를 반영한 다음 상태 맵. 재생 스텝마다 fold. */
+export function nextStatusMap(map: UnitStatusMap, e: BattleLogEntry): UnitStatusMap {
+  // 기절하면 상태 제거
+  if (e.fainted) {
+    if (!map[e.targetUid]) return map;
+    const m = { ...map }; delete m[e.targetUid]; return m;
+  }
+  // 마비/빙결은 행동 스킵으로 소모
+  if (e.kind === 'skip' && e.status) {
+    if (!map[e.targetUid]) return map;
+    const m = { ...map }; delete m[e.targetUid]; return m;
+  }
+  // 지속피해 틱 — 남은 턴 차감, 0이면 해제
+  if (e.kind === 'dot' && e.status) {
+    const cur = map[e.targetUid];
+    if (!cur || cur.kind !== e.status) return map;
+    const m = { ...map };
+    if (cur.ticksLeft <= 1) delete m[e.targetUid];
+    else m[e.targetUid] = { kind: cur.kind, ticksLeft: cur.ticksLeft - 1 };
+    return m;
+  }
+  // 공격으로 상태이상 부여
+  if ((!e.kind || e.kind === 'attack') && e.inflicted) {
+    const ticks = e.inflicted === 'burn' ? BURN_TURNS : e.inflicted === 'poison' ? POISON_TURNS : 1;
+    return { ...map, [e.targetUid]: { kind: e.inflicted, ticksLeft: ticks } };
+  }
+  return map;
+}
+
+const STATUS_ICON: Record<StatusKind, typeof Flame> = {
+  burn: Flame, poison: Skull, paralyze: Zap, freeze: Snowflake,
+};
+
+/** 유닛 스프라이트 위에 얹는 상태이상 뱃지. 부모가 position:relative여야 함. */
+export const UnitStatusBadge = ({ kind }: { kind: StatusKind }) => {
+  const Icon = STATUS_ICON[kind];
+  return <SBadge $c={STATUS_COLOR[kind]}><Icon size={9} /></SBadge>;
+};
+const SBadge = styled.span<{ $c: string }>`
+  position: absolute; top: -3px; right: 3px; width: 16px; height: 16px; border-radius: 50%;
+  display: flex; align-items: center; justify-content: center;
+  background: ${p => p.$c}; color: #fff;
+  box-shadow: 0 1px 3px rgba(0,0,0,0.55); z-index: 2;
+`;
 
 interface Props {
   log: BattleLogEntry[];

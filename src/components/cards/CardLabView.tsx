@@ -5,10 +5,10 @@ import { useEffect, useMemo, useState } from 'react';
 import styled, { keyframes } from 'styled-components';
 import { useNavigate } from 'react-router-dom';
 import { media } from '../../utils/responsive.utils';
-import { Coins, Sparkles, Package, Layers, Swords, Trophy, ChevronRight, Users } from 'lucide-react';
+import { Coins, Sparkles, Package, Layers, Swords, Trophy, ChevronRight, Users, CloudUpload, CloudDownload, X } from 'lucide-react';
 import { pokeAPI } from '../../api/pokeapi';
 import { useTranslation } from '../../i18n';
-import { cardService, PACK_DEFS } from '../../services/CardService';
+import { cardService, PACK_DEFS, seasonRewardForRank } from '../../services/CardService';
 import { databaseService, CardRankingEntry } from '../../services/DatabaseService';
 import { authService } from '../../services/AuthService';
 import { daysUntilSeasonReset } from '../../utils/season';
@@ -45,6 +45,9 @@ export const CardLabView = () => {
   const [detailId, setDetailId] = useState<number | null>(null);
   const [rankInfo, setRankInfo] = useState<{ towerRank: number | null; collRank: number | null; top3: CardRankingEntry[] } | null>(null);
   const [showRankings, setShowRankings] = useState(false);
+  const [notices, setNotices] = useState<string[]>([]); // 도감 마일스톤·시즌 보상 안내 배너
+  const [backupBusy, setBackupBusy] = useState(false);
+  const [lastBackupAt, setLastBackupAt] = useState<number | null>(() => databaseService.getLastBackupAt());
 
   // 추첨 리스트 준비(캐시 시 즉시)
   useEffect(() => { pokeAPI.preloadRarities().catch(() => {}); }, []);
@@ -81,6 +84,84 @@ export const CardLabView = () => {
     })();
     return () => { alive = false; };
   }, [weeklyBestFloor, ownedIds.length]);
+
+  // 도감 수집 마일스톤 수령 + 진행 자동 백업(30분 스로틀) — 보유 종 수 변화 시
+  useEffect(() => {
+    const earned = cardService.claimDexMilestones();
+    if (earned.length > 0) {
+      setNotices(n => [
+        ...n,
+        ...earned.map(m => t('cards.notice.dexMilestone', { n: m.threshold, c: m.coins, s: m.starShards })),
+      ]);
+    }
+    databaseService.autoBackupSaves();
+  }, [ownedIds.length]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  // 지난주 시즌 순위 셀프 보상 — 마운트 시 1회(직전 주 참가 기록이 있을 때만 read 발생)
+  useEffect(() => {
+    const pending = cardService.getUnclaimedSeasonWeek();
+    if (!pending) return;
+    if (authService.isOfflineMode() || !authService.getCurrentUser()) return;
+    let alive = true;
+    (async () => {
+      let coins = 0, shards = 0;
+      const parts: string[] = [];
+      if (pending.bestFloor > 0) {
+        const rank = await databaseService.getMyPastSeasonRank(pending.weekId, 'tower');
+        const rw = seasonRewardForRank(rank);
+        coins += rw.coins; shards += rw.starShards;
+        parts.push(t('cards.notice.seasonTowerPart', { rank: rank ?? '-', n: pending.bestFloor }));
+      }
+      if (pending.pvpWins > 0) {
+        const rank = await databaseService.getMyPastSeasonRank(pending.weekId, 'pvp');
+        const rw = seasonRewardForRank(rank);
+        coins += rw.coins; shards += rw.starShards;
+        parts.push(t('cards.notice.seasonPvpPart', { rank: rank ?? '-', n: pending.pvpWins }));
+      }
+      // 수령 확정은 조회 성공/실패와 무관하게 1회(실패 시 참가상 지급으로 관대하게)
+      cardService.claimSeasonReward(pending.weekId, { coins, starShards: shards });
+      if (alive) {
+        setNotices(n => [
+          ...n,
+          t('cards.notice.seasonReward', { detail: parts.join(' · '), c: coins, s: shards }),
+        ]);
+      }
+    })();
+    return () => { alive = false; };
+  }, []); // eslint-disable-line react-hooks/exhaustive-deps
+
+  // ─── 클라우드 백업/복원 ────────────────────────────────────────
+  const handleBackup = async () => {
+    if (backupBusy) return;
+    setBackupBusy(true);
+    try {
+      const ok = await databaseService.backupSaves();
+      if (ok) setLastBackupAt(Date.now());
+      else alert(t('cards.backup.backupFail'));
+    } finally {
+      setBackupBusy(false);
+    }
+  };
+
+  const handleRestore = async () => {
+    if (backupBusy) return;
+    setBackupBusy(true);
+    try {
+      const backup = await databaseService.fetchBackup();
+      if (!backup) { alert(t('cards.backup.noBackup')); return; }
+      const when = new Date(backup.updatedAt).toLocaleString();
+      const ok = window.confirm(t('cards.backup.restoreConfirm', {
+        time: when,
+        bOwned: backup.ownedCount, bFloor: backup.towerProgress,
+        lOwned: ownedIds.length, lFloor: state.towerProgress,
+      }));
+      if (!ok) return;
+      databaseService.applyBackupToLocal(backup);
+      window.location.reload(); // 서비스 싱글톤 재로드
+    } finally {
+      setBackupBusy(false);
+    }
+  };
 
   // 보유 카드 이름·타입·레어도 (검색/필터/정렬 + CardView용)
   const { meta, rarity: rarityMap } = useCardMeta(ownedIds.map(c => c.pokemonId));
@@ -131,6 +212,20 @@ export const CardLabView = () => {
       </TopBar>
 
       <Body>
+        {/* 보상 안내 배너 — 도감 마일스톤·시즌 순위 보상 */}
+        {notices.length > 0 && (
+          <NoticeStack>
+            {notices.map((msg, i) => (
+              <Notice key={`${i}-${msg}`}>
+                <span>{msg}</span>
+                <NoticeClose onClick={() => setNotices(ns => ns.filter((_, j) => j !== i))}>
+                  <X size={13} />
+                </NoticeClose>
+              </Notice>
+            ))}
+          </NoticeStack>
+        )}
+
         {/* 랭킹 위젯 — 이번 주 시즌 타워 + 통산 수집 */}
         <RankWidget>
           <RankHead>
@@ -244,6 +339,24 @@ export const CardLabView = () => {
             </>
           )}
         </Section>
+
+        {/* 클라우드 백업 — 로그인 유저만. 수집/기록이 localStorage 단독이라 유실 안전망 */}
+        {!authService.isOfflineMode() && !!authService.getCurrentUser() && (
+          <BackupBar>
+            <BackupInfo>
+              <CloudUpload size={13} />
+              {lastBackupAt
+                ? t('cards.backup.last', { time: new Date(lastBackupAt).toLocaleString() })
+                : t('cards.backup.never')}
+            </BackupInfo>
+            <BackupBtn onClick={handleBackup} disabled={backupBusy}>
+              <CloudUpload size={13} /> {t('cards.backup.backupBtn')}
+            </BackupBtn>
+            <BackupBtn onClick={handleRestore} disabled={backupBusy}>
+              <CloudDownload size={13} /> {t('cards.backup.restoreBtn')}
+            </BackupBtn>
+          </BackupBar>
+        )}
 
         {/* 개발용 화폐 지급 — dev 서버에서만 노출 (프로덕션 빌드에서 제거됨) */}
         {import.meta.env.DEV && (
@@ -458,6 +571,37 @@ const DexGrid = styled.div`
 const Empty = styled.div`
   padding: 40px; text-align: center; color: rgba(255,255,255,0.4); font-size: 14px;
   border: 1px dashed rgba(255,255,255,0.12); border-radius: 12px;
+`;
+
+const NoticeStack = styled.div`display: flex; flex-direction: column; gap: 8px;`;
+const Notice = styled.div`
+  display: flex; align-items: center; justify-content: space-between; gap: 10px;
+  background: rgba(251,191,36,0.1); border: 1px solid rgba(251,191,36,0.3);
+  color: #fbbf24; font-size: 13px; font-weight: 700;
+  padding: 10px 14px; border-radius: 10px; line-height: 1.5;
+  ${media.mobile} { font-size: 12px; padding: 8px 12px; }
+`;
+const NoticeClose = styled.button`
+  flex: 0 0 auto; display: flex; align-items: center; justify-content: center;
+  background: transparent; border: none; color: rgba(251,191,36,0.7); cursor: pointer;
+  padding: 2px; &:hover { color: #fbbf24; }
+`;
+
+const BackupBar = styled.div`
+  display: flex; align-items: center; justify-content: center; gap: 10px; flex-wrap: wrap;
+  padding: 10px; border: 1px dashed rgba(255,255,255,0.12); border-radius: 10px;
+`;
+const BackupInfo = styled.div`
+  display: flex; align-items: center; gap: 6px;
+  font-size: 12px; color: rgba(255,255,255,0.45);
+`;
+const BackupBtn = styled.button`
+  display: flex; align-items: center; gap: 5px;
+  background: rgba(255,255,255,0.06); border: 1px solid rgba(255,255,255,0.14);
+  color: rgba(255,255,255,0.75); font-size: 12px; font-weight: 700;
+  padding: 6px 12px; border-radius: 8px; cursor: pointer;
+  &:hover { background: rgba(255,255,255,0.12); }
+  &:disabled { opacity: 0.4; cursor: not-allowed; }
 `;
 
 const DevBar = styled.div`display: flex; justify-content: center; opacity: 0.4;`;

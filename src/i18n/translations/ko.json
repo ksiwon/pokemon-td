@@ -1211,6 +1211,24 @@
       "vsResult": "vs {name} · 잔존 {p} : {e}",
       "rematch": "다시 매칭"
     },
+    "daily": {
+      "firstWin": "일일 첫 승"
+    },
+    "notice": {
+      "dexMilestone": "📖 도감 {n}종 달성! +{c} 코인 +{s} 별조각",
+      "seasonReward": "🏆 지난주 시즌 보상 — {detail} → +{c} 코인 +{s} 별조각",
+      "seasonTowerPart": "타워 {rank}위({n}층)",
+      "seasonPvpPart": "대전 {rank}위({n}승)"
+    },
+    "backup": {
+      "last": "마지막 백업: {time}",
+      "never": "아직 백업 없음 — 기기 변경 대비 백업을 권장해요",
+      "backupBtn": "지금 백업",
+      "restoreBtn": "복원",
+      "backupFail": "백업에 실패했습니다. 네트워크를 확인해주세요.",
+      "noBackup": "클라우드에 저장된 백업이 없습니다.",
+      "restoreConfirm": "클라우드 백업({time})으로 복원할까요?\n\n백업: 도감 {bOwned}종 · 타워 {bFloor}층\n현재: 도감 {lOwned}종 · 타워 {lFloor}층\n\n복원하면 현재 로컬 데이터를 덮어씁니다."
+    },
     "battleLog": {
       "title": "전투 기록",
       "turn": "{n}턴",

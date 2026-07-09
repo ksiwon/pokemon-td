@@ -16,9 +16,21 @@ import { useCardState } from '../../hooks/useCardState';
 import {
   cardBattleService, buildBattleCard, BattleCard, BattleResult, BattleLogEntry,
 } from '../../services/CardBattleService';
-import { BattleLogPanel } from './BattleLogPanel';
+import { BattleLogPanel, nextStatusMap, UnitStatusMap, UnitStatusBadge } from './BattleLogPanel';
 
 type Phase = 'idle' | 'matching' | 'battle' | 'result';
+
+// 최근 대전 상대 uid 기록(반복 매칭 방지). localStorage에 최대 3명.
+const RECENT_OPPS_KEY = 'ptd-recent-opps';
+const loadRecentOpps = (): string[] => {
+  try { return JSON.parse(localStorage.getItem(RECENT_OPPS_KEY) ?? '[]'); } catch { return []; }
+};
+const pushRecentOpp = (uid: string): void => {
+  try {
+    const list = [uid, ...loadRecentOpps().filter(id => id !== uid)].slice(0, 3);
+    localStorage.setItem(RECENT_OPPS_KEY, JSON.stringify(list));
+  } catch { /* ignore */ }
+};
 
 // 매칭별 결정론 시드(FNV-1a) — 같은 상대 스냅샷과는 항상 같은 결과(재도전 리롤 방지).
 const hashSeed = (s: string): number => {
@@ -49,8 +61,10 @@ export const RandomBattle = ({ onBack }: { onBack: () => void }) => {
   const [speed, setSpeed] = useState(1);
   const [result, setResult] = useState<BattleResult | null>(null);
   const [rewardCoins, setRewardCoins] = useState(0);
+  const [dailyReward, setDailyReward] = useState<{ coins: number; starShards: number } | null>(null);
   const [hpMap, setHpMap] = useState<Record<string, number>>({});
   const [hit, setHit] = useState<string | null>(null);
+  const [statusMap, setStatusMap] = useState<UnitStatusMap>({});
   const timer = useRef<number | null>(null);
 
   const startMatch = async () => {
@@ -59,14 +73,17 @@ export const RandomBattle = ({ onBack }: { onBack: () => void }) => {
     setPhase('matching');
     try {
       // 1) 내 덱 발행(변경 시에만 실제 write) + 상대 찾기
+      //    전투력(별 합) 근접 우선 + 최근 상대 3명 제외(풀이 작으면 허용)
       const myDeck = cardService.getDeckWithStars();
       databaseService.publishCardDeck(myDeck).catch(() => {});
-      const opp = await databaseService.getRandomOpponentDeck();
+      const myPower = myDeck.reduce((s, d) => s + d.stars, 0);
+      const opp = await databaseService.getRandomOpponentDeck(myPower, loadRecentOpps());
       if (!opp) {
         alert(t('cards.pvp.noOpponent'));
         setPhase('idle');
         return;
       }
+      pushRecentOpp(opp.userId);
 
       // 2) 내 팀 빌드
       const player: BattleCard[] = [];
@@ -111,6 +128,8 @@ export const RandomBattle = ({ onBack }: { onBack: () => void }) => {
       if (weeklyWins !== null) {
         databaseService.updateCardPvpSeasonRanking(weeklyWins).catch(() => {});
       }
+      // 일일 첫 승 보너스(타워/랜덤대전 공통)
+      const daily = res.winner === 'player' ? cardService.claimDailyFirstWin() : null;
 
       // 6) 재생 준비 — 시너지 적용본을 풀피로 리셋
       const all: Record<string, BattleCard> = {};
@@ -125,9 +144,11 @@ export const RandomBattle = ({ onBack }: { onBack: () => void }) => {
       setPlayerOrder(pOrder);
       setEnemyOrder(eOrder);
       setHpMap(hp0);
+      setStatusMap({});
       setLog(res.log);
       setResult(res);
       setRewardCoins(coins);
+      setDailyReward(daily);
       setStep(0);
       setPhase('battle');
     } catch (e) {
@@ -144,6 +165,7 @@ export const RandomBattle = ({ onBack }: { onBack: () => void }) => {
     timer.current = window.setTimeout(() => {
       const e = log[step];
       setHpMap(m => ({ ...m, [e.targetUid]: e.remainingHp }));
+      setStatusMap(m => nextStatusMap(m, e));
       // 피격 흔들림은 데미지 이벤트(attack/dot)에만 — 회복/행동불가는 제외
       if (!e.kind || e.kind === 'attack' || e.kind === 'dot') {
         setHit(e.targetUid);
@@ -160,6 +182,7 @@ export const RandomBattle = ({ onBack }: { onBack: () => void }) => {
     Object.values(units).forEach(u => { finalHp[u.uid] = u.maxHp; });
     log.forEach(e => { finalHp[e.targetUid] = e.remainingHp; });
     setHpMap(finalHp);
+    setStatusMap({}); // 전투 종료 — 상태 표시 정리
     setStep(log.length);
     finish();
   };
@@ -170,7 +193,8 @@ export const RandomBattle = ({ onBack }: { onBack: () => void }) => {
   };
 
   const reset = () => {
-    setPhase('idle'); setResult(null); setOpponent(null); setLog([]); setStep(0); setRewardCoins(0);
+    setPhase('idle'); setResult(null); setOpponent(null); setLog([]); setStep(0);
+    setRewardCoins(0); setDailyReward(null); setStatusMap({});
   };
 
   // ─── 렌더 ───────────────────────────────────────────────────────
@@ -178,8 +202,10 @@ export const RandomBattle = ({ onBack }: { onBack: () => void }) => {
     const hp = hpMap[u.uid] ?? u.maxHp;
     const pct = Math.max(0, (hp / u.maxHp) * 100);
     const dead = hp <= 0;
+    const status = statusMap[u.uid];
     return (
       <Unit key={u.uid} $dead={dead} $hit={hit === u.uid} $side={u.side}>
+        {status && !dead && <UnitStatusBadge kind={status.kind} />}
         <Sprite src={u.sprite} alt={u.name} draggable={false} $side={u.side} />
         <HpBar><HpFill $pct={pct} $low={pct < 30} /></HpBar>
         <UStars>{'★'.repeat(u.stars)}</UStars>
@@ -262,6 +288,13 @@ export const RandomBattle = ({ onBack }: { onBack: () => void }) => {
             {rewardCoins > 0 && (
               <RewardRow>
                 <Rw $c="#fbbf24">{t('cards.tower.coins', { n: rewardCoins })}</Rw>
+              </RewardRow>
+            )}
+            {dailyReward && (
+              <RewardRow>
+                <DailyBadge>{t('cards.daily.firstWin')}</DailyBadge>
+                <Rw $c="#fbbf24">{t('cards.tower.coins', { n: dailyReward.coins })}</Rw>
+                {dailyReward.starShards > 0 && <Rw $c="#c084fc">{t('cards.tower.shards', { n: dailyReward.starShards })}</Rw>}
               </RewardRow>
             )}
             <ResultBtns>
@@ -348,6 +381,7 @@ const SideLabel = styled.div<{ $side: 'player' | 'enemy' }>`
 const Team = styled.div<{ $side: 'player' | 'enemy' }>`display: flex; flex-direction: column; gap: 12px;`;
 const ArenaRow = styled.div`display: flex; justify-content: center; gap: 18px; min-height: 78px;`;
 const Unit = styled.div<{ $dead: boolean; $hit: boolean; $side: 'player' | 'enemy' }>`
+  position: relative;
   display: flex; flex-direction: column; align-items: center; gap: 4px; width: 72px;
   opacity: ${p => (p.$dead ? 0.2 : 1)};
   filter: ${p => (p.$dead ? 'grayscale(1)' : 'none')};
@@ -386,6 +420,7 @@ const ResultCard = styled.div<{ $win: boolean }>`
 const ResultTitle = styled.div<{ $win: boolean }>`font-size: 34px; font-weight: 900; color: ${p => (p.$win ? '#34d399' : '#f87171')};`;
 const ResultSub = styled.div`font-size: 14px; color: rgba(255,255,255,0.6); margin-top: 6px;`;
 const RewardRow = styled.div`display: flex; gap: 10px; justify-content: center; align-items: center; flex-wrap: wrap; margin-top: 16px;`;
+const DailyBadge = styled.span`background: #7dd3fc; color: #07090f; font-size: 11px; font-weight: 800; padding: 3px 8px; border-radius: 6px;`;
 const Rw = styled.span<{ $c: string }>`font-size: 15px; font-weight: 800; color: ${p => p.$c};`;
 const ResultBtns = styled.div`display: flex; gap: 10px; justify-content: center; margin-top: 22px;`;
 const PrimaryBtn = styled.button`padding: 11px 26px; border-radius: 10px; border: none; background: #7dd3fc; color: #07090f; font-weight: 800; font-size: 15px; cursor: pointer; &:hover{transform:translateY(-2px);} transition: transform 0.15s;`;

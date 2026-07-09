@@ -34,6 +34,15 @@ export function seasonId(now: Date = new Date()): string {
   return `${isoYear}-W${String(week).padStart(2, '0')}`;
 }
 
+/** 주어진 시각의 KST 날짜 ID. 예: "2026-07-09". 일일 보너스 리셋(자정 KST) 기준. */
+export function dayId(now: Date = new Date()): string {
+  const k = toKst(now);
+  const y = k.getUTCFullYear();
+  const m = String(k.getUTCMonth() + 1).padStart(2, '0');
+  const d = String(k.getUTCDate()).padStart(2, '0');
+  return `${y}-${m}-${d}`;
+}
+
 /** 다음 시즌(다음 주 월요일 00:00 KST)까지 남은 ms. */
 export function msUntilSeasonReset(now: Date = new Date()): number {
   const k = toKst(now);

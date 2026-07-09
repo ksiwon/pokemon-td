@@ -10,7 +10,7 @@
 //   - 모달 닫힘 시 finalizeGame 호출하면 레이팅 업데이트 + finished 표기
 //   - 5분 후 cleanupExpiredRooms가 자동으로 방 삭제
 
-import { useState, useEffect, useCallback, useRef } from "react";
+import { useState, useEffect, useCallback, useRef, lazy, Suspense } from "react";
 import styled, { keyframes } from "styled-components";
 import { Routes, Route, useNavigate, useLocation, Navigate } from 'react-router-dom';
 import { authService } from "./services/AuthService";
@@ -25,14 +25,18 @@ import { useTranslation } from './i18n';
 import { Emoji } from "./components/shared/Emoji";
 import { LoginScreen } from "./components/auth/LoginScreen";
 import { MainMenu } from "./components/menu/MainMenu";
-import { MultiplayerLobby } from "./components/multiplayer/MultiplayerLobby";
-import { MapSelector } from "./components/ui/MapSelector";
-import { GameLayout } from "./components/game/GameLayout";
 import { ProtectedRoute } from "./components/auth/ProtectedRoute";
-import { StorySelector } from './components/story/StorySelector';
-import { CardLabView } from "./components/cards/CardLabView";
-import { QuizView } from "./components/quiz/QuizView";
 import { FloatingSettings } from "./components/ui/FloatingSettings";
+
+// [PERF] 라우트 레벨 코드 스플리팅 — 초기 로드는 로그인/메뉴만.
+//   무거운 서브트리(게임 UI, 카드, 퀴즈 은행, 스토리 대사, 멀티 로비)는 진입 시 로드.
+//   (서비스 싱글톤들은 main 청크에 남음 — SaveService/GameManager가 정적 참조하기 때문)
+const MultiplayerLobby = lazy(() => import("./components/multiplayer/MultiplayerLobby").then(m => ({ default: m.MultiplayerLobby })));
+const MapSelector = lazy(() => import("./components/ui/MapSelector").then(m => ({ default: m.MapSelector })));
+const GameLayout = lazy(() => import("./components/game/GameLayout").then(m => ({ default: m.GameLayout })));
+const StorySelector = lazy(() => import('./components/story/StorySelector').then(m => ({ default: m.StorySelector })));
+const CardLabView = lazy(() => import("./components/cards/CardLabView").then(m => ({ default: m.CardLabView })));
+const QuizView = lazy(() => import("./components/quiz/QuizView").then(m => ({ default: m.QuizView })));
 
 const fadeIn = keyframes`from { opacity: 0; } to { opacity: 1; }`;
 
@@ -234,6 +238,11 @@ function App() {
 
   return (
     <>
+    <Suspense fallback={
+      <PreloadingOverlay>
+        <LoadingTitle>{t('loading.checkingUser')}</LoadingTitle>
+      </PreloadingOverlay>
+    }>
     <Routes>
       <Route path="/login" element={<LoginScreen />} />
 
@@ -294,6 +303,7 @@ function App() {
 
       <Route path="*" element={<Navigate to={user ? "/" : "/login"} replace />} />
     </Routes>
+    </Suspense>
     {location.pathname !== '/game' && <FloatingSettings />}
     </>
   );
