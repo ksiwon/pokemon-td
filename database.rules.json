@@ -5,20 +5,20 @@
       ".indexOn": ["status", "createdAt"],
       "$roomId": {
         ".read": "auth != null",
-        ".write": "auth != null && ((!data.exists() && newData.child('hostId').val() === auth.uid) || data.child('memberIds').child(auth.uid).exists() || data.child('status').val() === 'waiting' || data.child('createdAt').val() < (now - 10800000))",
-        ".validate": "!newData.exists() || (newData.hasChildren(['id','hostId','createdAt']) && (!newData.child('name').exists() || (newData.child('name').isString() && newData.child('name').val().length <= 100)))"
+        ".write": "auth != null && ((!data.exists() && newData.child('hostId').val() === auth.uid) || data.child('memberIds').child(auth.uid).exists() || (data.child('status').val() === 'waiting' && newData.exists() && newData.child('memberIds').child(auth.uid).exists()) || (data.child('createdAt').val() < (now - 10800000) && !newData.exists()))",
+        ".validate": "!newData.exists() || (newData.hasChildren(['id','hostId','createdAt']) && (!data.exists() || (newData.child('hostId').val() === data.child('hostId').val() && newData.child('id').val() === data.child('id').val() && newData.child('createdAt').val() === data.child('createdAt').val())) && (!newData.child('name').exists() || (newData.child('name').isString() && newData.child('name').val().length <= 100)))"
       }
     },
     "gameStates": {
       "$roomId": {
         ".read": "auth != null",
-        ".write": "auth != null && (root.child('rooms').child($roomId).child('memberIds').child(auth.uid).exists() || (!root.child('rooms').child($roomId).exists() && !newData.exists()) || root.child('rooms').child($roomId).child('status').val() === 'finished' || root.child('rooms').child($roomId).child('createdAt').val() < (now - 10800000))"
+        ".write": "auth != null && (root.child('rooms').child($roomId).child('memberIds').child(auth.uid).exists() || (!newData.exists() && !root.child('rooms').child($roomId).exists()))"
       }
     },
     "towerDetails": {
       "$roomId": {
         ".read": "auth != null",
-        ".write": "auth != null && ((!root.child('rooms').child($roomId).exists() && !newData.exists()) || root.child('rooms').child($roomId).child('status').val() === 'finished' || root.child('rooms').child($roomId).child('createdAt').val() < (now - 10800000))",
+        ".write": "auth != null && !newData.exists() && !root.child('rooms').child($roomId).exists()",
         "$userId": {
           ".write": "auth != null && root.child('rooms').child($roomId).child('memberIds').child(auth.uid).exists() && (auth.uid === $userId || $userId.matches(/^ai_/))"
         }
@@ -27,13 +27,13 @@
     "battleResults": {
       "$roomId": {
         ".read": "auth != null",
-        ".write": "auth != null && (root.child('rooms').child($roomId).child('memberIds').child(auth.uid).exists() || (!root.child('rooms').child($roomId).exists() && !newData.exists()) || root.child('rooms').child($roomId).child('status').val() === 'finished' || root.child('rooms').child($roomId).child('createdAt').val() < (now - 10800000))"
+        ".write": "auth != null && (root.child('rooms').child($roomId).child('memberIds').child(auth.uid).exists() || (!newData.exists() && !root.child('rooms').child($roomId).exists()))"
       }
     },
     "presence": {
       "$roomId": {
         ".read": "auth != null",
-        ".write": "auth != null && ((!root.child('rooms').child($roomId).exists() && !newData.exists()) || root.child('rooms').child($roomId).child('status').val() === 'finished' || root.child('rooms').child($roomId).child('createdAt').val() < (now - 10800000))",
+        ".write": "auth != null && !newData.exists() && !root.child('rooms').child($roomId).exists()",
         "$userId": {
           ".write": "auth != null && root.child('rooms').child($roomId).child('memberIds').child(auth.uid).exists() && (auth.uid === $userId || $userId.matches(/^ai_/))",
           ".validate": "!newData.exists() || newData.hasChild('online')"

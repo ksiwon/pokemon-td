@@ -506,6 +506,9 @@ class PokeAPIService {
       this.cardRarityCache.set(id, rarity);
       out.push({ id, weight: RARITY_WEIGHTS[rarity] });
     }
+    // [DETERMINISM] statCache는 네트워크 응답 순서(Map 삽입 순)라 기기/세션마다 다를 수 있음.
+    //   id 정렬로 고정 → 시드 rng를 쓰는 트레이너 타워 적팀이 기기·캐시 재구축과 무관하게 동일.
+    out.sort((a, b) => a.id - b.id);
     this.cardWeightedList = out;
   }
 

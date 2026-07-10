@@ -1,8 +1,14 @@
 // src/services/quizExamBank.ts
-// 수능 모의고사 전용 큐레이션 문제은행 — 포덕 고인물 난이도.
-// 커뮤니티/유튜브의 "포켓몬 수능·모의고사" 스타일을 참고해 저작한 4지선다.
-// ★ 전부 사실 검증 가능한 문항만(진화·타입상성·종족값·특성·리전폼·세대 등).
-//   애니/성우 등 PokeAPI로 확인 불가한 트리비아는 배제.
+// 수능 모의고사 전용 큐레이션 문제은행 — "포켓몬 고인물능력시험" 난이도.
+//
+// 출제 방향(커뮤니티의 포켓몬 수능·배틀 모의고사·고인물능력시험 스타일 종합):
+//   단순 도감/타입 암기가 아니라 '실전 배틀 메타 지식'을 묻는다.
+//   ① 기술 우선도  ② 세대별 사양 변경  ③ 노력치·개체값·성격 계산
+//   ④ 특성 상호작용  ⑤ 지닌 도구 배율  ⑥ 날씨·필드  ⑦ 상태이상 수치
+//   ⑧ 4배 약점·스텔스록  ⑨ 스피드 종족값 라인  ⑩ 데미지 계산식
+//
+// ★ 전 문항 9세대(SV) 기준. 수치는 Bulbapedia 교차검증 완료.
+//   애니/성우 등 검증 불가 트리비아는 배제.
 
 import { QuizQuestion } from '../types/quiz';
 
@@ -11,114 +17,156 @@ const curLang = (): 'ko' | 'en' => (localStorage.getItem('language') === 'en' ? 
 
 interface BankQ {
   q: { ko: string; en: string };
-  /** 보기 4개. */
+  /** 보기 4개. 첫 번째(index 0)가 정답 — bankToQuestion에서 셔플됨. */
   opts: { ko: string; en: string }[];
-  /** 정답 인덱스(0~3). */
+  /** 정답 인덱스(0~3). 저작 편의상 항상 0. */
   correct: number;
 }
 
 export const EXAM_BANK: BankQ[] = [
-  { q: { ko: '다음 중 통신교환으로 진화하는 포켓몬은?', en: 'Which Pokémon evolves via trade?' },
-    opts: [{ ko: '팬텀', en: 'Gengar' }, { ko: '이상해꽃', en: 'Venusaur' }, { ko: '리자몽', en: 'Charizard' }, { ko: '거북왕', en: 'Blastoise' }], correct: 0 },
-  { q: { ko: '전국도감 150번 포켓몬은?', en: 'Which Pokémon is National Dex #150?' },
-    opts: [{ ko: '뮤츠', en: 'Mewtwo' }, { ko: '뮤', en: 'Mew' }, { ko: '루기아', en: 'Lugia' }, { ko: '딱구리', en: 'Golem' }], correct: 0 },
-  { q: { ko: '다음 중 종족값 총합이 가장 높은 포켓몬은?', en: 'Which has the highest base stat total?' },
-    opts: [{ ko: '뮤츠', en: 'Mewtwo' }, { ko: '한카리아스', en: 'Garchomp' }, { ko: '마기라스', en: 'Tyranitar' }, { ko: '메타그로스', en: 'Metagross' }], correct: 0 },
-  { q: { ko: '다음 중 이브이의 진화형이 아닌 것은?', en: 'Which is NOT an Eevee evolution?' },
-    opts: [{ ko: '마릴', en: 'Marill' }, { ko: '블래키', en: 'Umbreon' }, { ko: '님피아', en: 'Sylveon' }, { ko: '리피아', en: 'Leafeon' }], correct: 0 },
-  { q: { ko: '페어리 타입이 무효화(0배)하는 공격 타입은?', en: 'Fairy is immune (0×) to which attacking type?' },
-    opts: [{ ko: '드래곤', en: 'Dragon' }, { ko: '강철', en: 'Steel' }, { ko: '독', en: 'Poison' }, { ko: '불꽃', en: 'Fire' }], correct: 0 },
-  { q: { ko: '드래곤 타입에게 효과가 굉장한(2배) 타입이 아닌 것은?', en: 'Which is NOT super-effective against Dragon?' },
-    opts: [{ ko: '독', en: 'Poison' }, { ko: '얼음', en: 'Ice' }, { ko: '페어리', en: 'Fairy' }, { ko: '드래곤', en: 'Dragon' }], correct: 0 },
-  { q: { ko: '고스트 타입에게 효과가 없는(0배) 공격 타입은?', en: 'Which attack does NOT affect Ghost (0×)?' },
-    opts: [{ ko: '노말', en: 'Normal' }, { ko: '악', en: 'Dark' }, { ko: '에스퍼', en: 'Psychic' }, { ko: '땅', en: 'Ground' }], correct: 0 },
-  { q: { ko: '다음 중 성도지방(2세대)에서 처음 등장한 포켓몬은?', en: 'Which debuted in Johto (Gen 2)?' },
-    opts: [{ ko: '마릴', en: 'Marill' }, { ko: '또가스', en: 'Koffing' }, { ko: '롱스톤', en: 'Onix' }, { ko: '고라파덕', en: 'Golduck' }], correct: 0 },
-  { q: { ko: '다음 중 환상의 포켓몬(Mythical)은?', en: 'Which is a Mythical Pokémon?' },
-    opts: [{ ko: '뮤', en: 'Mew' }, { ko: '파이어', en: 'Moltres' }, { ko: '썬더', en: 'Zapdos' }, { ko: '프리져', en: 'Articuno' }], correct: 0 },
-  { q: { ko: '다음 중 메가진화가 존재하지 않는 포켓몬은?', en: 'Which does NOT have a Mega Evolution?' },
-    opts: [{ ko: '피카츄', en: 'Pikachu' }, { ko: '리자몽', en: 'Charizard' }, { ko: '이상해꽃', en: 'Venusaur' }, { ko: '거북왕', en: 'Blastoise' }], correct: 0 },
-  { q: { ko: '다음 중 "알로라의 모습(리전폼)"이 있는 포켓몬은?', en: 'Which has an Alolan form?' },
-    opts: [{ ko: '나인테일', en: 'Ninetales' }, { ko: '윈디', en: 'Arcanine' }, { ko: '부스터', en: 'Flareon' }, { ko: '펜드라', en: 'Scolipede' }], correct: 0 },
-  { q: { ko: '1세대에서 스피드 종족값이 가장 높은 포켓몬은?', en: 'Highest base Speed Pokémon in Gen 1?' },
-    opts: [{ ko: '마르마인', en: 'Electrode' }, { ko: '후딘', en: 'Alakazam' }, { ko: '피죤투', en: 'Pidgeot' }, { ko: '쥬레곤', en: 'Dewgong' }], correct: 0 },
-  { q: { ko: '특성으로 "비(잔비)"를 부르는 포켓몬은?', en: 'Which summons rain (Drizzle)?' },
-    opts: [{ ko: '가이오가', en: 'Kyogre' }, { ko: '그란돈', en: 'Groudon' }, { ko: '레쿠쟈', en: 'Rayquaza' }, { ko: '파비코리', en: 'Pheromosa' }], correct: 0 },
-  { q: { ko: '거북왕의 바로 전 진화 단계는?', en: 'What does Blastoise evolve from?' },
-    opts: [{ ko: '어니부기', en: 'Wartortle' }, { ko: '꼬부기', en: 'Squirtle' }, { ko: '리자드', en: 'Charmeleon' }, { ko: '이상해풀', en: 'Ivysaur' }], correct: 0 },
-  { q: { ko: '다음 중 노말·비행 복합타입인 포켓몬은?', en: 'Which is Normal/Flying type?' },
-    opts: [{ ko: '구구', en: 'Pidgey' }, { ko: '뮤', en: 'Mew' }, { ko: '또가스', en: 'Koffing' }, { ko: '꼬렛', en: 'Rattata' }], correct: 0 },
-  { q: { ko: '풀 스타터 "치코리타"가 처음 등장한 세대는?', en: 'Which generation introduced Chikorita?' },
-    opts: [{ ko: '2세대', en: 'Gen 2' }, { ko: '1세대', en: 'Gen 1' }, { ko: '3세대', en: 'Gen 3' }, { ko: '4세대', en: 'Gen 4' }], correct: 0 },
-  { q: { ko: '이상해씨의 타입 조합은?', en: "What is Bulbasaur's typing?" },
-    opts: [{ ko: '풀·독', en: 'Grass/Poison' }, { ko: '풀·땅', en: 'Grass/Ground' }, { ko: '풀', en: 'Grass' }, { ko: '풀·비행', en: 'Grass/Flying' }], correct: 0 },
-  { q: { ko: '특성 "부유"로 땅 기술을 받지 않는 포켓몬은?', en: 'Which ignores Ground moves via Levitate?' },
-    opts: [{ ko: '또가스', en: 'Koffing' }, { ko: '딱구리', en: 'Golem' }, { ko: '롱스톤', en: 'Onix' }, { ko: '두그리오', en: 'Dugtrio' }], correct: 0 },
-  { q: { ko: '피카츄의 진화 전(베이비) 포켓몬은?', en: 'What is the baby form of Pikachu?' },
-    opts: [{ ko: '피츄', en: 'Pichu' }, { ko: '라이츄', en: 'Raichu' }, { ko: '파치리스', en: 'Pachirisu' }, { ko: '에몽가', en: 'Emolga' }], correct: 0 },
-  { q: { ko: '잠만보로 진화하는 포켓몬은?', en: 'Which evolves into Snorlax?' },
-    opts: [{ ko: '먹고자', en: 'Munchlax' }, { ko: '야돈', en: 'Slowpoke' }, { ko: '노고치', en: 'Dunsparce' }, { ko: '링곰', en: 'Ursaring' }], correct: 0 },
-  { q: { ko: '다음 중 물·땅 복합타입인 포켓몬은?', en: 'Which is Water/Ground type?' },
-    opts: [{ ko: '늪짱이', en: 'Swampert' }, { ko: '샤크니아', en: 'Sharpedo' }, { ko: '밀로틱', en: 'Milotic' }, { ko: '갸라도스', en: 'Gyarados' }], correct: 0 },
-  { q: { ko: '이른바 "전설의 개" 3마리(성도)에 속하지 않는 것은?', en: 'Which is NOT one of the Johto legendary beasts?' },
-    opts: [{ ko: '루기아', en: 'Lugia' }, { ko: '라이코', en: 'Raikou' }, { ko: '앤테이', en: 'Entei' }, { ko: '스이쿤', en: 'Suicune' }], correct: 0 },
-  { q: { ko: '다음 중 불꽃 타입 스타터가 아닌 것은?', en: 'Which is NOT a Fire-type starter?' },
-    opts: [{ ko: '장크로다일', en: 'Feraligatr' }, { ko: '블레이범', en: 'Blaziken' }, { ko: '초염몽', en: 'Infernape' }, { ko: '리자몽', en: 'Charizard' }], correct: 0 },
-  { q: { ko: '고래왕(윌로드)처럼 몸길이가 14.5m로 매우 큰 포켓몬은?', en: 'Which Pokémon is a huge 14.5 m long?' },
-    opts: [{ ko: '고래왕', en: 'Wailord' }, { ko: '잉어킹', en: 'Magikarp' }, { ko: '거북왕', en: 'Blastoise' }, { ko: '이상해꽃', en: 'Venusaur' }], correct: 0 },
-  { q: { ko: '강철 타입이 무효화(0배)하는 공격 타입은?', en: 'Steel is immune (0×) to which attacking type?' },
-    opts: [{ ko: '독', en: 'Poison' }, { ko: '땅', en: 'Ground' }, { ko: '불꽃', en: 'Fire' }, { ko: '격투', en: 'Fighting' }], correct: 0 },
-  { q: { ko: '땅 타입이 무효화(0배)하는 공격 타입은?', en: 'Ground is immune (0×) to which attacking type?' },
-    opts: [{ ko: '전기', en: 'Electric' }, { ko: '물', en: 'Water' }, { ko: '얼음', en: 'Ice' }, { ko: '풀', en: 'Grass' }], correct: 0 },
-  { q: { ko: '비행 타입이 무효화(0배)하는 공격 타입은?', en: 'Flying is immune (0×) to which attacking type?' },
-    opts: [{ ko: '땅', en: 'Ground' }, { ko: '격투', en: 'Fighting' }, { ko: '벌레', en: 'Bug' }, { ko: '풀', en: 'Grass' }], correct: 0 },
-  { q: { ko: '노말 타입에게 효과가 굉장한(2배) 공격 타입은?', en: 'Which type is super-effective (2×) against Normal?' },
-    opts: [{ ko: '격투', en: 'Fighting' }, { ko: '에스퍼', en: 'Psychic' }, { ko: '독', en: 'Poison' }, { ko: '고스트', en: 'Ghost' }], correct: 0 },
-  { q: { ko: '다음 중 얼음 타입의 약점이 아닌 것은?', en: 'Which is NOT a weakness of Ice type?' },
-    opts: [{ ko: '풀', en: 'Grass' }, { ko: '불꽃', en: 'Fire' }, { ko: '바위', en: 'Rock' }, { ko: '강철', en: 'Steel' }], correct: 0 },
-  { q: { ko: '근육몬을 괴력몬으로 진화시키는 방법은?', en: 'How does Machoke evolve into Machamp?' },
-    opts: [{ ko: '통신교환', en: 'Trade' }, { ko: '레벨업', en: 'Level up' }, { ko: '천둥의돌', en: 'Thunder Stone' }, { ko: '높은 친밀도', en: 'High friendship' }], correct: 0 },
-  { q: { ko: '갸라도스의 타입 조합은?', en: "What is Gyarados's typing?" },
-    opts: [{ ko: '물·비행', en: 'Water/Flying' }, { ko: '물', en: 'Water' }, { ko: '물·드래곤', en: 'Water/Dragon' }, { ko: '물·악', en: 'Water/Dark' }], correct: 0 },
-  { q: { ko: '리자몽의 타입 조합은?', en: "What is Charizard's typing?" },
-    opts: [{ ko: '불꽃·비행', en: 'Fire/Flying' }, { ko: '불꽃·드래곤', en: 'Fire/Dragon' }, { ko: '불꽃', en: 'Fire' }, { ko: '불꽃·악', en: 'Fire/Dark' }], correct: 0 },
-  { q: { ko: '마기라스의 타입 조합은?', en: "What is Tyranitar's typing?" },
-    opts: [{ ko: '바위·악', en: 'Rock/Dark' }, { ko: '바위·땅', en: 'Rock/Ground' }, { ko: '악·드래곤', en: 'Dark/Dragon' }, { ko: '바위', en: 'Rock' }], correct: 0 },
-  { q: { ko: '한카리아스의 타입 조합은?', en: "What is Garchomp's typing?" },
-    opts: [{ ko: '드래곤·땅', en: 'Dragon/Ground' }, { ko: '드래곤', en: 'Dragon' }, { ko: '드래곤·비행', en: 'Dragon/Flying' }, { ko: '땅·악', en: 'Ground/Dark' }], correct: 0 },
-  { q: { ko: '다음 중 종족값 총합이 600이 아닌 포켓몬은?', en: 'Which does NOT have a base stat total of 600?' },
-    opts: [{ ko: '갸라도스', en: 'Gyarados' }, { ko: '보만다', en: 'Salamence' }, { ko: '마기라스', en: 'Tyranitar' }, { ko: '메타그로스', en: 'Metagross' }], correct: 0 },
-  { q: { ko: '다음 중 갈라르지방의 모습(리전폼)이 있는 포켓몬은?', en: 'Which has a Galarian form?' },
-    opts: [{ ko: '파오리', en: "Farfetch'd" }, { ko: '피카츄', en: 'Pikachu' }, { ko: '뮤', en: 'Mew' }, { ko: '리자몽', en: 'Charizard' }], correct: 0 },
-  { q: { ko: '뮤츠가 처음 등장한 세대는?', en: 'Which generation introduced Mewtwo?' },
-    opts: [{ ko: '1세대', en: 'Gen 1' }, { ko: '2세대', en: 'Gen 2' }, { ko: '3세대', en: 'Gen 3' }, { ko: '4세대', en: 'Gen 4' }], correct: 0 },
-  { q: { ko: '다음 중 물의 돌로 진화하는 포켓몬은?', en: 'Which evolves using a Water Stone?' },
-    opts: [{ ko: '별가사리', en: 'Staryu' }, { ko: '구구', en: 'Pidgey' }, { ko: '캐터피', en: 'Caterpie' }, { ko: '꼬렛', en: 'Rattata' }], correct: 0 },
-  { q: { ko: '다음 중 불꽃·비행 복합타입인 포켓몬은?', en: 'Which is Fire/Flying type?' },
-    opts: [{ ko: '파이어', en: 'Moltres' }, { ko: '초염몽', en: 'Infernape' }, { ko: '윈디', en: 'Arcanine' }, { ko: '부스터', en: 'Flareon' }], correct: 0 },
-  { q: { ko: '다음 중 에스퍼 타입에게 효과가 굉장한(2배) 공격 타입이 아닌 것은?', en: 'Which is NOT super-effective against Psychic?' },
-    opts: [{ ko: '격투', en: 'Fighting' }, { ko: '벌레', en: 'Bug' }, { ko: '고스트', en: 'Ghost' }, { ko: '악', en: 'Dark' }], correct: 0 },
-  { q: { ko: '다음 중 이른바 "전설의 새" 3마리에 속하지 않는 포켓몬은?', en: 'Which is NOT one of the legendary birds?' },
-    opts: [{ ko: '루기아', en: 'Lugia' }, { ko: '파이어', en: 'Moltres' }, { ko: '썬더', en: 'Zapdos' }, { ko: '프리져', en: 'Articuno' }], correct: 0 },
-  { q: { ko: '잉어킹이 진화하면?', en: 'What does Magikarp evolve into?' },
-    opts: [{ ko: '갸라도스', en: 'Gyarados' }, { ko: '밀로틱', en: 'Milotic' }, { ko: '샤크니아', en: 'Sharpedo' }, { ko: '왕콘치', en: 'Seaking' }], correct: 0 },
-  { q: { ko: '다음 중 격투 타입에게 효과가 굉장한(2배) 공격 타입은?', en: 'Which type is super-effective against Fighting?' },
-    opts: [{ ko: '에스퍼', en: 'Psychic' }, { ko: '바위', en: 'Rock' }, { ko: '노말', en: 'Normal' }, { ko: '악', en: 'Dark' }], correct: 0 },
-  { q: { ko: '다음 중 진화하지 않는(무진화) 포켓몬은?', en: 'Which Pokémon does NOT evolve?' },
-    opts: [{ ko: '켄타로스', en: 'Tauros' }, { ko: '이상해씨', en: 'Bulbasaur' }, { ko: '꼬부기', en: 'Squirtle' }, { ko: '파이리', en: 'Charmander' }], correct: 0 },
-  { q: { ko: '다음 중 타입에 드래곤이 포함되지 않는 포켓몬은?', en: 'Which Pokémon is NOT part Dragon type?' },
-    opts: [{ ko: '갸라도스', en: 'Gyarados' }, { ko: '망나뇽', en: 'Dragonite' }, { ko: '보만다', en: 'Salamence' }, { ko: '한카리아스', en: 'Garchomp' }], correct: 0 },
-  { q: { ko: '나옹이 진화하면?', en: 'What does Meowth evolve into?' },
-    opts: [{ ko: '페르시온', en: 'Persian' }, { ko: '나인테일', en: 'Ninetales' }, { ko: '라이츄', en: 'Raichu' }, { ko: '도라방스', en: 'Purrloin' }], correct: 0 },
-  // ── 고난도(베테랑 함정) ──
-  { q: { ko: '메가리자몽 X의 타입 조합은?', en: 'What is Mega Charizard X\'s typing?' },
-    opts: [{ ko: '불꽃·드래곤', en: 'Fire/Dragon' }, { ko: '불꽃·비행', en: 'Fire/Flying' }, { ko: '불꽃', en: 'Fire' }, { ko: '불꽃·악', en: 'Fire/Dark' }], correct: 0 },
-  { q: { ko: '알로라의 모습 "나시"의 타입 조합은?', en: 'What is Alolan Exeggutor\'s typing?' },
-    opts: [{ ko: '풀·드래곤', en: 'Grass/Dragon' }, { ko: '풀·에스퍼', en: 'Grass/Psychic' }, { ko: '풀·비행', en: 'Grass/Flying' }, { ko: '드래곤·에스퍼', en: 'Dragon/Psychic' }], correct: 0 },
-  { q: { ko: '다음 중 종족값 총합이 가장 낮은 포켓몬은?', en: 'Which has the lowest base stat total?' },
-    opts: [{ ko: '해너츠', en: 'Sunkern' }, { ko: '캐터피', en: 'Caterpie' }, { ko: '잉어킹', en: 'Magikarp' }, { ko: '구구', en: 'Pidgey' }], correct: 0 },
-  { q: { ko: '메가갸라도스의 타입 조합은?', en: 'What is Mega Gyarados\'s typing?' },
-    opts: [{ ko: '물·악', en: 'Water/Dark' }, { ko: '물·비행', en: 'Water/Flying' }, { ko: '물·드래곤', en: 'Water/Dragon' }, { ko: '물', en: 'Water' }], correct: 0 },
+  // ─── ① 기술 우선도 (5문항) ────────────────────────────────────────────────
+  { q: { ko: '기술 "속이기"의 우선도는?', en: 'What is the priority of Fake Out?' },
+    opts: [{ ko: '+3', en: '+3' }, { ko: '+1', en: '+1' }, { ko: '+2', en: '+2' }, { ko: '+4', en: '+4' }], correct: 0 },
+  { q: { ko: '기술 "신속"의 우선도는?', en: 'What is the priority of Extreme Speed?' },
+    opts: [{ ko: '+2', en: '+2' }, { ko: '+1', en: '+1' }, { ko: '+3', en: '+3' }, { ko: '+4', en: '+4' }], correct: 0 },
+  { q: { ko: '기술 "트릭룸"의 우선도는?', en: 'What is the priority of Trick Room?' },
+    opts: [{ ko: '-7', en: '-7' }, { ko: '0', en: '0' }, { ko: '-5', en: '-5' }, { ko: '-1', en: '-1' }], correct: 0 },
+  { q: { ko: '"반격"과 "미러코트"의 우선도는?', en: 'What is the priority of Counter and Mirror Coat?' },
+    opts: [{ ko: '-5', en: '-5' }, { ko: '-1', en: '-1' }, { ko: '-3', en: '-3' }, { ko: '-6', en: '-6' }], correct: 0 },
+  { q: { ko: '다음 중 우선도가 +4인 기술은?', en: 'Which move has priority +4?' },
+    opts: [{ ko: '방어', en: 'Protect' }, { ko: '속이기', en: 'Fake Out' }, { ko: '전광석화', en: 'Quick Attack' }, { ko: '도우미', en: 'Helping Hand' }], correct: 0 },
+
+  // ─── ② 세대별 사양 변경 (8문항) ────────────────────────────────────────────
+  { q: { ko: '기술의 물리/특수가 "기술 개별"로 분리된 세대는?', en: 'Which generation introduced the physical/special split?' },
+    opts: [{ ko: '4세대', en: 'Gen 4' }, { ko: '3세대', en: 'Gen 3' }, { ko: '5세대', en: 'Gen 5' }, { ko: '2세대', en: 'Gen 2' }], correct: 0 },
+  { q: { ko: '급소 데미지 배율이 2배에서 1.5배로 하향된 세대는?', en: 'In which generation did the critical hit multiplier drop from 2× to 1.5×?' },
+    opts: [{ ko: '6세대', en: 'Gen 6' }, { ko: '5세대', en: 'Gen 5' }, { ko: '7세대', en: 'Gen 7' }, { ko: '4세대', en: 'Gen 4' }], correct: 0 },
+  { q: { ko: '7세대 이후 급소율 0단계(기본)의 확률은?', en: 'What is the stage-0 critical hit rate from Gen 7 onward?' },
+    opts: [{ ko: '1/24 (약 4.17%)', en: '1/24 (~4.17%)' }, { ko: '1/16 (6.25%)', en: '1/16 (6.25%)' }, { ko: '1/8 (12.5%)', en: '1/8 (12.5%)' }, { ko: '1/32 (약 3.13%)', en: '1/32 (~3.13%)' }], correct: 0 },
+  { q: { ko: '6세대에서 강철 타입이 잃어버린 두 가지 저항(0.5배)은?', en: 'Which two resistances did Steel type LOSE in Gen 6?' },
+    opts: [{ ko: '고스트·악', en: 'Ghost and Dark' }, { ko: '얼음·바위', en: 'Ice and Rock' }, { ko: '드래곤·페어리', en: 'Dragon and Fairy' }, { ko: '에스퍼·비행', en: 'Psychic and Flying' }], correct: 0 },
+  { q: { ko: '마비 상태의 스피드 감소가 75%에서 50%로 완화된 세대는?', en: 'In which generation was paralysis Speed reduction eased from 75% to 50%?' },
+    opts: [{ ko: '7세대', en: 'Gen 7' }, { ko: '6세대', en: 'Gen 6' }, { ko: '5세대', en: 'Gen 5' }, { ko: '8세대', en: 'Gen 8' }], correct: 0 },
+  { q: { ko: '"스텔스록"이 처음 등장한 세대는?', en: 'Which generation introduced Stealth Rock?' },
+    opts: [{ ko: '4세대', en: 'Gen 4' }, { ko: '3세대', en: 'Gen 3' }, { ko: '5세대', en: 'Gen 5' }, { ko: '6세대', en: 'Gen 6' }], correct: 0 },
+  { q: { ko: '다음 배틀 기믹을 도입 순서대로 바르게 나열한 것은?', en: 'Which lists these battle gimmicks in correct chronological order?' },
+    opts: [
+      { ko: '메가진화 → Z기술 → 다이맥스 → 테라스탈', en: 'Mega → Z-Move → Dynamax → Terastal' },
+      { ko: 'Z기술 → 메가진화 → 테라스탈 → 다이맥스', en: 'Z-Move → Mega → Terastal → Dynamax' },
+      { ko: '메가진화 → 다이맥스 → Z기술 → 테라스탈', en: 'Mega → Dynamax → Z-Move → Terastal' },
+      { ko: 'Z기술 → 다이맥스 → 메가진화 → 테라스탈', en: 'Z-Move → Dynamax → Mega → Terastal' }], correct: 0 },
+  { q: { ko: '3~5세대에서 한 능력치에 투자 가능한 노력치 상한은?', en: 'What was the per-stat EV cap in Gen 3-5?' },
+    opts: [{ ko: '255', en: '255' }, { ko: '252', en: '252' }, { ko: '510', en: '510' }, { ko: '256', en: '256' }], correct: 0 },
+
+  // ─── ③ 노력치·개체값·성격 (6문항) ──────────────────────────────────────────
+  { q: { ko: '6세대 이후 한 능력치에 투자 가능한 노력치 상한은?', en: 'What is the per-stat EV cap from Gen 6 onward?' },
+    opts: [{ ko: '252', en: '252' }, { ko: '255', en: '255' }, { ko: '510', en: '510' }, { ko: '224', en: '224' }], correct: 0 },
+  { q: { ko: '한 포켓몬이 가질 수 있는 노력치 총합의 상한은?', en: 'What is the maximum total EVs a Pokémon can have?' },
+    opts: [{ ko: '510', en: '510' }, { ko: '508', en: '508' }, { ko: '512', en: '512' }, { ko: '504', en: '504' }], correct: 0 },
+  { q: { ko: '레벨 100 기준, 실능력치 1을 올리는 데 필요한 노력치는?', en: 'At level 100, how many EVs raise a stat by 1 point?' },
+    opts: [{ ko: '4', en: '4' }, { ko: '8', en: '8' }, { ko: '2', en: '2' }, { ko: '1', en: '1' }], correct: 0 },
+  { q: { ko: '개체값(IV)이 가질 수 있는 최댓값은?', en: 'What is the maximum possible IV value?' },
+    opts: [{ ko: '31', en: '31' }, { ko: '32', en: '32' }, { ko: '15', en: '15' }, { ko: '63', en: '63' }], correct: 0 },
+  { q: { ko: '성격에 의한 능력치 보정 배율은?', en: 'What are the stat multipliers from a Pokémon\'s Nature?' },
+    opts: [{ ko: '상승 1.1배 / 하락 0.9배', en: '1.1× up / 0.9× down' }, { ko: '상승 1.2배 / 하락 0.8배', en: '1.2× up / 0.8× down' }, { ko: '상승 1.5배 / 하락 0.5배', en: '1.5× up / 0.5× down' }, { ko: '상승 1.15배 / 하락 0.85배', en: '1.15× up / 0.85× down' }], correct: 0 },
+  { q: { ko: '노력치 252를 한 능력치에 투자했을 때 레벨 100에서 오르는 실능력치는?', en: 'How many stat points does 252 EVs give at level 100?' },
+    opts: [{ ko: '63', en: '63' }, { ko: '64', en: '64' }, { ko: '31', en: '31' }, { ko: '126', en: '126' }], correct: 0 },
+
+  // ─── ④ 특성 상호작용 (8문항) ───────────────────────────────────────────────
+  { q: { ko: '특성 "테크니션"이 위력을 1.5배로 올려주는 기준 위력은?', en: 'Technician boosts moves with base power up to what value?' },
+    opts: [{ ko: '60 이하', en: '60 or less' }, { ko: '50 이하', en: '50 or less' }, { ko: '70 이하', en: '70 or less' }, { ko: '40 이하', en: '40 or less' }], correct: 0 },
+  { q: { ko: '특성 "매직가드"를 가진 포켓몬이 받는 데미지는?', en: 'A Pokémon with Magic Guard takes damage only from what?' },
+    opts: [{ ko: '공격 기술의 직접 데미지만', en: 'Direct damage from attacking moves only' }, { ko: '모든 데미지', en: 'All damage sources' }, { ko: '상태이상 데미지만', en: 'Status damage only' }, { ko: '날씨 데미지만', en: 'Weather damage only' }], correct: 0 },
+  { q: { ko: '특성 "옹골참"의 효과로 옳은 것은?', en: 'What does the Ability Sturdy do?' },
+    opts: [{ ko: 'HP가 가득 찼을 때 일격에 쓰러지지 않는다', en: 'Survives a one-hit KO at full HP' }, { ko: '급소를 맞지 않는다', en: 'Cannot be hit by critical hits' }, { ko: '능력치가 떨어지지 않는다', en: 'Stats cannot be lowered' }, { ko: '상태이상에 걸리지 않는다', en: 'Cannot be inflicted with status' }], correct: 0 },
+  { q: { ko: '특성 "재생력(리제네레이터)"으로 교체 시 회복되는 HP는?', en: 'How much HP does Regenerator restore on switching out?' },
+    opts: [{ ko: '최대 HP의 1/3', en: '1/3 of max HP' }, { ko: '최대 HP의 1/2', en: '1/2 of max HP' }, { ko: '최대 HP의 1/4', en: '1/4 of max HP' }, { ko: '최대 HP의 1/16', en: '1/16 of max HP' }], correct: 0 },
+  { q: { ko: '특성 "장난꾸러기(짓궂은마음)"의 효과는?', en: 'What does the Ability Prankster do?' },
+    opts: [{ ko: '변화 기술의 우선도 +1', en: 'Gives status moves +1 priority' }, { ko: '모든 기술의 우선도 +1', en: 'Gives all moves +1 priority' }, { ko: '변화 기술의 명중률 100%', en: 'Status moves never miss' }, { ko: '변화 기술의 위력 1.5배', en: 'Status moves deal 1.5× damage' }], correct: 0 },
+  { q: { ko: '특성 "원더가드"를 가진 껍질몬에게 데미지를 줄 수 있는 공격은?', en: 'With Wonder Guard (Shedinja), which attacks can deal damage?' },
+    opts: [{ ko: '효과가 굉장한(2배 이상) 기술만', en: 'Only super-effective moves' }, { ko: '물리 기술만', en: 'Only physical moves' }, { ko: '자속 기술만', en: 'Only STAB moves' }, { ko: '위력 100 이상 기술만', en: 'Only moves with 100+ base power' }], correct: 0 },
+  { q: { ko: '특성 "천진(Unaware)"의 효과는?', en: 'What does the Ability Unaware do?' },
+    opts: [{ ko: '상대의 능력치 랭크 변화를 무시한다', en: 'Ignores the opponent\'s stat stage changes' }, { ko: '상대의 특성을 무시한다', en: 'Ignores the opponent\'s Ability' }, { ko: '타입 상성을 무시한다', en: 'Ignores type effectiveness' }, { ko: '상대의 도구를 무시한다', en: 'Ignores the opponent\'s held item' }], correct: 0 },
+  { q: { ko: '특성 "위협(Intimidate)"이 등장 시 깎는 능력치와 랭크는?', en: 'Intimidate lowers which stat, by how many stages, on entry?' },
+    opts: [{ ko: '공격 1랭크', en: 'Attack by 1 stage' }, { ko: '방어 1랭크', en: 'Defense by 1 stage' }, { ko: '공격 2랭크', en: 'Attack by 2 stages' }, { ko: '스피드 1랭크', en: 'Speed by 1 stage' }], correct: 0 },
+
+  // ─── ⑤ 지닌 도구 배율 (6문항) ──────────────────────────────────────────────
+  { q: { ko: '"생명의구슬"의 위력 배율과 반동 데미지는?', en: 'What is Life Orb\'s damage boost and recoil?' },
+    opts: [{ ko: '1.3배 / 최대 HP의 1/10', en: '1.3× / 1/10 of max HP' }, { ko: '1.5배 / 최대 HP의 1/8', en: '1.5× / 1/8 of max HP' }, { ko: '1.2배 / 최대 HP의 1/16', en: '1.2× / 1/16 of max HP' }, { ko: '1.3배 / 최대 HP의 1/8', en: '1.3× / 1/8 of max HP' }], correct: 0 },
+  { q: { ko: '"구애스카프"가 올려주는 능력치와 배율은?', en: 'Which stat does Choice Scarf boost, and by how much?' },
+    opts: [{ ko: '스피드 1.5배', en: 'Speed by 1.5×' }, { ko: '공격 1.5배', en: 'Attack by 1.5×' }, { ko: '스피드 2배', en: 'Speed by 2×' }, { ko: '특공 1.5배', en: 'Sp. Atk by 1.5×' }], correct: 0 },
+  { q: { ko: '"진화의휘석"의 효과는?', en: 'What does Eviolite do?' },
+    opts: [{ ko: '미진화 포켓몬의 방어·특방 1.5배', en: 'Raises Def and Sp. Def of not-fully-evolved Pokémon by 1.5×' }, { ko: '모든 포켓몬의 방어 2배', en: 'Doubles Defense for all Pokémon' }, { ko: '진화 레벨을 낮춘다', en: 'Lowers the evolution level' }, { ko: '미진화 포켓몬의 공격·특공 1.5배', en: 'Raises Atk and Sp. Atk of NFE Pokémon by 1.5×' }], correct: 0 },
+  { q: { ko: '"돌격조끼(Assault Vest)"의 효과로 옳은 것은?', en: 'Which describes Assault Vest correctly?' },
+    opts: [{ ko: '특방 1.5배, 단 변화 기술 사용 불가', en: 'Sp. Def ×1.5, but cannot use status moves' }, { ko: '방어 1.5배, 단 변화 기술 사용 불가', en: 'Def ×1.5, but cannot use status moves' }, { ko: '특방 2배, 단 교체 불가', en: 'Sp. Def ×2, but cannot switch out' }, { ko: '특방 1.5배, 단 한 기술만 사용 가능', en: 'Sp. Def ×1.5, but locked into one move' }], correct: 0 },
+  { q: { ko: '"먹다남은음식(Leftovers)"이 매 턴 회복하는 HP는?', en: 'How much HP does Leftovers restore each turn?' },
+    opts: [{ ko: '최대 HP의 1/16', en: '1/16 of max HP' }, { ko: '최대 HP의 1/8', en: '1/8 of max HP' }, { ko: '최대 HP의 1/10', en: '1/10 of max HP' }, { ko: '최대 HP의 1/4', en: '1/4 of max HP' }], correct: 0 },
+  { q: { ko: '"기합의띠(Focus Sash)"가 발동하는 조건은?', en: 'Under what condition does Focus Sash activate?' },
+    opts: [{ ko: 'HP가 가득 찬 상태에서 쓰러질 공격을 받았을 때', en: 'When hit by a KO move at full HP' }, { ko: 'HP가 절반 이하일 때', en: 'When HP is at or below half' }, { ko: '급소를 맞았을 때', en: 'When hit by a critical hit' }, { ko: '효과가 굉장한 공격을 받았을 때', en: 'When hit by a super-effective move' }], correct: 0 },
+
+  // ─── ⑥ 날씨·필드 (5문항) ───────────────────────────────────────────────────
+  { q: { ko: '"모래바람" 날씨에서 바위 타입이 얻는 이점은?', en: 'What benefit do Rock types gain in a Sandstorm?' },
+    opts: [{ ko: '특수방어 1.5배', en: 'Sp. Def ×1.5' }, { ko: '방어 1.5배', en: 'Defense ×1.5' }, { ko: '공격 1.5배', en: 'Attack ×1.5' }, { ko: '스피드 2배', en: 'Speed ×2' }], correct: 0 },
+  { q: { ko: '"트릭룸"의 지속 턴 수는?(발동 턴 포함)', en: 'How many turns does Trick Room last?' },
+    opts: [{ ko: '5턴', en: '5 turns' }, { ko: '3턴', en: '3 turns' }, { ko: '8턴', en: '8 turns' }, { ko: '4턴', en: '4 turns' }], correct: 0 },
+  { q: { ko: '"사이코필드"가 지면에 있는 포켓몬에게 주는 효과는?', en: 'What does Psychic Terrain do to grounded Pokémon?' },
+    opts: [{ ko: '우선도 기술의 대상이 되지 않는다', en: 'They cannot be hit by priority moves' }, { ko: '잠듦 상태가 되지 않는다', en: 'They cannot fall asleep' }, { ko: '모든 상태이상에 걸리지 않는다', en: 'They cannot be statused' }, { ko: '매 턴 HP를 회복한다', en: 'They recover HP each turn' }], correct: 0 },
+  { q: { ko: '"일렉트릭필드"가 지면에 있는 포켓몬에게 주는 효과는?', en: 'What does Electric Terrain do to grounded Pokémon?' },
+    opts: [{ ko: '잠듦 상태가 되지 않는다', en: 'They cannot fall asleep' }, { ko: '마비 상태가 되지 않는다', en: 'They cannot be paralyzed' }, { ko: '우선도 기술을 받지 않는다', en: 'They cannot be hit by priority moves' }, { ko: '전기 기술을 무효화한다', en: 'They are immune to Electric moves' }], correct: 0 },
+  { q: { ko: '"쾌청(맑음)" 날씨에서 물 타입 기술의 위력 배율은?', en: 'In harsh sunlight, what is the multiplier on Water-type moves?' },
+    opts: [{ ko: '0.5배', en: '0.5×' }, { ko: '1.5배', en: '1.5×' }, { ko: '1.0배(변화 없음)', en: '1.0× (unchanged)' }, { ko: '0배(무효)', en: '0× (immune)' }], correct: 0 },
+
+  // ─── ⑦ 상태이상 수치 (4문항) ───────────────────────────────────────────────
+  { q: { ko: '"화상" 상태가 반감시키는 능력치는?', en: 'Which stat does the Burn status halve?' },
+    opts: [{ ko: '물리 공격', en: 'Physical Attack' }, { ko: '특수공격', en: 'Special Attack' }, { ko: '방어', en: 'Defense' }, { ko: '스피드', en: 'Speed' }], correct: 0 },
+  { q: { ko: '"맹독" 상태의 데미지는 매 턴 어떻게 변하는가?', en: 'How does Badly Poisoned (Toxic) damage change each turn?' },
+    opts: [{ ko: '1/16씩 누적 증가(1/16, 2/16, 3/16…)', en: 'Increases by 1/16 each turn (1/16, 2/16, 3/16…)' }, { ko: '매 턴 1/8로 고정', en: 'Fixed at 1/8 each turn' }, { ko: '매 턴 두 배로 증가', en: 'Doubles each turn' }, { ko: '매 턴 1/16으로 고정', en: 'Fixed at 1/16 each turn' }], correct: 0 },
+  { q: { ko: '"마비" 상태에서 행동하지 못할 확률은?', en: 'What is the chance a paralyzed Pokémon cannot move?' },
+    opts: [{ ko: '25%', en: '25%' }, { ko: '50%', en: '50%' }, { ko: '12.5%', en: '12.5%' }, { ko: '33%', en: '33%' }], correct: 0 },
+  { q: { ko: '"얼음(빙결)" 상태가 매 턴 자연 해동될 확률은?', en: 'What is the chance a frozen Pokémon thaws each turn?' },
+    opts: [{ ko: '20%', en: '20%' }, { ko: '25%', en: '25%' }, { ko: '10%', en: '10%' }, { ko: '50%', en: '50%' }], correct: 0 },
+
+  // ─── ⑧ 4배 약점 · 스텔스록 (5문항) ─────────────────────────────────────────
+  { q: { ko: '한카리아스(드래곤·땅)의 4배 약점 타입은?', en: 'What type hits Garchomp (Dragon/Ground) for 4× damage?' },
+    opts: [{ ko: '얼음', en: 'Ice' }, { ko: '드래곤', en: 'Dragon' }, { ko: '페어리', en: 'Fairy' }, { ko: '물', en: 'Water' }], correct: 0 },
+  { q: { ko: '마기라스(바위·악)의 4배 약점 타입은?', en: 'What type hits Tyranitar (Rock/Dark) for 4× damage?' },
+    opts: [{ ko: '격투', en: 'Fighting' }, { ko: '땅', en: 'Ground' }, { ko: '물', en: 'Water' }, { ko: '벌레', en: 'Bug' }], correct: 0 },
+  { q: { ko: '핫삼(벌레·강철)의 4배 약점 타입은?', en: 'What type hits Scizor (Bug/Steel) for 4× damage?' },
+    opts: [{ ko: '불꽃', en: 'Fire' }, { ko: '격투', en: 'Fighting' }, { ko: '땅', en: 'Ground' }, { ko: '비행', en: 'Flying' }], correct: 0 },
+  { q: { ko: '스텔스록으로 교체 등장 시 최대 HP의 50%를 잃는 타입 조합은?', en: 'Which typing loses 50% max HP to Stealth Rock on entry?' },
+    opts: [{ ko: '불꽃·비행 (리자몽)', en: 'Fire/Flying (Charizard)' }, { ko: '물·비행 (갸라도스)', en: 'Water/Flying (Gyarados)' }, { ko: '드래곤·땅 (한카리아스)', en: 'Dragon/Ground (Garchomp)' }, { ko: '강철·페어리 (마기아나)', en: 'Steel/Fairy (Magearna)' }], correct: 0 },
+  { q: { ko: '스텔스록이 주는 데미지의 산정 기준은?', en: 'How is Stealth Rock damage calculated?' },
+    opts: [{ ko: '바위 타입 기술의 상성 배율에 비례', en: 'Proportional to Rock-type effectiveness against the Pokémon' }, { ko: '항상 최대 HP의 1/8 고정', en: 'Always a fixed 1/8 of max HP' }, { ko: '상대의 방어 종족값에 반비례', en: 'Inversely proportional to the target\'s Defense' }, { ko: '상대의 무게에 비례', en: 'Proportional to the target\'s weight' }], correct: 0 },
+
+  // ─── ⑨ 스피드 종족값 · 종족값 라인 (5문항) ────────────────────────────────
+  { q: { ko: '뮤츠의 스피드 종족값은?', en: 'What is Mewtwo\'s base Speed?' },
+    opts: [{ ko: '130', en: '130' }, { ko: '120', en: '120' }, { ko: '140', en: '140' }, { ko: '110', en: '110' }], correct: 0 },
+  { q: { ko: '한카리아스의 스피드 종족값은?(이른바 "102족")', en: 'What is Garchomp\'s base Speed (the famous "102 line")?' },
+    opts: [{ ko: '102', en: '102' }, { ko: '100', en: '100' }, { ko: '108', en: '108' }, { ko: '95', en: '95' }], correct: 0 },
+  { q: { ko: '종족값 총합이 720인 포켓몬은?', en: 'Which Pokémon has a base stat total of 720?' },
+    opts: [{ ko: '아르세우스', en: 'Arceus' }, { ko: '뮤츠', en: 'Mewtwo' }, { ko: '레쿠쟈', en: 'Rayquaza' }, { ko: '기라티나', en: 'Giratina' }], correct: 0 },
+  { q: { ko: '다음 중 종족값 총합이 680이 아닌 포켓몬은?', en: 'Which does NOT have a base stat total of 680?' },
+    opts: [{ ko: '한카리아스', en: 'Garchomp' }, { ko: '뮤츠', en: 'Mewtwo' }, { ko: '루기아', en: 'Lugia' }, { ko: '칠색조', en: 'Ho-Oh' }], correct: 0 },
+  { q: { ko: '스피드 종족값이 200으로 전 포켓몬 중 가장 빠른 포켓몬은?', en: 'Which Pokémon has the highest base Speed (200)?' },
+    opts: [{ ko: '레지에레키', en: 'Regieleki' }, { ko: '마르마인', en: 'Electrode' }, { ko: '뮤츠', en: 'Mewtwo' }, { ko: '텅비드', en: 'Ninjask' }], correct: 0 },
+
+  // ─── ⑩ 데미지 계산식 · 배틀 메커니즘 (8문항) ──────────────────────────────
+  { q: { ko: '데미지 계산 시 적용되는 난수(랜덤 보정)의 범위는?', en: 'What is the random damage roll range in the damage formula?' },
+    opts: [{ ko: '0.85 ~ 1.00', en: '0.85 – 1.00' }, { ko: '0.90 ~ 1.10', en: '0.90 – 1.10' }, { ko: '0.75 ~ 1.00', en: '0.75 – 1.00' }, { ko: '0.95 ~ 1.05', en: '0.95 – 1.05' }], correct: 0 },
+  { q: { ko: '자속 보정(STAB)의 배율은?(테라스탈 미적용)', en: 'What is the STAB multiplier (without Terastallization)?' },
+    opts: [{ ko: '1.5배', en: '1.5×' }, { ko: '1.25배', en: '1.25×' }, { ko: '2.0배', en: '2.0×' }, { ko: '1.3배', en: '1.3×' }], correct: 0 },
+  { q: { ko: '원래 타입과 같은 타입으로 테라스탈했을 때 그 타입 기술의 자속 배율은?', en: 'If a Pokémon Terastallizes into its own original type, what is the STAB multiplier for that type?' },
+    opts: [{ ko: '2.0배', en: '2.0×' }, { ko: '1.5배', en: '1.5×' }, { ko: '1.75배', en: '1.75×' }, { ko: '2.25배', en: '2.25×' }], correct: 0 },
+  { q: { ko: '급소에 맞았을 때 무시되는 능력치 랭크 변화는?', en: 'Which stat stage changes are ignored on a critical hit?' },
+    opts: [{ ko: '공격자의 공격 하락 랭크와 방어자의 방어 상승 랭크', en: 'Attacker\'s Attack drops and defender\'s Defense boosts' }, { ko: '모든 능력치 랭크 변화', en: 'All stat stage changes' }, { ko: '방어자의 방어 하락 랭크만', en: 'Only the defender\'s Defense drops' }, { ko: '공격자의 공격 상승 랭크만', en: 'Only the attacker\'s Attack boosts' }], correct: 0 },
+  { q: { ko: '기술 "지구던지기"가 주는 데미지는?', en: 'How much damage does Seismic Toss deal?' },
+    opts: [{ ko: '사용자의 레벨과 같은 고정 데미지', en: 'Fixed damage equal to the user\'s level' }, { ko: '상대 최대 HP의 절반', en: 'Half the target\'s max HP' }, { ko: '항상 40', en: 'Always 40' }, { ko: '상대 현재 HP의 절반', en: 'Half the target\'s current HP' }], correct: 0 },
+  { q: { ko: '"하이드로펌프"의 위력과 명중률은?', en: 'What are Hydro Pump\'s base power and accuracy?' },
+    opts: [{ ko: '위력 110 / 명중 80', en: '110 power / 80 accuracy' }, { ko: '위력 120 / 명중 70', en: '120 power / 70 accuracy' }, { ko: '위력 110 / 명중 70', en: '110 power / 70 accuracy' }, { ko: '위력 100 / 명중 80', en: '100 power / 80 accuracy' }], correct: 0 },
+  { q: { ko: '"인파이트(Close Combat)" 사용 후 사용자가 겪는 부작용은?', en: 'What drawback does Close Combat inflict on the user?' },
+    opts: [{ ko: '방어·특방이 1랭크씩 하락', en: 'Lowers the user\'s Defense and Sp. Def by 1 stage each' }, { ko: '다음 턴 행동 불가', en: 'The user must recharge next turn' }, { ko: '반동 데미지를 받는다', en: 'The user takes recoil damage' }, { ko: '공격이 1랭크 하락', en: 'Lowers the user\'s Attack by 1 stage' }], correct: 0 },
+  { q: { ko: '능력치 랭크 +6단계일 때 적용되는 배율은?', en: 'What multiplier applies at +6 stat stages?' },
+    opts: [{ ko: '4.0배', en: '4.0×' }, { ko: '3.0배', en: '3.0×' }, { ko: '2.5배', en: '2.5×' }, { ko: '6.0배', en: '6.0×' }], correct: 0 },
 ];
 
 /** 은행 문항 → QuizQuestion(현지화). 보기 순서 셔플(정답이 항상 첫 보기로 고정되는 것 방지). */

@@ -108,7 +108,8 @@ export const PokemonPicker: React.FC<{ onClose: () => void; storyHeroPool?: numb
     try {
       // 매 호출마다 스토어에서 최신 towers를 읽어 stale closure 방지
       const currentTowers = useGameStore.getState().towers;
-      const placedPokemonIds = new Set(currentTowers.map(t => t.pokemonId));
+      // [DUP-FIX] 진화 후에도 같은 히어로가 다시 뽑히지 않도록 기본형(basePokemonId) 기준 판정
+      const placedPokemonIds = new Set(currentTowers.map(t => t.basePokemonId ?? t.pokemonId));
 
       let ids: number[];
 

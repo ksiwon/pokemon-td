@@ -80,6 +80,18 @@ export class GameManager {
   }
 
 
+  // [FIX-HANG] Firestore 쓰기는 회선 단절 시(오프라인 모드 아님) 서버 ACK까지 영원히
+  //   pending일 수 있음 → checkWaveComplete의 finally가 실행되지 않아 isCompletingWave가
+  //   true로 고착되고 이후 웨이브 정산 전체가 멈추는 문제 방지용 타임아웃 래퍼.
+  private withTimeout<T>(p: Promise<T>, ms = 8000): Promise<T> {
+    return Promise.race([
+      p,
+      new Promise<never>((_, reject) =>
+        setTimeout(() => reject(new Error('firestore-timeout')), ms)
+      ),
+    ]);
+  }
+
   // stats를 배치로 모아서 0.5초마다 한 번에 저장
   private flushStats() {
     if (this.statFlushTimer) clearTimeout(this.statFlushTimer);
@@ -594,6 +606,13 @@ export class GameManager {
   }
 
   private applyDamage(proj: Projectile, enemy: Enemy) {
+    // [FIX-STALE-HP] 같은 프레임에 여러 투사체가 동일 적에 명중하면, hits 스냅샷의
+    //   낡은 hp 기준으로 각자 newHp를 계산해 먼저 맞은 데미지가 덮어써졌음.
+    //   최신 상태에서 재조회해 누적 피해가 정확히 반영되게 한다.
+    const freshEnemy = useGameStore.getState().enemies.find(e => e.id === enemy.id);
+    if (!freshEnemy) return; // 이미 처치/제거된 적
+    enemy = freshEnemy;
+
     const { addDamageNumber, towers, updateTower } = useGameStore.getState();
     const eff = getTypeEffectiveness(proj.type, enemy.types);
 
@@ -817,14 +836,14 @@ export class GameManager {
           try {
             const map = getMapById(currentMap);
             const pokemonUsed = towers.map(t => t.displayName);
-            await databaseService.addHallOfFameEntry(
+            await this.withTimeout(databaseService.addHallOfFameEntry(
               currentMap,
               map?.name || 'Unknown Map',
               wave,
               pokemonUsed,
               gameTime
-            );
-            await databaseService.updateLeaderboard(currentMap, gameTime, wave);
+            ));
+            await this.withTimeout(databaseService.updateLeaderboard(currentMap, gameTime, wave));
           } catch (err) {
             console.error('Failed to save Wave 50 clear data:', err);
           }
@@ -866,9 +885,9 @@ export class GameManager {
         // 50웨이브 완주 시 50회 → 10회로 Firestore 쓰기 80% 절감.
         if (wave % 5 === 0) {
           try {
-            await databaseService.updateLeaderboard(currentMap, undefined, wave);
+            await this.withTimeout(databaseService.updateLeaderboard(currentMap, undefined, wave));
           } catch {
-            // 무시
+            // 무시 (타임아웃 포함)
           }
         }
       }

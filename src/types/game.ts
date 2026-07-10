@@ -109,6 +109,8 @@ export type Gender = "male" | "female" | "genderless";
 export interface GamePokemon {
   id: string;
   pokemonId: number;
+  /** 배치 당시 원본(기본형) 도감번호. 진화해도 불변 — 스토리 히어로 중복 배치 판정용. */
+  basePokemonId?: number;
   name: string;
   displayName: string;
   level: number;

@@ -238,9 +238,11 @@ export class WaveSystem {
 
       const baseHp = pokemonData.stats.hp * waveMultiplier * mult.hp;
       const baseAttack = pokemonData.stats.attack * waveMultiplier * mult.attack;
-      const baseDefense = pokemonData.stats.defense * waveMultiplier * mult.attack;
+      // [FIX] 방어/특방은 '적 내구력'이므로 hp 배율에 묶는다(기존엔 mult.attack 사용).
+      //   현재 전 프리셋이 hp==attack이라 수치 무변 — 향후 비대칭 튜닝 대비 의미 정정.
+      const baseDefense = pokemonData.stats.defense * waveMultiplier * mult.hp;
       const baseSpecialAttack = pokemonData.stats.specialAttack * waveMultiplier * mult.attack;
-      const baseSpecialDefense = pokemonData.stats.specialDefense * waveMultiplier * mult.attack;
+      const baseSpecialDefense = pokemonData.stats.specialDefense * waveMultiplier * mult.hp;
 
       // [수정] 보스 보상: 일반 적의 5배. mult.reward 레버 반영(현재 전 난이도 1.0 → 수치 무변).
       const reward = Math.round((isBoss ? 50 : 10) * (mult.reward ?? 1));

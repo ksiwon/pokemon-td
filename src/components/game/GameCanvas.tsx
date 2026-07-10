@@ -784,7 +784,7 @@ export const GameCanvas: React.FC = () => {
 
     const poke = pokemonToPlace;
     addTower({
-      id: `tower-${Date.now()}`, pokemonId: poke.id, name: poke.name, displayName: poke.displayName,
+      id: `tower-${Date.now()}`, pokemonId: poke.id, basePokemonId: poke.id, name: poke.name, displayName: poke.displayName,
       level: 1, experience: 0, currentHp: poke.stats.hp, maxHp: poke.stats.hp,
       baseAttack: poke.stats.attack, attack: poke.stats.attack, defense: poke.stats.defense,
       specialAttack: poke.stats.specialAttack, specialDefense: poke.stats.specialDefense, speed: poke.stats.speed,
