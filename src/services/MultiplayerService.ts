@@ -288,23 +288,27 @@ class MultiplayerService {
     const roomRef = ref(rtdb, `rooms/${roomId}`);
 
     // 트랜잭션으로 동시 참가 레이스 방지
+    // [SEC] 실패/멱등 경로는 `return undefined`로 트랜잭션을 '중단'한다(기존엔 room을 그대로 반환 → 무의미한 쓰기).
+    //   보안 룰이 비멤버의 대기방 쓰기를 "가입(=결과 데이터에 본인 memberIds 포함)"으로만 제한하므로,
+    //   변경 없는 되쓰기는 permission_denied가 되어 아래 joinError 메시지를 덮어써 버린다.
+    //   중단하면 쓰기 자체가 발생하지 않아 원래 에러 메시지가 그대로 전달되고 RTDB 쓰기 쿼터도 아낀다.
     let joinError: Error | null = null;
     await runTransaction(roomRef, (room: Room | null) => {
-      if (!room) { joinError = new Error('Room not found'); return room; }
+      if (!room) { joinError = new Error('Room not found'); return; }
       if (Date.now() - room.createdAt > ROOM_EXPIRY_TIME) {
-        joinError = new Error('Room has expired'); return room;
+        joinError = new Error('Room has expired'); return;
       }
       const isAlreadyPlayer = room.players.some(p => p.userId === user.uid);
-      if (isAlreadyPlayer) return room; // 멱등
+      if (isAlreadyPlayer) return; // 멱등 — 이미 참가자면 쓰기 없이 중단
       // [SEC] 강퇴당한 유저는 즉시 재입장 불가.
       if ((room.kickedUserIds ?? []).includes(user.uid)) {
-        joinError = new Error('You were removed from this room'); return room;
+        joinError = new Error('You were removed from this room'); return;
       }
       if (room.players.length >= room.maxPlayers) {
-        joinError = new Error('Room is full'); return room;
+        joinError = new Error('Room is full'); return;
       }
       if (room.status !== 'waiting') {
-        joinError = new Error('Game already started'); return room;
+        joinError = new Error('Game already started'); return;
       }
       const newPlayer: RoomPlayer = {
         userId: user.uid, userName: user.displayName,
