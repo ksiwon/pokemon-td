@@ -35,8 +35,10 @@ const RARITY_SCORE: Record<PokemonRarity, number> = {
   Bronze: 1, Silver: 2, Gold: 3, Diamond: 4, Master: 5, Legend: 6,
 };
 
+// [BALANCE] 인간 구매가 공식(25 + BST/600×200 ≈ 25~265G)에 근접하게 인하.
+//   기존(50~800)은 AI만 최대 3배 비싸게 사서 hard AI조차 경제적으로 크게 불리했음.
 const RARITY_COST: Record<PokemonRarity, number> = {
-  Bronze: 50, Silver: 100, Gold: 200, Diamond: 350, Master: 500, Legend: 800,
+  Bronze: 40, Silver: 80, Gold: 130, Diamond: 180, Master: 220, Legend: 260,
 };
 
 const AI_CONFIG: Record<AIDifficulty, {
