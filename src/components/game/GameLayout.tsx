@@ -686,7 +686,9 @@ export const GameLayout: React.FC<GameLayoutProps> = ({ onLeaveGame }) => {
     // [STORY-FEE-FIX] 스토리 모드에서 배치 가능한 히어로가 하나도 없으면(전부 배치됨) 20G를 물리지 않는다.
     //   기존엔 20G 내고 '모두 배치됨' 안내만 보게 됐음 → 안내 화면은 무료로 연다.
     if (storyAccumulatedPool && storyAccumulatedPool.length > 0) {
-      const placed = new Set(useGameStore.getState().towers.map(t => t.pokemonId));
+      // [DUP-FIX] 진화하면 pokemonId가 바뀌어 같은 히어로가 '미배치'로 복귀하던 exploit 차단
+      //   — 배치 당시 기본형(basePokemonId) 기준으로 판정.
+      const placed = new Set(useGameStore.getState().towers.map(t => t.basePokemonId ?? t.pokemonId));
       const available = storyAccumulatedPool.filter(id => !placed.has(id));
       if (available.length === 0) { setShowPicker(true); return; }
     }
