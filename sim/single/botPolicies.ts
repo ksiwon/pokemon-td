@@ -286,7 +286,7 @@ function bulkOf(tw: GamePokemon): number {
 
 /** 난이도 배율 (WaveSystem DIFFICULTY_MULTIPLIERS와 동일) — 후퇴 시점 스케일용 */
 const DIFF_MULT: Record<string, number> = {
-  easiest: 0.3, easy: 0.5, medium: 0.7, hard: 0.9, expert: 1.1,
+  easiest: 0.4, easy: 0.55, medium: 0.7, hard: 0.85, expert: 1.0,
 };
 
 /** 딜러 후퇴 시작 웨이브 — 적 공격이 강한 맵일수록 이르다 */
@@ -595,6 +595,7 @@ async function maintainBodies(knobs: SkillKnobs, bias: BuyBias, urgent: boolean)
  */
 async function rebuildIfUpgrade(
   knobs: SkillKnobs, minMoney = 250, bonus: (c: Candidate) => number = () => 0,
+  protectBonus: (tw: GamePokemon) => number = () => 0,
 ): Promise<void> {
   const store = () => useGameStore.getState();
   if (store().towers.length < 6 || store().money < minMoney) return;
@@ -602,13 +603,21 @@ async function rebuildIfUpgrade(
   // (클리어 판은 전부 일찍 확정한 6마리가 전원 L50+로 동반 성장한 팀).
   if (store().wave > 20) return;
 
-  const ranked: Array<{ id: string; fb: number }> = [];
+  // 최약체 선정 — 타입 플랜 일치 유닛은 보호 가중(+200), 플랜 밖 잡몬부터 정리
+  const ranked: Array<{ id: string; fb: number; keep: number }> = [];
   for (const tw of store().towers) {
-    ranked.push({ id: tw.id, fb: await finalBstOf(tw.basePokemonId ?? tw.pokemonId) });
+    const fb = await finalBstOf(tw.basePokemonId ?? tw.pokemonId);
+    const keep = fb + protectBonus(tw);
+    ranked.push({ id: tw.id, fb, keep });
   }
-  ranked.sort((a, b) => a.fb - b.fb);
+  ranked.sort((a, b) => a.keep - b.keep);
   const worst = ranked[0];
   if (!worst) return;
+
+  // 팀에 고위력 광역기(70+)가 없으면 AOE 확보가 최우선 (개발자 확인: w20쯤엔
+  // 100위력급이 표준 — 잡몬 광역은 천장이 낮아 갈아끼워야 나온다).
+  const hasBigAoe = store().towers.some(t2 =>
+    !t2.isFainted && t2.equippedMoves[0]?.isAOE && (t2.equippedMoves[0]?.power ?? 0) >= 70);
 
   // 리롤 인내: 업그레이드가 뜰 때까지 여러 번 돌린다 (사람의 "리롤 파티완성").
   // 잔고가 minMoney 아래로 내려가면 중단 — 리롤이 전력을 갉아먹지 않게.
@@ -616,7 +625,12 @@ async function rebuildIfUpgrade(
     if (store().money < minMoney) return;
     if (!store().spendMoney(PICKER_ENTRY)) return;
     const cands = (await drawCandidates())
-      .filter(c => c.finalBst >= worst.fb + knobs.rebuildMargin)
+      .filter(c => hasBigAoe
+        // 평시: 잠재력 업그레이드
+        ? c.finalBst >= worst.fb + knobs.rebuildMargin
+        // AOE 부재: 고위력 광역 학습 후보면 BST 동급이어도 교체 가치
+        : (c.aoePower >= 80 && c.finalBst >= worst.fb) ||
+          c.finalBst >= worst.fb + knobs.rebuildMargin)
       .sort((a, b) =>
         (b.finalBst + aoeScore(b) + bonus(b)) - (a.finalBst + aoeScore(a) + bonus(a)));
     const hit = cands[0];
@@ -626,11 +640,11 @@ async function rebuildIfUpgrade(
       const tw = store().towers.find(t => t.id === worst.id);
       return tw ? Math.max(tw.level * 20, tw.sellValue || 0) : 0;
     })();
-    // 캐치업 예산 포함 요구 — L1 신입을 방치하면 전선에 구멍만 난다
-    // (실플레이 정석: "좋은 포켓몬 나오면 경험사탕으로 한번에 레벨업").
+    // 캐치업 예산 — 여유가 있으면 요구하되, 상한 250: 가난한 중반 경제에서
+    // 이 요구가 AOE 스왑 자체를 봉쇄하면 안 된다 (신입도 공유 XP로 따라옴).
     const lvls = [...new Set(store().towers.filter(t2 => !t2.isFainted && t2.id !== worst.id)
       .map(t2 => t2.level))].sort((a, b) => a - b);
-    const firstStep = (lvls[0] ?? 10) * 50;
+    const firstStep = Math.min(250, (lvls[0] ?? 10) * 50);
     if (store().money + sellRefund < hit.cost + firstStep + 60) continue;
 
     if (!store().sellTower(worst.id)) return;
@@ -784,8 +798,10 @@ async function albaAndShopping(
 
   if (urgent || st.wave < knobs.albaStartWave) return;
 
-  // 파견 조건: "충분히 안정" = 라이프 거의 만땅 + 자금 흑자 + 6마리 전원 생존
-  const stable = st.lives >= 45 && store().money >= 400 &&
+  // 파견 조건: 라이프 안정 + 6마리 전원 생존. 골드 게이트는 낮게(220) —
+  // 스카우트 해금(픽커 레어도 부스트)은 갈아타기 매물의 전제라 사람은 일찍 보낸다
+  // (개발자: "한마리 가둬서 보상 해금"이 w20 무렵 표준 플레이).
+  const stable = st.lives >= 42 && store().money >= 220 &&
     store().towers.filter(t2 => !t2.isFainted).length >= 6;
 
   // 1호 스카우트 (콘테스트 홀 → 픽커 고레어 부스트)
@@ -796,7 +812,7 @@ async function albaAndShopping(
 
   // 2호 점원 (더 늦게, 더 부유할 때만 — 전투 5마리로 감수)
   if (shopTile && !onTile(shopTile) && st.wave >= knobs.albaStartWave + 6 &&
-    st.lives >= 48 && store().money >= 800 &&
+    st.lives >= 46 && store().money >= 600 &&
     store().towers.filter(t2 => !t2.isFainted).length >= 6) {
     const w = lowestFighter();
     if (w) store().updateTower(w.id, { position: { x: shopTile.x * T + T / 2, y: shopTile.y * T + T / 2 } });
@@ -874,10 +890,12 @@ export interface BotPolicy {
   duringWave?(): void;
 }
 
-// 기술 교체 — 유효위력 = 위력 × 자속(1.5) × AOE 가중(2.5): 후반 70마리 웨이브 필수
+// 기술 교체 — 유효위력 = 위력 × 자속(1.5) × AOE 가중(웨이브 비례): 물량이 늘수록
+// 광역기 실효타수가 커진다 (w10 ×2.5 → w30 ×3.5, 상한 4).
 function moveValue(tower: GamePokemon, m: GameMove): number {
   const stab = tower.types.includes(m.type) ? 1.5 : 1;
-  const aoe = m.isAOE ? 2.5 : 1;
+  const wave = useGameStore.getState().wave;
+  const aoe = m.isAOE ? Math.min(4, 2 + wave * 0.05) : 1;
   return (m.power ?? 0) * stab * aoe * ((m.accuracy ?? 100) / 100);
 }
 
@@ -965,8 +983,10 @@ export function humanPolicy(hooks: StyleHooks, skill = SIM_SKILL): BotPolicy {
         await maintainBodies(knobs, bias, urgent);
       }
 
-      // 갈아타기 — 누수 중이라도 팀이 쓰레기면 질적 개선이 유일한 탈출구
-      await rebuildIfUpgrade(knobs, urgent ? 300 : 250, planBonus);
+      // 갈아타기 — 누수 중이라도 팀이 쓰레기면 질적 개선이 유일한 탈출구.
+      // 타입 플랜 일치 유닛은 매각 후순위(+200 보호).
+      await rebuildIfUpgrade(knobs, urgent ? 300 : 250, planBonus,
+        tw => (knobs.useTypePlan && planType && tw.types.includes(planType) ? 200 : 0));
 
       // 표준 인간 테크 (개발자 확인: 테라 핵심·알바 보통 보냄) — 스킬 게이트
       if (knobs.useItemEvo) await itemEvolutions();

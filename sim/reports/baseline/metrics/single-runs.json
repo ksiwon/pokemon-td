@@ -23,27 +23,27 @@
     },
     {
       "mapId": "easy_loop",
-      "clear": 0.3333333333333333,
-      "p50": 39,
+      "clear": 0.75,
+      "p50": 50,
       "best": 50
     },
     {
       "mapId": "medium_merge",
       "clear": 0,
-      "p50": 17,
-      "best": 22
+      "p50": 20,
+      "best": 38
     },
     {
       "mapId": "hard_dual_path",
       "clear": 0,
-      "p50": 7,
-      "best": 9
+      "p50": 6,
+      "best": 10
     },
     {
       "mapId": "extreme_central",
       "clear": 0,
       "p50": 5,
-      "best": 7
+      "best": 8
     }
   ],
   "aggregates": [
@@ -54,8 +54,8 @@
       "waveP50": 50,
       "waveP75": 50,
       "clearRate": 1,
-      "avgLivesLeft": 50,
-      "avgFinalGold": 1803,
+      "avgLivesLeft": 49.666666666666664,
+      "avgFinalGold": 682.6666666666666,
       "aborts": 0
     },
     {
@@ -65,8 +65,8 @@
       "waveP50": 50,
       "waveP75": 50,
       "clearRate": 1,
-      "avgLivesLeft": 50,
-      "avgFinalGold": 1458,
+      "avgLivesLeft": 48.666666666666664,
+      "avgFinalGold": 1037,
       "aborts": 0
     },
     {
@@ -76,8 +76,8 @@
       "waveP50": 50,
       "waveP75": 50,
       "clearRate": 1,
-      "avgLivesLeft": 47,
-      "avgFinalGold": 573.6666666666666,
+      "avgLivesLeft": 43,
+      "avgFinalGold": 1963,
       "aborts": 0
     },
     {
@@ -87,140 +87,140 @@
       "waveP50": 50,
       "waveP75": 50,
       "clearRate": 1,
-      "avgLivesLeft": 50,
-      "avgFinalGold": 897.6666666666666,
+      "avgLivesLeft": 48.666666666666664,
+      "avgFinalGold": 717.3333333333334,
       "aborts": 0
     },
     {
       "key": "easy_loop / holdout",
       "games": 3,
-      "waveP25": 31,
-      "waveP50": 38,
+      "waveP25": 43,
+      "waveP50": 50,
       "waveP75": 50,
-      "clearRate": 0.3333333333333333,
-      "avgLivesLeft": 5.333333333333333,
-      "avgFinalGold": 224.66666666666666,
+      "clearRate": 0.6666666666666666,
+      "avgLivesLeft": 31.333333333333332,
+      "avgFinalGold": 1021,
       "aborts": 0
     },
     {
       "key": "easy_loop / reroller",
       "games": 3,
-      "waveP25": 38,
-      "waveP50": 39,
+      "waveP25": 50,
+      "waveP50": 50,
       "waveP75": 50,
-      "clearRate": 0.3333333333333333,
-      "avgLivesLeft": 1.6666666666666667,
-      "avgFinalGold": 642.6666666666666,
+      "clearRate": 1,
+      "avgLivesLeft": 46.333333333333336,
+      "avgFinalGold": 1084.3333333333333,
       "aborts": 0
     },
     {
       "key": "easy_loop / worker",
       "games": 3,
-      "waveP25": 22,
-      "waveP50": 39,
+      "waveP25": 50,
+      "waveP50": 50,
       "waveP75": 50,
-      "clearRate": 0.3333333333333333,
-      "avgLivesLeft": 2.6666666666666665,
-      "avgFinalGold": 229.66666666666666,
+      "clearRate": 1,
+      "avgLivesLeft": 33.666666666666664,
+      "avgFinalGold": 1061.3333333333333,
       "aborts": 0
     },
     {
       "key": "easy_loop / tera",
       "games": 3,
-      "waveP25": 22,
-      "waveP50": 41,
+      "waveP25": 24,
+      "waveP50": 43,
       "waveP75": 50,
       "clearRate": 0.3333333333333333,
-      "avgLivesLeft": 2.6666666666666665,
-      "avgFinalGold": 179.33333333333334,
+      "avgLivesLeft": 15.333333333333334,
+      "avgFinalGold": 685.6666666666666,
       "aborts": 0
     },
     {
       "key": "medium_merge / holdout",
       "games": 3,
-      "waveP25": 14,
-      "waveP50": 17,
-      "waveP75": 17,
+      "waveP25": 19,
+      "waveP50": 20,
+      "waveP75": 38,
       "clearRate": 0,
       "avgLivesLeft": 0,
-      "avgFinalGold": 66.66666666666667,
+      "avgFinalGold": 691.6666666666666,
       "aborts": 0
     },
     {
       "key": "medium_merge / reroller",
       "games": 3,
       "waveP25": 6,
-      "waveP50": 15,
-      "waveP75": 17,
+      "waveP50": 19,
+      "waveP75": 21,
       "clearRate": 0,
       "avgLivesLeft": 0,
-      "avgFinalGold": 34.666666666666664,
+      "avgFinalGold": 46,
       "aborts": 0
     },
     {
       "key": "medium_merge / worker",
       "games": 3,
-      "waveP25": 13,
-      "waveP50": 19,
-      "waveP75": 22,
+      "waveP25": 19,
+      "waveP50": 20,
+      "waveP75": 20,
       "clearRate": 0,
       "avgLivesLeft": 0,
-      "avgFinalGold": 112.66666666666667,
+      "avgFinalGold": 102,
       "aborts": 0
     },
     {
       "key": "medium_merge / tera",
       "games": 3,
-      "waveP25": 13,
+      "waveP25": 18,
       "waveP50": 19,
-      "waveP75": 22,
+      "waveP75": 20,
       "clearRate": 0,
       "avgLivesLeft": 0,
-      "avgFinalGold": 112.66666666666667,
+      "avgFinalGold": 138.66666666666666,
       "aborts": 0
     },
     {
       "key": "hard_dual_path / holdout",
       "games": 3,
-      "waveP25": 5,
-      "waveP50": 7,
+      "waveP25": 6,
+      "waveP50": 6,
       "waveP75": 9,
       "clearRate": 0,
       "avgLivesLeft": 0,
-      "avgFinalGold": 73.66666666666667,
+      "avgFinalGold": 38.333333333333336,
       "aborts": 0
     },
     {
       "key": "hard_dual_path / reroller",
       "games": 3,
       "waveP25": 5,
-      "waveP50": 7,
-      "waveP75": 7,
+      "waveP50": 6,
+      "waveP75": 10,
       "clearRate": 0,
       "avgLivesLeft": 0,
-      "avgFinalGold": 57.666666666666664,
+      "avgFinalGold": 148.33333333333334,
       "aborts": 0
     },
     {
       "key": "hard_dual_path / worker",
       "games": 3,
-      "waveP25": 5,
-      "waveP50": 7,
-      "waveP75": 7,
+      "waveP25": 6,
+      "waveP50": 6,
+      "waveP75": 10,
       "clearRate": 0,
       "avgLivesLeft": 0,
-      "avgFinalGold": 64.33333333333333,
+      "avgFinalGold": 149,
       "aborts": 0
     },
     {
       "key": "hard_dual_path / tera",
       "games": 3,
-      "waveP25": 5,
-      "waveP50": 7,
-      "waveP75": 7,
+      "waveP25": 6,
+      "waveP50": 6,
+      "waveP75": 10,
       "clearRate": 0,
       "avgLivesLeft": 0,
-      "avgFinalGold": 64.33333333333333,
+      "avgFinalGold": 149,
       "aborts": 0
     },
     {
@@ -228,10 +228,10 @@
       "games": 3,
       "waveP25": 5,
       "waveP50": 5,
-      "waveP75": 7,
+      "waveP75": 8,
       "clearRate": 0,
       "avgLivesLeft": 0,
-      "avgFinalGold": 54.666666666666664,
+      "avgFinalGold": 58.666666666666664,
       "aborts": 0
     },
     {
@@ -239,10 +239,10 @@
       "games": 3,
       "waveP25": 5,
       "waveP50": 5,
-      "waveP75": 7,
+      "waveP75": 8,
       "clearRate": 0,
       "avgLivesLeft": 0,
-      "avgFinalGold": 65.33333333333333,
+      "avgFinalGold": 55.333333333333336,
       "aborts": 0
     },
     {
@@ -250,10 +250,10 @@
       "games": 3,
       "waveP25": 5,
       "waveP50": 5,
-      "waveP75": 7,
+      "waveP75": 8,
       "clearRate": 0,
       "avgLivesLeft": 0,
-      "avgFinalGold": 54.666666666666664,
+      "avgFinalGold": 58.666666666666664,
       "aborts": 0
     },
     {
@@ -261,10 +261,10 @@
       "games": 3,
       "waveP25": 5,
       "waveP50": 5,
-      "waveP75": 7,
+      "waveP75": 8,
       "clearRate": 0,
       "avgLivesLeft": 0,
-      "avgFinalGold": 54.666666666666664,
+      "avgFinalGold": 58.666666666666664,
       "aborts": 0
     }
   ],
@@ -278,7 +278,7 @@
       "gameOver": false,
       "aborted": null,
       "livesLeft": 50,
-      "finalGold": 1780
+      "finalGold": 977
     },
     {
       "mapId": "easiest_straight",
@@ -288,8 +288,8 @@
       "victory": true,
       "gameOver": false,
       "aborted": null,
-      "livesLeft": 50,
-      "finalGold": 1824
+      "livesLeft": 49,
+      "finalGold": 572
     },
     {
       "mapId": "easiest_straight",
@@ -300,7 +300,7 @@
       "gameOver": false,
       "aborted": null,
       "livesLeft": 50,
-      "finalGold": 1805
+      "finalGold": 499
     },
     {
       "mapId": "easiest_straight",
@@ -310,8 +310,8 @@
       "victory": true,
       "gameOver": false,
       "aborted": null,
-      "livesLeft": 50,
-      "finalGold": 818
+      "livesLeft": 48,
+      "finalGold": 1060
     },
     {
       "mapId": "easiest_straight",
@@ -321,8 +321,8 @@
       "victory": true,
       "gameOver": false,
       "aborted": null,
-      "livesLeft": 50,
-      "finalGold": 2596
+      "livesLeft": 49,
+      "finalGold": 685
     },
     {
       "mapId": "easiest_straight",
@@ -332,8 +332,8 @@
       "victory": true,
       "gameOver": false,
       "aborted": null,
-      "livesLeft": 50,
-      "finalGold": 960
+      "livesLeft": 49,
+      "finalGold": 1366
     },
     {
       "mapId": "easiest_straight",
@@ -343,8 +343,8 @@
       "victory": true,
       "gameOver": false,
       "aborted": null,
-      "livesLeft": 41,
-      "finalGold": 839
+      "livesLeft": 50,
+      "finalGold": 2402
     },
     {
       "mapId": "easiest_straight",
@@ -354,8 +354,8 @@
       "victory": true,
       "gameOver": false,
       "aborted": null,
-      "livesLeft": 50,
-      "finalGold": 460
+      "livesLeft": 49,
+      "finalGold": 2571
     },
     {
       "mapId": "easiest_straight",
@@ -365,8 +365,8 @@
       "victory": true,
       "gameOver": false,
       "aborted": null,
-      "livesLeft": 50,
-      "finalGold": 422
+      "livesLeft": 30,
+      "finalGold": 916
     },
     {
       "mapId": "easiest_straight",
@@ -376,8 +376,8 @@
       "victory": true,
       "gameOver": false,
       "aborted": null,
-      "livesLeft": 50,
-      "finalGold": 1780
+      "livesLeft": 47,
+      "finalGold": 447
     },
     {
       "mapId": "easiest_straight",
@@ -387,8 +387,8 @@
       "victory": true,
       "gameOver": false,
       "aborted": null,
-      "livesLeft": 50,
-      "finalGold": 460
+      "livesLeft": 49,
+      "finalGold": 1085
     },
     {
       "mapId": "easiest_straight",
@@ -399,18 +399,18 @@
       "gameOver": false,
       "aborted": null,
       "livesLeft": 50,
-      "finalGold": 453
+      "finalGold": 620
     },
     {
       "mapId": "easy_loop",
       "persona": "holdout",
       "seed": 100000,
-      "wavesCleared": 31,
+      "wavesCleared": 43,
       "victory": false,
       "gameOver": true,
       "aborted": null,
       "livesLeft": 0,
-      "finalGold": 162
+      "finalGold": 546
     },
     {
       "mapId": "easy_loop",
@@ -420,173 +420,173 @@
       "victory": true,
       "gameOver": false,
       "aborted": null,
-      "livesLeft": 16,
-      "finalGold": 298
+      "livesLeft": 47,
+      "finalGold": 241
     },
     {
       "mapId": "easy_loop",
       "persona": "holdout",
       "seed": 115838,
+      "wavesCleared": 50,
+      "victory": true,
+      "gameOver": false,
+      "aborted": null,
+      "livesLeft": 47,
+      "finalGold": 2276
+    },
+    {
+      "mapId": "easy_loop",
+      "persona": "reroller",
+      "seed": 100000,
+      "wavesCleared": 50,
+      "victory": true,
+      "gameOver": false,
+      "aborted": null,
+      "livesLeft": 50,
+      "finalGold": 691
+    },
+    {
+      "mapId": "easy_loop",
+      "persona": "reroller",
+      "seed": 107919,
+      "wavesCleared": 50,
+      "victory": true,
+      "gameOver": false,
+      "aborted": null,
+      "livesLeft": 50,
+      "finalGold": 236
+    },
+    {
+      "mapId": "easy_loop",
+      "persona": "reroller",
+      "seed": 115838,
+      "wavesCleared": 50,
+      "victory": true,
+      "gameOver": false,
+      "aborted": null,
+      "livesLeft": 39,
+      "finalGold": 2326
+    },
+    {
+      "mapId": "easy_loop",
+      "persona": "worker",
+      "seed": 100000,
+      "wavesCleared": 50,
+      "victory": true,
+      "gameOver": false,
+      "aborted": null,
+      "livesLeft": 12,
+      "finalGold": 563
+    },
+    {
+      "mapId": "easy_loop",
+      "persona": "worker",
+      "seed": 107919,
+      "wavesCleared": 50,
+      "victory": true,
+      "gameOver": false,
+      "aborted": null,
+      "livesLeft": 46,
+      "finalGold": 247
+    },
+    {
+      "mapId": "easy_loop",
+      "persona": "worker",
+      "seed": 115838,
+      "wavesCleared": 50,
+      "victory": true,
+      "gameOver": false,
+      "aborted": null,
+      "livesLeft": 43,
+      "finalGold": 2374
+    },
+    {
+      "mapId": "easy_loop",
+      "persona": "tera",
+      "seed": 100000,
+      "wavesCleared": 43,
+      "victory": false,
+      "gameOver": true,
+      "aborted": null,
+      "livesLeft": 0,
+      "finalGold": 1739
+    },
+    {
+      "mapId": "easy_loop",
+      "persona": "tera",
+      "seed": 107919,
+      "wavesCleared": 50,
+      "victory": true,
+      "gameOver": false,
+      "aborted": null,
+      "livesLeft": 46,
+      "finalGold": 247
+    },
+    {
+      "mapId": "easy_loop",
+      "persona": "tera",
+      "seed": 115838,
+      "wavesCleared": 24,
+      "victory": false,
+      "gameOver": true,
+      "aborted": null,
+      "livesLeft": 0,
+      "finalGold": 71
+    },
+    {
+      "mapId": "medium_merge",
+      "persona": "holdout",
+      "seed": 100000,
+      "wavesCleared": 19,
+      "victory": false,
+      "gameOver": true,
+      "aborted": null,
+      "livesLeft": 0,
+      "finalGold": 76
+    },
+    {
+      "mapId": "medium_merge",
+      "persona": "holdout",
+      "seed": 107919,
       "wavesCleared": 38,
       "victory": false,
       "gameOver": true,
       "aborted": null,
       "livesLeft": 0,
-      "finalGold": 214
-    },
-    {
-      "mapId": "easy_loop",
-      "persona": "reroller",
-      "seed": 100000,
-      "wavesCleared": 39,
-      "victory": false,
-      "gameOver": true,
-      "aborted": null,
-      "livesLeft": 0,
-      "finalGold": 30
-    },
-    {
-      "mapId": "easy_loop",
-      "persona": "reroller",
-      "seed": 107919,
-      "wavesCleared": 50,
-      "victory": true,
-      "gameOver": false,
-      "aborted": null,
-      "livesLeft": 5,
-      "finalGold": 224
-    },
-    {
-      "mapId": "easy_loop",
-      "persona": "reroller",
-      "seed": 115838,
-      "wavesCleared": 38,
-      "victory": false,
-      "gameOver": true,
-      "aborted": null,
-      "livesLeft": 0,
-      "finalGold": 1674
-    },
-    {
-      "mapId": "easy_loop",
-      "persona": "worker",
-      "seed": 100000,
-      "wavesCleared": 39,
-      "victory": false,
-      "gameOver": true,
-      "aborted": null,
-      "livesLeft": 0,
-      "finalGold": 177
-    },
-    {
-      "mapId": "easy_loop",
-      "persona": "worker",
-      "seed": 107919,
-      "wavesCleared": 50,
-      "victory": true,
-      "gameOver": false,
-      "aborted": null,
-      "livesLeft": 8,
-      "finalGold": 333
-    },
-    {
-      "mapId": "easy_loop",
-      "persona": "worker",
-      "seed": 115838,
-      "wavesCleared": 22,
-      "victory": false,
-      "gameOver": true,
-      "aborted": null,
-      "livesLeft": 0,
-      "finalGold": 179
-    },
-    {
-      "mapId": "easy_loop",
-      "persona": "tera",
-      "seed": 100000,
-      "wavesCleared": 41,
-      "victory": false,
-      "gameOver": true,
-      "aborted": null,
-      "livesLeft": 0,
-      "finalGold": 26
-    },
-    {
-      "mapId": "easy_loop",
-      "persona": "tera",
-      "seed": 107919,
-      "wavesCleared": 50,
-      "victory": true,
-      "gameOver": false,
-      "aborted": null,
-      "livesLeft": 8,
-      "finalGold": 333
-    },
-    {
-      "mapId": "easy_loop",
-      "persona": "tera",
-      "seed": 115838,
-      "wavesCleared": 22,
-      "victory": false,
-      "gameOver": true,
-      "aborted": null,
-      "livesLeft": 0,
-      "finalGold": 179
-    },
-    {
-      "mapId": "medium_merge",
-      "persona": "holdout",
-      "seed": 100000,
-      "wavesCleared": 17,
-      "victory": false,
-      "gameOver": true,
-      "aborted": null,
-      "livesLeft": 0,
-      "finalGold": 30
-    },
-    {
-      "mapId": "medium_merge",
-      "persona": "holdout",
-      "seed": 107919,
-      "wavesCleared": 17,
-      "victory": false,
-      "gameOver": true,
-      "aborted": null,
-      "livesLeft": 0,
-      "finalGold": 35
+      "finalGold": 1790
     },
     {
       "mapId": "medium_merge",
       "persona": "holdout",
       "seed": 115838,
-      "wavesCleared": 14,
+      "wavesCleared": 20,
       "victory": false,
       "gameOver": true,
       "aborted": null,
       "livesLeft": 0,
-      "finalGold": 135
+      "finalGold": 209
     },
     {
       "mapId": "medium_merge",
       "persona": "reroller",
       "seed": 100000,
-      "wavesCleared": 17,
+      "wavesCleared": 19,
       "victory": false,
       "gameOver": true,
       "aborted": null,
       "livesLeft": 0,
-      "finalGold": 30
+      "finalGold": 76
     },
     {
       "mapId": "medium_merge",
       "persona": "reroller",
       "seed": 107919,
-      "wavesCleared": 15,
+      "wavesCleared": 21,
       "victory": false,
       "gameOver": true,
       "aborted": null,
       "livesLeft": 0,
-      "finalGold": 34
+      "finalGold": 22
     },
     {
       "mapId": "medium_merge",
@@ -603,67 +603,67 @@
       "mapId": "medium_merge",
       "persona": "worker",
       "seed": 100000,
-      "wavesCleared": 22,
-      "victory": false,
-      "gameOver": true,
-      "aborted": null,
-      "livesLeft": 0,
-      "finalGold": 60
-    },
-    {
-      "mapId": "medium_merge",
-      "persona": "worker",
-      "seed": 107919,
       "wavesCleared": 19,
       "victory": false,
       "gameOver": true,
       "aborted": null,
       "livesLeft": 0,
-      "finalGold": 213
+      "finalGold": 76
+    },
+    {
+      "mapId": "medium_merge",
+      "persona": "worker",
+      "seed": 107919,
+      "wavesCleared": 20,
+      "victory": false,
+      "gameOver": true,
+      "aborted": null,
+      "livesLeft": 0,
+      "finalGold": 21
     },
     {
       "mapId": "medium_merge",
       "persona": "worker",
       "seed": 115838,
-      "wavesCleared": 13,
+      "wavesCleared": 20,
       "victory": false,
       "gameOver": true,
       "aborted": null,
       "livesLeft": 0,
-      "finalGold": 65
+      "finalGold": 209
     },
     {
       "mapId": "medium_merge",
       "persona": "tera",
       "seed": 100000,
-      "wavesCleared": 22,
-      "victory": false,
-      "gameOver": true,
-      "aborted": null,
-      "livesLeft": 0,
-      "finalGold": 60
-    },
-    {
-      "mapId": "medium_merge",
-      "persona": "tera",
-      "seed": 107919,
       "wavesCleared": 19,
       "victory": false,
       "gameOver": true,
       "aborted": null,
       "livesLeft": 0,
-      "finalGold": 213
+      "finalGold": 76
+    },
+    {
+      "mapId": "medium_merge",
+      "persona": "tera",
+      "seed": 107919,
+      "wavesCleared": 18,
+      "victory": false,
+      "gameOver": true,
+      "aborted": null,
+      "livesLeft": 0,
+      "finalGold": 131
     },
     {
       "mapId": "medium_merge",
       "persona": "tera",
       "seed": 115838,
-      "wavesCleared": 13,
+      "wavesCleared": 20,
       "victory": false,
       "gameOver": true,
       "aborted": null,
       "livesLeft": 0,
-      "finalGold": 65
+      "finalGold": 209
     },
     {
       "mapId": "hard_dual_path",
@@ -674,51 +674,51 @@
       "gameOver": true,
       "aborted": null,
       "livesLeft": 0,
-      "finalGold": 91
+      "finalGold": 29
     },
     {
       "mapId": "hard_dual_path",
       "persona": "holdout",
       "seed": 107919,
-      "wavesCleared": 7,
+      "wavesCleared": 6,
       "victory": false,
       "gameOver": true,
       "aborted": null,
       "livesLeft": 0,
-      "finalGold": 88
+      "finalGold": 40
     },
     {
       "mapId": "hard_dual_path",
       "persona": "holdout",
       "seed": 115838,
-      "wavesCleared": 5,
+      "wavesCleared": 6,
       "victory": false,
       "gameOver": true,
       "aborted": null,
       "livesLeft": 0,
-      "finalGold": 42
+      "finalGold": 46
     },
     {
       "mapId": "hard_dual_path",
       "persona": "reroller",
       "seed": 100000,
-      "wavesCleared": 7,
+      "wavesCleared": 10,
       "victory": false,
       "gameOver": true,
       "aborted": null,
       "livesLeft": 0,
-      "finalGold": 63
+      "finalGold": 361
     },
     {
       "mapId": "hard_dual_path",
       "persona": "reroller",
       "seed": 107919,
-      "wavesCleared": 7,
+      "wavesCleared": 6,
       "victory": false,
       "gameOver": true,
       "aborted": null,
       "livesLeft": 0,
-      "finalGold": 88
+      "finalGold": 40
     },
     {
       "mapId": "hard_dual_path",
@@ -729,79 +729,79 @@
       "gameOver": true,
       "aborted": null,
       "livesLeft": 0,
-      "finalGold": 22
+      "finalGold": 44
     },
     {
       "mapId": "hard_dual_path",
       "persona": "worker",
       "seed": 100000,
-      "wavesCleared": 7,
+      "wavesCleared": 10,
       "victory": false,
       "gameOver": true,
       "aborted": null,
       "livesLeft": 0,
-      "finalGold": 63
+      "finalGold": 361
     },
     {
       "mapId": "hard_dual_path",
       "persona": "worker",
       "seed": 107919,
-      "wavesCleared": 7,
+      "wavesCleared": 6,
       "victory": false,
       "gameOver": true,
       "aborted": null,
       "livesLeft": 0,
-      "finalGold": 88
+      "finalGold": 40
     },
     {
       "mapId": "hard_dual_path",
       "persona": "worker",
       "seed": 115838,
-      "wavesCleared": 5,
+      "wavesCleared": 6,
       "victory": false,
       "gameOver": true,
       "aborted": null,
       "livesLeft": 0,
-      "finalGold": 42
+      "finalGold": 46
     },
     {
       "mapId": "hard_dual_path",
       "persona": "tera",
       "seed": 100000,
-      "wavesCleared": 7,
+      "wavesCleared": 10,
       "victory": false,
       "gameOver": true,
       "aborted": null,
       "livesLeft": 0,
-      "finalGold": 63
+      "finalGold": 361
     },
     {
       "mapId": "hard_dual_path",
       "persona": "tera",
       "seed": 107919,
-      "wavesCleared": 7,
+      "wavesCleared": 6,
       "victory": false,
       "gameOver": true,
       "aborted": null,
       "livesLeft": 0,
-      "finalGold": 88
+      "finalGold": 40
     },
     {
       "mapId": "hard_dual_path",
       "persona": "tera",
       "seed": 115838,
-      "wavesCleared": 5,
+      "wavesCleared": 6,
       "victory": false,
       "gameOver": true,
       "aborted": null,
       "livesLeft": 0,
-      "finalGold": 42
+      "finalGold": 46
     },
     {
       "mapId": "extreme_central",
       "persona": "holdout",
       "seed": 100000,
-      "wavesCleared": 7,
+      "wavesCleared": 8,
       "victory": false,
       "gameOver": true,
       "aborted": null,
@@ -817,7 +817,7 @@
       "gameOver": true,
       "aborted": null,
       "livesLeft": 0,
-      "finalGold": 75
+      "finalGold": 87
     },
     {
       "mapId": "extreme_central",
@@ -834,7 +834,7 @@
       "mapId": "extreme_central",
       "persona": "reroller",
       "seed": 100000,
-      "wavesCleared": 7,
+      "wavesCleared": 8,
       "victory": false,
       "gameOver": true,
       "aborted": null,
@@ -850,7 +850,7 @@
       "gameOver": true,
       "aborted": null,
       "livesLeft": 0,
-      "finalGold": 75
+      "finalGold": 87
     },
     {
       "mapId": "extreme_central",
@@ -861,13 +861,13 @@
       "gameOver": true,
       "aborted": null,
       "livesLeft": 0,
-      "finalGold": 71
+      "finalGold": 29
     },
     {
       "mapId": "extreme_central",
       "persona": "worker",
       "seed": 100000,
-      "wavesCleared": 7,
+      "wavesCleared": 8,
       "victory": false,
       "gameOver": true,
       "aborted": null,
@@ -883,7 +883,7 @@
       "gameOver": true,
       "aborted": null,
       "livesLeft": 0,
-      "finalGold": 75
+      "finalGold": 87
     },
     {
       "mapId": "extreme_central",
@@ -900,7 +900,7 @@
       "mapId": "extreme_central",
       "persona": "tera",
       "seed": 100000,
-      "wavesCleared": 7,
+      "wavesCleared": 8,
       "victory": false,
       "gameOver": true,
       "aborted": null,
@@ -916,7 +916,7 @@
       "gameOver": true,
       "aborted": null,
       "livesLeft": 0,
-      "finalGold": 75
+      "finalGold": 87
     },
     {
       "mapId": "extreme_central",

@@ -33,5 +33,8 @@ export default defineConfig({
     hookTimeout: 1_200_000,
     // 파일 간 병렬은 유지하되, 파일 내부는 순차(시드 결정론 보호)
     sequence: { concurrent: false },
+    // 알려진 버릇: 소스/설정 편집 직후 첫 실행이 "Cannot read properties of undefined
+    // (reading 'config')"로 죽을 수 있음(원인 미상, cache:false로도 재현). 두 번째
+    // 실행부터 정상 — 측정 전 smoke.sim.ts 1~2회 웜업이 표준 절차.
   },
 });
