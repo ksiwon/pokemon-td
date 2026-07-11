@@ -9,11 +9,9 @@ const DIFFICULTY_MULTIPLIERS: Record<
   { hp: number; attack: number; reward: number }
 > = {
   // [BALANCE] reward: medium=1.0 기준 난이도당 0.1씩 차등 → 고난도에 골드 이득을 줘 선택 이유 부여.
-  // [BALANCE 실험 이력 2026-07-11] 일괄 -0.1(0.2~1.0) 시뮬 A안: easy/medium p50 +5~8 개선,
-  //   easiest 후반벽·hard 초반벽엔 무효, 멀티 PvE 비중 9.6%로 과소 → 원복.
-  //   B안(지수 1.08→1.06)과 비교 측정 중.
-  // [BALANCE 실험 2026-07-11] 사다리 압축: 0.3~1.1(0.2step) → 0.4~1.0(0.15step)
-  //   하단 강화·상단 완화·medium 앵커. 1.06 지수와 조합 측정 중.
+  // [BALANCE 확정 2026-07-12] hp/attack 사다리 0.4~1.0(0.15step): 하단 강화·상단 완화·
+  //   medium(0.7) 앵커. 적 지수 1.07과 조합 — 목표 판당 승률 99/80/50/20/1%.
+  //   상세·실험 이력: docs/BALANCE.md
   easiest: { hp: 0.4,  attack: 0.4,  reward: 0.8 },
   easy:    { hp: 0.55, attack: 0.55, reward: 0.9 },
   medium:  { hp: 0.7,  attack: 0.7,  reward: 1.0 }, // maps.ts 'medium' 대응
@@ -237,12 +235,10 @@ export class WaveSystem {
       // [FIX-RACE] await 복귀 후 epoch 검증 — 바뀌었으면 새 웨이브가 시작된 것이므로 스폰 중단
       if (this._spawnEpoch !== epochAtStart) return;
 
-      // 지수적 스케일링 — 모드 분기.
-      // [BALANCE 2026-07-11] 싱글/멀티 1.08 → 1.07 (개발자 확정): 타워 +5%/레벨보다 약간
-      //   가파르게 — 시간이 흐르면 서서히 조여오되(사탕·시너지·테라로 벌충 가능한 기울기),
-      //   v1.23 시절 medium 체감("딱 좋았다")을 배율 0.7 기준으로 근사. w50: 27.5x(×0.7=19.2x).
-      //   이력: 1.08(easiest 58%) → 1.06(100%/33%) → 1.05(100%/75%, 후반 무긴장) → 1.07 확정.
-      // 스토리 모드는 원 곡선(1.08) 유지 — 챕터 밸런스가 1.08 기준으로 최근 튜닝됨.
+      // 지수적 스케일링 — 모드 분기 (확정 근거·실험 이력: docs/BALANCE.md).
+      // [BALANCE 확정 2026-07-12] 싱글/멀티 1.07: 타워 +5%/레벨보다 약간 가파르게 —
+      //   사탕·시너지·도구·테라·스왑으로 벌충 가능한 기울기. w50: 27.5x(×0.7=19.2x).
+      // 스토리 모드는 원 곡선(1.08) 유지 — 챕터 밸런스가 1.08 기준으로 튜닝됨.
       const waveMultiplier = Math.pow(storyChapterNumber !== null ? 1.08 : 1.07, wave - 1);
 
       const baseHp = pokemonData.stats.hp * waveMultiplier * mult.hp;

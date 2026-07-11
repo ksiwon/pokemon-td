@@ -94,8 +94,6 @@ export interface MapData {
   description: string;
   backgroundType: "grass" | "desert" | "snow" | "cave" | "water";
   backgroundImage?: string;
-  /** @deprecated 울타리 배치제한 폐기(자유배치 전환). 데이터는 남아있으나 미사용. */
-  buildZones?: { x: number; y: number; w: number; h: number }[];
   /** 테라스탈 타일: 점유한 타워의 타입을 type으로 변환(원전 충실형: 방어상성+자속).
    *  type은 맵별 고정, 위치는 spots 후보들 사이로 N웨이브마다 순환(쉬는 시간에 이동). */
   teraTiles?: { type: string; spots: { x: number; y: number }[] }[];

@@ -850,7 +850,7 @@ export const useGameStore = create<GameStore>((set, get) => ({
     }
 
     if (withdraw) {
-      const emptyPos = findEmptyBuildZoneTile(currentMap, towers);
+      const emptyPos = findEmptyBuildableTile(currentMap, towers);
       if (!emptyPos) {
         return { success: false, message: 'work.errNoTile' };
       }
@@ -868,7 +868,7 @@ export const useGameStore = create<GameStore>((set, get) => ({
   },
 }));
 
-function findEmptyBuildZoneTile(
+function findEmptyBuildableTile(
   mapId: string,
   towers: Array<{ position: { x: number; y: number } }>
 ): { x: number; y: number } | null {
@@ -878,7 +878,7 @@ function findEmptyBuildZoneTile(
   const facility = getFacilityTiles(map);
   const workTiles = [...facility.shopTiles, ...facility.contestTiles];
 
-  // [buildZones 폐기] 자유배치 규칙(길·입출구 keepout 제외)으로 빈 칸을 찾는다.
+  // 자유배치 규칙(길·입출구 keepout 제외)으로 빈 칸을 찾는다.
   // GameCanvas 배치 검증과 동일 소스(getBuildableTiles)를 사용해 일관성을 유지.
   const buildablePoints = getBuildableTiles(map);
 
