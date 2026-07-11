@@ -83,7 +83,8 @@ export function knobsForSkill(s: number): SkillKnobs {
     skill: s,
     // 오라클 쪽 값(두 번째 인자)은 sim:tune 힐클라임 결과(2026-07-11, easiest 67%)
     openingEntries: Math.round(lerp(2, 10)),
-    openingBar: lerp(300, 420),
+    // 개발자 확인: 아는 유저는 오프닝을 리롤해서 콘팡급(최종 450)은 안 들고 시작한다
+    openingBar: lerp(300, 470),
     placementTopK: Math.round(lerp(6, 1)),
     repositionPrep: s >= 0.4,
     safeWave: Math.round(lerp(40, 5)), // 하수는 후퇴 개념이 늦음(사실상 안 함)
@@ -391,24 +392,28 @@ export interface Candidate {
   offense: number; // max(atk, spa) + speed/2
   /** 최종진화 BST — 실플레이 평가 기준("왕귀형"). */
   finalBst: number;
-  /** 레벨 40까지 배우는 최고 광역기 위력 (0 = 광역기 없음) — 후반 물량전 핵심 */
+  /** 레벨 60까지 배우는 최고 광역기 위력 (0 = 광역기 없음) — 후반 물량전 핵심 */
   aoePower: number;
+  /** 구매 시 실제로 들고 나오는 기술의 위력 — "지금 당장 때릴 수 있나".
+   * 잠재력만 보고 위력 15짜리를 전선에 세우는 함정(페이검 등) 방지. */
+  entryPower: number;
 }
 
 const _finalBstCache = new Map<number, number>();
 const _aoePowerCache = new Map<number, number>();
+const _entryPowerCache = new Map<number, number>();
 
 /**
  * 광역기 잠재력 — "얘 광역기 배우나?" (실플레이 구매 판단 기준).
- * 레벨 2~40 레벨업 학습 기술 중 AOE 최고 위력. getLearnableMoves는
- * 레벨키 캐시 + 디스크 HTTP 캐시가 받쳐줘서 종당 1회만 실비용.
+ * 레벨 2~60 레벨업 학습 기술 중 AOE 최고 위력 (플랫 XP라 w40쯤 L60 도달).
+ * getLearnableMoves는 레벨키 캐시 + 디스크 HTTP 캐시가 받쳐줘서 종당 1회만 실비용.
  */
 export async function aoePowerOf(pokemonId: number): Promise<number> {
   const cached = _aoePowerCache.get(pokemonId);
   if (cached !== undefined) return cached;
   let best = 0;
   try {
-    for (let lvl = 2; lvl <= 40; lvl++) {
+    for (let lvl = 2; lvl <= 60; lvl++) {
       const moves = await pokeAPI.getLearnableMoves(pokemonId, lvl);
       for (const m of moves) {
         if (m.isAOE && (m.power ?? 0) > best) best = m.power ?? 0;
@@ -417,6 +422,20 @@ export async function aoePowerOf(pokemonId: number): Promise<number> {
   } catch { /* 캐시 미스 등 — 0으로 취급 */ }
   _aoePowerCache.set(pokemonId, best);
   return best;
+}
+
+/** 입장 화력 — 구매 시 장착되는 기술(기술목록 앞 10개 중 첫 non-status,
+ * PokemonPicker.handleSelect와 동일 규칙 = 종별 결정적)의 위력. */
+export async function entryPowerOf(poke: PokemonData): Promise<number> {
+  const cached = _entryPowerCache.get(poke.id);
+  if (cached !== undefined) return cached;
+  let p = 0;
+  try {
+    const mv = await pickUsableMove(poke);
+    p = mv?.power ?? 0;
+  } catch { /* 캐시 미스 등 — 0으로 취급 */ }
+  _entryPowerCache.set(poke.id, p);
+  return p;
 }
 
 export async function finalBstOf(pokemonId: number): Promise<number> {
@@ -458,6 +477,7 @@ async function drawCandidates(): Promise<Candidate[]> {
       offense: Math.max(p.stats.attack, p.stats.specialAttack) + p.stats.speed / 2,
       finalBst: await finalBstOf(p.id),
       aoePower: await aoePowerOf(p.id),
+      entryPower: await entryPowerOf(p),
     };
   }));
 }
@@ -515,8 +535,13 @@ export type BuyBias = (c: Candidate, towers: GamePokemon[]) => number;
 /** 광역기 가산점 — 후반 70마리 웨이브에서 AOE가 처리량을 지배 (실측 최대 효과) */
 const aoeScore = (c: Candidate) => (c.aoePower > 0 ? 120 + c.aoePower : 0);
 
+/** 즉시 화력 가산점 — 초반엔 "지금 때릴 수 있는가"가 잠재력보다 급하다.
+ * 중후반 신입은 사탕/공유XP로 금방 크므로 가중을 낮춘다. */
+const earlyScore = (c: Candidate) =>
+  c.entryPower * (useGameStore.getState().wave <= 12 ? 2.5 : 0.5);
+
 const balancedBias: BuyBias = (c, towers) =>
-  c.finalBst + c.bulk * 0.5 + aoeScore(c) + synergyBonus(c.data.types, towers) * 1.5;
+  c.finalBst + c.bulk * 0.5 + aoeScore(c) + earlyScore(c) + synergyBonus(c.data.types, towers) * 1.5;
 
 /**
  * 오프닝 (개발자 확인: "쓸만한 3~4마리 + 남은 골드 비축"):
@@ -527,16 +552,23 @@ async function runOpening(knobs: SkillKnobs, bias: BuyBias): Promise<void> {
   const store = () => useGameStore.getState();
   let bar = knobs.openingBar;
   let entries = 0;
-  const TARGET = 4;
+  // 분리 경로 맵은 방어선이 2개 — 몸을 하나 더 확보해야 갈래당 최소 전력이 나온다
+  const multiPath = pathSamplesByPath(store().currentMap).length > 1;
+  const TARGET = multiPath ? 5 : 4;
   const MIN_COST = 85; // 최저가 포켓몬 근사
 
+  let misses = 0;
   while (store().towers.length < TARGET && entries < knobs.openingEntries) {
-    if (store().money < PICKER_ENTRY + MIN_COST) break;
+    // 몸 2마리 이상이면 바닥까지 긁지 않는다 — 남은 골드가 130 밑이면 은행하고
+    // 다음 웨이브 킬 수입과 합쳐 제대로 된 3호를 산다 (입장비 소진 = 빈곤 루프 진범).
+    if (store().money < PICKER_ENTRY + (store().towers.length >= 2 ? 130 : MIN_COST)) break;
     if (!store().spendMoney(PICKER_ENTRY)) break;
     entries++;
 
     // 첫 유닛은 비싸도 됨(캐리). 이후엔 잔액의 50%까지만 — "쓸만한 3~4마리"가
     // 목표라 두 번째 유닛이 예산을 독식하면 몸 수가 부족해진다.
+    // (분리 경로 맵에 싸구려 다수 실험 → 내구 부족으로 기절 연쇄, 오히려 악화.
+    //  갈래당 품질이 우선 — 머릿수는 bodyTarget이 킬 수입으로 채운다.)
     const slotsLeft = TARGET - store().towers.length;
     const cap = store().towers.length >= 1 && slotsLeft >= 2
       ? Math.max(MIN_COST, store().money * 0.5) : Infinity;
@@ -546,16 +578,31 @@ async function runOpening(knobs: SkillKnobs, bias: BuyBias): Promise<void> {
     const scored = cands
       .map(c => ({
         c,
-        score: tankSlot ? c.bulk * 2 + c.finalBst * 0.5 : bias(c, store().towers),
+        score: tankSlot ? c.bulk * 2 + c.finalBst * 0.5 + earlyScore(c) : bias(c, store().towers),
       }))
       .sort((a, b) => b.score - a.score);
 
     const lastChance = entries >= knobs.openingEntries - 1 ||
       store().money < PICKER_ENTRY + MIN_COST * 2;
-    const pick = scored.find(s2 => s2.c.finalBst >= bar) ??
-      // 입장 여력이 끝나가는데 몸이 부족하면 최고점이라도 산다 (몸 우선 폴백)
-      (lastChance && store().towers.length < 3 && scored.length > 0 ? scored[0] : null);
-    if (pick) await purchaseAndPlace(pick.c, knobs);
+    // 몸이 3마리 미만인데 리롤만 계속하면 입장비가 예산을 태운다(빈곤 루프) —
+    // 두어 번 눈높이 사냥 후엔 컷만 넘으면 산다. 사람의 "일단 3마리는 깔고 시작".
+    const settle = store().towers.length < 3 && entries >= 3;
+    // 즉시 화력 하드컷(위력 30) — 위력 15짜리(페이검)는 전선이 안 된다.
+    // (체급(statTotal) 컷도 실험 → 약어리/잉어킹류 "할인 왕귀"까지 배제해 후반 화력이
+    //  빠지면서 medium 33%→0% 회귀. 종이 몸은 감수하는 게 낫다.)
+    const usable = (c: Candidate) => c.entryPower >= 30;
+    const pick = scored.find(s2 => s2.c.finalBst >= bar && usable(s2.c)) ??
+      (settle || lastChance
+        ? scored.find(s2 => usable(s2.c)) ??
+          // 진짜 마지막 기회면 몸 우선 — 최고점이라도 산다
+          (lastChance && store().towers.length < 3 ? scored[0] : null)
+        : null);
+    if (pick) {
+      await purchaseAndPlace(pick.c, knobs);
+      misses = 0;
+    } else if (++misses >= 3) {
+      break; // 세 번 연속 허탕 — 손절하고 남은 골드 은행
+    }
     bar *= 0.88; // 눈높이 하강 — 리롤 비용이 쌓일수록 타협
   }
 }
@@ -565,9 +612,13 @@ async function runOpening(knobs: SkillKnobs, bias: BuyBias): Promise<void> {
  * urgent(직전 웨이브 누수)면 즉시 6마리 목표 + 예비비 축소.
  */
 /** 웨이브별 목표 머릿수 — 6마리 조기 확정이 후반 생존 결정 변수
- * (XP가 전원 분배라 합류가 늦을수록 레벨 빚. 클리어 판 = 전원 L47+, 실패 판 = 낙오자 L21~34) */
+ * (XP가 전원 분배라 합류가 늦을수록 레벨 빚. 클리어 판 = 전원 L47+, 실패 판 = 낙오자 L21~34)
+ * 분리 경로 맵은 갈래당 전력이 반토막 → 한 단계씩 앞당긴다. */
 function bodyTarget(wave: number, urgent: boolean): number {
-  return urgent ? 6 : wave >= 7 ? 6 : wave >= 4 ? 5 : 4;
+  const multiPath = pathSamplesByPath(useGameStore.getState().currentMap).length > 1;
+  if (urgent) return 6;
+  if (multiPath) return wave >= 4 ? 6 : 5;
+  return wave >= 7 ? 6 : wave >= 4 ? 5 : 4;
 }
 
 async function maintainBodies(knobs: SkillKnobs, bias: BuyBias, urgent: boolean): Promise<void> {
@@ -576,15 +627,29 @@ async function maintainBodies(knobs: SkillKnobs, bias: BuyBias, urgent: boolean)
   let bar = urgent ? 0 : 360; // 평시엔 쓰레기 안 삼, 급하면 아무거나
   let guard = 0;
 
+  let misses = 0;
   while (store().towers.length < target && guard++ < 8) {
     if (store().money < PICKER_ENTRY + 85) break;
     if (!store().spendMoney(PICKER_ENTRY)) break;
     const cands = (await drawCandidates()).filter(c => c.cost <= store().money);
     const scored = cands.map(c => ({ c, score: bias(c, store().towers) }))
       .sort((a, b) => b.score - a.score);
-    const pick = scored.find(s2 => s2.c.finalBst >= bar) ??
-      (urgent || guard >= 3 ? scored[0] : null); // 세 번 돌려도 없으면 타협
-    if (pick) await purchaseAndPlace(pick.c, knobs);
+    // 초반(w10까지)엔 즉시 화력 하드컷(위력 30) — 위력 15짜리(페이검)는 전선이 안 된다.
+    // 이후엔 신입도 사탕/공유XP로 크므로 컷 해제. (체급 컷은 할인 왕귀까지 배제 → 기각)
+    const early = store().wave <= 10;
+    const usable = (c: Candidate) => !early || c.entryPower >= 30;
+    // 보드 4마리 미만 = 리롤 사치 금지 — 컷만 넘으면 산다. 컷도 못 넘는 쓰레기는
+    // 긴급(누수 중)일 때만 (몸이라도 세워 시간을 번다).
+    const desperate = store().towers.length < 4;
+    const pick = scored.find(s2 => s2.c.finalBst >= bar && usable(s2.c)) ??
+      ((desperate || guard >= 3) ? scored.find(s2 => usable(s2.c)) : undefined) ??
+      (urgent ? scored[0] : null);
+    if (pick) {
+      await purchaseAndPlace(pick.c, knobs);
+      misses = 0;
+    } else if (++misses >= 2) {
+      break; // 연속 허탕 — 입장비 태우지 말고 은행
+    }
     bar *= 0.9;
   }
 }
@@ -598,10 +663,13 @@ async function rebuildIfUpgrade(
   protectBonus: (tw: GamePokemon) => number = () => 0,
 ): Promise<void> {
   const store = () => useGameStore.getState();
+  // 6/6 풀보드 + w35까지가 처칭 스윗스팟 (측정으로 확정):
+  //   5보드 처칭 → 6호 몸값을 스왑에 태워 medium 33%→0% 회귀 → 기각.
+  //   w36+ 스왑 → 교체 딥(신입 레벨 공백)이 막판 DPS 체크에 걸림 → 기각.
   if (store().towers.length < 6 || store().money < minMoney) return;
-  // 후반 리빌드 금지 — 공유 XP 구조라 늦게 합류한 유닛은 레벨 빚을 영영 못 갚는다
-  // (클리어 판은 전부 일찍 확정한 6마리가 전원 L50+로 동반 성장한 팀).
-  if (store().wave > 20) return;
+  if (store().wave > 35) return;
+  const late = store().wave > 20;
+  if (late && store().money < 450) return; // 후반 스왑은 몸값+사탕 캐치업 여유가 전제
 
   // 최약체 선정 — 타입 플랜 일치 유닛은 보호 가중(+200), 플랜 밖 잡몬부터 정리
   const ranked: Array<{ id: string; fb: number; keep: number }> = [];
@@ -614,10 +682,12 @@ async function rebuildIfUpgrade(
   const worst = ranked[0];
   if (!worst) return;
 
-  // 팀에 고위력 광역기(70+)가 없으면 AOE 확보가 최우선 (개발자 확인: w20쯤엔
+  // 팀에 고위력 광역기가 없으면 AOE 확보가 최우선 (개발자 확인: w20쯤엔
   // 100위력급이 표준 — 잡몬 광역은 천장이 낮아 갈아끼워야 나온다).
+  // 눈높이는 후반일수록 상승: w20까지 70+, 이후 90+.
+  const bigAoeBar = late ? 90 : 70;
   const hasBigAoe = store().towers.some(t2 =>
-    !t2.isFainted && t2.equippedMoves[0]?.isAOE && (t2.equippedMoves[0]?.power ?? 0) >= 70);
+    !t2.isFainted && t2.equippedMoves[0]?.isAOE && (t2.equippedMoves[0]?.power ?? 0) >= bigAoeBar);
 
   // 리롤 인내: 업그레이드가 뜰 때까지 여러 번 돌린다 (사람의 "리롤 파티완성").
   // 잔고가 minMoney 아래로 내려가면 중단 — 리롤이 전력을 갉아먹지 않게.
@@ -629,7 +699,7 @@ async function rebuildIfUpgrade(
         // 평시: 잠재력 업그레이드
         ? c.finalBst >= worst.fb + knobs.rebuildMargin
         // AOE 부재: 고위력 광역 학습 후보면 BST 동급이어도 교체 가치
-        : (c.aoePower >= 80 && c.finalBst >= worst.fb) ||
+        : (c.aoePower >= (late ? 100 : 80) && c.finalBst >= worst.fb) ||
           c.finalBst >= worst.fb + knobs.rebuildMargin)
       .sort((a, b) =>
         (b.finalBst + aoeScore(b) + bonus(b)) - (a.finalBst + aoeScore(a) + bonus(a)));
@@ -640,11 +710,12 @@ async function rebuildIfUpgrade(
       const tw = store().towers.find(t => t.id === worst.id);
       return tw ? Math.max(tw.level * 20, tw.sellValue || 0) : 0;
     })();
-    // 캐치업 예산 — 여유가 있으면 요구하되, 상한 250: 가난한 중반 경제에서
+    // 캐치업 예산 — 여유가 있으면 요구하되 상한: 가난한 중반(250)에서
     // 이 요구가 AOE 스왑 자체를 봉쇄하면 안 된다 (신입도 공유 XP로 따라옴).
+    // 후반(800)은 경험사탕 점프값이 커서 예산도 커야 실제 캐치업이 된다.
     const lvls = [...new Set(store().towers.filter(t2 => !t2.isFainted && t2.id !== worst.id)
       .map(t2 => t2.level))].sort((a, b) => a - b);
-    const firstStep = Math.min(250, (lvls[0] ?? 10) * 50);
+    const firstStep = Math.min(late ? 800 : 250, (lvls[0] ?? 10) * 50);
     if (store().money + sellRefund < hit.cost + firstStep + 60) continue;
 
     if (!store().sellTower(worst.id)) return;
@@ -770,7 +841,7 @@ function assignTeraTiles(): void {
  * 등급 해금 시 도구 구매 → 캐리 장착.
  */
 async function albaAndShopping(
-  knobs: SkillKnobs, urgent: boolean, boughtItems: Set<string>, leakStreak: number,
+  knobs: SkillKnobs, urgent: boolean, leakStreak: number,
 ): Promise<void> {
   const store = () => useGameStore.getState();
   const st = store();
@@ -818,25 +889,28 @@ async function albaAndShopping(
     if (w) store().updateTower(w.id, { position: { x: shopTile.x * T + T / 2, y: shopTile.y * T + T / 2 } });
   }
 
-  // 지닌도구 구매 (점원 등급 해금 시)
+  // 지닌도구 구매 (점원 등급 해금 시) — 도구 없는 전투원 전원에게 차례로 장착.
+  // 사람은 해금되는 대로 캐리부터 채운다: 흡혈(생존+딜 유지) > 생구(최대 딜) >
+  // 딜클래스 일치 밴드/구슬 > 달인의띠. 열매(1회성)는 관리 비용 대비 이득이 작아 생략.
   const clerk = onTile(shopTile);
   if (clerk) {
     const tier = shopTier(clerk.shopWavesHeld ?? 0);
-    const wish = [
-      { grade: 3, id: 'shell-bell' },
-      { grade: 2, id: 'muscle-band' },
-    ];
-    for (const w of wish) {
-      if (tier >= w.grade && !boughtItems.has(w.id)) {
-        const def = HELD_ITEMS.find(h => h.id === w.id)!;
-        const carry = store().towers.filter(t2 => !t2.isFainted && !t2.heldItem)
-          .sort((a, b) => b.level - a.level || b.attack - a.attack)[0];
-        if (carry && store().money >= def.cost + 100 && store().spendMoney(def.cost)) {
-          store().addHeldItem(def.id);
-          store().equipHeldItem(carry.id, def.id);
-          boughtItems.add(w.id);
-        }
-      }
+    for (let n = 0; n < 4; n++) {
+      const carry = store().towers
+        .filter(t2 => !t2.isFainted && !t2.heldItem && !isOnWorkTile(t2, st.currentMap))
+        .sort((a, b) => b.level - a.level || b.attack - a.attack)[0];
+      if (!carry) break;
+      const physical = carry.attack >= carry.specialAttack;
+      const prefs = [
+        ...(tier >= 3 ? ['shell-bell', 'life-orb'] : []),
+        ...(tier >= 2 ? [physical ? 'muscle-band' : 'wise-glasses', 'expert-belt'] : []),
+      ];
+      const def = prefs.map(id => HELD_ITEMS.find(h => h.id === id)!)
+        .find(d => store().money >= d.cost + 150);
+      if (!def) break;
+      if (!store().spendMoney(def.cost)) break;
+      store().addHeldItem(def.id);
+      store().equipHeldItem(carry.id, def.id);
     }
   }
 }
@@ -939,7 +1013,6 @@ interface StyleHooks {
 
 export function humanPolicy(hooks: StyleHooks, skill = SIM_SKILL): BotPolicy {
   const knobs: SkillKnobs = { ...knobsForSkill(skill), ...GLOBAL_KNOBS, ...hooks.knobsOverride };
-  const boughtItems = new Set<string>();
 
   // 타입 플랜 — 맵 테라타입을 기둥으로 단일타입 6각 지향 (고수 메타)
   let planType: string | null = null;
@@ -990,7 +1063,7 @@ export function humanPolicy(hooks: StyleHooks, skill = SIM_SKILL): BotPolicy {
 
       // 표준 인간 테크 (개발자 확인: 테라 핵심·알바 보통 보냄) — 스킬 게이트
       if (knobs.useItemEvo) await itemEvolutions();
-      if (knobs.useAlba) await albaAndShopping(knobs, urgent, boughtItems, leakStreak);
+      if (knobs.useAlba) await albaAndShopping(knobs, urgent, leakStreak);
 
       // 스타일 특수 행동 (스파이크 판단 등)
       if (hooks.extras) await hooks.extras(knobs, urgent);

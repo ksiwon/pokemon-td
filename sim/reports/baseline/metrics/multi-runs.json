@@ -13,43 +13,43 @@
     "lossStreaker"
   ],
   "avgRounds": 45,
-  "avgBattles": 47,
+  "avgBattles": 49,
   "lifeLoss": {
-    "pve": 42,
-    "pvp": 648
+    "pve": 44,
+    "pvp": 666
   },
-  "spiralRecovery": 0.32608695652173914,
-  "spiralSamples": 46,
+  "spiralRecovery": 0.2558139534883721,
+  "spiralSamples": 43,
   "personas": {
     "holdout": {
-      "avgPlacement": 3.3333333333333335,
-      "avgPveLoss": 6,
-      "avgPvpLoss": 32.666666666666664,
-      "avgBattleGold": 884.1666666666666
+      "avgPlacement": 4.166666666666667,
+      "avgPveLoss": 0,
+      "avgPvpLoss": 46.333333333333336,
+      "avgBattleGold": 895.8333333333334
     },
     "reroller": {
-      "avgPlacement": 6,
-      "avgPveLoss": 0.75,
-      "avgPvpLoss": 48,
-      "avgBattleGold": 776.25
+      "avgPlacement": 5.5,
+      "avgPveLoss": 9,
+      "avgPvpLoss": 39,
+      "avgBattleGold": 801.25
     },
     "worker": {
-      "avgPlacement": 4.5,
-      "avgPveLoss": 0.5,
-      "avgPvpLoss": 42.5,
-      "avgBattleGold": 1017.5
+      "avgPlacement": 5,
+      "avgPveLoss": 2,
+      "avgPvpLoss": 44,
+      "avgBattleGold": 1082.5
     },
     "tera": {
-      "avgPlacement": 4.5,
-      "avgPveLoss": 1,
-      "avgPvpLoss": 37,
-      "avgBattleGold": 1170
+      "avgPlacement": 2.5,
+      "avgPveLoss": 2,
+      "avgPvpLoss": 26,
+      "avgBattleGold": 1025
     },
     "lossStreaker": {
       "avgPlacement": 5,
       "avgPveLoss": 0,
-      "avgPvpLoss": 50.5,
-      "avgBattleGold": 1067.5
+      "avgPvpLoss": 46,
+      "avgBattleGold": 1027.5
     }
   },
   "raw": [
@@ -57,7 +57,7 @@
       "seed": 500000,
       "engine": "arena",
       "rounds": 45,
-      "battles": 44,
+      "battles": 54,
       "winnerPersona": "holdout",
       "players": [
         {
@@ -66,8 +66,1184 @@
           "placement": 1,
           "eliminatedRound": null,
           "pveLivesLost": 0,
-          "pvpLivesLost": 37,
-          "battleGold": 835,
+          "pvpLivesLost": 41,
+          "battleGold": 665,
+          "wins": 9,
+          "losses": 6,
+          "battleResults": [
+            {
+              "round": 3,
+              "won": false
+            },
+            {
+              "round": 6,
+              "won": true
+            },
+            {
+              "round": 9,
+              "won": true
+            },
+            {
+              "round": 12,
+              "won": false
+            },
+            {
+              "round": 15,
+              "won": true
+            },
+            {
+              "round": 18,
+              "won": false
+            },
+            {
+              "round": 21,
+              "won": true
+            },
+            {
+              "round": 24,
+              "won": true
+            },
+            {
+              "round": 27,
+              "won": true
+            },
+            {
+              "round": 30,
+              "won": false
+            },
+            {
+              "round": 33,
+              "won": true
+            },
+            {
+              "round": 36,
+              "won": true
+            },
+            {
+              "round": 39,
+              "won": false
+            },
+            {
+              "round": 42,
+              "won": false
+            },
+            {
+              "round": 45,
+              "won": true
+            }
+          ],
+          "livesHistory": [
+            {
+              "round": 1,
+              "lives": 50,
+              "gold": 163
+            },
+            {
+              "round": 2,
+              "lives": 50,
+              "gold": 76
+            },
+            {
+              "round": 3,
+              "lives": 44,
+              "gold": 188
+            },
+            {
+              "round": 4,
+              "lives": 44,
+              "gold": 123
+            },
+            {
+              "round": 5,
+              "lives": 44,
+              "gold": 159
+            },
+            {
+              "round": 6,
+              "lives": 44,
+              "gold": 201
+            },
+            {
+              "round": 7,
+              "lives": 44,
+              "gold": 321
+            },
+            {
+              "round": 8,
+              "lives": 44,
+              "gold": 314
+            },
+            {
+              "round": 9,
+              "lives": 44,
+              "gold": 627
+            },
+            {
+              "round": 10,
+              "lives": 44,
+              "gold": 789
+            },
+            {
+              "round": 11,
+              "lives": 44,
+              "gold": 386
+            },
+            {
+              "round": 12,
+              "lives": 39,
+              "gold": 645
+            },
+            {
+              "round": 13,
+              "lives": 39,
+              "gold": 732
+            },
+            {
+              "round": 14,
+              "lives": 39,
+              "gold": 884
+            },
+            {
+              "round": 15,
+              "lives": 39,
+              "gold": 652
+            },
+            {
+              "round": 16,
+              "lives": 39,
+              "gold": 724
+            },
+            {
+              "round": 17,
+              "lives": 39,
+              "gold": 719
+            },
+            {
+              "round": 18,
+              "lives": 31,
+              "gold": 895
+            },
+            {
+              "round": 19,
+              "lives": 31,
+              "gold": 1039
+            },
+            {
+              "round": 20,
+              "lives": 31,
+              "gold": 1199
+            },
+            {
+              "round": 21,
+              "lives": 31,
+              "gold": 1427
+            },
+            {
+              "round": 22,
+              "lives": 31,
+              "gold": 1611
+            },
+            {
+              "round": 23,
+              "lives": 31,
+              "gold": 1803
+            },
+            {
+              "round": 24,
+              "lives": 31,
+              "gold": 2106
+            },
+            {
+              "round": 25,
+              "lives": 31,
+              "gold": 547
+            },
+            {
+              "round": 26,
+              "lives": 31,
+              "gold": 779
+            },
+            {
+              "round": 27,
+              "lives": 31,
+              "gold": 1149
+            },
+            {
+              "round": 28,
+              "lives": 31,
+              "gold": 1405
+            },
+            {
+              "round": 29,
+              "lives": 31,
+              "gold": 1669
+            },
+            {
+              "round": 30,
+              "lives": 25,
+              "gold": 1989
+            },
+            {
+              "round": 31,
+              "lives": 25,
+              "gold": 2277
+            },
+            {
+              "round": 32,
+              "lives": 25,
+              "gold": 581
+            },
+            {
+              "round": 33,
+              "lives": 25,
+              "gold": 993
+            },
+            {
+              "round": 34,
+              "lives": 25,
+              "gold": 1321
+            },
+            {
+              "round": 35,
+              "lives": 25,
+              "gold": 1657
+            },
+            {
+              "round": 36,
+              "lives": 25,
+              "gold": 2124
+            },
+            {
+              "round": 37,
+              "lives": 25,
+              "gold": 2604
+            },
+            {
+              "round": 38,
+              "lives": 25,
+              "gold": 3100
+            },
+            {
+              "round": 39,
+              "lives": 18,
+              "gold": 3644
+            },
+            {
+              "round": 40,
+              "lives": 18,
+              "gold": 4164
+            },
+            {
+              "round": 41,
+              "lives": 18,
+              "gold": 4692
+            },
+            {
+              "round": 42,
+              "lives": 9,
+              "gold": 5366
+            },
+            {
+              "round": 43,
+              "lives": 9,
+              "gold": 5918
+            },
+            {
+              "round": 44,
+              "lives": 9,
+              "gold": 6486
+            },
+            {
+              "round": 45,
+              "lives": 9,
+              "gold": 7162
+            }
+          ]
+        },
+        {
+          "userId": "p1_holdout",
+          "persona": "holdout",
+          "placement": 2,
+          "eliminatedRound": null,
+          "pveLivesLost": 0,
+          "pvpLivesLost": 34,
+          "battleGold": 695,
+          "wins": 10,
+          "losses": 5,
+          "battleResults": [
+            {
+              "round": 3,
+              "won": true
+            },
+            {
+              "round": 6,
+              "won": true
+            },
+            {
+              "round": 9,
+              "won": true
+            },
+            {
+              "round": 12,
+              "won": true
+            },
+            {
+              "round": 15,
+              "won": false
+            },
+            {
+              "round": 18,
+              "won": true
+            },
+            {
+              "round": 21,
+              "won": true
+            },
+            {
+              "round": 24,
+              "won": false
+            },
+            {
+              "round": 27,
+              "won": true
+            },
+            {
+              "round": 30,
+              "won": true
+            },
+            {
+              "round": 33,
+              "won": true
+            },
+            {
+              "round": 36,
+              "won": false
+            },
+            {
+              "round": 39,
+              "won": true
+            },
+            {
+              "round": 42,
+              "won": false
+            },
+            {
+              "round": 45,
+              "won": false
+            }
+          ],
+          "livesHistory": [
+            {
+              "round": 1,
+              "lives": 50,
+              "gold": 188
+            },
+            {
+              "round": 2,
+              "lives": 50,
+              "gold": 102
+            },
+            {
+              "round": 3,
+              "lives": 50,
+              "gold": 274
+            },
+            {
+              "round": 4,
+              "lives": 50,
+              "gold": 154
+            },
+            {
+              "round": 5,
+              "lives": 50,
+              "gold": 110
+            },
+            {
+              "round": 6,
+              "lives": 50,
+              "gold": 297
+            },
+            {
+              "round": 7,
+              "lives": 50,
+              "gold": 417
+            },
+            {
+              "round": 8,
+              "lives": 50,
+              "gold": 360
+            },
+            {
+              "round": 9,
+              "lives": 50,
+              "gold": 650
+            },
+            {
+              "round": 10,
+              "lives": 50,
+              "gold": 737
+            },
+            {
+              "round": 11,
+              "lives": 50,
+              "gold": 425
+            },
+            {
+              "round": 12,
+              "lives": 50,
+              "gold": 744
+            },
+            {
+              "round": 13,
+              "lives": 50,
+              "gold": 662
+            },
+            {
+              "round": 14,
+              "lives": 50,
+              "gold": 810
+            },
+            {
+              "round": 15,
+              "lives": 46,
+              "gold": 586
+            },
+            {
+              "round": 16,
+              "lives": 46,
+              "gold": 798
+            },
+            {
+              "round": 17,
+              "lives": 46,
+              "gold": 958
+            },
+            {
+              "round": 18,
+              "lives": 46,
+              "gold": 694
+            },
+            {
+              "round": 19,
+              "lives": 46,
+              "gold": 938
+            },
+            {
+              "round": 20,
+              "lives": 46,
+              "gold": 1098
+            },
+            {
+              "round": 21,
+              "lives": 46,
+              "gold": 1421
+            },
+            {
+              "round": 22,
+              "lives": 46,
+              "gold": 555
+            },
+            {
+              "round": 23,
+              "lives": 46,
+              "gold": 747
+            },
+            {
+              "round": 24,
+              "lives": 41,
+              "gold": 995
+            },
+            {
+              "round": 25,
+              "lives": 41,
+              "gold": 1211
+            },
+            {
+              "round": 26,
+              "lives": 41,
+              "gold": 1463
+            },
+            {
+              "round": 27,
+              "lives": 41,
+              "gold": 1783
+            },
+            {
+              "round": 28,
+              "lives": 41,
+              "gold": 2039
+            },
+            {
+              "round": 29,
+              "lives": 41,
+              "gold": 1083
+            },
+            {
+              "round": 30,
+              "lives": 41,
+              "gold": 1558
+            },
+            {
+              "round": 31,
+              "lives": 41,
+              "gold": 1846
+            },
+            {
+              "round": 32,
+              "lives": 41,
+              "gold": 2230
+            },
+            {
+              "round": 33,
+              "lives": 41,
+              "gold": 2672
+            },
+            {
+              "round": 34,
+              "lives": 41,
+              "gold": 630
+            },
+            {
+              "round": 35,
+              "lives": 41,
+              "gold": 416
+            },
+            {
+              "round": 36,
+              "lives": 33,
+              "gold": 928
+            },
+            {
+              "round": 37,
+              "lives": 33,
+              "gold": 783
+            },
+            {
+              "round": 38,
+              "lives": 33,
+              "gold": 1279
+            },
+            {
+              "round": 39,
+              "lives": 33,
+              "gold": 863
+            },
+            {
+              "round": 40,
+              "lives": 33,
+              "gold": 1383
+            },
+            {
+              "round": 41,
+              "lives": 33,
+              "gold": 1911
+            },
+            {
+              "round": 42,
+              "lives": 24,
+              "gold": 895
+            },
+            {
+              "round": 43,
+              "lives": 24,
+              "gold": 1447
+            },
+            {
+              "round": 44,
+              "lives": 24,
+              "gold": 2015
+            },
+            {
+              "round": 45,
+              "lives": 16,
+              "gold": 2691
+            }
+          ]
+        },
+        {
+          "userId": "p2_holdout",
+          "persona": "holdout",
+          "placement": 8,
+          "eliminatedRound": 27,
+          "pveLivesLost": 0,
+          "pvpLivesLost": 58,
+          "battleGold": 1300,
+          "wins": 1,
+          "losses": 8,
+          "battleResults": [
+            {
+              "round": 3,
+              "won": true
+            },
+            {
+              "round": 6,
+              "won": false
+            },
+            {
+              "round": 9,
+              "won": false
+            },
+            {
+              "round": 12,
+              "won": false
+            },
+            {
+              "round": 15,
+              "won": false
+            },
+            {
+              "round": 18,
+              "won": false
+            },
+            {
+              "round": 21,
+              "won": false
+            },
+            {
+              "round": 24,
+              "won": false
+            },
+            {
+              "round": 27,
+              "won": false
+            }
+          ],
+          "livesHistory": [
+            {
+              "round": 1,
+              "lives": 50,
+              "gold": 192
+            },
+            {
+              "round": 2,
+              "lives": 50,
+              "gold": 113
+            },
+            {
+              "round": 3,
+              "lives": 50,
+              "gold": 245
+            },
+            {
+              "round": 4,
+              "lives": 50,
+              "gold": 158
+            },
+            {
+              "round": 5,
+              "lives": 50,
+              "gold": 102
+            },
+            {
+              "round": 6,
+              "lives": 44,
+              "gold": 214
+            },
+            {
+              "round": 7,
+              "lives": 44,
+              "gold": 213
+            },
+            {
+              "round": 8,
+              "lives": 44,
+              "gold": 349
+            },
+            {
+              "round": 9,
+              "lives": 36,
+              "gold": 621
+            },
+            {
+              "round": 10,
+              "lives": 36,
+              "gold": 354
+            },
+            {
+              "round": 11,
+              "lives": 36,
+              "gold": 549
+            },
+            {
+              "round": 12,
+              "lives": 31,
+              "gold": 802
+            },
+            {
+              "round": 13,
+              "lives": 31,
+              "gold": 621
+            },
+            {
+              "round": 14,
+              "lives": 31,
+              "gold": 341
+            },
+            {
+              "round": 15,
+              "lives": 24,
+              "gold": 609
+            },
+            {
+              "round": 16,
+              "lives": 24,
+              "gold": 550
+            },
+            {
+              "round": 17,
+              "lives": 24,
+              "gold": 650
+            },
+            {
+              "round": 18,
+              "lives": 16,
+              "gold": 1006
+            },
+            {
+              "round": 19,
+              "lives": 16,
+              "gold": 650
+            },
+            {
+              "round": 20,
+              "lives": 16,
+              "gold": 810
+            },
+            {
+              "round": 21,
+              "lives": 10,
+              "gold": 1108
+            },
+            {
+              "round": 22,
+              "lives": 10,
+              "gold": 836
+            },
+            {
+              "round": 23,
+              "lives": 10,
+              "gold": 1390
+            },
+            {
+              "round": 24,
+              "lives": 1,
+              "gold": 1898
+            },
+            {
+              "round": 25,
+              "lives": 1,
+              "gold": 714
+            },
+            {
+              "round": 26,
+              "lives": 1,
+              "gold": 946
+            },
+            {
+              "round": 27,
+              "lives": 0,
+              "gold": 1486
+            },
+            {
+              "round": 28,
+              "lives": 0,
+              "gold": 1486
+            },
+            {
+              "round": 29,
+              "lives": 0,
+              "gold": 1486
+            },
+            {
+              "round": 30,
+              "lives": 0,
+              "gold": 1486
+            },
+            {
+              "round": 31,
+              "lives": 0,
+              "gold": 1486
+            },
+            {
+              "round": 32,
+              "lives": 0,
+              "gold": 1486
+            },
+            {
+              "round": 33,
+              "lives": 0,
+              "gold": 1486
+            },
+            {
+              "round": 34,
+              "lives": 0,
+              "gold": 1486
+            },
+            {
+              "round": 35,
+              "lives": 0,
+              "gold": 1486
+            },
+            {
+              "round": 36,
+              "lives": 0,
+              "gold": 1486
+            },
+            {
+              "round": 37,
+              "lives": 0,
+              "gold": 1486
+            },
+            {
+              "round": 38,
+              "lives": 0,
+              "gold": 1486
+            },
+            {
+              "round": 39,
+              "lives": 0,
+              "gold": 1486
+            },
+            {
+              "round": 40,
+              "lives": 0,
+              "gold": 1486
+            },
+            {
+              "round": 41,
+              "lives": 0,
+              "gold": 1486
+            },
+            {
+              "round": 42,
+              "lives": 0,
+              "gold": 1486
+            },
+            {
+              "round": 43,
+              "lives": 0,
+              "gold": 1486
+            },
+            {
+              "round": 44,
+              "lives": 0,
+              "gold": 1486
+            },
+            {
+              "round": 45,
+              "lives": 0,
+              "gold": 1486
+            }
+          ]
+        },
+        {
+          "userId": "p3_reroller",
+          "persona": "reroller",
+          "placement": 5,
+          "eliminatedRound": null,
+          "pveLivesLost": 0,
+          "pvpLivesLost": 45,
+          "battleGold": 635,
+          "wins": 7,
+          "losses": 8,
+          "battleResults": [
+            {
+              "round": 3,
+              "won": false
+            },
+            {
+              "round": 6,
+              "won": false
+            },
+            {
+              "round": 9,
+              "won": false
+            },
+            {
+              "round": 12,
+              "won": true
+            },
+            {
+              "round": 15,
+              "won": true
+            },
+            {
+              "round": 18,
+              "won": true
+            },
+            {
+              "round": 21,
+              "won": false
+            },
+            {
+              "round": 24,
+              "won": true
+            },
+            {
+              "round": 27,
+              "won": false
+            },
+            {
+              "round": 30,
+              "won": true
+            },
+            {
+              "round": 33,
+              "won": false
+            },
+            {
+              "round": 36,
+              "won": true
+            },
+            {
+              "round": 39,
+              "won": false
+            },
+            {
+              "round": 42,
+              "won": true
+            },
+            {
+              "round": 45,
+              "won": false
+            }
+          ],
+          "livesHistory": [
+            {
+              "round": 1,
+              "lives": 50,
+              "gold": 178
+            },
+            {
+              "round": 2,
+              "lives": 50,
+              "gold": 59
+            },
+            {
+              "round": 3,
+              "lives": 46,
+              "gold": 141
+            },
+            {
+              "round": 4,
+              "lives": 46,
+              "gold": 129
+            },
+            {
+              "round": 5,
+              "lives": 46,
+              "gold": 42
+            },
+            {
+              "round": 6,
+              "lives": 41,
+              "gold": 194
+            },
+            {
+              "round": 7,
+              "lives": 41,
+              "gold": 149
+            },
+            {
+              "round": 8,
+              "lives": 41,
+              "gold": 138
+            },
+            {
+              "round": 9,
+              "lives": 37,
+              "gold": 402
+            },
+            {
+              "round": 10,
+              "lives": 37,
+              "gold": 588
+            },
+            {
+              "round": 11,
+              "lives": 37,
+              "gold": 778
+            },
+            {
+              "round": 12,
+              "lives": 37,
+              "gold": 517
+            },
+            {
+              "round": 13,
+              "lives": 37,
+              "gold": 633
+            },
+            {
+              "round": 14,
+              "lives": 37,
+              "gold": 388
+            },
+            {
+              "round": 15,
+              "lives": 37,
+              "gold": 584
+            },
+            {
+              "round": 16,
+              "lives": 37,
+              "gold": 676
+            },
+            {
+              "round": 17,
+              "lives": 37,
+              "gold": 776
+            },
+            {
+              "round": 18,
+              "lives": 37,
+              "gold": 1042
+            },
+            {
+              "round": 19,
+              "lives": 37,
+              "gold": 1186
+            },
+            {
+              "round": 20,
+              "lives": 37,
+              "gold": 511
+            },
+            {
+              "round": 21,
+              "lives": 33,
+              "gold": 719
+            },
+            {
+              "round": 22,
+              "lives": 33,
+              "gold": 903
+            },
+            {
+              "round": 23,
+              "lives": 33,
+              "gold": 1095
+            },
+            {
+              "round": 24,
+              "lives": 33,
+              "gold": 1403
+            },
+            {
+              "round": 25,
+              "lives": 33,
+              "gold": 1619
+            },
+            {
+              "round": 26,
+              "lives": 33,
+              "gold": 1851
+            },
+            {
+              "round": 27,
+              "lives": 29,
+              "gold": 506
+            },
+            {
+              "round": 28,
+              "lives": 29,
+              "gold": 762
+            },
+            {
+              "round": 29,
+              "lives": 29,
+              "gold": 1026
+            },
+            {
+              "round": 30,
+              "lives": 29,
+              "gold": 1406
+            },
+            {
+              "round": 31,
+              "lives": 29,
+              "gold": 1694
+            },
+            {
+              "round": 32,
+              "lives": 29,
+              "gold": 1998
+            },
+            {
+              "round": 33,
+              "lives": 22,
+              "gold": 2350
+            },
+            {
+              "round": 34,
+              "lives": 22,
+              "gold": 2678
+            },
+            {
+              "round": 35,
+              "lives": 22,
+              "gold": 639
+            },
+            {
+              "round": 36,
+              "lives": 22,
+              "gold": 1091
+            },
+            {
+              "round": 37,
+              "lives": 22,
+              "gold": 1571
+            },
+            {
+              "round": 38,
+              "lives": 22,
+              "gold": 2067
+            },
+            {
+              "round": 39,
+              "lives": 14,
+              "gold": 2611
+            },
+            {
+              "round": 40,
+              "lives": 14,
+              "gold": 3131
+            },
+            {
+              "round": 41,
+              "lives": 14,
+              "gold": 3659
+            },
+            {
+              "round": 42,
+              "lives": 14,
+              "gold": 4303
+            },
+            {
+              "round": 43,
+              "lives": 14,
+              "gold": 4855
+            },
+            {
+              "round": 44,
+              "lives": 14,
+              "gold": 5423
+            },
+            {
+              "round": 45,
+              "lives": 5,
+              "gold": 6069
+            }
+          ]
+        },
+        {
+          "userId": "p4_reroller",
+          "persona": "reroller",
+          "placement": 4,
+          "eliminatedRound": null,
+          "pveLivesLost": 0,
+          "pvpLivesLost": 43,
+          "battleGold": 1545,
           "wins": 9,
           "losses": 6,
           "battleResults": [
@@ -85,15 +1261,15 @@
             },
             {
               "round": 12,
-              "won": false
+              "won": true
             },
             {
               "round": 15,
-              "won": false
+              "won": true
             },
             {
               "round": 18,
-              "won": false
+              "won": true
             },
             {
               "round": 21,
@@ -101,19 +1277,19 @@
             },
             {
               "round": 24,
-              "won": false
+              "won": true
             },
             {
               "round": 27,
-              "won": false
+              "won": true
             },
             {
               "round": 30,
-              "won": true
+              "won": false
             },
             {
               "round": 33,
-              "won": true
+              "won": false
             },
             {
               "round": 36,
@@ -121,255 +1297,544 @@
             },
             {
               "round": 39,
-              "won": true
+              "won": false
             },
             {
               "round": 42,
-              "won": true
+              "won": false
             },
             {
               "round": 45,
-              "won": true
+              "won": false
             }
           ],
           "livesHistory": [
             {
               "round": 1,
               "lives": 50,
-              "gold": 151
+              "gold": 190
             },
             {
               "round": 2,
               "lives": 50,
-              "gold": 79
+              "gold": 130
             },
             {
               "round": 3,
               "lives": 50,
-              "gold": 231
+              "gold": 242
             },
             {
               "round": 4,
               "lives": 50,
-              "gold": 164
+              "gold": 184
             },
             {
               "round": 5,
               "lives": 50,
-              "gold": 135
+              "gold": 117
             },
             {
               "round": 6,
               "lives": 50,
-              "gold": 342
+              "gold": 344
             },
             {
               "round": 7,
               "lives": 50,
-              "gold": 462
+              "gold": 464
             },
             {
               "round": 8,
               "lives": 50,
-              "gold": 459
+              "gold": 444
             },
             {
               "round": 9,
               "lives": 50,
-              "gold": 635
+              "gold": 550
             },
             {
               "round": 10,
               "lives": 50,
-              "gold": 489
+              "gold": 742
             },
             {
               "round": 11,
               "lives": 50,
-              "gold": 700
+              "gold": 790
             },
             {
               "round": 12,
-              "lives": 41,
-              "gold": 804
+              "lives": 50,
+              "gold": 796
             },
             {
               "round": 13,
-              "lives": 41,
-              "gold": 876
+              "lives": 50,
+              "gold": 868
             },
             {
               "round": 14,
-              "lives": 41,
-              "gold": 464
+              "lives": 50,
+              "gold": 956
             },
             {
               "round": 15,
-              "lives": 37,
-              "gold": 660
+              "lives": 50,
+              "gold": 1297
             },
             {
               "round": 16,
-              "lives": 37,
-              "gold": 772
+              "lives": 50,
+              "gold": 1409
             },
             {
               "round": 17,
-              "lives": 37,
-              "gold": 892
+              "lives": 50,
+              "gold": 1534
             },
             {
               "round": 18,
-              "lives": 30,
-              "gold": 1168
+              "lives": 50,
+              "gold": 1820
             },
             {
               "round": 19,
-              "lives": 30,
-              "gold": 537
+              "lives": 50,
+              "gold": 664
             },
             {
               "round": 20,
-              "lives": 30,
-              "gold": 697
+              "lives": 50,
+              "gold": 824
             },
             {
               "round": 21,
-              "lives": 30,
-              "gold": 965
+              "lives": 50,
+              "gold": 1122
             },
             {
               "round": 22,
-              "lives": 30,
-              "gold": 1269
+              "lives": 50,
+              "gold": 1306
             },
             {
               "round": 23,
-              "lives": 30,
-              "gold": 606
+              "lives": 50,
+              "gold": 1498
             },
             {
               "round": 24,
-              "lives": 23,
-              "gold": 974
+              "lives": 50,
+              "gold": 1856
             },
             {
               "round": 25,
-              "lives": 23,
-              "gold": 1310
+              "lives": 50,
+              "gold": 2072
             },
             {
               "round": 26,
-              "lives": 23,
-              "gold": 512
+              "lives": 50,
+              "gold": 2304
             },
             {
               "round": 27,
-              "lives": 18,
-              "gold": 972
+              "lives": 50,
+              "gold": 2694
             },
             {
               "round": 28,
-              "lives": 18,
-              "gold": 1348
+              "lives": 50,
+              "gold": 1325
             },
             {
               "round": 29,
-              "lives": 18,
-              "gold": 1732
+              "lives": 50,
+              "gold": 1494
             },
             {
               "round": 30,
-              "lives": 18,
-              "gold": 862
+              "lives": 43,
+              "gold": 964
             },
             {
               "round": 31,
-              "lives": 18,
-              "gold": 1270
+              "lives": 43,
+              "gold": 1252
             },
             {
               "round": 32,
-              "lives": 18,
-              "gold": 1194
+              "lives": 43,
+              "gold": 1556
             },
             {
               "round": 33,
-              "lives": 18,
-              "gold": 1741
+              "lives": 34,
+              "gold": 1118
             },
             {
               "round": 34,
-              "lives": 18,
-              "gold": 1689
+              "lives": 34,
+              "gold": 1446
             },
             {
               "round": 35,
-              "lives": 18,
-              "gold": 545
+              "lives": 34,
+              "gold": 2487
             },
             {
               "round": 36,
-              "lives": 13,
-              "gold": 1087
+              "lives": 25,
+              "gold": 1604
             },
             {
               "round": 37,
-              "lives": 13,
-              "gold": 1567
+              "lives": 25,
+              "gold": 484
             },
             {
               "round": 38,
-              "lives": 13,
-              "gold": 2063
+              "lives": 25,
+              "gold": 980
             },
             {
               "round": 39,
-              "lives": 13,
-              "gold": 867
+              "lives": 21,
+              "gold": 1674
             },
             {
               "round": 40,
-              "lives": 13,
-              "gold": 1387
+              "lives": 21,
+              "gold": 2194
             },
             {
               "round": 41,
-              "lives": 13,
-              "gold": 1915
+              "lives": 21,
+              "gold": 2722
             },
             {
               "round": 42,
-              "lives": 13,
-              "gold": 599
+              "lives": 14,
+              "gold": 1106
             },
             {
               "round": 43,
-              "lives": 13,
-              "gold": 1151
+              "lives": 14,
+              "gold": 1658
             },
             {
               "round": 44,
-              "lives": 13,
-              "gold": 1719
+              "lives": 14,
+              "gold": 2226
             },
             {
               "round": 45,
-              "lives": 13,
-              "gold": 2405
+              "lives": 7,
+              "gold": 3072
             }
           ]
         },
         {
-          "userId": "p1_holdout",
-          "persona": "holdout",
-          "placement": 4,
+          "userId": "p5_worker",
+          "persona": "worker",
+          "placement": 7,
+          "eliminatedRound": 36,
+          "pveLivesLost": 1,
+          "pvpLivesLost": 52,
+          "battleGold": 850,
+          "wins": 2,
+          "losses": 9,
+          "battleResults": [
+            {
+              "round": 3,
+              "won": false
+            },
+            {
+              "round": 6,
+              "won": false
+            },
+            {
+              "round": 9,
+              "won": true
+            },
+            {
+              "round": 12,
+              "won": false
+            },
+            {
+              "round": 15,
+              "won": false
+            },
+            {
+              "round": 18,
+              "won": false
+            },
+            {
+              "round": 21,
+              "won": true
+            },
+            {
+              "round": 24,
+              "won": false
+            },
+            {
+              "round": 27,
+              "won": false
+            },
+            {
+              "round": 30,
+              "won": true,
+              "bye": true
+            },
+            {
+              "round": 33,
+              "won": false
+            },
+            {
+              "round": 36,
+              "won": false
+            }
+          ],
+          "livesHistory": [
+            {
+              "round": 1,
+              "lives": 49,
+              "gold": 181
+            },
+            {
+              "round": 2,
+              "lives": 49,
+              "gold": 120
+            },
+            {
+              "round": 3,
+              "lives": 44,
+              "gold": 212
+            },
+            {
+              "round": 4,
+              "lives": 44,
+              "gold": 106
+            },
+            {
+              "round": 5,
+              "lives": 44,
+              "gold": 142
+            },
+            {
+              "round": 6,
+              "lives": 38,
+              "gold": 175
+            },
+            {
+              "round": 7,
+              "lives": 38,
+              "gold": 142
+            },
+            {
+              "round": 8,
+              "lives": 38,
+              "gold": 278
+            },
+            {
+              "round": 9,
+              "lives": 38,
+              "gold": 511
+            },
+            {
+              "round": 10,
+              "lives": 38,
+              "gold": 676
+            },
+            {
+              "round": 11,
+              "lives": 38,
+              "gold": 724
+            },
+            {
+              "round": 12,
+              "lives": 34,
+              "gold": 828
+            },
+            {
+              "round": 13,
+              "lives": 34,
+              "gold": 577
+            },
+            {
+              "round": 14,
+              "lives": 34,
+              "gold": 402
+            },
+            {
+              "round": 15,
+              "lives": 28,
+              "gold": 472
+            },
+            {
+              "round": 16,
+              "lives": 28,
+              "gold": 584
+            },
+            {
+              "round": 17,
+              "lives": 28,
+              "gold": 704
+            },
+            {
+              "round": 18,
+              "lives": 22,
+              "gold": 492
+            },
+            {
+              "round": 19,
+              "lives": 22,
+              "gold": 591
+            },
+            {
+              "round": 20,
+              "lives": 22,
+              "gold": 780
+            },
+            {
+              "round": 21,
+              "lives": 22,
+              "gold": 913
+            },
+            {
+              "round": 22,
+              "lives": 22,
+              "gold": 1196
+            },
+            {
+              "round": 23,
+              "lives": 22,
+              "gold": 988
+            },
+            {
+              "round": 24,
+              "lives": 15,
+              "gold": 1236
+            },
+            {
+              "round": 25,
+              "lives": 15,
+              "gold": 1452
+            },
+            {
+              "round": 26,
+              "lives": 15,
+              "gold": 1684
+            },
+            {
+              "round": 27,
+              "lives": 9,
+              "gold": 2054
+            },
+            {
+              "round": 28,
+              "lives": 9,
+              "gold": 535
+            },
+            {
+              "round": 29,
+              "lives": 9,
+              "gold": 799
+            },
+            {
+              "round": 30,
+              "lives": 9,
+              "gold": 1901
+            },
+            {
+              "round": 31,
+              "lives": 9,
+              "gold": 2189
+            },
+            {
+              "round": 32,
+              "lives": 9,
+              "gold": 2493
+            },
+            {
+              "round": 33,
+              "lives": 4,
+              "gold": 805
+            },
+            {
+              "round": 34,
+              "lives": 4,
+              "gold": 1133
+            },
+            {
+              "round": 35,
+              "lives": 4,
+              "gold": 1469
+            },
+            {
+              "round": 36,
+              "lives": 0,
+              "gold": 1571
+            },
+            {
+              "round": 37,
+              "lives": 0,
+              "gold": 1571
+            },
+            {
+              "round": 38,
+              "lives": 0,
+              "gold": 1571
+            },
+            {
+              "round": 39,
+              "lives": 0,
+              "gold": 1571
+            },
+            {
+              "round": 40,
+              "lives": 0,
+              "gold": 1571
+            },
+            {
+              "round": 41,
+              "lives": 0,
+              "gold": 1571
+            },
+            {
+              "round": 42,
+              "lives": 0,
+              "gold": 1571
+            },
+            {
+              "round": 43,
+              "lives": 0,
+              "gold": 1571
+            },
+            {
+              "round": 44,
+              "lives": 0,
+              "gold": 1571
+            },
+            {
+              "round": 45,
+              "lives": 0,
+              "gold": 1571
+            }
+          ]
+        },
+        {
+          "userId": "p6_tera",
+          "persona": "tera",
+          "placement": 3,
           "eliminatedRound": null,
-          "pveLivesLost": 0,
-          "pvpLivesLost": 45,
-          "battleGold": 1295,
-          "wins": 6,
-          "losses": 7,
+          "pveLivesLost": 4,
+          "pvpLivesLost": 33,
+          "battleGold": 845,
+          "wins": 8,
+          "losses": 6,
           "battleResults": [
             {
               "round": 3,
@@ -385,8 +1850,7 @@
             },
             {
               "round": 12,
-              "won": true,
-              "bye": true
+              "won": true
             },
             {
               "round": 15,
@@ -394,11 +1858,11 @@
             },
             {
               "round": 18,
-              "won": false
+              "won": true
             },
             {
               "round": 21,
-              "won": true
+              "won": false
             },
             {
               "round": 24,
@@ -406,8 +1870,619 @@
             },
             {
               "round": 27,
+              "won": false
+            },
+            {
+              "round": 30,
+              "won": true
+            },
+            {
+              "round": 33,
+              "won": true
+            },
+            {
+              "round": 36,
               "won": true,
               "bye": true
+            },
+            {
+              "round": 39,
+              "won": true
+            },
+            {
+              "round": 42,
+              "won": true
+            },
+            {
+              "round": 45,
+              "won": true
+            }
+          ],
+          "livesHistory": [
+            {
+              "round": 1,
+              "lives": 50,
+              "gold": 197
+            },
+            {
+              "round": 2,
+              "lives": 50,
+              "gold": 111
+            },
+            {
+              "round": 3,
+              "lives": 46,
+              "gold": 153
+            },
+            {
+              "round": 4,
+              "lives": 45,
+              "gold": 35
+            },
+            {
+              "round": 5,
+              "lives": 44,
+              "gold": 43
+            },
+            {
+              "round": 6,
+              "lives": 35,
+              "gold": 99
+            },
+            {
+              "round": 7,
+              "lives": 35,
+              "gold": 139
+            },
+            {
+              "round": 8,
+              "lives": 35,
+              "gold": 169
+            },
+            {
+              "round": 9,
+              "lives": 28,
+              "gold": 298
+            },
+            {
+              "round": 10,
+              "lives": 28,
+              "gold": 458
+            },
+            {
+              "round": 11,
+              "lives": 28,
+              "gold": 653
+            },
+            {
+              "round": 12,
+              "lives": 28,
+              "gold": 492
+            },
+            {
+              "round": 13,
+              "lives": 28,
+              "gold": 666
+            },
+            {
+              "round": 14,
+              "lives": 28,
+              "gold": 648
+            },
+            {
+              "round": 15,
+              "lives": 23,
+              "gold": 784
+            },
+            {
+              "round": 16,
+              "lives": 23,
+              "gold": 896
+            },
+            {
+              "round": 17,
+              "lives": 23,
+              "gold": 516
+            },
+            {
+              "round": 18,
+              "lives": 23,
+              "gold": 752
+            },
+            {
+              "round": 19,
+              "lives": 23,
+              "gold": 896
+            },
+            {
+              "round": 20,
+              "lives": 23,
+              "gold": 1056
+            },
+            {
+              "round": 21,
+              "lives": 19,
+              "gold": 1264
+            },
+            {
+              "round": 22,
+              "lives": 19,
+              "gold": 1317
+            },
+            {
+              "round": 23,
+              "lives": 19,
+              "gold": 1509
+            },
+            {
+              "round": 24,
+              "lives": 19,
+              "gold": 1817
+            },
+            {
+              "round": 25,
+              "lives": 19,
+              "gold": 458
+            },
+            {
+              "round": 26,
+              "lives": 19,
+              "gold": 690
+            },
+            {
+              "round": 27,
+              "lives": 13,
+              "gold": 1000
+            },
+            {
+              "round": 28,
+              "lives": 13,
+              "gold": 1256
+            },
+            {
+              "round": 29,
+              "lives": 13,
+              "gold": 1520
+            },
+            {
+              "round": 30,
+              "lives": 13,
+              "gold": 1900
+            },
+            {
+              "round": 31,
+              "lives": 13,
+              "gold": 848
+            },
+            {
+              "round": 32,
+              "lives": 13,
+              "gold": 1152
+            },
+            {
+              "round": 33,
+              "lives": 13,
+              "gold": 1579
+            },
+            {
+              "round": 34,
+              "lives": 13,
+              "gold": 1907
+            },
+            {
+              "round": 35,
+              "lives": 13,
+              "gold": 2243
+            },
+            {
+              "round": 36,
+              "lives": 13,
+              "gold": 1010
+            },
+            {
+              "round": 37,
+              "lives": 13,
+              "gold": 540
+            },
+            {
+              "round": 38,
+              "lives": 13,
+              "gold": 1036
+            },
+            {
+              "round": 39,
+              "lives": 13,
+              "gold": 1670
+            },
+            {
+              "round": 40,
+              "lives": 13,
+              "gold": 665
+            },
+            {
+              "round": 41,
+              "lives": 13,
+              "gold": 1193
+            },
+            {
+              "round": 42,
+              "lives": 13,
+              "gold": 1887
+            },
+            {
+              "round": 43,
+              "lives": 13,
+              "gold": 2439
+            },
+            {
+              "round": 44,
+              "lives": 13,
+              "gold": 682
+            },
+            {
+              "round": 45,
+              "lives": 13,
+              "gold": 1408
+            }
+          ]
+        },
+        {
+          "userId": "p7_lossStreaker",
+          "persona": "lossStreaker",
+          "placement": 6,
+          "eliminatedRound": null,
+          "pveLivesLost": 0,
+          "pvpLivesLost": 46,
+          "battleGold": 900,
+          "wins": 8,
+          "losses": 6,
+          "battleResults": [
+            {
+              "round": 3,
+              "won": true
+            },
+            {
+              "round": 6,
+              "won": true
+            },
+            {
+              "round": 9,
+              "won": false
+            },
+            {
+              "round": 12,
+              "won": false
+            },
+            {
+              "round": 15,
+              "won": true
+            },
+            {
+              "round": 18,
+              "won": false
+            },
+            {
+              "round": 21,
+              "won": false
+            },
+            {
+              "round": 24,
+              "won": false
+            },
+            {
+              "round": 27,
+              "won": true
+            },
+            {
+              "round": 30,
+              "won": false
+            },
+            {
+              "round": 33,
+              "won": true,
+              "bye": true
+            },
+            {
+              "round": 36,
+              "won": true
+            },
+            {
+              "round": 39,
+              "won": true
+            },
+            {
+              "round": 42,
+              "won": true
+            },
+            {
+              "round": 45,
+              "won": true
+            }
+          ],
+          "livesHistory": [
+            {
+              "round": 1,
+              "lives": 50,
+              "gold": 181
+            },
+            {
+              "round": 2,
+              "lives": 50,
+              "gold": 91
+            },
+            {
+              "round": 3,
+              "lives": 50,
+              "gold": 243
+            },
+            {
+              "round": 4,
+              "lives": 50,
+              "gold": 140
+            },
+            {
+              "round": 5,
+              "lives": 50,
+              "gold": 121
+            },
+            {
+              "round": 6,
+              "lives": 50,
+              "gold": 348
+            },
+            {
+              "round": 7,
+              "lives": 50,
+              "gold": 468
+            },
+            {
+              "round": 8,
+              "lives": 50,
+              "gold": 423
+            },
+            {
+              "round": 9,
+              "lives": 42,
+              "gold": 774
+            },
+            {
+              "round": 10,
+              "lives": 42,
+              "gold": 446
+            },
+            {
+              "round": 11,
+              "lives": 42,
+              "gold": 473
+            },
+            {
+              "round": 12,
+              "lives": 34,
+              "gold": 839
+            },
+            {
+              "round": 13,
+              "lives": 34,
+              "gold": 605
+            },
+            {
+              "round": 14,
+              "lives": 34,
+              "gold": 718
+            },
+            {
+              "round": 15,
+              "lives": 34,
+              "gold": 703
+            },
+            {
+              "round": 16,
+              "lives": 34,
+              "gold": 585
+            },
+            {
+              "round": 17,
+              "lives": 34,
+              "gold": 705
+            },
+            {
+              "round": 18,
+              "lives": 25,
+              "gold": 881
+            },
+            {
+              "round": 19,
+              "lives": 25,
+              "gold": 757
+            },
+            {
+              "round": 20,
+              "lives": 25,
+              "gold": 917
+            },
+            {
+              "round": 21,
+              "lives": 17,
+              "gold": 685
+            },
+            {
+              "round": 22,
+              "lives": 17,
+              "gold": 869
+            },
+            {
+              "round": 23,
+              "lives": 17,
+              "gold": 1061
+            },
+            {
+              "round": 24,
+              "lives": 11,
+              "gold": 1439
+            },
+            {
+              "round": 25,
+              "lives": 11,
+              "gold": 1655
+            },
+            {
+              "round": 26,
+              "lives": 11,
+              "gold": 1887
+            },
+            {
+              "round": 27,
+              "lives": 11,
+              "gold": 822
+            },
+            {
+              "round": 28,
+              "lives": 11,
+              "gold": 1078
+            },
+            {
+              "round": 29,
+              "lives": 11,
+              "gold": 1342
+            },
+            {
+              "round": 30,
+              "lives": 4,
+              "gold": 1692
+            },
+            {
+              "round": 31,
+              "lives": 4,
+              "gold": 1980
+            },
+            {
+              "round": 32,
+              "lives": 4,
+              "gold": 2284
+            },
+            {
+              "round": 33,
+              "lives": 4,
+              "gold": 586
+            },
+            {
+              "round": 34,
+              "lives": 4,
+              "gold": 914
+            },
+            {
+              "round": 35,
+              "lives": 4,
+              "gold": 515
+            },
+            {
+              "round": 36,
+              "lives": 4,
+              "gold": 967
+            },
+            {
+              "round": 37,
+              "lives": 4,
+              "gold": 622
+            },
+            {
+              "round": 38,
+              "lives": 4,
+              "gold": 568
+            },
+            {
+              "round": 39,
+              "lives": 4,
+              "gold": 1187
+            },
+            {
+              "round": 40,
+              "lives": 4,
+              "gold": 757
+            },
+            {
+              "round": 41,
+              "lives": 4,
+              "gold": 1285
+            },
+            {
+              "round": 42,
+              "lives": 4,
+              "gold": 1959
+            },
+            {
+              "round": 43,
+              "lives": 4,
+              "gold": 961
+            },
+            {
+              "round": 44,
+              "lives": 4,
+              "gold": 1529
+            },
+            {
+              "round": 45,
+              "lives": 4,
+              "gold": 2255
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "seed": 507919,
+      "engine": "arena",
+      "rounds": 45,
+      "battles": 44,
+      "winnerPersona": "holdout",
+      "players": [
+        {
+          "userId": "p0_holdout",
+          "persona": "holdout",
+          "placement": 1,
+          "eliminatedRound": null,
+          "pveLivesLost": 0,
+          "pvpLivesLost": 37,
+          "battleGold": 770,
+          "wins": 9,
+          "losses": 5,
+          "battleResults": [
+            {
+              "round": 3,
+              "won": true
+            },
+            {
+              "round": 6,
+              "won": true
+            },
+            {
+              "round": 9,
+              "won": true
+            },
+            {
+              "round": 12,
+              "won": false
+            },
+            {
+              "round": 15,
+              "won": true
+            },
+            {
+              "round": 18,
+              "won": true,
+              "bye": true
+            },
+            {
+              "round": 21,
+              "won": false
+            },
+            {
+              "round": 24,
+              "won": false
+            },
+            {
+              "round": 27,
+              "won": true
             },
             {
               "round": 30,
@@ -423,11 +2498,11 @@
             },
             {
               "round": 39,
-              "won": true
+              "won": false
             },
             {
               "round": 42,
-              "won": false
+              "won": true
             },
             {
               "round": 45,
@@ -438,233 +2513,803 @@
             {
               "round": 1,
               "lives": 50,
-              "gold": 147
+              "gold": 191
             },
             {
               "round": 2,
               "lives": 50,
-              "gold": 66
+              "gold": 126
             },
             {
               "round": 3,
-              "lives": 45,
-              "gold": 178
+              "lives": 50,
+              "gold": 258
             },
             {
               "round": 4,
-              "lives": 45,
-              "gold": 120
+              "lives": 50,
+              "gold": 93
             },
             {
               "round": 5,
-              "lives": 45,
-              "gold": 106
+              "lives": 50,
+              "gold": 189
             },
             {
               "round": 6,
-              "lives": 40,
-              "gold": 298
+              "lives": 50,
+              "gold": 416
             },
             {
               "round": 7,
-              "lives": 40,
-              "gold": 206
+              "lives": 50,
+              "gold": 536
             },
             {
               "round": 8,
-              "lives": 40,
-              "gold": 342
+              "lives": 50,
+              "gold": 482
             },
             {
               "round": 9,
-              "lives": 34,
-              "gold": 633
+              "lives": 50,
+              "gold": 873
             },
             {
               "round": 10,
-              "lives": 34,
-              "gold": 508
+              "lives": 50,
+              "gold": 413
             },
             {
               "round": 11,
-              "lives": 34,
-              "gold": 583
+              "lives": 50,
+              "gold": 461
             },
             {
               "round": 12,
-              "lives": 34,
-              "gold": 959
+              "lives": 44,
+              "gold": 565
             },
             {
               "round": 13,
-              "lives": 34,
-              "gold": 518
+              "lives": 44,
+              "gold": 264
             },
             {
               "round": 14,
-              "lives": 34,
-              "gold": 586
+              "lives": 44,
+              "gold": 452
             },
             {
               "round": 15,
-              "lives": 27,
-              "gold": 1046
+              "lives": 44,
+              "gold": 370
             },
             {
               "round": 16,
-              "lives": 27,
-              "gold": 658
+              "lives": 44,
+              "gold": 442
             },
             {
               "round": 17,
-              "lives": 27,
-              "gold": 738
+              "lives": 44,
+              "gold": 562
             },
             {
               "round": 18,
-              "lives": 18,
-              "gold": 1094
+              "lives": 44,
+              "gold": 930
             },
             {
               "round": 19,
-              "lives": 18,
-              "gold": 903
+              "lives": 44,
+              "gold": 574
             },
             {
               "round": 20,
-              "lives": 18,
-              "gold": 1063
+              "lives": 44,
+              "gold": 669
             },
             {
               "round": 21,
-              "lives": 18,
-              "gold": 636
+              "lives": 36,
+              "gold": 917
             },
             {
               "round": 22,
-              "lives": 18,
-              "gold": 880
+              "lives": 36,
+              "gold": 601
             },
             {
               "round": 23,
-              "lives": 18,
-              "gold": 1172
+              "lives": 36,
+              "gold": 793
             },
             {
               "round": 24,
-              "lives": 18,
-              "gold": 615
+              "lives": 30,
+              "gold": 1101
             },
             {
               "round": 25,
-              "lives": 18,
-              "gold": 951
+              "lives": 30,
+              "gold": 817
             },
             {
               "round": 26,
-              "lives": 18,
-              "gold": 1303
+              "lives": 30,
+              "gold": 1049
             },
             {
               "round": 27,
-              "lives": 18,
-              "gold": 558
+              "lives": 30,
+              "gold": 1389
             },
             {
               "round": 28,
-              "lives": 18,
-              "gold": 934
+              "lives": 30,
+              "gold": 2260
             },
             {
               "round": 29,
-              "lives": 18,
-              "gold": 1318
+              "lives": 30,
+              "gold": 2524
             },
             {
               "round": 30,
-              "lives": 18,
-              "gold": 1848
+              "lives": 30,
+              "gold": 2899
             },
             {
               "round": 31,
-              "lives": 18,
-              "gold": 881
+              "lives": 30,
+              "gold": 1212
             },
             {
               "round": 32,
-              "lives": 18,
-              "gold": 1305
+              "lives": 30,
+              "gold": 1516
             },
             {
               "round": 33,
-              "lives": 18,
-              "gold": 1867
+              "lives": 30,
+              "gold": 1958
             },
             {
               "round": 34,
-              "lives": 18,
-              "gold": 765
+              "lives": 30,
+              "gold": 2286
             },
             {
               "round": 35,
-              "lives": 18,
-              "gold": 1221
+              "lives": 30,
+              "gold": 2622
             },
             {
               "round": 36,
-              "lives": 18,
-              "gold": 1843
+              "lives": 30,
+              "gold": 824
             },
             {
               "round": 37,
-              "lives": 18,
-              "gold": 598
+              "lives": 30,
+              "gold": 1304
             },
             {
               "round": 38,
-              "lives": 18,
-              "gold": 1094
+              "lives": 30,
+              "gold": 1800
             },
             {
               "round": 39,
-              "lives": 18,
-              "gold": 1748
+              "lives": 22,
+              "gold": 744
             },
             {
               "round": 40,
-              "lives": 18,
-              "gold": 2268
+              "lives": 22,
+              "gold": 1264
             },
             {
               "round": 41,
-              "lives": 18,
-              "gold": 871
+              "lives": 22,
+              "gold": 1792
             },
             {
               "round": 42,
-              "lives": 9,
-              "gold": 1485
+              "lives": 22,
+              "gold": 2436
             },
             {
               "round": 43,
-              "lives": 9,
-              "gold": 2037
+              "lives": 22,
+              "gold": 2988
             },
             {
               "round": 44,
-              "lives": 9,
-              "gold": 505
+              "lives": 22,
+              "gold": 3556
             },
             {
               "round": 45,
+              "lives": 13,
+              "gold": 4172
+            }
+          ]
+        },
+        {
+          "userId": "p1_holdout",
+          "persona": "holdout",
+          "placement": 7,
+          "eliminatedRound": 30,
+          "pveLivesLost": 0,
+          "pvpLivesLost": 51,
+          "battleGold": 750,
+          "wins": 2,
+          "losses": 7,
+          "battleResults": [
+            {
+              "round": 3,
+              "won": false
+            },
+            {
+              "round": 6,
+              "won": true
+            },
+            {
+              "round": 9,
+              "won": false
+            },
+            {
+              "round": 12,
+              "won": true
+            },
+            {
+              "round": 15,
+              "won": false
+            },
+            {
+              "round": 18,
+              "won": false
+            },
+            {
+              "round": 21,
+              "won": false
+            },
+            {
+              "round": 24,
+              "won": true,
+              "bye": true
+            },
+            {
+              "round": 27,
+              "won": false
+            },
+            {
+              "round": 30,
+              "won": false
+            }
+          ],
+          "livesHistory": [
+            {
+              "round": 1,
+              "lives": 50,
+              "gold": 186
+            },
+            {
+              "round": 2,
+              "lives": 50,
+              "gold": 107
+            },
+            {
+              "round": 3,
+              "lives": 44,
+              "gold": 199
+            },
+            {
+              "round": 4,
+              "lives": 44,
+              "gold": 101
+            },
+            {
+              "round": 5,
+              "lives": 44,
+              "gold": 177
+            },
+            {
+              "round": 6,
+              "lives": 44,
+              "gold": 204
+            },
+            {
+              "round": 7,
+              "lives": 44,
+              "gold": 324
+            },
+            {
+              "round": 8,
+              "lives": 44,
+              "gold": 331
+            },
+            {
+              "round": 9,
+              "lives": 36,
+              "gold": 415
+            },
+            {
+              "round": 10,
+              "lives": 36,
+              "gold": 527
+            },
+            {
+              "round": 11,
+              "lives": 36,
+              "gold": 787
+            },
+            {
+              "round": 12,
+              "lives": 36,
+              "gold": 643
+            },
+            {
+              "round": 13,
+              "lives": 36,
+              "gold": 513
+            },
+            {
+              "round": 14,
+              "lives": 36,
+              "gold": 630
+            },
+            {
+              "round": 15,
+              "lives": 30,
+              "gold": 613
+            },
+            {
+              "round": 16,
+              "lives": 30,
+              "gold": 725
+            },
+            {
+              "round": 17,
+              "lives": 30,
+              "gold": 454
+            },
+            {
+              "round": 18,
+              "lives": 21,
+              "gold": 812
+            },
+            {
+              "round": 19,
+              "lives": 21,
+              "gold": 1008
+            },
+            {
+              "round": 20,
+              "lives": 21,
+              "gold": 768
+            },
+            {
+              "round": 21,
+              "lives": 14,
+              "gold": 1076
+            },
+            {
+              "round": 22,
+              "lives": 14,
+              "gold": 1260
+            },
+            {
+              "round": 23,
+              "lives": 14,
+              "gold": 1452
+            },
+            {
+              "round": 24,
+              "lives": 14,
+              "gold": 1619
+            },
+            {
+              "round": 25,
+              "lives": 14,
+              "gold": 945
+            },
+            {
+              "round": 26,
+              "lives": 14,
+              "gold": 1177
+            },
+            {
+              "round": 27,
               "lives": 5,
-              "gold": 1241
+              "gold": 1637
+            },
+            {
+              "round": 28,
+              "lives": 5,
+              "gold": 1893
+            },
+            {
+              "round": 29,
+              "lives": 5,
+              "gold": 1657
+            },
+            {
+              "round": 30,
+              "lives": 0,
+              "gold": 2237
+            },
+            {
+              "round": 31,
+              "lives": 0,
+              "gold": 2237
+            },
+            {
+              "round": 32,
+              "lives": 0,
+              "gold": 2237
+            },
+            {
+              "round": 33,
+              "lives": 0,
+              "gold": 2237
+            },
+            {
+              "round": 34,
+              "lives": 0,
+              "gold": 2237
+            },
+            {
+              "round": 35,
+              "lives": 0,
+              "gold": 2237
+            },
+            {
+              "round": 36,
+              "lives": 0,
+              "gold": 2237
+            },
+            {
+              "round": 37,
+              "lives": 0,
+              "gold": 2237
+            },
+            {
+              "round": 38,
+              "lives": 0,
+              "gold": 2237
+            },
+            {
+              "round": 39,
+              "lives": 0,
+              "gold": 2237
+            },
+            {
+              "round": 40,
+              "lives": 0,
+              "gold": 2237
+            },
+            {
+              "round": 41,
+              "lives": 0,
+              "gold": 2237
+            },
+            {
+              "round": 42,
+              "lives": 0,
+              "gold": 2237
+            },
+            {
+              "round": 43,
+              "lives": 0,
+              "gold": 2237
+            },
+            {
+              "round": 44,
+              "lives": 0,
+              "gold": 2237
+            },
+            {
+              "round": 45,
+              "lives": 0,
+              "gold": 2237
             }
           ]
         },
         {
           "userId": "p2_holdout",
           "persona": "holdout",
+          "placement": 6,
+          "eliminatedRound": 36,
+          "pveLivesLost": 0,
+          "pvpLivesLost": 57,
+          "battleGold": 1195,
+          "wins": 4,
+          "losses": 7,
+          "battleResults": [
+            {
+              "round": 3,
+              "won": true
+            },
+            {
+              "round": 6,
+              "won": false
+            },
+            {
+              "round": 9,
+              "won": true
+            },
+            {
+              "round": 12,
+              "won": true
+            },
+            {
+              "round": 15,
+              "won": true
+            },
+            {
+              "round": 18,
+              "won": false
+            },
+            {
+              "round": 21,
+              "won": false
+            },
+            {
+              "round": 24,
+              "won": false
+            },
+            {
+              "round": 27,
+              "won": false
+            },
+            {
+              "round": 30,
+              "won": true,
+              "bye": true
+            },
+            {
+              "round": 33,
+              "won": false
+            },
+            {
+              "round": 36,
+              "won": false
+            }
+          ],
+          "livesHistory": [
+            {
+              "round": 1,
+              "lives": 50,
+              "gold": 178
+            },
+            {
+              "round": 2,
+              "lives": 50,
+              "gold": 110
+            },
+            {
+              "round": 3,
+              "lives": 50,
+              "gold": 262
+            },
+            {
+              "round": 4,
+              "lives": 50,
+              "gold": 96
+            },
+            {
+              "round": 5,
+              "lives": 50,
+              "gold": 192
+            },
+            {
+              "round": 6,
+              "lives": 42,
+              "gold": 344
+            },
+            {
+              "round": 7,
+              "lives": 42,
+              "gold": 260
+            },
+            {
+              "round": 8,
+              "lives": 42,
+              "gold": 376
+            },
+            {
+              "round": 9,
+              "lives": 42,
+              "gold": 544
+            },
+            {
+              "round": 10,
+              "lives": 42,
+              "gold": 703
+            },
+            {
+              "round": 11,
+              "lives": 42,
+              "gold": 438
+            },
+            {
+              "round": 12,
+              "lives": 42,
+              "gold": 603
+            },
+            {
+              "round": 13,
+              "lives": 42,
+              "gold": 460
+            },
+            {
+              "round": 14,
+              "lives": 42,
+              "gold": 775
+            },
+            {
+              "round": 15,
+              "lives": 42,
+              "gold": 633
+            },
+            {
+              "round": 16,
+              "lives": 42,
+              "gold": 919
+            },
+            {
+              "round": 17,
+              "lives": 42,
+              "gold": 689
+            },
+            {
+              "round": 18,
+              "lives": 33,
+              "gold": 865
+            },
+            {
+              "round": 19,
+              "lives": 33,
+              "gold": 1009
+            },
+            {
+              "round": 20,
+              "lives": 33,
+              "gold": 721
+            },
+            {
+              "round": 21,
+              "lives": 24,
+              "gold": 1061
+            },
+            {
+              "round": 22,
+              "lives": 24,
+              "gold": 545
+            },
+            {
+              "round": 23,
+              "lives": 24,
+              "gold": 737
+            },
+            {
+              "round": 24,
+              "lives": 17,
+              "gold": 1085
+            },
+            {
+              "round": 25,
+              "lives": 17,
+              "gold": 1301
+            },
+            {
+              "round": 26,
+              "lives": 17,
+              "gold": 1533
+            },
+            {
+              "round": 27,
+              "lives": 8,
+              "gold": 1000
+            },
+            {
+              "round": 28,
+              "lives": 8,
+              "gold": 1256
+            },
+            {
+              "round": 29,
+              "lives": 8,
+              "gold": 1520
+            },
+            {
+              "round": 30,
+              "lives": 8,
+              "gold": 1890
+            },
+            {
+              "round": 31,
+              "lives": 8,
+              "gold": 2178
+            },
+            {
+              "round": 32,
+              "lives": 8,
+              "gold": 2482
+            },
+            {
+              "round": 33,
+              "lives": 1,
+              "gold": 794
+            },
+            {
+              "round": 34,
+              "lives": 1,
+              "gold": 1122
+            },
+            {
+              "round": 35,
+              "lives": 1,
+              "gold": 1458
+            },
+            {
+              "round": 36,
+              "lives": 0,
+              "gold": 2110
+            },
+            {
+              "round": 37,
+              "lives": 0,
+              "gold": 2110
+            },
+            {
+              "round": 38,
+              "lives": 0,
+              "gold": 2110
+            },
+            {
+              "round": 39,
+              "lives": 0,
+              "gold": 2110
+            },
+            {
+              "round": 40,
+              "lives": 0,
+              "gold": 2110
+            },
+            {
+              "round": 41,
+              "lives": 0,
+              "gold": 2110
+            },
+            {
+              "round": 42,
+              "lives": 0,
+              "gold": 2110
+            },
+            {
+              "round": 43,
+              "lives": 0,
+              "gold": 2110
+            },
+            {
+              "round": 44,
+              "lives": 0,
+              "gold": 2110
+            },
+            {
+              "round": 45,
+              "lives": 0,
+              "gold": 2110
+            }
+          ]
+        },
+        {
+          "userId": "p3_reroller",
+          "persona": "reroller",
           "placement": 8,
           "eliminatedRound": 9,
           "pveLivesLost": 36,
@@ -686,22 +3331,22 @@
             {
               "round": 1,
               "lives": 50,
-              "gold": 74
+              "gold": 182
             },
             {
               "round": 2,
               "lives": 50,
-              "gold": 98
+              "gold": 48
             },
             {
               "round": 3,
               "lives": 44,
-              "gold": 90
+              "gold": 80
             },
             {
               "round": 4,
               "lives": 44,
-              "gold": 28
+              "gold": 48
             },
             {
               "round": 5,
@@ -710,220 +3355,220 @@
             },
             {
               "round": 6,
-              "lives": 29,
-              "gold": 84
+              "lives": 28,
+              "gold": 106
             },
             {
               "round": 7,
-              "lives": 21,
-              "gold": 20
+              "lives": 18,
+              "gold": 66
             },
             {
               "round": 8,
-              "lives": 9,
-              "gold": 30
+              "lives": 4,
+              "gold": 40
             },
             {
               "round": 9,
               "lives": 0,
-              "gold": 40
+              "gold": 48
             },
             {
               "round": 10,
               "lives": 0,
-              "gold": 40
+              "gold": 48
             },
             {
               "round": 11,
               "lives": 0,
-              "gold": 40
+              "gold": 48
             },
             {
               "round": 12,
               "lives": 0,
-              "gold": 40
+              "gold": 48
             },
             {
               "round": 13,
               "lives": 0,
-              "gold": 40
+              "gold": 48
             },
             {
               "round": 14,
               "lives": 0,
-              "gold": 40
+              "gold": 48
             },
             {
               "round": 15,
               "lives": 0,
-              "gold": 40
+              "gold": 48
             },
             {
               "round": 16,
               "lives": 0,
-              "gold": 40
+              "gold": 48
             },
             {
               "round": 17,
               "lives": 0,
-              "gold": 40
+              "gold": 48
             },
             {
               "round": 18,
               "lives": 0,
-              "gold": 40
+              "gold": 48
             },
             {
               "round": 19,
               "lives": 0,
-              "gold": 40
+              "gold": 48
             },
             {
               "round": 20,
               "lives": 0,
-              "gold": 40
+              "gold": 48
             },
             {
               "round": 21,
               "lives": 0,
-              "gold": 40
+              "gold": 48
             },
             {
               "round": 22,
               "lives": 0,
-              "gold": 40
+              "gold": 48
             },
             {
               "round": 23,
               "lives": 0,
-              "gold": 40
+              "gold": 48
             },
             {
               "round": 24,
               "lives": 0,
-              "gold": 40
+              "gold": 48
             },
             {
               "round": 25,
               "lives": 0,
-              "gold": 40
+              "gold": 48
             },
             {
               "round": 26,
               "lives": 0,
-              "gold": 40
+              "gold": 48
             },
             {
               "round": 27,
               "lives": 0,
-              "gold": 40
+              "gold": 48
             },
             {
               "round": 28,
               "lives": 0,
-              "gold": 40
+              "gold": 48
             },
             {
               "round": 29,
               "lives": 0,
-              "gold": 40
+              "gold": 48
             },
             {
               "round": 30,
               "lives": 0,
-              "gold": 40
+              "gold": 48
             },
             {
               "round": 31,
               "lives": 0,
-              "gold": 40
+              "gold": 48
             },
             {
               "round": 32,
               "lives": 0,
-              "gold": 40
+              "gold": 48
             },
             {
               "round": 33,
               "lives": 0,
-              "gold": 40
+              "gold": 48
             },
             {
               "round": 34,
               "lives": 0,
-              "gold": 40
+              "gold": 48
             },
             {
               "round": 35,
               "lives": 0,
-              "gold": 40
+              "gold": 48
             },
             {
               "round": 36,
               "lives": 0,
-              "gold": 40
+              "gold": 48
             },
             {
               "round": 37,
               "lives": 0,
-              "gold": 40
+              "gold": 48
             },
             {
               "round": 38,
               "lives": 0,
-              "gold": 40
+              "gold": 48
             },
             {
               "round": 39,
               "lives": 0,
-              "gold": 40
+              "gold": 48
             },
             {
               "round": 40,
               "lives": 0,
-              "gold": 40
+              "gold": 48
             },
             {
               "round": 41,
               "lives": 0,
-              "gold": 40
+              "gold": 48
             },
             {
               "round": 42,
               "lives": 0,
-              "gold": 40
+              "gold": 48
             },
             {
               "round": 43,
               "lives": 0,
-              "gold": 40
+              "gold": 48
             },
             {
               "round": 44,
               "lives": 0,
-              "gold": 40
+              "gold": 48
             },
             {
               "round": 45,
               "lives": 0,
-              "gold": 40
+              "gold": 48
             }
           ]
         },
         {
-          "userId": "p3_reroller",
+          "userId": "p4_reroller",
           "persona": "reroller",
-          "placement": 7,
-          "eliminatedRound": 33,
-          "pveLivesLost": 3,
-          "pvpLivesLost": 49,
-          "battleGold": 945,
-          "wins": 3,
-          "losses": 7,
+          "placement": 5,
+          "eliminatedRound": 45,
+          "pveLivesLost": 0,
+          "pvpLivesLost": 54,
+          "battleGold": 965,
+          "wins": 6,
+          "losses": 8,
           "battleResults": [
             {
               "round": 3,
-              "won": true
+              "won": false
             },
             {
               "round": 6,
@@ -939,20 +3584,20 @@
             },
             {
               "round": 15,
-              "won": false
+              "won": true,
+              "bye": true
             },
             {
               "round": 18,
-              "won": false
+              "won": true
             },
             {
               "round": 21,
-              "won": false
+              "won": true
             },
             {
               "round": 24,
-              "won": true,
-              "bye": true
+              "won": true
             },
             {
               "round": 27,
@@ -964,6 +3609,22 @@
             },
             {
               "round": 33,
+              "won": true
+            },
+            {
+              "round": 36,
+              "won": false
+            },
+            {
+              "round": 39,
+              "won": false
+            },
+            {
+              "round": 42,
+              "won": false
+            },
+            {
+              "round": 45,
               "won": false
             }
           ],
@@ -971,239 +3632,239 @@
             {
               "round": 1,
               "lives": 50,
-              "gold": 144
+              "gold": 190
             },
             {
               "round": 2,
               "lives": 50,
-              "gold": 53
+              "gold": 105
             },
             {
               "round": 3,
-              "lives": 50,
-              "gold": 225
+              "lives": 46,
+              "gold": 197
             },
             {
               "round": 4,
-              "lives": 50,
-              "gold": 170
+              "lives": 46,
+              "gold": 119
             },
             {
               "round": 5,
-              "lives": 50,
-              "gold": 96
+              "lives": 46,
+              "gold": 105
             },
             {
               "round": 6,
-              "lives": 50,
-              "gold": 303
+              "lives": 46,
+              "gold": 257
             },
             {
               "round": 7,
-              "lives": 50,
-              "gold": 423
+              "lives": 46,
+              "gold": 377
             },
             {
               "round": 8,
-              "lives": 50,
-              "gold": 352
+              "lives": 46,
+              "gold": 372
             },
             {
               "round": 9,
-              "lives": 44,
-              "gold": 455
+              "lives": 39,
+              "gold": 473
             },
             {
               "round": 10,
-              "lives": 44,
-              "gold": 690
+              "lives": 39,
+              "gold": 640
             },
             {
               "round": 11,
-              "lives": 44,
-              "gold": 613
+              "lives": 39,
+              "gold": 777
             },
             {
               "round": 12,
-              "lives": 35,
-              "gold": 821
+              "lives": 34,
+              "gold": 921
             },
             {
               "round": 13,
-              "lives": 35,
-              "gold": 462
+              "lives": 34,
+              "gold": 493
             },
             {
               "round": 14,
-              "lives": 35,
-              "gold": 400
+              "lives": 34,
+              "gold": 456
             },
             {
               "round": 15,
-              "lives": 26,
-              "gold": 618
+              "lives": 34,
+              "gold": 817
             },
             {
               "round": 16,
-              "lives": 26,
-              "gold": 220
+              "lives": 34,
+              "gold": 929
             },
             {
               "round": 17,
-              "lives": 26,
-              "gold": 280
+              "lives": 34,
+              "gold": 549
             },
             {
               "round": 18,
-              "lives": 15,
-              "gold": 576
+              "lives": 34,
+              "gold": 785
             },
             {
               "round": 19,
-              "lives": 15,
-              "gold": 720
+              "lives": 34,
+              "gold": 929
             },
             {
               "round": 20,
-              "lives": 15,
-              "gold": 880
+              "lives": 34,
+              "gold": 1089
             },
             {
               "round": 21,
-              "lives": 7,
-              "gold": 798
+              "lives": 34,
+              "gold": 1372
             },
             {
               "round": 22,
-              "lives": 7,
-              "gold": 602
+              "lives": 34,
+              "gold": 1556
             },
             {
               "round": 23,
-              "lives": 7,
-              "gold": 914
+              "lives": 34,
+              "gold": 1748
             },
             {
               "round": 24,
-              "lives": 7,
-              "gold": 1332
+              "lives": 34,
+              "gold": 2086
             },
             {
               "round": 25,
-              "lives": 7,
-              "gold": 793
+              "lives": 34,
+              "gold": 1454
             },
             {
               "round": 26,
-              "lives": 7,
-              "gold": 1145
+              "lives": 34,
+              "gold": 1686
             },
             {
               "round": 27,
-              "lives": 7,
-              "gold": 580
+              "lives": 34,
+              "gold": 2076
             },
             {
               "round": 28,
-              "lives": 7,
-              "gold": 956
+              "lives": 34,
+              "gold": 707
             },
             {
               "round": 29,
-              "lives": 7,
-              "gold": 1340
+              "lives": 34,
+              "gold": 971
             },
             {
               "round": 30,
-              "lives": 3,
-              "gold": 665
+              "lives": 30,
+              "gold": 1291
             },
             {
               "round": 31,
-              "lives": 3,
-              "gold": 1073
+              "lives": 30,
+              "gold": 1579
             },
             {
               "round": 32,
-              "lives": 3,
-              "gold": 1497
+              "lives": 30,
+              "gold": 1883
             },
             {
               "round": 33,
-              "lives": 0,
-              "gold": 739
+              "lives": 30,
+              "gold": 2295
             },
             {
               "round": 34,
-              "lives": 0,
-              "gold": 739
+              "lives": 30,
+              "gold": 2047
             },
             {
               "round": 35,
-              "lives": 0,
-              "gold": 739
+              "lives": 30,
+              "gold": 1743
             },
             {
               "round": 36,
-              "lives": 0,
-              "gold": 739
+              "lives": 22,
+              "gold": 1535
             },
             {
               "round": 37,
-              "lives": 0,
-              "gold": 739
+              "lives": 22,
+              "gold": 440
             },
             {
               "round": 38,
-              "lives": 0,
-              "gold": 739
+              "lives": 22,
+              "gold": 936
             },
             {
               "round": 39,
-              "lives": 0,
-              "gold": 739
+              "lives": 13,
+              "gold": 1540
             },
             {
               "round": 40,
-              "lives": 0,
-              "gold": 739
+              "lives": 13,
+              "gold": 985
             },
             {
               "round": 41,
-              "lives": 0,
-              "gold": 739
+              "lives": 13,
+              "gold": 1513
             },
             {
               "round": 42,
-              "lives": 0,
-              "gold": 739
+              "lives": 5,
+              "gold": 577
             },
             {
               "round": 43,
-              "lives": 0,
-              "gold": 739
+              "lives": 5,
+              "gold": 1129
             },
             {
               "round": 44,
-              "lives": 0,
-              "gold": 739
+              "lives": 5,
+              "gold": 1697
             },
             {
               "round": 45,
               "lives": 0,
-              "gold": 739
+              "gold": 2523
             }
           ]
         },
         {
-          "userId": "p4_reroller",
-          "persona": "reroller",
+          "userId": "p5_worker",
+          "persona": "worker",
           "placement": 3,
           "eliminatedRound": null,
-          "pveLivesLost": 0,
-          "pvpLivesLost": 40,
-          "battleGold": 1055,
-          "wins": 9,
+          "pveLivesLost": 3,
+          "pvpLivesLost": 36,
+          "battleGold": 1315,
+          "wins": 7,
           "losses": 5,
           "battleResults": [
             {
@@ -1241,7 +3902,7 @@
             },
             {
               "round": 27,
-              "won": true
+              "won": false
             },
             {
               "round": 30,
@@ -1253,11 +3914,12 @@
             },
             {
               "round": 36,
-              "won": true
+              "won": false
             },
             {
               "round": 39,
-              "won": false
+              "won": true,
+              "bye": true
             },
             {
               "round": 42,
@@ -1265,524 +3927,235 @@
             },
             {
               "round": 45,
-              "won": false
+              "won": true,
+              "bye": true
             }
           ],
           "livesHistory": [
             {
               "round": 1,
               "lives": 50,
-              "gold": 150
+              "gold": 180
             },
             {
               "round": 2,
               "lives": 50,
-              "gold": 69
+              "gold": 59
             },
             {
               "round": 3,
+              "lives": 50,
+              "gold": 191
+            },
+            {
+              "round": 4,
+              "lives": 50,
+              "gold": 108
+            },
+            {
+              "round": 5,
+              "lives": 50,
+              "gold": 84
+            },
+            {
+              "round": 6,
+              "lives": 50,
+              "gold": 291
+            },
+            {
+              "round": 7,
+              "lives": 50,
+              "gold": 246
+            },
+            {
+              "round": 8,
               "lives": 50,
               "gold": 221
             },
             {
-              "round": 4,
-              "lives": 50,
-              "gold": 114
-            },
-            {
-              "round": 5,
-              "lives": 50,
-              "gold": 190
-            },
-            {
-              "round": 6,
-              "lives": 50,
-              "gold": 254
-            },
-            {
-              "round": 7,
-              "lives": 50,
-              "gold": 374
-            },
-            {
-              "round": 8,
-              "lives": 50,
-              "gold": 308
-            },
-            {
               "round": 9,
               "lives": 50,
-              "gold": 594
+              "gold": 475
             },
             {
               "round": 10,
               "lives": 50,
-              "gold": 753
+              "gold": 669
             },
             {
               "round": 11,
               "lives": 50,
-              "gold": 801
+              "gold": 817
             },
             {
               "round": 12,
               "lives": 50,
-              "gold": 634
+              "gold": 631
             },
             {
               "round": 13,
               "lives": 50,
-              "gold": 706
+              "gold": 803
             },
             {
               "round": 14,
               "lives": 50,
-              "gold": 931
+              "gold": 491
             },
             {
               "round": 15,
               "lives": 50,
-              "gold": 1177
+              "gold": 837
             },
             {
               "round": 16,
               "lives": 50,
-              "gold": 724
+              "gold": 1049
             },
             {
               "round": 17,
               "lives": 50,
-              "gold": 1139
+              "gold": 1249
             },
             {
               "round": 18,
               "lives": 50,
-              "gold": 600
+              "gold": 835
             },
             {
               "round": 19,
-              "lives": 50,
-              "gold": 744
-            },
-            {
-              "round": 20,
-              "lives": 50,
-              "gold": 904
-            },
-            {
-              "round": 21,
-              "lives": 50,
-              "gold": 867
-            },
-            {
-              "round": 22,
-              "lives": 50,
-              "gold": 1171
-            },
-            {
-              "round": 23,
-              "lives": 50,
-              "gold": 1483
-            },
-            {
-              "round": 24,
-              "lives": 50,
-              "gold": 941
-            },
-            {
-              "round": 25,
-              "lives": 50,
-              "gold": 1277
-            },
-            {
-              "round": 26,
-              "lives": 50,
-              "gold": 829
-            },
-            {
-              "round": 27,
-              "lives": 50,
-              "gold": 1319
-            },
-            {
-              "round": 28,
-              "lives": 50,
-              "gold": 1695
-            },
-            {
-              "round": 29,
               "lives": 50,
               "gold": 1079
             },
             {
-              "round": 30,
-              "lives": 41,
-              "gold": 1199
-            },
-            {
-              "round": 31,
-              "lives": 41,
-              "gold": 1607
-            },
-            {
-              "round": 32,
-              "lives": 41,
-              "gold": 531
-            },
-            {
-              "round": 33,
-              "lives": 33,
-              "gold": 1063
-            },
-            {
-              "round": 34,
-              "lives": 33,
-              "gold": 1511
-            },
-            {
-              "round": 35,
-              "lives": 33,
-              "gold": 1967
-            },
-            {
-              "round": 36,
-              "lives": 33,
-              "gold": 819
-            },
-            {
-              "round": 37,
-              "lives": 33,
-              "gold": 1299
-            },
-            {
-              "round": 38,
-              "lives": 33,
-              "gold": 1795
-            },
-            {
-              "round": 39,
-              "lives": 24,
-              "gold": 464
-            },
-            {
-              "round": 40,
-              "lives": 24,
-              "gold": 984
-            },
-            {
-              "round": 41,
-              "lives": 24,
-              "gold": 1512
-            },
-            {
-              "round": 42,
-              "lives": 18,
-              "gold": 2156
-            },
-            {
-              "round": 43,
-              "lives": 18,
-              "gold": 633
-            },
-            {
-              "round": 44,
-              "lives": 18,
-              "gold": 1201
-            },
-            {
-              "round": 45,
-              "lives": 10,
-              "gold": 1947
-            }
-          ]
-        },
-        {
-          "userId": "p5_worker",
-          "persona": "worker",
-          "placement": 6,
-          "eliminatedRound": 36,
-          "pveLivesLost": 1,
-          "pvpLivesLost": 51,
-          "battleGold": 985,
-          "wins": 3,
-          "losses": 7,
-          "battleResults": [
-            {
-              "round": 3,
-              "won": false
-            },
-            {
-              "round": 6,
-              "won": false
-            },
-            {
-              "round": 9,
-              "won": true
-            },
-            {
-              "round": 12,
-              "won": true
-            },
-            {
-              "round": 15,
-              "won": true,
-              "bye": true
-            },
-            {
-              "round": 18,
-              "won": true
-            },
-            {
-              "round": 21,
-              "won": false
-            },
-            {
-              "round": 24,
-              "won": false
-            },
-            {
-              "round": 27,
-              "won": false
-            },
-            {
-              "round": 30,
-              "won": true,
-              "bye": true
-            },
-            {
-              "round": 33,
-              "won": false
-            },
-            {
-              "round": 36,
-              "won": false
-            }
-          ],
-          "livesHistory": [
-            {
-              "round": 1,
-              "lives": 50,
-              "gold": 146
-            },
-            {
-              "round": 2,
-              "lives": 49,
-              "gold": 142
-            },
-            {
-              "round": 3,
-              "lives": 44,
-              "gold": 115
-            },
-            {
-              "round": 4,
-              "lives": 44,
-              "gold": 183
-            },
-            {
-              "round": 5,
-              "lives": 44,
-              "gold": 126
-            },
-            {
-              "round": 6,
-              "lives": 39,
-              "gold": 258
-            },
-            {
-              "round": 7,
-              "lives": 39,
-              "gold": 217
-            },
-            {
-              "round": 8,
-              "lives": 39,
-              "gold": 200
-            },
-            {
-              "round": 9,
-              "lives": 39,
-              "gold": 444
-            },
-            {
-              "round": 10,
-              "lives": 39,
-              "gold": 664
-            },
-            {
-              "round": 11,
-              "lives": 39,
-              "gold": 779
-            },
-            {
-              "round": 12,
-              "lives": 39,
-              "gold": 958
-            },
-            {
-              "round": 13,
-              "lives": 39,
-              "gold": 530
-            },
-            {
-              "round": 14,
-              "lives": 39,
-              "gold": 618
-            },
-            {
-              "round": 15,
-              "lives": 39,
-              "gold": 521
-            },
-            {
-              "round": 16,
-              "lives": 39,
-              "gold": 633
-            },
-            {
-              "round": 17,
-              "lives": 39,
-              "gold": 370
-            },
-            {
-              "round": 18,
-              "lives": 39,
-              "gold": 858
-            },
-            {
-              "round": 19,
-              "lives": 39,
-              "gold": 1002
-            },
-            {
               "round": 20,
-              "lives": 39,
-              "gold": 596
+              "lives": 50,
+              "gold": 1339
             },
             {
               "round": 21,
-              "lives": 30,
-              "gold": 876
+              "lives": 50,
+              "gold": 1697
             },
             {
               "round": 22,
-              "lives": 30,
-              "gold": 680
+              "lives": 50,
+              "gold": 1981
             },
             {
               "round": 23,
-              "lives": 30,
-              "gold": 992
+              "lives": 50,
+              "gold": 2273
             },
             {
               "round": 24,
-              "lives": 22,
-              "gold": 745
+              "lives": 50,
+              "gold": 756
             },
             {
               "round": 25,
-              "lives": 22,
-              "gold": 1081
+              "lives": 50,
+              "gold": 1072
             },
             {
               "round": 26,
-              "lives": 22,
-              "gold": 608
+              "lives": 50,
+              "gold": 764
             },
             {
               "round": 27,
-              "lives": 15,
-              "gold": 1108
+              "lives": 44,
+              "gold": 824
             },
             {
               "round": 28,
-              "lives": 15,
-              "gold": 534
+              "lives": 44,
+              "gold": 1160
             },
             {
               "round": 29,
-              "lives": 15,
-              "gold": 918
+              "lives": 44,
+              "gold": 1204
             },
             {
               "round": 30,
-              "lives": 15,
-              "gold": 1408
+              "lives": 35,
+              "gold": 1660
             },
             {
               "round": 31,
-              "lives": 15,
-              "gold": 691
+              "lives": 35,
+              "gold": 2048
             },
             {
               "round": 32,
-              "lives": 15,
-              "gold": 1115
+              "lives": 35,
+              "gold": 1164
             },
             {
               "round": 33,
-              "lives": 6,
-              "gold": 1767
+              "lives": 28,
+              "gold": 1616
             },
             {
               "round": 34,
-              "lives": 6,
-              "gold": 915
+              "lives": 28,
+              "gold": 863
             },
             {
               "round": 35,
-              "lives": 6,
-              "gold": 1371
+              "lives": 28,
+              "gold": 1199
             },
             {
               "round": 36,
-              "lives": 0,
-              "gold": 2143
+              "lives": 20,
+              "gold": 1741
             },
             {
               "round": 37,
-              "lives": 0,
-              "gold": 2143
+              "lives": 20,
+              "gold": 896
             },
             {
               "round": 38,
-              "lives": 0,
-              "gold": 2143
+              "lives": 20,
+              "gold": 1392
             },
             {
               "round": 39,
-              "lives": 0,
-              "gold": 2143
+              "lives": 20,
+              "gold": 1986
             },
             {
               "round": 40,
-              "lives": 0,
-              "gold": 2143
+              "lives": 20,
+              "gold": 606
             },
             {
               "round": 41,
-              "lives": 0,
-              "gold": 2143
+              "lives": 20,
+              "gold": 1134
             },
             {
               "round": 42,
-              "lives": 0,
-              "gold": 2143
+              "lives": 11,
+              "gold": 1948
             },
             {
               "round": 43,
-              "lives": 0,
-              "gold": 2143
+              "lives": 11,
+              "gold": 2500
             },
             {
               "round": 44,
-              "lives": 0,
-              "gold": 2143
+              "lives": 11,
+              "gold": 3068
             },
             {
               "round": 45,
-              "lives": 0,
-              "gold": 2143
+              "lives": 11,
+              "gold": 3734
             }
           ]
         },
@@ -1791,15 +4164,15 @@
           "persona": "tera",
           "placement": 2,
           "eliminatedRound": null,
-          "pveLivesLost": 2,
-          "pvpLivesLost": 17,
-          "battleGold": 1215,
+          "pveLivesLost": 0,
+          "pvpLivesLost": 19,
+          "battleGold": 1205,
           "wins": 10,
           "losses": 3,
           "battleResults": [
             {
               "round": 3,
-              "won": false
+              "won": true
             },
             {
               "round": 6,
@@ -1807,16 +4180,16 @@
             },
             {
               "round": 9,
+              "won": false
+            },
+            {
+              "round": 12,
               "won": true,
               "bye": true
             },
             {
-              "round": 12,
-              "won": false
-            },
-            {
               "round": 15,
-              "won": true
+              "won": false
             },
             {
               "round": 18,
@@ -1848,12 +4221,12 @@
             },
             {
               "round": 39,
-              "won": true,
-              "bye": true
+              "won": true
             },
             {
               "round": 42,
-              "won": true
+              "won": true,
+              "bye": true
             },
             {
               "round": 45,
@@ -1864,269 +4237,269 @@
             {
               "round": 1,
               "lives": 50,
-              "gold": 89
+              "gold": 200
             },
             {
               "round": 2,
-              "lives": 48,
-              "gold": 77
+              "lives": 50,
+              "gold": 131
             },
             {
               "round": 3,
-              "lives": 42,
-              "gold": 169
+              "lives": 50,
+              "gold": 188
             },
             {
               "round": 4,
-              "lives": 42,
-              "gold": 54
+              "lives": 50,
+              "gold": 256
             },
             {
               "round": 5,
-              "lives": 42,
-              "gold": 150
+              "lives": 50,
+              "gold": 189
             },
             {
               "round": 6,
-              "lives": 36,
-              "gold": 215
+              "lives": 44,
+              "gold": 341
             },
             {
               "round": 7,
-              "lives": 36,
-              "gold": 182
+              "lives": 44,
+              "gold": 333
             },
             {
               "round": 8,
-              "lives": 36,
-              "gold": 318
+              "lives": 44,
+              "gold": 369
             },
             {
               "round": 9,
-              "lives": 36,
-              "gold": 619
+              "lives": 37,
+              "gold": 647
             },
             {
               "round": 10,
-              "lives": 36,
-              "gold": 323
+              "lives": 37,
+              "gold": 494
             },
             {
               "round": 11,
-              "lives": 36,
-              "gold": 411
+              "lives": 37,
+              "gold": 604
             },
             {
               "round": 12,
-              "lives": 31,
-              "gold": 615
+              "lives": 37,
+              "gold": 945
             },
             {
               "round": 13,
-              "lives": 31,
-              "gold": 462
+              "lives": 37,
+              "gold": 532
             },
             {
               "round": 14,
-              "lives": 31,
-              "gold": 302
+              "lives": 37,
+              "gold": 620
             },
             {
               "round": 15,
               "lives": 31,
-              "gold": 538
+              "gold": 856
             },
             {
               "round": 16,
               "lives": 31,
-              "gold": 844
+              "gold": 968
             },
             {
               "round": 17,
               "lives": 31,
-              "gold": 966
+              "gold": 1088
             },
             {
               "round": 18,
               "lives": 31,
-              "gold": 872
+              "gold": 1324
             },
             {
               "round": 19,
               "lives": 31,
-              "gold": 1016
+              "gold": 1468
             },
             {
               "round": 20,
               "lives": 31,
-              "gold": 1176
+              "gold": 1608
             },
             {
               "round": 21,
               "lives": 31,
-              "gold": 1454
+              "gold": 1891
             },
             {
               "round": 22,
               "lives": 31,
-              "gold": 658
+              "gold": 550
             },
             {
               "round": 23,
               "lives": 31,
-              "gold": 950
+              "gold": 742
             },
             {
               "round": 24,
               "lives": 31,
-              "gold": 1428
+              "gold": 1080
             },
             {
               "round": 25,
               "lives": 31,
-              "gold": 589
+              "gold": 1296
             },
             {
               "round": 26,
               "lives": 31,
-              "gold": 941
+              "gold": 2377
             },
             {
               "round": 27,
               "lives": 31,
-              "gold": 1451
+              "gold": 2767
             },
             {
               "round": 28,
               "lives": 31,
-              "gold": 477
+              "gold": 673
             },
             {
               "round": 29,
               "lives": 31,
-              "gold": 861
+              "gold": 937
             },
             {
               "round": 30,
               "lives": 31,
-              "gold": 1411
+              "gold": 1367
             },
             {
               "round": 31,
               "lives": 31,
-              "gold": 1819
+              "gold": 1655
             },
             {
               "round": 32,
               "lives": 31,
-              "gold": 718
+              "gold": 1959
             },
             {
               "round": 33,
               "lives": 31,
-              "gold": 1300
+              "gold": 2421
             },
             {
               "round": 34,
               "lives": 31,
-              "gold": 1748
+              "gold": 2749
             },
             {
               "round": 35,
               "lives": 31,
-              "gold": 504
+              "gold": 610
             },
             {
               "round": 36,
               "lives": 31,
-              "gold": 1066
+              "gold": 1112
             },
             {
               "round": 37,
               "lives": 31,
-              "gold": 1546
+              "gold": 1592
             },
             {
               "round": 38,
               "lives": 31,
-              "gold": 2042
+              "gold": 2088
             },
             {
               "round": 39,
               "lives": 31,
-              "gold": 736
+              "gold": 892
             },
             {
               "round": 40,
               "lives": 31,
-              "gold": 1256
+              "gold": 1412
             },
             {
               "round": 41,
               "lives": 31,
-              "gold": 1784
+              "gold": 1940
             },
             {
               "round": 42,
               "lives": 31,
-              "gold": 2478
+              "gold": 2574
             },
             {
               "round": 43,
               "lives": 31,
-              "gold": 930
+              "gold": 3126
             },
             {
               "round": 44,
               "lives": 31,
-              "gold": 1498
+              "gold": 3694
             },
             {
               "round": 45,
               "lives": 31,
-              "gold": 2224
+              "gold": 4420
             }
           ]
         },
         {
           "userId": "p7_lossStreaker",
           "persona": "lossStreaker",
-          "placement": 5,
-          "eliminatedRound": 39,
+          "placement": 4,
+          "eliminatedRound": null,
           "pveLivesLost": 0,
-          "pvpLivesLost": 51,
-          "battleGold": 1130,
-          "wins": 4,
+          "pvpLivesLost": 46,
+          "battleGold": 1155,
+          "wins": 6,
           "losses": 7,
           "battleResults": [
             {
               "round": 3,
-              "won": true
-            },
-            {
-              "round": 6,
-              "won": true
-            },
-            {
-              "round": 9,
               "won": false
             },
             {
-              "round": 12,
-              "won": true
+              "round": 6,
+              "won": false
             },
             {
-              "round": 15,
-              "won": true
-            },
-            {
-              "round": 18,
+              "round": 9,
               "won": true,
               "bye": true
             },
             {
-              "round": 21,
+              "round": 12,
               "won": false
+            },
+            {
+              "round": 15,
+              "won": false
+            },
+            {
+              "round": 18,
+              "won": false
+            },
+            {
+              "round": 21,
+              "won": true
             },
             {
               "round": 24,
@@ -2134,2605 +4507,259 @@
             },
             {
               "round": 27,
-              "won": false
-            },
-            {
-              "round": 30,
-              "won": false
-            },
-            {
-              "round": 33,
               "won": true,
               "bye": true
             },
             {
-              "round": 36,
+              "round": 30,
+              "won": true
+            },
+            {
+              "round": 33,
               "won": false
             },
             {
+              "round": 36,
+              "won": true
+            },
+            {
               "round": 39,
-              "won": false
+              "won": true
+            },
+            {
+              "round": 42,
+              "won": true
+            },
+            {
+              "round": 45,
+              "won": true
             }
           ],
           "livesHistory": [
             {
               "round": 1,
               "lives": 50,
-              "gold": 145
+              "gold": 235
             },
             {
               "round": 2,
               "lives": 50,
-              "gold": 81
+              "gold": 79
             },
             {
               "round": 3,
-              "lives": 50,
-              "gold": 253
+              "lives": 43,
+              "gold": 171
             },
             {
               "round": 4,
-              "lives": 50,
-              "gold": 146
+              "lives": 43,
+              "gold": 76
             },
             {
               "round": 5,
-              "lives": 50,
-              "gold": 86
+              "lives": 43,
+              "gold": 172
             },
             {
               "round": 6,
-              "lives": 50,
-              "gold": 233
+              "lives": 39,
+              "gold": 364
             },
             {
               "round": 7,
-              "lives": 50,
-              "gold": 293
+              "lives": 39,
+              "gold": 324
             },
             {
               "round": 8,
-              "lives": 50,
-              "gold": 263
+              "lives": 39,
+              "gold": 500
             },
             {
               "round": 9,
-              "lives": 43,
-              "gold": 424
+              "lives": 39,
+              "gold": 734
             },
             {
               "round": 10,
-              "lives": 43,
-              "gold": 424
+              "lives": 39,
+              "gold": 753
             },
             {
               "round": 11,
-              "lives": 43,
-              "gold": 554
+              "lives": 39,
+              "gold": 1225
             },
             {
               "round": 12,
-              "lives": 43,
-              "gold": 416
+              "lives": 30,
+              "gold": 1004
             },
             {
               "round": 13,
-              "lives": 43,
-              "gold": 265
+              "lives": 30,
+              "gold": 615
             },
             {
               "round": 14,
-              "lives": 43,
-              "gold": 453
+              "lives": 30,
+              "gold": 1060
             },
             {
               "round": 15,
-              "lives": 43,
-              "gold": 873
-            },
-            {
-              "round": 16,
-              "lives": 43,
-              "gold": 445
-            },
-            {
-              "round": 17,
-              "lives": 43,
-              "gold": 797
-            },
-            {
-              "round": 18,
-              "lives": 43,
-              "gold": 1023
-            },
-            {
-              "round": 19,
-              "lives": 43,
-              "gold": 667
-            },
-            {
-              "round": 20,
-              "lives": 43,
-              "gold": 862
-            },
-            {
-              "round": 21,
-              "lives": 34,
-              "gold": 1035
-            },
-            {
-              "round": 22,
-              "lives": 34,
-              "gold": 619
-            },
-            {
-              "round": 23,
-              "lives": 34,
-              "gold": 931
-            },
-            {
-              "round": 24,
-              "lives": 30,
-              "gold": 509
-            },
-            {
-              "round": 25,
-              "lives": 30,
-              "gold": 845
-            },
-            {
-              "round": 26,
-              "lives": 30,
-              "gold": 1197
-            },
-            {
-              "round": 27,
-              "lives": 21,
-              "gold": 672
-            },
-            {
-              "round": 28,
-              "lives": 21,
-              "gold": 1048
-            },
-            {
-              "round": 29,
-              "lives": 21,
-              "gold": 1432
-            },
-            {
-              "round": 30,
-              "lives": 12,
-              "gold": 847
-            },
-            {
-              "round": 31,
-              "lives": 12,
-              "gold": 1255
-            },
-            {
-              "round": 32,
-              "lives": 12,
-              "gold": 1679
-            },
-            {
-              "round": 33,
-              "lives": 12,
-              "gold": 876
-            },
-            {
-              "round": 34,
-              "lives": 12,
-              "gold": 1324
-            },
-            {
-              "round": 35,
-              "lives": 12,
-              "gold": 1780
-            },
-            {
-              "round": 36,
-              "lives": 8,
-              "gold": 1022
-            },
-            {
-              "round": 37,
-              "lives": 8,
-              "gold": 1502
-            },
-            {
-              "round": 38,
-              "lives": 8,
-              "gold": 1998
-            },
-            {
-              "round": 39,
-              "lives": 0,
-              "gold": 1152
-            },
-            {
-              "round": 40,
-              "lives": 0,
-              "gold": 1152
-            },
-            {
-              "round": 41,
-              "lives": 0,
-              "gold": 1152
-            },
-            {
-              "round": 42,
-              "lives": 0,
-              "gold": 1152
-            },
-            {
-              "round": 43,
-              "lives": 0,
-              "gold": 1152
-            },
-            {
-              "round": 44,
-              "lives": 0,
-              "gold": 1152
-            },
-            {
-              "round": 45,
-              "lives": 0,
-              "gold": 1152
-            }
-          ]
-        }
-      ]
-    },
-    {
-      "seed": 507919,
-      "engine": "arena",
-      "rounds": 45,
-      "battles": 50,
-      "winnerPersona": "holdout",
-      "players": [
-        {
-          "userId": "p0_holdout",
-          "persona": "holdout",
-          "placement": 1,
-          "eliminatedRound": null,
-          "pveLivesLost": 0,
-          "pvpLivesLost": 41,
-          "battleGold": 1065,
-          "wins": 7,
-          "losses": 6,
-          "battleResults": [
-            {
-              "round": 3,
-              "won": true
-            },
-            {
-              "round": 6,
-              "won": true
-            },
-            {
-              "round": 9,
-              "won": true
-            },
-            {
-              "round": 12,
-              "won": true
-            },
-            {
-              "round": 15,
-              "won": true
-            },
-            {
-              "round": 18,
-              "won": true
-            },
-            {
-              "round": 21,
-              "won": false
-            },
-            {
-              "round": 24,
-              "won": false
-            },
-            {
-              "round": 27,
-              "won": false
-            },
-            {
-              "round": 30,
-              "won": true
-            },
-            {
-              "round": 33,
-              "won": false
-            },
-            {
-              "round": 36,
-              "won": true,
-              "bye": true
-            },
-            {
-              "round": 39,
-              "won": false
-            },
-            {
-              "round": 42,
-              "won": true,
-              "bye": true
-            },
-            {
-              "round": 45,
-              "won": false
-            }
-          ],
-          "livesHistory": [
-            {
-              "round": 1,
-              "lives": 50,
-              "gold": 151
-            },
-            {
-              "round": 2,
-              "lives": 50,
-              "gold": 74
-            },
-            {
-              "round": 3,
-              "lives": 50,
-              "gold": 246
-            },
-            {
-              "round": 4,
-              "lives": 50,
-              "gold": 178
-            },
-            {
-              "round": 5,
-              "lives": 50,
-              "gold": 99
-            },
-            {
-              "round": 6,
-              "lives": 50,
-              "gold": 326
-            },
-            {
-              "round": 7,
-              "lives": 50,
-              "gold": 446
-            },
-            {
-              "round": 8,
-              "lives": 50,
-              "gold": 344
-            },
-            {
-              "round": 9,
-              "lives": 50,
-              "gold": 580
-            },
-            {
-              "round": 10,
-              "lives": 50,
-              "gold": 634
-            },
-            {
-              "round": 11,
-              "lives": 50,
-              "gold": 496
-            },
-            {
-              "round": 12,
-              "lives": 50,
-              "gold": 690
-            },
-            {
-              "round": 13,
-              "lives": 50,
-              "gold": 342
-            },
-            {
-              "round": 14,
-              "lives": 50,
-              "gold": 330
-            },
-            {
-              "round": 15,
-              "lives": 50,
+              "lives": 24,
               "gold": 596
             },
             {
               "round": 16,
-              "lives": 50,
-              "gold": 688
-            },
-            {
-              "round": 17,
-              "lives": 50,
-              "gold": 768
-            },
-            {
-              "round": 18,
-              "lives": 50,
-              "gold": 1034
-            },
-            {
-              "round": 19,
-              "lives": 50,
-              "gold": 920
-            },
-            {
-              "round": 20,
-              "lives": 50,
-              "gold": 1080
-            },
-            {
-              "round": 21,
-              "lives": 43,
-              "gold": 513
-            },
-            {
-              "round": 22,
-              "lives": 43,
-              "gold": 817
-            },
-            {
-              "round": 23,
-              "lives": 43,
-              "gold": 1129
-            },
-            {
-              "round": 24,
-              "lives": 35,
-              "gold": 587
-            },
-            {
-              "round": 25,
-              "lives": 35,
-              "gold": 923
-            },
-            {
-              "round": 26,
-              "lives": 35,
-              "gold": 775
-            },
-            {
-              "round": 27,
-              "lives": 28,
-              "gold": 1275
-            },
-            {
-              "round": 28,
-              "lives": 28,
-              "gold": 1151
-            },
-            {
-              "round": 29,
-              "lives": 28,
-              "gold": 1535
-            },
-            {
-              "round": 30,
-              "lives": 28,
-              "gold": 1035
-            },
-            {
-              "round": 31,
-              "lives": 28,
-              "gold": 1443
-            },
-            {
-              "round": 32,
-              "lives": 28,
-              "gold": 492
-            },
-            {
-              "round": 33,
-              "lives": 22,
-              "gold": 964
-            },
-            {
-              "round": 34,
-              "lives": 22,
-              "gold": 1412
-            },
-            {
-              "round": 35,
-              "lives": 22,
-              "gold": 1868
-            },
-            {
-              "round": 36,
-              "lives": 22,
-              "gold": 855
-            },
-            {
-              "round": 37,
-              "lives": 22,
-              "gold": 1335
-            },
-            {
-              "round": 38,
-              "lives": 22,
-              "gold": 1831
-            },
-            {
-              "round": 39,
-              "lives": 14,
-              "gold": 685
-            },
-            {
-              "round": 40,
-              "lives": 14,
-              "gold": 1205
-            },
-            {
-              "round": 41,
-              "lives": 14,
-              "gold": 1733
-            },
-            {
-              "round": 42,
-              "lives": 14,
-              "gold": 2367
-            },
-            {
-              "round": 43,
-              "lives": 14,
-              "gold": 969
-            },
-            {
-              "round": 44,
-              "lives": 14,
-              "gold": 1537
-            },
-            {
-              "round": 45,
-              "lives": 9,
-              "gold": 2283
-            }
-          ]
-        },
-        {
-          "userId": "p1_holdout",
-          "persona": "holdout",
-          "placement": 4,
-          "eliminatedRound": null,
-          "pveLivesLost": 0,
-          "pvpLivesLost": 44,
-          "battleGold": 835,
-          "wins": 7,
-          "losses": 6,
-          "battleResults": [
-            {
-              "round": 3,
-              "won": false
-            },
-            {
-              "round": 6,
-              "won": true
-            },
-            {
-              "round": 9,
-              "won": true
-            },
-            {
-              "round": 12,
-              "won": false
-            },
-            {
-              "round": 15,
-              "won": false
-            },
-            {
-              "round": 18,
-              "won": false
-            },
-            {
-              "round": 21,
-              "won": true
-            },
-            {
-              "round": 24,
-              "won": true
-            },
-            {
-              "round": 27,
-              "won": false
-            },
-            {
-              "round": 30,
-              "won": false
-            },
-            {
-              "round": 33,
-              "won": true,
-              "bye": true
-            },
-            {
-              "round": 36,
-              "won": true
-            },
-            {
-              "round": 39,
-              "won": true,
-              "bye": true
-            },
-            {
-              "round": 42,
-              "won": true
-            },
-            {
-              "round": 45,
-              "won": true
-            }
-          ],
-          "livesHistory": [
-            {
-              "round": 1,
-              "lives": 50,
-              "gold": 146
-            },
-            {
-              "round": 2,
-              "lives": 50,
-              "gold": 69
-            },
-            {
-              "round": 3,
-              "lives": 44,
-              "gold": 181
-            },
-            {
-              "round": 4,
-              "lives": 44,
-              "gold": 111
-            },
-            {
-              "round": 5,
-              "lives": 44,
-              "gold": 167
-            },
-            {
-              "round": 6,
-              "lives": 44,
-              "gold": 161
-            },
-            {
-              "round": 7,
-              "lives": 44,
-              "gold": 281
-            },
-            {
-              "round": 8,
-              "lives": 44,
-              "gold": 227
-            },
-            {
-              "round": 9,
-              "lives": 44,
-              "gold": 486
-            },
-            {
-              "round": 10,
-              "lives": 44,
-              "gold": 706
-            },
-            {
-              "round": 11,
-              "lives": 44,
-              "gold": 816
-            },
-            {
-              "round": 12,
-              "lives": 36,
-              "gold": 667
-            },
-            {
-              "round": 13,
-              "lives": 36,
-              "gold": 818
-            },
-            {
-              "round": 14,
-              "lives": 36,
-              "gold": 906
-            },
-            {
-              "round": 15,
-              "lives": 27,
-              "gold": 712
-            },
-            {
-              "round": 16,
-              "lives": 27,
-              "gold": 471
-            },
-            {
-              "round": 17,
-              "lives": 27,
-              "gold": 571
-            },
-            {
-              "round": 18,
-              "lives": 19,
-              "gold": 811
-            },
-            {
-              "round": 19,
-              "lives": 19,
-              "gold": 955
-            },
-            {
-              "round": 20,
-              "lives": 19,
-              "gold": 974
-            },
-            {
-              "round": 21,
-              "lives": 19,
-              "gold": 742
-            },
-            {
-              "round": 22,
-              "lives": 19,
-              "gold": 1046
-            },
-            {
-              "round": 23,
-              "lives": 19,
-              "gold": 483
-            },
-            {
-              "round": 24,
-              "lives": 19,
-              "gold": 926
-            },
-            {
-              "round": 25,
-              "lives": 19,
-              "gold": 1262
-            },
-            {
-              "round": 26,
-              "lives": 19,
-              "gold": 564
-            },
-            {
-              "round": 27,
-              "lives": 14,
-              "gold": 994
-            },
-            {
-              "round": 28,
-              "lives": 14,
-              "gold": 1370
-            },
-            {
-              "round": 29,
-              "lives": 14,
-              "gold": 529
-            },
-            {
-              "round": 30,
-              "lives": 6,
-              "gold": 1059
-            },
-            {
-              "round": 31,
-              "lives": 6,
-              "gold": 1467
-            },
-            {
-              "round": 32,
-              "lives": 6,
-              "gold": 491
-            },
-            {
-              "round": 33,
-              "lives": 6,
-              "gold": 1013
-            },
-            {
-              "round": 34,
-              "lives": 6,
-              "gold": 1461
-            },
-            {
-              "round": 35,
-              "lives": 6,
-              "gold": 1917
-            },
-            {
-              "round": 36,
-              "lives": 6,
-              "gold": 869
-            },
-            {
-              "round": 37,
-              "lives": 6,
-              "gold": 849
-            },
-            {
-              "round": 38,
-              "lives": 6,
-              "gold": 1345
-            },
-            {
-              "round": 39,
-              "lives": 6,
-              "gold": 1939
-            },
-            {
-              "round": 40,
-              "lives": 6,
-              "gold": 634
-            },
-            {
-              "round": 41,
-              "lives": 6,
-              "gold": 1162
-            },
-            {
-              "round": 42,
-              "lives": 6,
-              "gold": 1821
-            },
-            {
-              "round": 43,
-              "lives": 6,
-              "gold": 2373
-            },
-            {
-              "round": 44,
-              "lives": 6,
-              "gold": 916
-            },
-            {
-              "round": 45,
-              "lives": 6,
-              "gold": 1602
-            }
-          ]
-        },
-        {
-          "userId": "p2_holdout",
-          "persona": "holdout",
-          "placement": 2,
-          "eliminatedRound": null,
-          "pveLivesLost": 0,
-          "pvpLivesLost": 15,
-          "battleGold": 1215,
-          "wins": 13,
-          "losses": 2,
-          "battleResults": [
-            {
-              "round": 3,
-              "won": true
-            },
-            {
-              "round": 6,
-              "won": false
-            },
-            {
-              "round": 9,
-              "won": false
-            },
-            {
-              "round": 12,
-              "won": true
-            },
-            {
-              "round": 15,
-              "won": true
-            },
-            {
-              "round": 18,
-              "won": true
-            },
-            {
-              "round": 21,
-              "won": true
-            },
-            {
-              "round": 24,
-              "won": true
-            },
-            {
-              "round": 27,
-              "won": true
-            },
-            {
-              "round": 30,
-              "won": true
-            },
-            {
-              "round": 33,
-              "won": true
-            },
-            {
-              "round": 36,
-              "won": true
-            },
-            {
-              "round": 39,
-              "won": true
-            },
-            {
-              "round": 42,
-              "won": true
-            },
-            {
-              "round": 45,
-              "won": true
-            }
-          ],
-          "livesHistory": [
-            {
-              "round": 1,
-              "lives": 50,
-              "gold": 149
-            },
-            {
-              "round": 2,
-              "lives": 50,
-              "gold": 65
-            },
-            {
-              "round": 3,
-              "lives": 50,
-              "gold": 217
-            },
-            {
-              "round": 4,
-              "lives": 50,
-              "gold": 103
-            },
-            {
-              "round": 5,
-              "lives": 50,
-              "gold": 199
-            },
-            {
-              "round": 6,
-              "lives": 42,
-              "gold": 175
-            },
-            {
-              "round": 7,
-              "lives": 42,
-              "gold": 162
-            },
-            {
-              "round": 8,
-              "lives": 42,
-              "gold": 298
-            },
-            {
-              "round": 9,
-              "lives": 35,
-              "gold": 482
-            },
-            {
-              "round": 10,
-              "lives": 35,
-              "gold": 574
-            },
-            {
-              "round": 11,
-              "lives": 35,
-              "gold": 331
-            },
-            {
-              "round": 12,
-              "lives": 35,
-              "gold": 572
-            },
-            {
-              "round": 13,
-              "lives": 35,
-              "gold": 799
-            },
-            {
-              "round": 14,
-              "lives": 35,
-              "gold": 886
-            },
-            {
-              "round": 15,
-              "lives": 35,
-              "gold": 577
-            },
-            {
-              "round": 16,
-              "lives": 35,
-              "gold": 689
-            },
-            {
-              "round": 17,
-              "lives": 35,
-              "gold": 809
-            },
-            {
-              "round": 18,
-              "lives": 35,
-              "gold": 669
-            },
-            {
-              "round": 19,
-              "lives": 35,
-              "gold": 813
-            },
-            {
-              "round": 20,
-              "lives": 35,
-              "gold": 973
-            },
-            {
-              "round": 21,
-              "lives": 35,
-              "gold": 791
-            },
-            {
-              "round": 22,
-              "lives": 35,
-              "gold": 595
-            },
-            {
-              "round": 23,
-              "lives": 35,
-              "gold": 907
-            },
-            {
-              "round": 24,
-              "lives": 35,
-              "gold": 865
-            },
-            {
-              "round": 25,
-              "lives": 35,
-              "gold": 701
-            },
-            {
-              "round": 26,
-              "lives": 35,
-              "gold": 1053
-            },
-            {
-              "round": 27,
-              "lives": 35,
-              "gold": 1563
-            },
-            {
-              "round": 28,
-              "lives": 35,
-              "gold": 639
-            },
-            {
-              "round": 29,
-              "lives": 35,
-              "gold": 1023
-            },
-            {
-              "round": 30,
-              "lives": 35,
-              "gold": 1573
-            },
-            {
-              "round": 31,
-              "lives": 35,
-              "gold": 506
-            },
-            {
-              "round": 32,
-              "lives": 35,
-              "gold": 930
-            },
-            {
-              "round": 33,
-              "lives": 35,
-              "gold": 1512
-            },
-            {
-              "round": 34,
-              "lives": 35,
-              "gold": 1960
-            },
-            {
-              "round": 35,
-              "lives": 35,
-              "gold": 766
-            },
-            {
-              "round": 36,
-              "lives": 35,
-              "gold": 1368
-            },
-            {
-              "round": 37,
-              "lives": 35,
-              "gold": 1848
-            },
-            {
-              "round": 38,
-              "lives": 35,
-              "gold": 519
-            },
-            {
-              "round": 39,
-              "lives": 35,
-              "gold": 1153
-            },
-            {
-              "round": 40,
-              "lives": 35,
-              "gold": 1673
-            },
-            {
-              "round": 41,
-              "lives": 35,
-              "gold": 2201
-            },
-            {
-              "round": 42,
-              "lives": 35,
-              "gold": 850
-            },
-            {
-              "round": 43,
-              "lives": 35,
-              "gold": 1402
-            },
-            {
-              "round": 44,
-              "lives": 35,
-              "gold": 1970
-            },
-            {
-              "round": 45,
-              "lives": 35,
-              "gold": 2676
-            }
-          ]
-        },
-        {
-          "userId": "p3_reroller",
-          "persona": "reroller",
-          "placement": 6,
-          "eliminatedRound": 33,
-          "pveLivesLost": 0,
-          "pvpLivesLost": 50,
-          "battleGold": 545,
-          "wins": 4,
-          "losses": 7,
-          "battleResults": [
-            {
-              "round": 3,
-              "won": false
-            },
-            {
-              "round": 6,
-              "won": false
-            },
-            {
-              "round": 9,
-              "won": false
-            },
-            {
-              "round": 12,
-              "won": true
-            },
-            {
-              "round": 15,
-              "won": true
-            },
-            {
-              "round": 18,
-              "won": false
-            },
-            {
-              "round": 21,
-              "won": true
-            },
-            {
-              "round": 24,
-              "won": false
-            },
-            {
-              "round": 27,
-              "won": true
-            },
-            {
-              "round": 30,
-              "won": false
-            },
-            {
-              "round": 33,
-              "won": false
-            }
-          ],
-          "livesHistory": [
-            {
-              "round": 1,
-              "lives": 50,
-              "gold": 56
-            },
-            {
-              "round": 2,
-              "lives": 50,
-              "gold": 120
-            },
-            {
-              "round": 3,
-              "lives": 45,
-              "gold": 102
-            },
-            {
-              "round": 4,
-              "lives": 45,
-              "gold": 170
-            },
-            {
-              "round": 5,
-              "lives": 45,
-              "gold": 83
-            },
-            {
-              "round": 6,
-              "lives": 37,
-              "gold": 235
-            },
-            {
-              "round": 7,
-              "lives": 37,
-              "gold": 202
-            },
-            {
-              "round": 8,
-              "lives": 37,
-              "gold": 338
-            },
-            {
-              "round": 9,
-              "lives": 29,
-              "gold": 714
-            },
-            {
-              "round": 10,
-              "lives": 29,
-              "gold": 893
-            },
-            {
-              "round": 11,
-              "lives": 29,
-              "gold": 630
-            },
-            {
-              "round": 12,
-              "lives": 29,
-              "gold": 889
-            },
-            {
-              "round": 13,
-              "lives": 29,
-              "gold": 461
-            },
-            {
-              "round": 14,
-              "lives": 29,
-              "gold": 476
-            },
-            {
-              "round": 15,
-              "lives": 29,
-              "gold": 789
-            },
-            {
-              "round": 16,
-              "lives": 29,
-              "gold": 653
-            },
-            {
-              "round": 17,
-              "lives": 29,
-              "gold": 382
-            },
-            {
-              "round": 18,
-              "lives": 21,
-              "gold": 558
-            },
-            {
-              "round": 19,
-              "lives": 21,
-              "gold": 667
-            },
-            {
-              "round": 20,
-              "lives": 21,
-              "gold": 807
-            },
-            {
-              "round": 21,
-              "lives": 21,
-              "gold": 995
-            },
-            {
-              "round": 22,
-              "lives": 21,
-              "gold": 624
-            },
-            {
-              "round": 23,
-              "lives": 21,
-              "gold": 936
-            },
-            {
-              "round": 24,
-              "lives": 16,
-              "gold": 454
-            },
-            {
-              "round": 25,
-              "lives": 16,
-              "gold": 790
-            },
-            {
-              "round": 26,
-              "lives": 16,
-              "gold": 1142
-            },
-            {
-              "round": 27,
-              "lives": 16,
-              "gold": 557
-            },
-            {
-              "round": 28,
-              "lives": 16,
-              "gold": 933
-            },
-            {
-              "round": 29,
-              "lives": 16,
-              "gold": 1317
-            },
-            {
-              "round": 30,
-              "lives": 7,
-              "gold": 587
-            },
-            {
-              "round": 31,
-              "lives": 7,
-              "gold": 995
-            },
-            {
-              "round": 32,
-              "lives": 7,
-              "gold": 1419
-            },
-            {
-              "round": 33,
-              "lives": 0,
-              "gold": 636
-            },
-            {
-              "round": 34,
-              "lives": 0,
-              "gold": 636
-            },
-            {
-              "round": 35,
-              "lives": 0,
-              "gold": 636
-            },
-            {
-              "round": 36,
-              "lives": 0,
-              "gold": 636
-            },
-            {
-              "round": 37,
-              "lives": 0,
-              "gold": 636
-            },
-            {
-              "round": 38,
-              "lives": 0,
-              "gold": 636
-            },
-            {
-              "round": 39,
-              "lives": 0,
-              "gold": 636
-            },
-            {
-              "round": 40,
-              "lives": 0,
-              "gold": 636
-            },
-            {
-              "round": 41,
-              "lives": 0,
-              "gold": 636
-            },
-            {
-              "round": 42,
-              "lives": 0,
-              "gold": 636
-            },
-            {
-              "round": 43,
-              "lives": 0,
-              "gold": 636
-            },
-            {
-              "round": 44,
-              "lives": 0,
-              "gold": 636
-            },
-            {
-              "round": 45,
-              "lives": 0,
-              "gold": 636
-            }
-          ]
-        },
-        {
-          "userId": "p4_reroller",
-          "persona": "reroller",
-          "placement": 8,
-          "eliminatedRound": 27,
-          "pveLivesLost": 0,
-          "pvpLivesLost": 53,
-          "battleGold": 560,
-          "wins": 2,
-          "losses": 7,
-          "battleResults": [
-            {
-              "round": 3,
-              "won": false
-            },
-            {
-              "round": 6,
-              "won": false
-            },
-            {
-              "round": 9,
-              "won": true
-            },
-            {
-              "round": 12,
-              "won": false
-            },
-            {
-              "round": 15,
-              "won": true
-            },
-            {
-              "round": 18,
-              "won": false
-            },
-            {
-              "round": 21,
-              "won": false
-            },
-            {
-              "round": 24,
-              "won": false
-            },
-            {
-              "round": 27,
-              "won": false
-            }
-          ],
-          "livesHistory": [
-            {
-              "round": 1,
-              "lives": 50,
-              "gold": 90
-            },
-            {
-              "round": 2,
-              "lives": 50,
-              "gold": 154
-            },
-            {
-              "round": 3,
-              "lives": 44,
-              "gold": 83
-            },
-            {
-              "round": 4,
-              "lives": 44,
-              "gold": 151
-            },
-            {
-              "round": 5,
-              "lives": 44,
-              "gold": 117
-            },
-            {
-              "round": 6,
-              "lives": 36,
-              "gold": 249
-            },
-            {
-              "round": 7,
-              "lives": 36,
-              "gold": 216
-            },
-            {
-              "round": 8,
-              "lives": 36,
-              "gold": 352
-            },
-            {
-              "round": 9,
-              "lives": 36,
-              "gold": 561
-            },
-            {
-              "round": 10,
-              "lives": 36,
-              "gold": 755
-            },
-            {
-              "round": 11,
-              "lives": 36,
-              "gold": 487
-            },
-            {
-              "round": 12,
-              "lives": 28,
-              "gold": 658
-            },
-            {
-              "round": 13,
-              "lives": 28,
-              "gold": 897
-            },
-            {
-              "round": 14,
-              "lives": 28,
-              "gold": 1024
-            },
-            {
-              "round": 15,
-              "lives": 28,
-              "gold": 1220
-            },
-            {
-              "round": 16,
-              "lives": 28,
-              "gold": 632
-            },
-            {
-              "round": 17,
-              "lives": 28,
-              "gold": 752
-            },
-            {
-              "round": 18,
-              "lives": 21,
-              "gold": 928
-            },
-            {
-              "round": 19,
-              "lives": 21,
-              "gold": 1072
-            },
-            {
-              "round": 20,
-              "lives": 21,
-              "gold": 531
-            },
-            {
-              "round": 21,
-              "lives": 13,
-              "gold": 799
-            },
-            {
-              "round": 22,
-              "lives": 13,
-              "gold": 1083
-            },
-            {
-              "round": 23,
-              "lives": 13,
-              "gold": 695
-            },
-            {
-              "round": 24,
-              "lives": 5,
-              "gold": 1193
-            },
-            {
-              "round": 25,
-              "lives": 5,
-              "gold": 679
-            },
-            {
-              "round": 26,
-              "lives": 5,
-              "gold": 1031
-            },
-            {
-              "round": 27,
-              "lives": 0,
-              "gold": 1641
-            },
-            {
-              "round": 28,
-              "lives": 0,
-              "gold": 1641
-            },
-            {
-              "round": 29,
-              "lives": 0,
-              "gold": 1641
-            },
-            {
-              "round": 30,
-              "lives": 0,
-              "gold": 1641
-            },
-            {
-              "round": 31,
-              "lives": 0,
-              "gold": 1641
-            },
-            {
-              "round": 32,
-              "lives": 0,
-              "gold": 1641
-            },
-            {
-              "round": 33,
-              "lives": 0,
-              "gold": 1641
-            },
-            {
-              "round": 34,
-              "lives": 0,
-              "gold": 1641
-            },
-            {
-              "round": 35,
-              "lives": 0,
-              "gold": 1641
-            },
-            {
-              "round": 36,
-              "lives": 0,
-              "gold": 1641
-            },
-            {
-              "round": 37,
-              "lives": 0,
-              "gold": 1641
-            },
-            {
-              "round": 38,
-              "lives": 0,
-              "gold": 1641
-            },
-            {
-              "round": 39,
-              "lives": 0,
-              "gold": 1641
-            },
-            {
-              "round": 40,
-              "lives": 0,
-              "gold": 1641
-            },
-            {
-              "round": 41,
-              "lives": 0,
-              "gold": 1641
-            },
-            {
-              "round": 42,
-              "lives": 0,
-              "gold": 1641
-            },
-            {
-              "round": 43,
-              "lives": 0,
-              "gold": 1641
-            },
-            {
-              "round": 44,
-              "lives": 0,
-              "gold": 1641
-            },
-            {
-              "round": 45,
-              "lives": 0,
-              "gold": 1641
-            }
-          ]
-        },
-        {
-          "userId": "p5_worker",
-          "persona": "worker",
-          "placement": 3,
-          "eliminatedRound": null,
-          "pveLivesLost": 0,
-          "pvpLivesLost": 34,
-          "battleGold": 1050,
-          "wins": 9,
-          "losses": 6,
-          "battleResults": [
-            {
-              "round": 3,
-              "won": true
-            },
-            {
-              "round": 6,
-              "won": true
-            },
-            {
-              "round": 9,
-              "won": true
-            },
-            {
-              "round": 12,
-              "won": true
-            },
-            {
-              "round": 15,
-              "won": false
-            },
-            {
-              "round": 18,
-              "won": true
-            },
-            {
-              "round": 21,
-              "won": false
-            },
-            {
-              "round": 24,
-              "won": true
-            },
-            {
-              "round": 27,
-              "won": true
-            },
-            {
-              "round": 30,
-              "won": true
-            },
-            {
-              "round": 33,
-              "won": true
-            },
-            {
-              "round": 36,
-              "won": false
-            },
-            {
-              "round": 39,
-              "won": false
-            },
-            {
-              "round": 42,
-              "won": false
-            },
-            {
-              "round": 45,
-              "won": false
-            }
-          ],
-          "livesHistory": [
-            {
-              "round": 1,
-              "lives": 50,
-              "gold": 145
-            },
-            {
-              "round": 2,
-              "lives": 50,
-              "gold": 103
-            },
-            {
-              "round": 3,
-              "lives": 50,
-              "gold": 275
-            },
-            {
-              "round": 4,
-              "lives": 50,
-              "gold": 82
-            },
-            {
-              "round": 5,
-              "lives": 50,
-              "gold": 178
-            },
-            {
-              "round": 6,
-              "lives": 50,
-              "gold": 385
-            },
-            {
-              "round": 7,
-              "lives": 50,
-              "gold": 505
-            },
-            {
-              "round": 8,
-              "lives": 50,
-              "gold": 414
-            },
-            {
-              "round": 9,
-              "lives": 50,
-              "gold": 752
-            },
-            {
-              "round": 10,
-              "lives": 50,
-              "gold": 754
-            },
-            {
-              "round": 11,
-              "lives": 50,
-              "gold": 556
-            },
-            {
-              "round": 12,
-              "lives": 50,
-              "gold": 832
-            },
-            {
-              "round": 13,
-              "lives": 50,
-              "gold": 653
-            },
-            {
-              "round": 14,
-              "lives": 50,
-              "gold": 710
-            },
-            {
-              "round": 15,
-              "lives": 43,
-              "gold": 345
-            },
-            {
-              "round": 16,
-              "lives": 43,
-              "gold": 517
-            },
-            {
-              "round": 17,
-              "lives": 43,
-              "gold": 637
-            },
-            {
-              "round": 18,
-              "lives": 43,
-              "gold": 873
-            },
-            {
-              "round": 19,
-              "lives": 43,
-              "gold": 1017
-            },
-            {
-              "round": 20,
-              "lives": 43,
-              "gold": 477
-            },
-            {
-              "round": 21,
-              "lives": 34,
-              "gold": 685
-            },
-            {
-              "round": 22,
-              "lives": 34,
-              "gold": 989
-            },
-            {
-              "round": 23,
-              "lives": 34,
-              "gold": 1301
-            },
-            {
-              "round": 24,
-              "lives": 34,
-              "gold": 779
-            },
-            {
-              "round": 25,
-              "lives": 34,
-              "gold": 1115
-            },
-            {
-              "round": 26,
-              "lives": 34,
-              "gold": 1467
-            },
-            {
-              "round": 27,
-              "lives": 34,
-              "gold": 842
-            },
-            {
-              "round": 28,
-              "lives": 34,
-              "gold": 1218
-            },
-            {
-              "round": 29,
-              "lives": 34,
-              "gold": 1602
-            },
-            {
-              "round": 30,
-              "lives": 34,
-              "gold": 857
-            },
-            {
-              "round": 31,
-              "lives": 34,
-              "gold": 1265
-            },
-            {
-              "round": 32,
-              "lives": 34,
-              "gold": 1689
-            },
-            {
-              "round": 33,
-              "lives": 34,
-              "gold": 821
-            },
-            {
-              "round": 34,
-              "lives": 34,
-              "gold": 1269
-            },
-            {
-              "round": 35,
-              "lives": 34,
-              "gold": 1725
-            },
-            {
-              "round": 36,
-              "lives": 29,
-              "gold": 612
-            },
-            {
-              "round": 37,
-              "lives": 29,
-              "gold": 1092
-            },
-            {
-              "round": 38,
-              "lives": 29,
-              "gold": 1588
-            },
-            {
-              "round": 39,
               "lives": 24,
-              "gold": 2192
+              "gold": 643
+            },
+            {
+              "round": 17,
+              "lives": 24,
+              "gold": 878
+            },
+            {
+              "round": 18,
+              "lives": 16,
+              "gold": 1254
+            },
+            {
+              "round": 19,
+              "lives": 16,
+              "gold": 1398
+            },
+            {
+              "round": 20,
+              "lives": 16,
+              "gold": 1558
+            },
+            {
+              "round": 21,
+              "lives": 16,
+              "gold": 976
+            },
+            {
+              "round": 22,
+              "lives": 16,
+              "gold": 660
+            },
+            {
+              "round": 23,
+              "lives": 16,
+              "gold": 852
+            },
+            {
+              "round": 24,
+              "lives": 10,
+              "gold": 1130
+            },
+            {
+              "round": 25,
+              "lives": 10,
+              "gold": 1346
+            },
+            {
+              "round": 26,
+              "lives": 10,
+              "gold": 1578
+            },
+            {
+              "round": 27,
+              "lives": 10,
+              "gold": 1908
+            },
+            {
+              "round": 28,
+              "lives": 10,
+              "gold": 2164
+            },
+            {
+              "round": 29,
+              "lives": 10,
+              "gold": 553
+            },
+            {
+              "round": 30,
+              "lives": 10,
+              "gold": 2288
+            },
+            {
+              "round": 31,
+              "lives": 10,
+              "gold": 2576
+            },
+            {
+              "round": 32,
+              "lives": 10,
+              "gold": 580
+            },
+            {
+              "round": 33,
+              "lives": 4,
+              "gold": 992
+            },
+            {
+              "round": 34,
+              "lives": 4,
+              "gold": 1320
+            },
+            {
+              "round": 35,
+              "lives": 4,
+              "gold": 1656
+            },
+            {
+              "round": 36,
+              "lives": 4,
+              "gold": 2108
+            },
+            {
+              "round": 37,
+              "lives": 4,
+              "gold": 1488
+            },
+            {
+              "round": 38,
+              "lives": 4,
+              "gold": 784
+            },
+            {
+              "round": 39,
+              "lives": 4,
+              "gold": 1403
             },
             {
               "round": 40,
-              "lives": 24,
-              "gold": 887
+              "lives": 4,
+              "gold": 1923
             },
             {
               "round": 41,
-              "lives": 24,
-              "gold": 1415
-            },
-            {
-              "round": 42,
-              "lives": 20,
-              "gold": 2099
-            },
-            {
-              "round": 43,
-              "lives": 20,
+              "lives": 4,
               "gold": 676
             },
             {
-              "round": 44,
-              "lives": 20,
-              "gold": 1244
-            },
-            {
-              "round": 45,
-              "lives": 16,
-              "gold": 2040
-            }
-          ]
-        },
-        {
-          "userId": "p6_tera",
-          "persona": "tera",
-          "placement": 7,
-          "eliminatedRound": 33,
-          "pveLivesLost": 0,
-          "pvpLivesLost": 57,
-          "battleGold": 1125,
-          "wins": 3,
-          "losses": 8,
-          "battleResults": [
-            {
-              "round": 3,
-              "won": true
-            },
-            {
-              "round": 6,
-              "won": true
-            },
-            {
-              "round": 9,
-              "won": false
-            },
-            {
-              "round": 12,
-              "won": false
-            },
-            {
-              "round": 15,
-              "won": false
-            },
-            {
-              "round": 18,
-              "won": false
-            },
-            {
-              "round": 21,
-              "won": false
-            },
-            {
-              "round": 24,
-              "won": false
-            },
-            {
-              "round": 27,
-              "won": true
-            },
-            {
-              "round": 30,
-              "won": false
-            },
-            {
-              "round": 33,
-              "won": false
-            }
-          ],
-          "livesHistory": [
-            {
-              "round": 1,
-              "lives": 50,
-              "gold": 134
-            },
-            {
-              "round": 2,
-              "lives": 50,
-              "gold": 83
-            },
-            {
-              "round": 3,
-              "lives": 50,
-              "gold": 195
-            },
-            {
-              "round": 4,
-              "lives": 50,
-              "gold": 263
-            },
-            {
-              "round": 5,
-              "lives": 50,
-              "gold": 249
-            },
-            {
-              "round": 6,
-              "lives": 50,
-              "gold": 416
-            },
-            {
-              "round": 7,
-              "lives": 50,
-              "gold": 536
-            },
-            {
-              "round": 8,
-              "lives": 50,
-              "gold": 474
-            },
-            {
-              "round": 9,
-              "lives": 42,
-              "gold": 666
-            },
-            {
-              "round": 10,
-              "lives": 42,
-              "gold": 321
-            },
-            {
-              "round": 11,
-              "lives": 42,
-              "gold": 563
-            },
-            {
-              "round": 12,
-              "lives": 34,
-              "gold": 688
-            },
-            {
-              "round": 13,
-              "lives": 34,
-              "gold": 397
-            },
-            {
-              "round": 14,
-              "lives": 34,
-              "gold": 445
-            },
-            {
-              "round": 15,
-              "lives": 27,
-              "gold": 601
-            },
-            {
-              "round": 16,
-              "lives": 27,
-              "gold": 593
-            },
-            {
-              "round": 17,
-              "lives": 27,
-              "gold": 673
-            },
-            {
-              "round": 18,
-              "lives": 19,
-              "gold": 591
-            },
-            {
-              "round": 19,
-              "lives": 19,
-              "gold": 675
-            },
-            {
-              "round": 20,
-              "lives": 19,
-              "gold": 835
-            },
-            {
-              "round": 21,
-              "lives": 11,
-              "gold": 583
-            },
-            {
-              "round": 22,
-              "lives": 11,
-              "gold": 787
-            },
-            {
-              "round": 23,
-              "lives": 11,
-              "gold": 599
-            },
-            {
-              "round": 24,
-              "lives": 7,
-              "gold": 1197
-            },
-            {
-              "round": 25,
-              "lives": 7,
-              "gold": 1033
-            },
-            {
-              "round": 26,
-              "lives": 7,
-              "gold": 885
-            },
-            {
-              "round": 27,
-              "lives": 7,
-              "gold": 1345
-            },
-            {
-              "round": 28,
-              "lives": 7,
-              "gold": 521
-            },
-            {
-              "round": 29,
-              "lives": 7,
-              "gold": 905
-            },
-            {
-              "round": 30,
-              "lives": 1,
-              "gold": 1405
-            },
-            {
-              "round": 31,
-              "lives": 1,
-              "gold": 438
-            },
-            {
-              "round": 32,
-              "lives": 1,
-              "gold": 862
-            },
-            {
-              "round": 33,
-              "lives": 0,
-              "gold": 1454
-            },
-            {
-              "round": 34,
-              "lives": 0,
-              "gold": 1454
-            },
-            {
-              "round": 35,
-              "lives": 0,
-              "gold": 1454
-            },
-            {
-              "round": 36,
-              "lives": 0,
-              "gold": 1454
-            },
-            {
-              "round": 37,
-              "lives": 0,
-              "gold": 1454
-            },
-            {
-              "round": 38,
-              "lives": 0,
-              "gold": 1454
-            },
-            {
-              "round": 39,
-              "lives": 0,
-              "gold": 1454
-            },
-            {
-              "round": 40,
-              "lives": 0,
-              "gold": 1454
-            },
-            {
-              "round": 41,
-              "lives": 0,
-              "gold": 1454
-            },
-            {
               "round": 42,
-              "lives": 0,
-              "gold": 1454
+              "lives": 4,
+              "gold": 1350
             },
             {
               "round": 43,
-              "lives": 0,
-              "gold": 1454
+              "lives": 4,
+              "gold": 1902
             },
             {
               "round": 44,
-              "lives": 0,
-              "gold": 1454
+              "lives": 4,
+              "gold": 2470
             },
             {
               "round": 45,
-              "lives": 0,
-              "gold": 1454
-            }
-          ]
-        },
-        {
-          "userId": "p7_lossStreaker",
-          "persona": "lossStreaker",
-          "placement": 5,
-          "eliminatedRound": 42,
-          "pveLivesLost": 0,
-          "pvpLivesLost": 50,
-          "battleGold": 1005,
-          "wins": 5,
-          "losses": 8,
-          "battleResults": [
-            {
-              "round": 3,
-              "won": false
-            },
-            {
-              "round": 6,
-              "won": false
-            },
-            {
-              "round": 9,
-              "won": false
-            },
-            {
-              "round": 12,
-              "won": false
-            },
-            {
-              "round": 15,
-              "won": false
-            },
-            {
-              "round": 18,
-              "won": true
-            },
-            {
-              "round": 21,
-              "won": true
-            },
-            {
-              "round": 24,
-              "won": true
-            },
-            {
-              "round": 27,
-              "won": false
-            },
-            {
-              "round": 30,
-              "won": true,
-              "bye": true
-            },
-            {
-              "round": 33,
-              "won": true
-            },
-            {
-              "round": 36,
-              "won": false
-            },
-            {
-              "round": 39,
-              "won": true
-            },
-            {
-              "round": 42,
-              "won": false
-            }
-          ],
-          "livesHistory": [
-            {
-              "round": 1,
-              "lives": 50,
-              "gold": 130
-            },
-            {
-              "round": 2,
-              "lives": 50,
-              "gold": 64
-            },
-            {
-              "round": 3,
-              "lives": 45,
-              "gold": 176
-            },
-            {
-              "round": 4,
-              "lives": 45,
-              "gold": 114
-            },
-            {
-              "round": 5,
-              "lives": 45,
-              "gold": 210
-            },
-            {
-              "round": 6,
-              "lives": 41,
-              "gold": 422
-            },
-            {
-              "round": 7,
-              "lives": 41,
-              "gold": 297
-            },
-            {
-              "round": 8,
-              "lives": 41,
-              "gold": 463
-            },
-            {
-              "round": 9,
-              "lives": 36,
-              "gold": 897
-            },
-            {
-              "round": 10,
-              "lives": 36,
-              "gold": 571
-            },
-            {
-              "round": 11,
-              "lives": 36,
-              "gold": 619
-            },
-            {
-              "round": 12,
-              "lives": 29,
-              "gold": 873
-            },
-            {
-              "round": 13,
-              "lives": 29,
-              "gold": 692
-            },
-            {
-              "round": 14,
-              "lives": 29,
-              "gold": 399
-            },
-            {
-              "round": 15,
-              "lives": 20,
-              "gold": 735
-            },
-            {
-              "round": 16,
-              "lives": 20,
-              "gold": 847
-            },
-            {
-              "round": 17,
-              "lives": 20,
-              "gold": 967
-            },
-            {
-              "round": 18,
-              "lives": 20,
-              "gold": 703
-            },
-            {
-              "round": 19,
-              "lives": 20,
-              "gold": 342
-            },
-            {
-              "round": 20,
-              "lives": 20,
-              "gold": 562
-            },
-            {
-              "round": 21,
-              "lives": 20,
-              "gold": 955
-            },
-            {
-              "round": 22,
-              "lives": 20,
-              "gold": 759
-            },
-            {
-              "round": 23,
-              "lives": 20,
-              "gold": 396
-            },
-            {
-              "round": 24,
-              "lives": 20,
-              "gold": 834
-            },
-            {
-              "round": 25,
-              "lives": 20,
-              "gold": 1170
-            },
-            {
-              "round": 26,
-              "lives": 20,
-              "gold": 647
-            },
-            {
-              "round": 27,
-              "lives": 11,
-              "gold": 1077
-            },
-            {
-              "round": 28,
-              "lives": 11,
-              "gold": 478
-            },
-            {
-              "round": 29,
-              "lives": 11,
-              "gold": 862
-            },
-            {
-              "round": 30,
-              "lives": 11,
-              "gold": 1352
-            },
-            {
-              "round": 31,
-              "lives": 11,
-              "gold": 610
-            },
-            {
-              "round": 32,
-              "lives": 11,
-              "gold": 1034
-            },
-            {
-              "round": 33,
-              "lives": 11,
-              "gold": 1566
-            },
-            {
-              "round": 34,
-              "lives": 11,
-              "gold": 689
-            },
-            {
-              "round": 35,
-              "lives": 11,
-              "gold": 1145
-            },
-            {
-              "round": 36,
-              "lives": 7,
-              "gold": 1687
-            },
-            {
-              "round": 37,
-              "lives": 7,
-              "gold": 667
-            },
-            {
-              "round": 38,
-              "lives": 7,
-              "gold": 1163
-            },
-            {
-              "round": 39,
-              "lives": 7,
-              "gold": 1767
-            },
-            {
-              "round": 40,
-              "lives": 7,
-              "gold": 612
-            },
-            {
-              "round": 41,
-              "lives": 7,
-              "gold": 1140
-            },
-            {
-              "round": 42,
-              "lives": 0,
-              "gold": 1784
-            },
-            {
-              "round": 43,
-              "lives": 0,
-              "gold": 1784
-            },
-            {
-              "round": 44,
-              "lives": 0,
-              "gold": 1784
-            },
-            {
-              "round": 45,
-              "lives": 0,
-              "gold": 1784
+              "lives": 4,
+              "gold": 3196
             }
           ]
         }

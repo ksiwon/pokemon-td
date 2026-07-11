@@ -23,7 +23,7 @@ const DIFFICULTY_MULTIPLIERS: Record<
 
 // ─── 스토리 모드 챕터별 난이도 배율 ────────────────────────────────────────────
 // 30웨이브 기준. 후반 체감 난이도가 과해 곡선을 완만하게 낮춤(상한 1.0).
-// 실효 난이도 = 챕터배율 × 1.05^(wave-1). ch8 wave30 ≈ 1.0×4.1 = 4.1x (기존 11.2x).
+// 실효 난이도 = 챕터배율 × 1.08^(wave-1). ch8 wave30 ≈ 1.0×9.3 = 9.3x.
 const STORY_CHAPTER_MULTIPLIERS: Record<number, { hp: number; attack: number; reward: number }> = {
   1: { hp: 0.60, attack: 0.60, reward: 1.0 },
   2: { hp: 0.60, attack: 0.60, reward: 1.0 },

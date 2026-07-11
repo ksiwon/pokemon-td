@@ -34,7 +34,7 @@ const TARGET_CLEAR: Record<string, number> = {
   easy_loop: 0.70,
   medium_merge: 0.30,
   hard_dual_path: 0.10,
-  extreme_central: 0.0,
+  extreme_central: 0.01,
 };
 
 function quantile(sorted: number[], q: number): number {
