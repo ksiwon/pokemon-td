@@ -644,15 +644,29 @@ export class GameManager {
     const newHp = Math.max(0, enemy.hp - dmg);
     useGameStore.getState().updateEnemy(enemy.id, { hp: newHp });
 
-    // 흡혈: drainPercent(기술 효과) 우선, 없으면 ability.lifesteal, + 조개껍질방울(지닌도구)
-    if (attacker && !attacker.isFainted) {
-      const drainRatio = (proj.effect.drainPercent
-        ?? (attacker.ability?.effect === 'lifesteal' ? (attacker.ability.value ?? 0) : 0))
-        + heldLifesteal(attacker.heldItem);
-      if (drainRatio > 0) {
-        const healAmount = Math.floor(dmg * drainRatio);
-        const newTowerHp = Math.min(attacker.maxHp, attacker.currentHp + healAmount);
-        updateTower(attacker.id, { currentHp: newTowerHp });
+    // 흡혈(drainPercent > ability.lifesteal, + 조개껍질방울) + 전투 통계를 한 번에 반영.
+    // [STATS-FIX 2026-07-12] kills/damageDealt는 생성 시 0으로만 세팅되고 아무 데서도
+    //   증가하지 않아 포켓몬 관리 패널에 항상 0으로 표시되던 버그 — 여기서 집계한다.
+    //   같은 프레임 다중 명중의 낡은 스냅샷 문제를 피하려고 최신 상태를 재조회(흡혈도 동일 수혜).
+    if (attacker) {
+      const freshAtk = useGameStore.getState().towers.find(t => t.id === attacker.id);
+      if (freshAtk) {
+        const updates: Partial<typeof freshAtk> = {
+          damageDealt: (freshAtk.damageDealt ?? 0) + dmg,
+        };
+        if (!freshAtk.isFainted) {
+          const drainRatio = (proj.effect.drainPercent
+            ?? (freshAtk.ability?.effect === 'lifesteal' ? (freshAtk.ability.value ?? 0) : 0))
+            + heldLifesteal(freshAtk.heldItem);
+          if (drainRatio > 0) {
+            updates.currentHp = Math.min(freshAtk.maxHp, freshAtk.currentHp + Math.floor(dmg * drainRatio));
+          }
+        }
+        // 킬 귀속: 이 명중이 막타면 +1 (killEnemy가 removeEnemy를 동기 실행하므로 중복 귀속 없음)
+        if (newHp <= 0 && !this.killedEnemyIds.has(enemy.id)) {
+          updates.kills = (freshAtk.kills ?? 0) + 1;
+        }
+        updateTower(attacker.id, updates);
       }
     }
 
