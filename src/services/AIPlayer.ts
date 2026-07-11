@@ -44,15 +44,19 @@ const RARITY_COST: Record<PokemonRarity, number> = {
 const AI_CONFIG: Record<AIDifficulty, {
   purchaseIntervalMs: number;
   pickTopN: number;
-  levelUpChance: number;
+  /** 실플레이어 킬XP 대비 성장 효율 (누수·기절 손실 모델). 1.0 = 전 몹 처치와 동일 */
+  xpEfficiency: number;
   evolvePriority: number;
   upgradeTeam: boolean;
   rerollCount: number;
   synergyWeight: number;
 }> = {
-  easy:   { purchaseIntervalMs: 12000, pickTopN: 999, levelUpChance: 0.15, evolvePriority: 0.1,  upgradeTeam: false, rerollCount: 0, synergyWeight: 0 },
-  medium: { purchaseIntervalMs: 7000,  pickTopN: 3,   levelUpChance: 0.5,  evolvePriority: 0.5,  upgradeTeam: false, rerollCount: 1, synergyWeight: 0.5 },
-  hard:   { purchaseIntervalMs: 3000,  pickTopN: 1,   levelUpChance: 0.9,  evolvePriority: 0.85, upgradeTeam: true,  rerollCount: 3, synergyWeight: 1.0 },
+  // [BALANCE 2026-07-12] levelUpChance(웨이브당 확률 +1렙) → xpEfficiency로 교체.
+  //   기존 확률 방식은 실플레이어(킬XP 10×몹수 공유, 플랫 100XP/레벨 = w20에 L42)보다
+  //   수 배 느려서 AI가 멀티에서 들러리가 됨. 이제 실제 XP 공식을 미러링한다.
+  easy:   { purchaseIntervalMs: 12000, pickTopN: 999, xpEfficiency: 0.4, evolvePriority: 0.1,  upgradeTeam: false, rerollCount: 0, synergyWeight: 0 },
+  medium: { purchaseIntervalMs: 7000,  pickTopN: 3,   xpEfficiency: 0.7, evolvePriority: 0.5,  upgradeTeam: false, rerollCount: 1, synergyWeight: 0.5 },
+  hard:   { purchaseIntervalMs: 3000,  pickTopN: 1,   xpEfficiency: 1.0, evolvePriority: 0.85, upgradeTeam: true,  rerollCount: 3, synergyWeight: 1.0 },
 };
 
 interface AICandidate {
@@ -391,7 +395,11 @@ export class AIPlayer {
 
   private async postWaveProcessing(wave: number) {
     this.towers = this.towers.map(t => ({ ...t, currentHp: t.maxHp, isFainted: false }));
-    if (Math.random() < this.cfg.levelUpChance) this.levelUpAllTowers();
+    // [BALANCE 2026-07-12] 실플레이어 XP 공식 미러링: 웨이브 몹수×10 XP(보스≈+50)를
+    // 100XP/레벨로 환산, 난이도별 효율 적용. 소수분은 이월(levelBank).
+    const kills = Math.floor(5 + wave * 1.5) + (wave % 3 === 0 ? 5 : 0);
+    this.levelBank += (kills * 10 * this.cfg.xpEfficiency) / 100;
+    while (this.levelBank >= 1) { this.levelUpAllTowers(); this.levelBank -= 1; }
     if (Math.random() < this.cfg.evolvePriority) await this.tryEvolve();
     if (this.difficulty === 'hard' && wave % 3 === 0) await this.tryMegaEvolve(); // [FIX] WaveSystem과 동일하게 3의 배수
   }
@@ -578,19 +586,19 @@ export class AIPlayer {
   // [BUG-2 FIX] 전 포켓몬 균등 레벨업 — 싱글플레이의 addXpToTower와 동일한 성장 방식
   // 이전: 가장 강한 포켓몬 1마리만 레벨업 → 격차 심화
   // 변경: 살아있는 전 포켓몬을 동일하게 1레벨씩 성장
+  private levelBank = 0;
   private levelUpAllTowers() {
     this.towers = this.towers.map(t => {
       if (t.isFainted || t.level >= 100) return t;
-      // 싱글플레이 addXpToTower와 동일한 성장률
-      const hpIncrease    = Math.floor(t.maxHp          * 0.1);
+      // [BALANCE 2026-07-12] addXpToTower와 정확히 동일하게: 전 스탯 +5%, 속도 고정
+      //   (기존: HP +10%·속도 +3%로 어긋나 있었음 — AI 탱킹 과대·속도 이점)
+      const hpIncrease    = Math.floor(t.maxHp          * 0.05);
       const atkIncrease   = Math.floor(t.attack         * 0.05);
       // [BUG-2 FIX] specialAttack은 자체 값 기준으로 증가량 계산
-      // 이전: atkIncrease(t.attack * 0.05)를 그대로 사용 → 특수형 포켓몬 성장 저하
-      // 수정: t.specialAttack * 0.05로 별도 계산
       const spAtkIncrease = Math.floor(t.specialAttack  * 0.05);
       const defIncrease   = Math.floor(t.defense        * 0.05);
       const spDefIncrease = Math.floor(t.specialDefense * 0.05);
-      const spdIncrease   = Math.floor(t.speed          * 0.03);
+      const spdIncrease   = 0; // 속도는 레벨업으로 변하지 않음 (플레이어와 동일)
       return {
         ...t,
         level:          t.level + 1,

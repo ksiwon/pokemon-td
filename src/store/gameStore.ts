@@ -23,10 +23,12 @@ export const MAX_LIVES_CAP = 50;
 // 싱글플레이 초기 라이프 (업적 체크 기준값으로 사용)
 export const INITIAL_LIVES_SINGLE = MAX_LIVES_CAP;
 
-// 레벨업에 필요한 XP — 10레벨 구간마다 100씩 증가
-//   Lv1~10: 100 / 11~20: 200 / 21~30: 300 / … / 91~100: 1000
-export const xpToNextLevel = (level: number) =>
-  (Math.floor((level - 1) / 10) + 1) * 100;
+// 레벨업에 필요한 XP — 플랫 100 (v2.14에서 티어드 곡선 폐기, 원래 값 복원).
+// [BALANCE 2026-07-12] 의도된 플레이: 킬XP 자연 성장으로 ~w33 만렙 → 이후
+//   낡은 타워를 하나씩 팔고 새로 사서 경험사탕으로 즉시 만렙 캐치업하는 순환.
+//   티어드 곡선(구간당 +100)은 이 순환을 죽이고 "만렙 불가" 게임을 만들었음
+//   (50웨이브 자연 XP ≈ 22,400 vs 티어드 요구 54,000).
+export const xpToNextLevel = (_level: number) => 100;
 
 interface GameStore extends GameState {
   addTower: (tower: GamePokemon) => void;

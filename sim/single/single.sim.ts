@@ -27,13 +27,14 @@ const HUMAN_LADDER: Record<string, string> = {
   extreme_central: '거의 불가 (개발자도 못 깸)',
 };
 
-// 개발자 지정 목표 (2026-07-11): "아는 유저의 판당 승률" — 봇 1판 승률을 그대로 맞춘다.
+// 개발자 지정 목표 (2026-07-12 갱신): 인간 목표는 99/80/50/20/1이지만 봇은 인간 테크
+// (도구·시너지 완성·전설 스왑)를 다 못 쓰므로, 봇 사다리는 하향 눈금 95/70/30/10/0으로 판정.
 const TARGET_CLEAR: Record<string, number> = {
-  easiest_straight: 0.99,
-  easy_loop: 0.80,
-  medium_merge: 0.50,
-  hard_dual_path: 0.20,
-  extreme_central: 0.01,
+  easiest_straight: 0.95,
+  easy_loop: 0.70,
+  medium_merge: 0.30,
+  hard_dual_path: 0.10,
+  extreme_central: 0.0,
 };
 
 function quantile(sorted: number[], q: number): number {
