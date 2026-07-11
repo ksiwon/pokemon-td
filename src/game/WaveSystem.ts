@@ -9,16 +9,19 @@ const DIFFICULTY_MULTIPLIERS: Record<
   { hp: number; attack: number; reward: number }
 > = {
   // [BALANCE] reward: medium=1.0 기준 난이도당 0.1씩 차등 → 고난도에 골드 이득을 줘 선택 이유 부여.
-  easiest: { hp: 0.3,  attack: 0.3,  reward: 0.8 },
-  easy:    { hp: 0.5,  attack: 0.5,  reward: 0.9 },
+  // [BALANCE 확정 2026-07-12] hp/attack 사다리 0.4~1.0(0.15step): 하단 강화·상단 완화·
+  //   medium(0.7) 앵커. 적 지수 1.07과 조합 — 목표 판당 승률 99/80/50/20/1%.
+  //   상세·실험 이력: docs/BALANCE.md
+  easiest: { hp: 0.4,  attack: 0.4,  reward: 0.8 },
+  easy:    { hp: 0.55, attack: 0.55, reward: 0.9 },
   medium:  { hp: 0.7,  attack: 0.7,  reward: 1.0 }, // maps.ts 'medium' 대응
-  hard:    { hp: 0.9,  attack: 0.9,  reward: 1.1 },
-  expert:  { hp: 1.1,  attack: 1.1,  reward: 1.2 },
+  hard:    { hp: 0.85, attack: 0.85, reward: 1.1 },
+  expert:  { hp: 1.0,  attack: 1.0,  reward: 1.2 },
 };
 
 // ─── 스토리 모드 챕터별 난이도 배율 ────────────────────────────────────────────
 // 30웨이브 기준. 후반 체감 난이도가 과해 곡선을 완만하게 낮춤(상한 1.0).
-// 실효 난이도 = 챕터배율 × 1.05^(wave-1). ch8 wave30 ≈ 1.0×4.1 = 4.1x (기존 11.2x).
+// 실효 난이도 = 챕터배율 × 1.08^(wave-1). ch8 wave30 ≈ 1.0×9.3 = 9.3x.
 const STORY_CHAPTER_MULTIPLIERS: Record<number, { hp: number; attack: number; reward: number }> = {
   1: { hp: 0.60, attack: 0.60, reward: 1.0 },
   2: { hp: 0.60, attack: 0.60, reward: 1.0 },
@@ -232,9 +235,11 @@ export class WaveSystem {
       // [FIX-RACE] await 복귀 후 epoch 검증 — 바뀌었으면 새 웨이브가 시작된 것이므로 스폰 중단
       if (this._spawnEpoch !== epochAtStart) return;
 
-      // 지수적 스케일링 (전 모드 1.08^(wave-1)).
-      // wave30: 1.08^29≈9.3x, wave50: 1.08^49≈43x.
-      const waveMultiplier = Math.pow(1.08, wave - 1);
+      // 지수적 스케일링 — 모드 분기 (확정 근거·실험 이력: docs/BALANCE.md).
+      // [BALANCE 확정 2026-07-12] 싱글/멀티 1.07: 타워 +5%/레벨보다 약간 가파르게 —
+      //   사탕·시너지·도구·테라·스왑으로 벌충 가능한 기울기. w50: 27.5x(×0.7=19.2x).
+      // 스토리 모드는 원 곡선(1.08) 유지 — 챕터 밸런스가 1.08 기준으로 튜닝됨.
+      const waveMultiplier = Math.pow(storyChapterNumber !== null ? 1.08 : 1.07, wave - 1);
 
       const baseHp = pokemonData.stats.hp * waveMultiplier * mult.hp;
       const baseAttack = pokemonData.stats.attack * waveMultiplier * mult.attack;

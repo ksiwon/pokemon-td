@@ -2,6 +2,7 @@
 
 import { PokemonAbility } from '../types/game';
 import { PokemonAbilityData } from '../api/pokeapi';
+import { rng } from './rng';
 
 /**
  * 특성 이름을 기반으로 게임 내 특성 효과를 매핑
@@ -82,7 +83,7 @@ export function mapAbilityToGameEffect(abilityData: PokemonAbilityData): Pokemon
     { effect: 'speed', value: 1.2 },
     { effect: 'tank', value: 0.85 },
   ];
-  const randomEffect = randomEffects[Math.floor(Math.random() * randomEffects.length)];
+  const randomEffect = randomEffects[Math.floor(rng() * randomEffects.length)];
   
   return {
     name: abilityData.name,

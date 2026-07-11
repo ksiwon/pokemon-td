@@ -6,11 +6,14 @@ import { media, lMedia } from '../../utils/responsive.utils';
 import { useTranslation } from '../../i18n';
 import { pokeAPI, PokemonData } from '../../api/pokeapi';
 import { useGameStore } from '../../store/gameStore';
-import { GameMove, MoveEffect, Gender } from '../../types/game';
+import { GameMove, Gender } from '../../types/game';
 import { Rarity, RARITY_COLORS } from '../../data/evolution';
 import { getMapById, getFacilityTiles } from '../../data/maps';
 import { rarityBoostFromWaves } from '../../data/heldItems';
-import { mapAbilityToGameEffect } from '../../utils/abilities';
+import {
+  pickUsableMove, toEquippedMove, pickRandomAbility,
+  computePokemonCost, statTotalOf,
+} from '../../game/towerFactory';
 import { ModalOverlay, ModalBox, ModalCloseBtn, MODAL_ACCENT } from '../shared/modal.styles';
 import { Emoji } from '../shared/Emoji';
 
@@ -146,9 +149,7 @@ export const PokemonPicker: React.FC<{ onClose: () => void; storyHeroPool?: numb
       const data = await Promise.all(ids.map(id => pokeAPI.getPokemon(id)));
 
       const withCostAndRarityAndGender = await Promise.all(data.map(async (p) => {
-        const statTotal = p.stats.hp + p.stats.attack + p.stats.defense +
-                         p.stats.specialAttack + p.stats.specialDefense + p.stats.speed;
-        const cost = Math.floor(25 + (statTotal / 600) * 200);
+        const cost = computePokemonCost(statTotalOf(p));
         const rarity = await pokeAPI.getRarity(p.id);
         const gender = determineGender(p.id);
         return { data: p, cost, rarity, gender };
@@ -172,99 +173,16 @@ export const PokemonPicker: React.FC<{ onClose: () => void; storyHeroPool?: numb
 
   const handleSelect = async (choice: PokemonChoice) => {
     if (isLoading) return;
-    
+
     setIsLoading(true);
     try {
       const poke = choice.data;
-      const moveNames = poke.moves.slice(0, 10);
-      let usableMove: any = null;
-      
-      for (const name of moveNames) {
-        const move = await pokeAPI.getMove(name);
-        if (move.damageClass !== 'status') {
-          usableMove = move;
-          break;
-        }
-      }
-      
-      if (!usableMove) {
-        usableMove = {
-          name: 'tackle',
-          displayName: t('picker.fallbackMove'),
-          type: 'normal',
-          power: 40,
-          accuracy: 100,
-          damageClass: 'physical',
-          target: 'selected-pokemon',
-          effectEntries: ['Inflicts regular damage with no additional effect.'],
-          effectChance: null,
-        };
-      }
-      
-      const effect: MoveEffect = { type: 'damage' };
-      const effectText = usableMove.effectEntries?.[0]?.toLowerCase() || '';
+      // [SIM-EXTRACT] 기술 선택/효과 파싱/특성 배정은 towerFactory로 이동(동작 동일) —
+      //   밸런스 시뮬 봇과 사람 구매가 같은 코드로 만들어지도록 공유한다.
+      const usableMove = await pickUsableMove(poke, t('picker.fallbackMove'));
+      const equippedMoves: GameMove[] = [toEquippedMove(usableMove)];
+      const ability = pickRandomAbility(poke);
 
-      if (effectText.includes('drain') || effectText.includes('recover') || effectText.includes('restore')) {
-        if (effectText.includes('75%')) {
-          effect.drainPercent = 0.75;
-        } else {
-          effect.drainPercent = 0.5;
-        }
-      }
-
-      if (effectText.includes('burn')) {
-        effect.statusInflict = 'burn';
-        effect.statusChance = usableMove.effectChance;
-      } else if (effectText.includes('paralyze') || effectText.includes('paralysis')) {
-        effect.statusInflict = 'paralysis';
-        effect.statusChance = usableMove.effectChance;
-      } else if (effectText.includes('poison')) {
-        effect.statusInflict = 'poison';
-        effect.statusChance = usableMove.effectChance;
-      } else if (effectText.includes('freeze') || effectText.includes('frozen')) {
-        effect.statusInflict = 'freeze';
-        effect.statusChance = usableMove.effectChance;
-      } else if (effectText.includes('sleep')) {
-        effect.statusInflict = 'sleep';
-        effect.statusChance = usableMove.effectChance;
-      } else if (effectText.includes('confus')) {
-        effect.statusInflict = 'confusion';
-        effect.statusChance = usableMove.effectChance;
-      }
-      
-      if (effectText) {
-        effect.additionalEffects = effectText;
-      }
-
-      const isAOE = [
-        'all-opponents',
-        'all-other-pokemon',
-        'all-pokemon',
-        'user-and-allies'
-      ].includes(usableMove.target || '');
-
-      const equippedMoves: GameMove[] = [{
-        name: usableMove.name,
-        displayName: usableMove.displayName,
-        type: usableMove.type,
-        power: usableMove.power || 40,
-        accuracy: usableMove.accuracy || 100,
-        damageClass: usableMove.damageClass,
-        effect: effect,
-        cooldown: 2.0,
-        currentCooldown: 0,
-        isAOE: isAOE,
-        aoeRadius: isAOE ? 100 : undefined,
-        manualCast: false,
-      }];
-      
-      let ability = undefined;
-      if (poke.abilities && poke.abilities.length > 0) {
-        const randomIndex = Math.floor(Math.random() * poke.abilities.length);
-        const randomAbility = poke.abilities[randomIndex];
-        ability = mapAbilityToGameEffect(randomAbility);
-      }
-      
       // [NEW] Pay-on-Pick Logic
       // [SECURITY-FIX] 무한 골드 익스플로잇 차단.
       //   기존: 보유 포켓몬 환불을 '먼저' 하고 결제 실패 시 그냥 return → 환불금은 남고 보유물도 유지

@@ -6,7 +6,17 @@
   "scripts": {
     "dev": "vite",
     "build": "tsc && vite build",
-    "preview": "vite preview"
+    "preview": "vite preview",
+    "sim": "vitest run --config vitest.sim.config.ts",
+    "sim:prefetch": "cross-env SIM_HTTP=record vitest run --config vitest.sim.config.ts sim/tools/prefetch.sim.ts",
+    "sim:pvp": "vitest run --config vitest.sim.config.ts sim/pvp/pvpMatrix.sim.ts",
+    "sim:placement": "vitest run --config vitest.sim.config.ts sim/pvp/placement.sim.ts",
+    "sim:cross": "vitest run --config vitest.sim.config.ts sim/pvp/crossValidate.sim.ts",
+    "sim:single": "vitest run --config vitest.sim.config.ts sim/single/single.sim.ts",
+    "sim:multi": "vitest run --config vitest.sim.config.ts sim/multi/multi.sim.ts",
+    "sim:report": "vitest run --config vitest.sim.config.ts sim/report/report.sim.ts",
+    "sim:baseline": "node sim/tools/baseline.mjs",
+    "sim:tune": "cross-env SIM_TUNE=1 vitest run --config vitest.sim.config.ts sim/tools/tune.sim.ts"
   },
   "dependencies": {
     "@emailjs/browser": "^4.4.1",
@@ -32,7 +42,9 @@
     "@typescript-eslint/parser": "^6.14.0",
     "@vitejs/plugin-react": "^4.2.1",
     "baseline-browser-mapping": "^2.10.8",
+    "cross-env": "^10.1.0",
     "typescript": "^5.2.2",
-    "vite": "^5.0.8"
+    "vite": "^5.0.8",
+    "vitest": "^4.1.10"
   }
 }

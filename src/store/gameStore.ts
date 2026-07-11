@@ -13,6 +13,7 @@ import { pokeAPI } from '../api/pokeapi';
 import { saveService } from '../services/SaveService';
 import { calculateActiveSynergies } from '../utils/synergyManager';
 import { getMapById, getFacilityTiles, getBuildableTiles } from '../data/maps';
+import { rng } from '../utils/rng';
 import { ACHIEVEMENTS } from '../data/achievements';
 import { achievementService } from '../services/AchievementService';
 
@@ -22,10 +23,12 @@ export const MAX_LIVES_CAP = 50;
 // 싱글플레이 초기 라이프 (업적 체크 기준값으로 사용)
 export const INITIAL_LIVES_SINGLE = MAX_LIVES_CAP;
 
-// 레벨업에 필요한 XP — 10레벨 구간마다 100씩 증가
-//   Lv1~10: 100 / 11~20: 200 / 21~30: 300 / … / 91~100: 1000
-export const xpToNextLevel = (level: number) =>
-  (Math.floor((level - 1) / 10) + 1) * 100;
+// 레벨업에 필요한 XP — 플랫 100 (v2.14에서 티어드 곡선 폐기, 원래 값 복원).
+// [BALANCE 2026-07-12] 의도된 플레이: 킬XP 자연 성장으로 ~w33 만렙 → 이후
+//   낡은 타워를 하나씩 팔고 새로 사서 경험사탕으로 즉시 만렙 캐치업하는 순환.
+//   티어드 곡선(구간당 +100)은 이 순환을 죽이고 "만렙 불가" 게임을 만들었음
+//   (50웨이브 자연 XP ≈ 22,400 vs 티어드 요구 54,000).
+export const xpToNextLevel = (_level: number) => 100;
 
 interface GameStore extends GameState {
   addTower: (tower: GamePokemon) => void;
@@ -847,7 +850,7 @@ export const useGameStore = create<GameStore>((set, get) => ({
     }
 
     if (withdraw) {
-      const emptyPos = findEmptyBuildZoneTile(currentMap, towers);
+      const emptyPos = findEmptyBuildableTile(currentMap, towers);
       if (!emptyPos) {
         return { success: false, message: 'work.errNoTile' };
       }
@@ -865,7 +868,7 @@ export const useGameStore = create<GameStore>((set, get) => ({
   },
 }));
 
-function findEmptyBuildZoneTile(
+function findEmptyBuildableTile(
   mapId: string,
   towers: Array<{ position: { x: number; y: number } }>
 ): { x: number; y: number } | null {
@@ -875,7 +878,7 @@ function findEmptyBuildZoneTile(
   const facility = getFacilityTiles(map);
   const workTiles = [...facility.shopTiles, ...facility.contestTiles];
 
-  // [buildZones 폐기] 자유배치 규칙(길·입출구 keepout 제외)으로 빈 칸을 찾는다.
+  // 자유배치 규칙(길·입출구 keepout 제외)으로 빈 칸을 찾는다.
   // GameCanvas 배치 검증과 동일 소스(getBuildableTiles)를 사용해 일관성을 유지.
   const buildablePoints = getBuildableTiles(map);
 
@@ -910,7 +913,7 @@ function findEmptyBuildZoneTile(
   if (pool.length === 0) return null;
 
   // 무작위 빈 타일 좌표 반환 (snapped: x * 64 + 32, y * 64 + 32)
-  const chosen = pool[Math.floor(Math.random() * pool.length)];
+  const chosen = pool[Math.floor(rng() * pool.length)];
   return {
     x: chosen.x * 64 + 32,
     y: chosen.y * 64 + 32

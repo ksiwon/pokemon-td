@@ -2,6 +2,7 @@
 import axios from 'axios';
 import { EVOLUTION_CHAINS, getFinalEvolutionId, calculateRarity, RARITY_WEIGHTS, Rarity } from '../data/evolution';
 import { GameMove, MoveEffect } from '../types/game';
+import { rng as gameRng } from '../utils/rng';
 
 const API_BASE = 'https://pokeapi.co/api/v2';
 
@@ -459,7 +460,7 @@ class PokeAPIService {
     rarityBoost: number,
     rng?: () => number,
   ): number {
-    const rand = rng ?? Math.random;
+    const rand = rng ?? gameRng;
     const eff = (p: { id: number; weight: number }) =>
       rarityBoost > 0
         ? p.weight * (1 + rarityBoost * (WEIGHT_TO_RANK[p.weight] ?? 0))
@@ -586,7 +587,7 @@ class PokeAPIService {
 
     let randomId = 0;
     do {
-      randomId = Math.floor(Math.random() * max) + 1;
+      randomId = Math.floor(gameRng() * max) + 1;
     } while (EVOLVED_POKEMON_IDS.has(randomId));
     return randomId;
   }
@@ -602,9 +603,9 @@ class PokeAPIService {
       }
     }
     if (suitable.length > 0) {
-      return suitable[Math.floor(Math.random() * suitable.length)];
+      return suitable[Math.floor(gameRng() * suitable.length)];
     }
-    return Math.floor(Math.random() * 1025) + 1;
+    return Math.floor(gameRng() * 1025) + 1;
   }
 
   /**
@@ -628,7 +629,7 @@ class PokeAPIService {
 
     // 타입 매칭 후보가 있으면 100% 그 중에서만 선택
     if (typedCandidates.length > 0) {
-      return typedCandidates[Math.floor(Math.random() * typedCandidates.length)];
+      return typedCandidates[Math.floor(gameRng() * typedCandidates.length)];
     }
     // statCache에 해당 타입이 없으면 스탯 범위로 폴백 (초기 캐시 미구축 상황 대비)
     return this.getEnemyPokemonIdByStatRange(minStat, maxStat);

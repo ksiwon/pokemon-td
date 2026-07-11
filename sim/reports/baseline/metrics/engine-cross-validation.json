@@ -1,0 +1,181 @@
+{
+  "seeds": 20,
+  "overallAgreement": 0.7857142857142857,
+  "flippedPairs": [
+    "nosyn6 vs water6",
+    "water6 vs gen1x6",
+    "water6 vs tank6",
+    "gen1x6 vs tank6",
+    "mid4 vs tank6"
+  ],
+  "rows": [
+    {
+      "pair": "nosyn6 vs water6",
+      "svcWinA": 0.85,
+      "arenaWinA": 0,
+      "agreement": 0.15
+    },
+    {
+      "pair": "nosyn6 vs gen1x6",
+      "svcWinA": 1,
+      "arenaWinA": 0.65,
+      "agreement": 0.65
+    },
+    {
+      "pair": "nosyn6 vs mid4",
+      "svcWinA": 0.05,
+      "arenaWinA": 0,
+      "agreement": 0.95
+    },
+    {
+      "pair": "nosyn6 vs expensive3",
+      "svcWinA": 0,
+      "arenaWinA": 0.1,
+      "agreement": 0.9
+    },
+    {
+      "pair": "nosyn6 vs tank6",
+      "svcWinA": 0,
+      "arenaWinA": 0.15,
+      "agreement": 0.85
+    },
+    {
+      "pair": "nosyn6 vs charizard3",
+      "svcWinA": 0,
+      "arenaWinA": 0,
+      "agreement": 1
+    },
+    {
+      "pair": "nosyn6 vs charmander3",
+      "svcWinA": 0,
+      "arenaWinA": 0,
+      "agreement": 1
+    },
+    {
+      "pair": "water6 vs gen1x6",
+      "svcWinA": 0.1,
+      "arenaWinA": 0.95,
+      "agreement": 0.15
+    },
+    {
+      "pair": "water6 vs mid4",
+      "svcWinA": 0,
+      "arenaWinA": 0,
+      "agreement": 1
+    },
+    {
+      "pair": "water6 vs expensive3",
+      "svcWinA": 0,
+      "arenaWinA": 0,
+      "agreement": 1
+    },
+    {
+      "pair": "water6 vs tank6",
+      "svcWinA": 0,
+      "arenaWinA": 1,
+      "agreement": 0
+    },
+    {
+      "pair": "water6 vs charizard3",
+      "svcWinA": 0,
+      "arenaWinA": 0,
+      "agreement": 1
+    },
+    {
+      "pair": "water6 vs charmander3",
+      "svcWinA": 0.15,
+      "arenaWinA": 0,
+      "agreement": 0.85
+    },
+    {
+      "pair": "gen1x6 vs mid4",
+      "svcWinA": 0.7,
+      "arenaWinA": 0.6,
+      "agreement": 0.6
+    },
+    {
+      "pair": "gen1x6 vs expensive3",
+      "svcWinA": 0,
+      "arenaWinA": 0,
+      "agreement": 1
+    },
+    {
+      "pair": "gen1x6 vs tank6",
+      "svcWinA": 0,
+      "arenaWinA": 1,
+      "agreement": 0
+    },
+    {
+      "pair": "gen1x6 vs charizard3",
+      "svcWinA": 0,
+      "arenaWinA": 0,
+      "agreement": 1
+    },
+    {
+      "pair": "gen1x6 vs charmander3",
+      "svcWinA": 0,
+      "arenaWinA": 0,
+      "agreement": 1
+    },
+    {
+      "pair": "mid4 vs expensive3",
+      "svcWinA": 0,
+      "arenaWinA": 0,
+      "agreement": 1
+    },
+    {
+      "pair": "mid4 vs tank6",
+      "svcWinA": 0,
+      "arenaWinA": 0.95,
+      "agreement": 0.05
+    },
+    {
+      "pair": "mid4 vs charizard3",
+      "svcWinA": 0,
+      "arenaWinA": 0,
+      "agreement": 1
+    },
+    {
+      "pair": "mid4 vs charmander3",
+      "svcWinA": 0,
+      "arenaWinA": 0,
+      "agreement": 1
+    },
+    {
+      "pair": "expensive3 vs tank6",
+      "svcWinA": 0.85,
+      "arenaWinA": 1,
+      "agreement": 0.85
+    },
+    {
+      "pair": "expensive3 vs charizard3",
+      "svcWinA": 0,
+      "arenaWinA": 0,
+      "agreement": 1
+    },
+    {
+      "pair": "expensive3 vs charmander3",
+      "svcWinA": 0,
+      "arenaWinA": 0,
+      "agreement": 1
+    },
+    {
+      "pair": "tank6 vs charizard3",
+      "svcWinA": 0,
+      "arenaWinA": 0,
+      "agreement": 1
+    },
+    {
+      "pair": "tank6 vs charmander3",
+      "svcWinA": 0,
+      "arenaWinA": 0,
+      "agreement": 1
+    },
+    {
+      "pair": "charizard3 vs charmander3",
+      "svcWinA": 1,
+      "arenaWinA": 1,
+      "agreement": 1
+    }
+  ]
+}
