@@ -9,6 +9,9 @@ const DIFFICULTY_MULTIPLIERS: Record<
   { hp: number; attack: number; reward: number }
 > = {
   // [BALANCE] reward: medium=1.0 기준 난이도당 0.1씩 차등 → 고난도에 골드 이득을 줘 선택 이유 부여.
+  // [BALANCE 실험 이력 2026-07-11] 일괄 -0.1(0.2~1.0) 시뮬 A안: easy/medium p50 +5~8 개선,
+  //   easiest 후반벽·hard 초반벽엔 무효, 멀티 PvE 비중 9.6%로 과소 → 원복.
+  //   B안(지수 1.08→1.06)과 비교 측정 중.
   easiest: { hp: 0.3,  attack: 0.3,  reward: 0.8 },
   easy:    { hp: 0.5,  attack: 0.5,  reward: 0.9 },
   medium:  { hp: 0.7,  attack: 0.7,  reward: 1.0 }, // maps.ts 'medium' 대응
@@ -232,9 +235,12 @@ export class WaveSystem {
       // [FIX-RACE] await 복귀 후 epoch 검증 — 바뀌었으면 새 웨이브가 시작된 것이므로 스폰 중단
       if (this._spawnEpoch !== epochAtStart) return;
 
-      // 지수적 스케일링 (전 모드 1.08^(wave-1)).
-      // wave30: 1.08^29≈9.3x, wave50: 1.08^49≈43x.
-      const waveMultiplier = Math.pow(1.08, wave - 1);
+      // 지수적 스케일링 (전 모드 공통).
+      // [BALANCE 2026-07-11 채택] 1.08 → 1.06: 초반 무변(w5 -7%), 후반 대폭 완화(w50 -60%).
+      //   시뮬 실측: easiest 클리어 58→100%(목표 99), easy p50 23→39 — 후반벽(w40+ 수입-성장
+      //   교차) 해소, 초반 벽(hard/extreme)은 보존. w30: 5.4x, w50: 17.4x.
+      //   주의: 스토리 모드도 공유 — 후반 챕터 체감 하락(필요시 STORY_CHAPTER_MULTIPLIERS로 보상).
+      const waveMultiplier = Math.pow(1.06, wave - 1);
 
       const baseHp = pokemonData.stats.hp * waveMultiplier * mult.hp;
       const baseAttack = pokemonData.stats.attack * waveMultiplier * mult.attack;
