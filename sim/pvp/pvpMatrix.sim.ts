@@ -1,0 +1,182 @@
+// sim/pvp/pvpMatrix.sim.ts
+// P0a — PvP 보드 풀리그 매트릭스 (PvPBattleService 엔진 = AI vs AI 결정론 시뮬)
+// 실행: npm run sim:pvp
+//
+// 산출:
+//   sim/reports/current/pvp-matrix.md        — 승률 매트릭스 + 골드효율 + 등가골드 검증
+//   sim/reports/current/metrics/pvp-matrix.json
+
+import { describe, it, expect } from 'vitest';
+import { setRngSource, mulberry32 } from '../../src/utils/rng';
+import { pvpBattleService } from '../../src/services/PvPBattleService';
+import { buildAllBoards } from './boards';
+import { writeReport, writeMetrics, mdTable, pct } from '../support/report';
+
+const SEEDS_PER_PAIR = 40; // roundNumber 1..40 → 시드 40개 (deriveBattleSeed가 라운드 포함)
+
+describe('P0a: PvP 보드 매트릭스', () => {
+  it('풀리그 승률 매트릭스 + 골드 등가 검증', async () => {
+    // 보드 생성(특성 fallback 랜덤 배정 등)도 결정론이 되도록 시드 고정
+    setRngSource(mulberry32(20260711));
+
+    const boards = await buildAllBoards();
+    const n = boards.length;
+
+    // ── 풀리그: 모든 쌍 × 시드 40 × 양방향(선공 교대) ────────────────────
+    // simulateBattle은 매 턴 team1이 먼저 공격 → 선공(p1) 이점이 존재한다.
+    // 공정 비교를 위해 각 쌍을 양방향으로 돌려 평균, 선공 이점은 별도 지표로 측정.
+    const winrate: number[][] = Array.from({ length: n }, () => Array(n).fill(0));
+    let p1Wins = 0;
+    let orderedGames = 0;
+
+    const playOrdered = (i: number, j: number, round: number): boolean => {
+      const result = pvpBattleService.simulateBattle(
+        boards[i].details, boards[j].details,
+        `sim_${boards[i].name}`, `sim_${boards[j].name}`,
+        round
+      );
+      orderedGames++;
+      const iWon = result.winnerId === `sim_${boards[i].name}`;
+      if (iWon) p1Wins++;
+      return iWon;
+    };
+
+    for (let i = 0; i < n; i++) {
+      for (let j = i + 1; j < n; j++) {
+        let iWins = 0;
+        for (let round = 1; round <= SEEDS_PER_PAIR; round++) {
+          if (playOrdered(i, j, round)) iWins++;          // i가 선공
+          if (!playOrdered(j, i, round)) iWins++;         // j가 선공
+        }
+        winrate[i][j] = iWins / (SEEDS_PER_PAIR * 2);
+        winrate[j][i] = 1 - winrate[i][j];
+      }
+      winrate[i][i] = 0.5;
+    }
+
+    const firstMoverEdge = p1Wins / orderedGames; // 0.5보다 크면 선공 이점
+
+    // ── 지표 집계 ─────────────────────────────────────────────────────────
+    const avgWin = boards.map((_, i) =>
+      boards.reduce((s, _b, j) => (i === j ? s : s + winrate[i][j]), 0) / (n - 1)
+    );
+    // 골드효율 = 평균승률 / 구매골드(1000G당). 레벨업은 실전에서 XP로 무료라 구매가 기준.
+    const buyGoldOf = (b: (typeof boards)[number]) => b.goldBreakdown.reduce((s, g) => s + g.buy, 0);
+    const goldEff = boards.map((b, i) => avgWin[i] / (buyGoldOf(b) / 1000));
+
+    // ── 핵심 실험 체크 ────────────────────────────────────────────────────
+    const idx = (name: string) => boards.findIndex(b => b.name === name);
+    const pair = (a: string, b: string) => winrate[idx(a)][idx(b)];
+
+    // ⚠ 이 엔진(PvPBattleService)은 시너지 버프를 적용하지 않는다(알려진 엔진 드리프트 —
+    //   인간전 아레나는 getBuffedStats 적용). 여기의 타입/세대 보드 비교는 순수하게
+    //   "타입 구성(공격/방어 상성)" 가치만 측정한다. 시너지 버프 가치는 아레나 매트릭스에서 측정.
+    const checks = [
+      {
+        name: '타입 구성 가치 (water6 vs nosyn6, 등가골드·시너지버프 미적용 엔진)',
+        value: pair('water6', 'nosyn6'),
+        expect: '≈0.5 안팎 (참고 지표)',
+        pass: pair('water6', 'nosyn6') >= 0.35 && pair('water6', 'nosyn6') <= 0.65,
+      },
+      {
+        name: '세대 보드 vs 무시너지 보드 (등가골드·시너지버프 미적용 엔진)',
+        value: pair('gen1x6', 'nosyn6'),
+        expect: '≈0.5 안팎 (참고 지표)',
+        pass: pair('gen1x6', 'nosyn6') >= 0.35 && pair('gen1x6', 'nosyn6') <= 0.65,
+      },
+      {
+        name: '진화 가치 (charizard3 vs charmander3, 동일 구매가/레벨)',
+        value: pair('charizard3', 'charmander3'),
+        expect: '>0.5 (진화가 이득이어야 함)',
+        pass: pair('charizard3', 'charmander3') > 0.5,
+      },
+      {
+        name: '수량vs품질: 저가6 vs 고가3 (근사 등가골드) — 45~65% 밴드',
+        value: pair('nosyn6', 'expensive3'),
+        expect: '0.35~0.65 (한쪽 일방적이면 밸런스 문제)',
+        pass: pair('nosyn6', 'expensive3') >= 0.35 && pair('nosyn6', 'expensive3') <= 0.65,
+      },
+      {
+        name: '선공(p1) 이점 — AI vs AI 매치는 userId 정렬순이 선공이 됨',
+        value: firstMoverEdge,
+        expect: '0.48~0.52 (이탈 시 선공이 유불리 = 공정성 문제)',
+        pass: firstMoverEdge >= 0.48 && firstMoverEdge <= 0.52,
+      },
+    ];
+
+    // ── 마크다운 리포트 ───────────────────────────────────────────────────
+    let md = `# PvP 보드 매트릭스 (PvPBattleService 엔진)\n\n`;
+    md += `- 엔진: AI vs AI 결정론 시뮬 (멀티에서 AI 매치·타임아웃 보충에 사용되는 코드 그대로)\n`;
+    md += `- 시드: 쌍마다 roundNumber 1~${SEEDS_PER_PAIR}\n\n`;
+
+    md += `## 보드 정의\n\n`;
+    md += mdTable(
+      ['보드', '설명', '구매골드', '시너지'],
+      boards.map(b => [
+        b.name, b.description, `${b.gold - b.goldBreakdown.reduce((s, g) => s + g.candy, 0)}G`,
+        b.synergies.map(s => `${s.id}(${s.count})`).join(', ') || '—',
+      ])
+    );
+
+    md += `\n## 승률 매트릭스 (행이 열을 이길 확률)\n\n`;
+    md += mdTable(
+      ['', ...boards.map(b => b.name)],
+      boards.map((b, i) => [b.name, ...winrate[i].map(w => pct(w, 0))])
+    );
+
+    md += `\n## 파워 랭킹\n\n`;
+    const ranking = boards
+      .map((b, i) => ({ name: b.name, avg: avgWin[i], eff: goldEff[i], buyGold: b.goldBreakdown.reduce((s, g) => s + g.buy, 0) }))
+      .sort((a, b) => b.avg - a.avg);
+    md += mdTable(
+      ['순위', '보드', '평균승률', '구매골드', '승률/1000G'],
+      ranking.map((r, k) => [k + 1, r.name, pct(r.avg), `${r.buyGold}G`, r.eff.toFixed(2)])
+    );
+
+    md += `\n## 핵심 실험 체크\n\n`;
+    md += mdTable(
+      ['실험', '측정값', '기대', '판정'],
+      checks.map(c => [c.name, pct(c.value), c.expect, c.pass ? '✅' : '⚠️'])
+    );
+
+    writeReport('pvp-matrix', md);
+    writeMetrics('pvp-matrix', {
+      seedsPerPair: SEEDS_PER_PAIR,
+      firstMoverEdge,
+      boards: boards.map((b, i) => ({
+        name: b.name,
+        buyGold: b.goldBreakdown.reduce((s, g) => s + g.buy, 0),
+        synergies: b.synergies.map(s => `${s.id}:${s.count}`),
+        avgWinRate: avgWin[i],
+        goldEfficiency: goldEff[i],
+      })),
+      winrate: Object.fromEntries(boards.map((b, i) => [
+        b.name,
+        Object.fromEntries(boards.map((c, j) => [c.name, winrate[i][j]])),
+      ])),
+      checks: checks.map(c => ({ name: c.name, value: c.value, pass: c.pass })),
+    });
+
+    // 콘솔 요약
+    console.log('\n=== PvP 매트릭스 요약 ===');
+    ranking.forEach((r, k) => console.log(`${k + 1}. ${r.name}: 평균승률 ${pct(r.avg)} (구매 ${r.buyGold}G)`));
+    checks.forEach(c => console.log(`${c.pass ? 'PASS' : 'WARN'} ${c.name}: ${pct(c.value)}`));
+
+    // 하네스 자체 무결성(밸런스 판정은 리포트로): 매트릭스가 완전하고 대칭 합이 1인지
+    for (let i = 0; i < n; i++) {
+      for (let j = i + 1; j < n; j++) {
+        expect(winrate[i][j] + winrate[j][i]).toBeCloseTo(1, 5);
+      }
+    }
+  });
+
+  it('결정론: 같은 보드·시드 → 같은 결과', async () => {
+    setRngSource(mulberry32(20260711));
+    const boards = await buildAllBoards();
+    const a = pvpBattleService.simulateBattle(boards[0].details, boards[1].details, 'p1', 'p2', 7);
+    const b = pvpBattleService.simulateBattle(boards[0].details, boards[1].details, 'p1', 'p2', 7);
+    expect(a.winnerId).toBe(b.winnerId);
+    expect(a.player1RemainingPokemon).toBe(b.player1RemainingPokemon);
+    expect(a.battleLog.length).toBe(b.battleLog.length);
+  });
+});

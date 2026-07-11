@@ -39,6 +39,7 @@ import {
   GamePhase, MultiplayerGameState, RoundMatchup, PvPBattleResult,
 } from '../types/multiplayer';
 import { pvpBattleService } from './PvPBattleService';
+import { calcBattleRewards } from './battleRewards';
 import { authService } from './AuthService';
 import { databaseService } from './DatabaseService';
 import { achievementService } from './AchievementService';
@@ -973,38 +974,15 @@ class MultiplayerService {
     return resultMatchup;
   }
 
+  // [SIM-EXTRACT] 보상 공식은 src/services/battleRewards.ts로 이동(동작 동일) —
+  //   밸런스 시뮬 하네스와 단일 출처 공유. 이 메서드는 위임만 한다.
   private calcBattleRewards(
     player: PlayerGameState,
     isWinner: boolean,
     myRemaining: number,
     oppRemaining: number
   ): { goldDelta: number; livesDelta: number } {
-    if (isWinner) {
-      // [FIX] 승리 골드 감소 (기존 80 → 40 기본)
-      let gold = 40;
-      // [NEW-3 FIX] 실제 연속 승리 수(currentWinStreak)를 사용
-      // 기존: battleRecord.wins(누적 총 승수)를 streak으로 잘못 사용
-      const winStreak = (player.battleRecord?.currentWinStreak ?? 0) + 1;
-      if (winStreak >= 4) gold += 50;
-      else if (winStreak >= 3) gold += 30;
-      else if (winStreak >= 2) gold += 15;
-      if (myRemaining >= 3) gold += 20;
-      return { goldDelta: gold, livesDelta: 0 };
-    } else {
-      // [FIX] lives 감소: 2+상대생존 → 3+상대생존
-      const livesLost = 3 + oppRemaining;
-      // [NEW-3 FIX] 실제 연속 패배 수(currentLoseStreak)를 사용
-      // 기존: battleRecord.losses(누적 총 패수)를 streak으로 잘못 사용
-      let consolation = 0;
-      const loseStreak = (player.battleRecord?.currentLoseStreak ?? 0) + 1;
-      if (loseStreak >= 5) consolation = 200;
-      else if (loseStreak >= 4) consolation = 150;
-      else if (loseStreak >= 3) consolation = 100;
-      else if (loseStreak >= 2) consolation = 60;
-      if (player.lives <= 10) consolation += 60;
-      else if (player.lives <= 20) consolation += 30;
-      return { goldDelta: consolation, livesDelta: -livesLost };
-    }
+    return calcBattleRewards(player, isWinner, myRemaining, oppRemaining);
   }
 
   /**

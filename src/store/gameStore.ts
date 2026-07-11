@@ -13,6 +13,7 @@ import { pokeAPI } from '../api/pokeapi';
 import { saveService } from '../services/SaveService';
 import { calculateActiveSynergies } from '../utils/synergyManager';
 import { getMapById, getFacilityTiles, getBuildableTiles } from '../data/maps';
+import { rng } from '../utils/rng';
 import { ACHIEVEMENTS } from '../data/achievements';
 import { achievementService } from '../services/AchievementService';
 
@@ -910,7 +911,7 @@ function findEmptyBuildZoneTile(
   if (pool.length === 0) return null;
 
   // 무작위 빈 타일 좌표 반환 (snapped: x * 64 + 32, y * 64 + 32)
-  const chosen = pool[Math.floor(Math.random() * pool.length)];
+  const chosen = pool[Math.floor(rng() * pool.length)];
   return {
     x: chosen.x * 64 + 32,
     y: chosen.y * 64 + 32

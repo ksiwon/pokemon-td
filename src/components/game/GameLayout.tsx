@@ -58,9 +58,9 @@ import { EvolutionConfirmModal } from "../modals/EvolutionConfirmModal";
 import { WorkMilestoneModal } from "../modals/WorkMilestoneModal";
 
 import { authService } from "../../services/AuthService";
-import { PlayerGameState, TowerDetail, GamePhase } from "../../types/multiplayer";
+import { PlayerGameState, GamePhase } from "../../types/multiplayer";
 import { aiPlayerManager } from "../../services/AIPlayer";
-import { getCriticalChance, getAOEDamageMultiplier } from "../../utils/abilities";
+import { buildTowerDetails } from "../../game/towerFactory";
 import { lMedia } from "../../utils/responsive.utils";
 import { Emoji } from "../shared/Emoji";
 import { Store, Award } from "lucide-react";
@@ -108,38 +108,7 @@ const phaseEmoji = (phase: GamePhase) => {
 };
 
 // ── Tower detail builder ──────────────────────────────────────────
-// (모듈 레벨로 분리 — buildTowerDetails 재사용, JSON scrub 포함)
-const scrub = (obj: any): any => JSON.parse(JSON.stringify(obj));
-
-const buildTowerDetails = (towers: any[]): TowerDetail[] =>
-  (towers ?? []).map((t: any) => {
-    const ability      = t.ability ?? "";
-    const critChance   = getCriticalChance(ability);
-    const hasAOEMove   = (t.equippedMoves ?? []).some((m: any) => m.isAOE);
-    const aoeMultiplier = getAOEDamageMultiplier(ability);
-    const aoeBonus     = hasAOEMove ? 0.5 * aoeMultiplier : 0;
-
-    return scrub({
-      pokemonId:     t.pokemonId,
-      name:          t.displayName || t.name,
-      level:         t.level,
-      sprite:        t.sprite,
-      position:      t.position,
-      currentHp:     t.currentHp,
-      maxHp:         t.maxHp,
-      isFainted:     !!t.isFainted,
-      attack:        t.attack,
-      defense:       t.defense,
-      specialAttack: t.specialAttack,
-      specialDefense:t.specialDefense,
-      speed:         t.speed,
-      types:         t.types,
-      equippedMoves: t.equippedMoves,
-      critChance,
-      aoeBonus,
-      lifesteal:     0,
-    });
-  });
+// [SIM-EXTRACT] src/game/towerFactory.ts로 이동(동작 동일) — 시뮬 하네스와 공유.
 
 // ── Component ─────────────────────────────────────────────────────
 

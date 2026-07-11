@@ -10,6 +10,7 @@ import { hasMegaEvolution, hasGigantamax, MEGA_EVOLUTIONS, GIGANTAMAX_FORMS } fr
 import { saveService } from '../services/SaveService';
 import { cardService } from '../services/CardService';
 import { getCriticalChance, getAOEDamageMultiplier } from '../utils/abilities';
+import { rng } from '../utils/rng';
 import { getBuffedStats } from '../utils/synergyManager';
 import { databaseService } from '../services/DatabaseService';
 import { getMapById, getFacilityTiles } from '../data/maps';
@@ -480,7 +481,7 @@ export class GameManager {
     const m = tower.equippedMoves.find(m => m.name === move.name);
     if (m) {
       const hitChance = m.accuracy / 100;
-      if (Math.random() > hitChance) {
+      if (rng() > hitChance) {
         useGameStore.getState().addDamageNumber({
           id: `miss-${this.nextId()}`,
           value: 0,
@@ -621,7 +622,7 @@ export class GameManager {
       : undefined;
     const held = attacker?.heldItem;
     const critChance = getCriticalChance(attacker?.ability) + heldCritBonus(held); // 초점렌즈
-    const isCrit = Math.random() < critChance;
+    const isCrit = rng() < critChance;
     // 테라스탈 반영 자속 배율. 명중 시점의 타워 상태(teraType)를 사용; 타워가 없으면 투사체에 실린 원래타입으로 폴백.
     const atkTypes = attacker?.types ?? proj.attackerTypes;
     const stab = stabMultiplier(atkTypes, attacker?.teraType, proj.type);
@@ -666,7 +667,7 @@ export class GameManager {
 
     // 상태이상 부여
     if (proj.effect.statusInflict && proj.effect.statusChance != null) {
-      if (Math.random() * 100 < proj.effect.statusChance) {
+      if (rng() * 100 < proj.effect.statusChance) {
         const duration =
           proj.effect.statusInflict === 'freeze' ||
           proj.effect.statusInflict === 'sleep'
@@ -922,8 +923,8 @@ export class GameManager {
     if (isStoryMode) return itemChoices;
 
     const megaEligible = towers.filter(t => hasMegaEvolution(t.pokemonId));
-    if (megaEligible.length > 0 && Math.random() < 0.1 * megaEligible.length) {
-      const randomPokemon = megaEligible[Math.floor(Math.random() * megaEligible.length)];
+    if (megaEligible.length > 0 && rng() < 0.1 * megaEligible.length) {
+      const randomPokemon = megaEligible[Math.floor(rng() * megaEligible.length)];
       const megaData = MEGA_EVOLUTIONS.find(m => m.from === randomPokemon.pokemonId);
       if (megaData) {
         itemChoices.push({
@@ -938,8 +939,8 @@ export class GameManager {
     }
 
     const gigaEligible = towers.filter(t => hasGigantamax(t.pokemonId));
-    if (gigaEligible.length > 0 && Math.random() < 0.1 * gigaEligible.length) {
-      const randomPokemon = gigaEligible[Math.floor(Math.random() * gigaEligible.length)];
+    if (gigaEligible.length > 0 && rng() < 0.1 * gigaEligible.length) {
+      const randomPokemon = gigaEligible[Math.floor(rng() * gigaEligible.length)];
       const gigaData = GIGANTAMAX_FORMS.find(g => g.from === randomPokemon.pokemonId);
       if (gigaData) {
         itemChoices.push({
