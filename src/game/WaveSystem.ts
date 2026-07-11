@@ -12,11 +12,13 @@ const DIFFICULTY_MULTIPLIERS: Record<
   // [BALANCE 실험 이력 2026-07-11] 일괄 -0.1(0.2~1.0) 시뮬 A안: easy/medium p50 +5~8 개선,
   //   easiest 후반벽·hard 초반벽엔 무효, 멀티 PvE 비중 9.6%로 과소 → 원복.
   //   B안(지수 1.08→1.06)과 비교 측정 중.
-  easiest: { hp: 0.3,  attack: 0.3,  reward: 0.8 },
-  easy:    { hp: 0.5,  attack: 0.5,  reward: 0.9 },
+  // [BALANCE 실험 2026-07-11] 사다리 압축: 0.3~1.1(0.2step) → 0.4~1.0(0.15step)
+  //   하단 강화·상단 완화·medium 앵커. 1.06 지수와 조합 측정 중.
+  easiest: { hp: 0.4,  attack: 0.4,  reward: 0.8 },
+  easy:    { hp: 0.55, attack: 0.55, reward: 0.9 },
   medium:  { hp: 0.7,  attack: 0.7,  reward: 1.0 }, // maps.ts 'medium' 대응
-  hard:    { hp: 0.9,  attack: 0.9,  reward: 1.1 },
-  expert:  { hp: 1.1,  attack: 1.1,  reward: 1.2 },
+  hard:    { hp: 0.85, attack: 0.85, reward: 1.1 },
+  expert:  { hp: 1.0,  attack: 1.0,  reward: 1.2 },
 };
 
 // ─── 스토리 모드 챕터별 난이도 배율 ────────────────────────────────────────────
@@ -235,12 +237,13 @@ export class WaveSystem {
       // [FIX-RACE] await 복귀 후 epoch 검증 — 바뀌었으면 새 웨이브가 시작된 것이므로 스폰 중단
       if (this._spawnEpoch !== epochAtStart) return;
 
-      // 지수적 스케일링 (전 모드 공통).
-      // [BALANCE 2026-07-11 채택] 1.08 → 1.06: 초반 무변(w5 -7%), 후반 대폭 완화(w50 -60%).
-      //   시뮬 실측: easiest 클리어 58→100%(목표 99), easy p50 23→39 — 후반벽(w40+ 수입-성장
-      //   교차) 해소, 초반 벽(hard/extreme)은 보존. w30: 5.4x, w50: 17.4x.
-      //   주의: 스토리 모드도 공유 — 후반 챕터 체감 하락(필요시 STORY_CHAPTER_MULTIPLIERS로 보상).
-      const waveMultiplier = Math.pow(1.06, wave - 1);
+      // 지수적 스케일링 — 모드 분기.
+      // [BALANCE 2026-07-11] 싱글/멀티 1.08 → 1.05: 타워 성장(+5%/레벨)과 동일 복리 정렬.
+      //   웨이브당 1레벨 유지 = 파워 균형, 사탕/시너지/테라는 순수 잉여 전력. w30: 4.1x, w50: 10.9x.
+      //   시뮬 실측(배율 0.4~1.0 압축과 조합): easiest 100%(목표 99)·easy 75%(목표 80)·
+      //   extreme 0%(목표 1) 정렬. 이력: 1.08(easiest 58%) → 1.06(100%/33%) → 1.05(100%/75%).
+      // 스토리 모드는 원 곡선(1.08) 유지 — 챕터 밸런스가 1.08 기준으로 최근 튜닝됨.
+      const waveMultiplier = Math.pow(storyChapterNumber !== null ? 1.08 : 1.05, wave - 1);
 
       const baseHp = pokemonData.stats.hp * waveMultiplier * mult.hp;
       const baseAttack = pokemonData.stats.attack * waveMultiplier * mult.attack;
