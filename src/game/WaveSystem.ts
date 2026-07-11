@@ -238,12 +238,12 @@ export class WaveSystem {
       if (this._spawnEpoch !== epochAtStart) return;
 
       // 지수적 스케일링 — 모드 분기.
-      // [BALANCE 2026-07-11] 싱글/멀티 1.08 → 1.05: 타워 성장(+5%/레벨)과 동일 복리 정렬.
-      //   웨이브당 1레벨 유지 = 파워 균형, 사탕/시너지/테라는 순수 잉여 전력. w30: 4.1x, w50: 10.9x.
-      //   시뮬 실측(배율 0.4~1.0 압축과 조합): easiest 100%(목표 99)·easy 75%(목표 80)·
-      //   extreme 0%(목표 1) 정렬. 이력: 1.08(easiest 58%) → 1.06(100%/33%) → 1.05(100%/75%).
+      // [BALANCE 2026-07-11] 싱글/멀티 1.08 → 1.07 (개발자 확정): 타워 +5%/레벨보다 약간
+      //   가파르게 — 시간이 흐르면 서서히 조여오되(사탕·시너지·테라로 벌충 가능한 기울기),
+      //   v1.23 시절 medium 체감("딱 좋았다")을 배율 0.7 기준으로 근사. w50: 27.5x(×0.7=19.2x).
+      //   이력: 1.08(easiest 58%) → 1.06(100%/33%) → 1.05(100%/75%, 후반 무긴장) → 1.07 확정.
       // 스토리 모드는 원 곡선(1.08) 유지 — 챕터 밸런스가 1.08 기준으로 최근 튜닝됨.
-      const waveMultiplier = Math.pow(storyChapterNumber !== null ? 1.08 : 1.05, wave - 1);
+      const waveMultiplier = Math.pow(storyChapterNumber !== null ? 1.08 : 1.07, wave - 1);
 
       const baseHp = pokemonData.stats.hp * waveMultiplier * mult.hp;
       const baseAttack = pokemonData.stats.attack * waveMultiplier * mult.attack;
