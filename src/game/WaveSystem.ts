@@ -3,6 +3,7 @@ import { useGameStore } from "../store/gameStore";
 import { Enemy } from "../types/game";
 import { getMapById } from "../data/maps";
 import { pokeAPI } from "../api/pokeapi";
+import { BALANCE_OVERRIDES } from "./balanceOverrides";
 
 const DIFFICULTY_MULTIPLIERS: Record<
   string,
@@ -112,9 +113,14 @@ export class WaveSystem {
 
     // 난이도: 스토리 모드면 챕터 번호 기준, 아니면 맵 difficulty 기준
     const { storyChapterNumber } = useGameStore.getState();
-    const mult = (storyChapterNumber !== null && STORY_CHAPTER_MULTIPLIERS[storyChapterNumber])
+    let mult = (storyChapterNumber !== null && STORY_CHAPTER_MULTIPLIERS[storyChapterNumber])
       ? STORY_CHAPTER_MULTIPLIERS[storyChapterNumber]
       : (DIFFICULTY_MULTIPLIERS[map.difficulty] ?? DIFFICULTY_MULTIPLIERS['medium']);
+    // 시뮬 밸런스 실험 오버라이드 (스토리 제외) — 프로덕션은 미설정이라 원값 유지
+    const ovrMult = BALANCE_OVERRIDES.difficultyMult?.[map.difficulty];
+    if (ovrMult !== undefined && storyChapterNumber === null) {
+      mult = { hp: ovrMult, attack: ovrMult, reward: mult.reward };
+    }
     const count = this.getEnemyCount(wave);
     const pathsToUse = map.paths;
 

@@ -29,9 +29,12 @@ import { HELD_ITEMS, shopTier, rarityBoostFromWaves } from '../../src/data/heldI
 import { getFinalEvolutionId, canEvolveWithItem } from '../../src/data/evolution';
 import { EVOLUTION_ITEMS } from '../../src/data/evolutionItems';
 import { rng } from '../../src/utils/rng';
+import { BALANCE_OVERRIDES } from '../../src/game/balanceOverrides';
 
 const T = 64;
 const PICKER_ENTRY = 20;
+/** 사탕 레벨당 단가 — 밸런스 실험 오버라이드 동기화 (gameStore.useItem과 동일) */
+const candyRate = () => BALANCE_OVERRIDES.candyCostPerLevel ?? 25;
 
 // ─── 스킬 노브 ────────────────────────────────────────────────────────────────
 // 하나의 skill 다이얼(0~1)에서 도출. 개별 오버라이드 가능(튜너가 사용).
@@ -75,6 +78,26 @@ export interface SkillKnobs {
   albaStartWave: number;
   /** 타입 플랜 — 단일타입 6각+테라 지향 (개발자 확인 고수 메타) */
   useTypePlan: boolean;
+
+  // ── 페이싱 노브 — 머릿수·사탕 타이밍 (개발자 실플레이 메타 대조 실험용) ──
+  /** 오프닝 목표 머릿수 (분리 경로 맵은 +1). 인간 메타 = 3 */
+  openingTarget: number;
+  /** 단일 경로 맵에서 6마리 확정 웨이브 (분리맵은 -3). 인간 메타 = ~10 */
+  body6Wave: number;
+  /** 웨이브 중 사탕 투입(w15+, 잉여 400+) 허용 */
+  candyDuringWave: boolean;
+
+  // ── 구매 편향 가중치 — skill 무관 상수, 튜너(setGlobalKnobs) 탐색 대상 ──
+  /** balancedBias의 bulk 가중 */
+  buyWBulk: number;
+  /** 광역기 보유 기본 가산점 (aoeScore 베이스) */
+  buyWAoeBase: number;
+  /** 초반(w≤12) 즉시 화력 가중 — 중후반엔 ×0.2로 감쇠 */
+  buyWEarly: number;
+  /** 시너지 가산점 배율 (balancedBias) */
+  buyWSynergy: number;
+  /** 캐리 품질 컷(최종진화 BST) — 미달이면 리빌드 자금 비축 (investGold) */
+  carryQualityBar: number;
 }
 
 export function knobsForSkill(s: number): SkillKnobs {
@@ -101,6 +124,16 @@ export function knobsForSkill(s: number): SkillKnobs {
     useAlba: s >= 0.55,
     albaStartWave: Math.round(lerp(22, 12)),
     useTypePlan: s >= 0.6,
+    // 페이싱 — 현 봇 기본(v2.2 측정 기반). 인간 메타는 3/10 (2026-07-14 개발자 문답)
+    openingTarget: 4,
+    body6Wave: 7,
+    candyDuringWave: true,
+    // 구매 가중치 — 실플레이 관찰로 손튜닝한 기본값 (sim:tune이 탐색·갱신)
+    buyWBulk: 0.5,
+    buyWAoeBase: 120,
+    buyWEarly: 2.5,
+    buyWSynergy: 1.5,
+    carryQualityBar: 520,
   };
 }
 
@@ -532,16 +565,20 @@ async function purchaseAndPlace(c: Candidate, knobs: SkillKnobs): Promise<boolea
 
 export type BuyBias = (c: Candidate, towers: GamePokemon[]) => number;
 
+/** 구매 가중치 뷰 — skill 무관 상수 + 튜너(GLOBAL_KNOBS) 오버라이드 */
+const W = (): SkillKnobs => ({ ...knobsForSkill(SIM_SKILL), ...GLOBAL_KNOBS });
+
 /** 광역기 가산점 — 후반 70마리 웨이브에서 AOE가 처리량을 지배 (실측 최대 효과) */
-const aoeScore = (c: Candidate) => (c.aoePower > 0 ? 120 + c.aoePower : 0);
+const aoeScore = (c: Candidate) => (c.aoePower > 0 ? W().buyWAoeBase + c.aoePower : 0);
 
 /** 즉시 화력 가산점 — 초반엔 "지금 때릴 수 있는가"가 잠재력보다 급하다.
- * 중후반 신입은 사탕/공유XP로 금방 크므로 가중을 낮춘다. */
+ * 중후반 신입은 사탕/공유XP로 금방 크므로 가중을 낮춘다(×0.2). */
 const earlyScore = (c: Candidate) =>
-  c.entryPower * (useGameStore.getState().wave <= 12 ? 2.5 : 0.5);
+  c.entryPower * (useGameStore.getState().wave <= 12 ? W().buyWEarly : W().buyWEarly * 0.2);
 
 const balancedBias: BuyBias = (c, towers) =>
-  c.finalBst + c.bulk * 0.5 + aoeScore(c) + earlyScore(c) + synergyBonus(c.data.types, towers) * 1.5;
+  c.finalBst + c.bulk * W().buyWBulk + aoeScore(c) + earlyScore(c) +
+  synergyBonus(c.data.types, towers) * W().buyWSynergy;
 
 /**
  * 오프닝 (개발자 확인: "쓸만한 3~4마리 + 남은 골드 비축"):
@@ -554,7 +591,7 @@ async function runOpening(knobs: SkillKnobs, bias: BuyBias): Promise<void> {
   let entries = 0;
   // 분리 경로 맵은 방어선이 2개 — 몸을 하나 더 확보해야 갈래당 최소 전력이 나온다
   const multiPath = pathSamplesByPath(store().currentMap).length > 1;
-  const TARGET = multiPath ? 5 : 4;
+  const TARGET = multiPath ? knobs.openingTarget + 1 : knobs.openingTarget;
   const MIN_COST = 85; // 최저가 포켓몬 근사
 
   let misses = 0;
@@ -614,16 +651,18 @@ async function runOpening(knobs: SkillKnobs, bias: BuyBias): Promise<void> {
 /** 웨이브별 목표 머릿수 — 6마리 조기 확정이 후반 생존 결정 변수
  * (XP가 전원 분배라 합류가 늦을수록 레벨 빚. 클리어 판 = 전원 L47+, 실패 판 = 낙오자 L21~34)
  * 분리 경로 맵은 갈래당 전력이 반토막 → 한 단계씩 앞당긴다. */
-function bodyTarget(wave: number, urgent: boolean): number {
+function bodyTarget(wave: number, urgent: boolean, knobs: SkillKnobs): number {
   const multiPath = pathSamplesByPath(useGameStore.getState().currentMap).length > 1;
   if (urgent) return 6;
-  if (multiPath) return wave >= 4 ? 6 : 5;
-  return wave >= 7 ? 6 : wave >= 4 ? 5 : 4;
+  // body6Wave에 6마리 확정, 그 3웨이브 전에 5마리 (기본 7 → 5@4·6@7, 분리맵은 -3)
+  const w6 = multiPath ? Math.max(2, knobs.body6Wave - 3) : knobs.body6Wave;
+  if (multiPath) return wave >= w6 ? 6 : 5;
+  return wave >= w6 ? 6 : wave >= Math.max(2, w6 - 3) ? 5 : 4;
 }
 
 async function maintainBodies(knobs: SkillKnobs, bias: BuyBias, urgent: boolean): Promise<void> {
   const store = () => useGameStore.getState();
-  const target = bodyTarget(store().wave, urgent);
+  const target = bodyTarget(store().wave, urgent, knobs);
   let bar = urgent ? 0 : 360; // 평시엔 쓰레기 안 삼, 급하면 아무거나
   let guard = 0;
 
@@ -656,7 +695,8 @@ async function maintainBodies(knobs: SkillKnobs, bias: BuyBias, urgent: boolean)
 
 /**
  * 판매 리빌드 — 6/6 상태에서 최약체보다 잠재력이 margin+ 높은 후보로 교체,
- * 경험사탕 캐치업.
+ * 경험사탕 캐치업. 예외: 4~5마리 빈곤 보드에서도 최약체가 잡몬(장착 위력<30
+ * 또는 최종진화<400)이면 즉시 전력(entryPower 30+) 후보로 스왑 허용.
  */
 async function rebuildIfUpgrade(
   knobs: SkillKnobs, minMoney = 250, bonus: (c: Candidate) => number = () => 0,
@@ -664,12 +704,16 @@ async function rebuildIfUpgrade(
 ): Promise<void> {
   const store = () => useGameStore.getState();
   // 6/6 풀보드 + w35까지가 처칭 스윗스팟 (측정으로 확정):
-  //   5보드 처칭 → 6호 몸값을 스왑에 태워 medium 33%→0% 회귀 → 기각.
+  //   5보드 "업그레이드" 처칭 → 6호 몸값을 스왑에 태워 medium 33%→0% 회귀 → 기각.
   //   w36+ 스왑 → 교체 딥(신입 레벨 공백)이 막판 DPS 체크에 걸림 → 기각.
-  if (store().towers.length < 6 || store().money < minMoney) return;
-  if (store().wave > 35) return;
+  // 예외 — 빈곤 스왑(4~5마리): 최약체가 전선 기여 없는 잡몬일 때만 아래에서 허용.
+  //   (6/6 전제는 역진적: 가난할수록 질적 개선 경로가 잠김 — medium 프로브 실증)
+  const boardN = store().towers.length;
+  if (boardN < 4 || store().wave > 35) return;
+  const fullBoard = boardN >= 6;
+  if (fullBoard && store().money < minMoney) return;
   const late = store().wave > 20;
-  if (late && store().money < 450) return; // 후반 스왑은 몸값+사탕 캐치업 여유가 전제
+  if (fullBoard && late && store().money < 450) return; // 후반 스왑은 몸값+사탕 캐치업 여유가 전제
 
   // 최약체 선정 — 타입 플랜 일치 유닛은 보호 가중(+200), 플랜 밖 잡몬부터 정리
   const ranked: Array<{ id: string; fb: number; keep: number }> = [];
@@ -682,6 +726,15 @@ async function rebuildIfUpgrade(
   const worst = ranked[0];
   if (!worst) return;
 
+  // 빈곤 스왑 게이트: 몸을 잠시 줄이는 대가가 있으므로, 최약체가 진짜 잡몬
+  // (장착 위력 <30 = 전선 기여 없음, 또는 최종진화 바닥)일 때만 발동.
+  // 사람의 "이 잡몬 팔고 딴 거 뽑자" — 빈곤 판의 유일한 질적 탈출구.
+  if (!fullBoard) {
+    const worstTw = store().towers.find(t2 => t2.id === worst.id);
+    const curPower = worstTw?.equippedMoves[0]?.power ?? 0;
+    if (curPower >= 30 && worst.fb >= 400) return;
+  }
+
   // 팀에 고위력 광역기가 없으면 AOE 확보가 최우선 (개발자 확인: w20쯤엔
   // 100위력급이 표준 — 잡몬 광역은 천장이 낮아 갈아끼워야 나온다).
   // 눈높이는 후반일수록 상승: w20까지 70+, 이후 90+.
@@ -692,15 +745,17 @@ async function rebuildIfUpgrade(
   // 리롤 인내: 업그레이드가 뜰 때까지 여러 번 돌린다 (사람의 "리롤 파티완성").
   // 잔고가 minMoney 아래로 내려가면 중단 — 리롤이 전력을 갉아먹지 않게.
   for (let entry = 0; entry < knobs.rebuildEntries; entry++) {
-    if (store().money < minMoney) return;
+    // 빈곤 모드: minMoney 대신 "입장비+최소 여유"만 요구 — 매각 환불이 몸값을 채운다
+    if (fullBoard ? store().money < minMoney : store().money < PICKER_ENTRY + 20) return;
     if (!store().spendMoney(PICKER_ENTRY)) return;
     const cands = (await drawCandidates())
-      .filter(c => hasBigAoe
+      // 빈곤 스왑은 즉시 전력이어야 함 — 잡몬을 잡몬으로 바꾸면 몸값만 태운다
+      .filter(c => (fullBoard || c.entryPower >= 30) && (hasBigAoe
         // 평시: 잠재력 업그레이드
         ? c.finalBst >= worst.fb + knobs.rebuildMargin
         // AOE 부재: 고위력 광역 학습 후보면 BST 동급이어도 교체 가치
         : (c.aoePower >= (late ? 100 : 80) && c.finalBst >= worst.fb) ||
-          c.finalBst >= worst.fb + knobs.rebuildMargin)
+          c.finalBst >= worst.fb + knobs.rebuildMargin))
       .sort((a, b) =>
         (b.finalBst + aoeScore(b) + bonus(b)) - (a.finalBst + aoeScore(a) + bonus(a)));
     const hit = cands[0];
@@ -715,8 +770,9 @@ async function rebuildIfUpgrade(
     // 후반(800)은 경험사탕 점프값이 커서 예산도 커야 실제 캐치업이 된다.
     const lvls = [...new Set(store().towers.filter(t2 => !t2.isFainted && t2.id !== worst.id)
       .map(t2 => t2.level))].sort((a, b) => a - b);
-    const firstStep = Math.min(late ? 800 : 250, (lvls[0] ?? 10) * 50);
-    if (store().money + sellRefund < hit.cost + firstStep + 60) continue;
+    // 빈곤 스왑은 캐치업 예산 요구 생략(사탕 살 돈 자체가 없음) + 버퍼 최소화
+    const firstStep = fullBoard ? Math.min(late ? 800 : 250, (lvls[0] ?? 10) * 50) : 0;
+    if (store().money + sellRefund < hit.cost + firstStep + (fullBoard ? 60 : 20)) continue;
 
     if (!store().sellTower(worst.id)) return;
     const ok = await purchaseAndPlace(hit, knobs);
@@ -740,7 +796,7 @@ function expCandyCatchUp(towerId: string, reserve = 100): void {
     if (higher === undefined) break;
     // 가성비 검사: 같은 구간을 일반 사탕으로 올리는 비용의 80% 미만일 때만
     const stepCost = higher * 50;
-    const candyEquiv = ((tw.level + higher - 1) / 2) * 25 * (higher - tw.level);
+    const candyEquiv = ((tw.level + higher - 1) / 2) * candyRate() * (higher - tw.level);
     if (stepCost >= candyEquiv * 0.8) break;
     if (store().money - stepCost < reserve) break;
     if (!store().useItem('exp_candy', towerId)) break;
@@ -750,7 +806,7 @@ function expCandyCatchUp(towerId: string, reserve = 100): void {
 /**
  * 사탕 몰빵 — 예비비 이상 잉여는 캐리 레벨에 투입 (+5% 복리가 지배 스케일링).
  * 저레벨 낙오자는 경험사탕 캐치업 먼저 (레벨당 단가가 쌈).
- * 품질 게이트: 캐리가 저품질(finalBst<520)이면 고레벨 사탕은 나쁜 투자 —
+ * 품질 게이트: 캐리가 저품질(finalBst < carryQualityBar)이면 고레벨 사탕은 나쁜 투자 —
  * 리빌드 자금(400)을 비축해 왕귀를 찾는다 (개발자 확인 리롤 메타).
  */
 async function investGold(knobs: SkillKnobs, reserveOverride?: number): Promise<void> {
@@ -763,7 +819,7 @@ async function investGold(knobs: SkillKnobs, reserveOverride?: number): Promise<
     const fb = await finalBstOf(carryNow.basePokemonId ?? carryNow.pokemonId);
     // 탈출 밸브: 리빌드가 계속 불발이면 700G 초과분은 그냥 현재 캐리에 붓는다
     // — 사람은 골드를 쥔 채 죽지 않는다.
-    if (fb < 520 && store().money <= 700) reserve = Math.max(reserve, 400);
+    if (fb < W().carryQualityBar && store().money <= 700) reserve = Math.max(reserve, 400);
   }
 
   // 1) 낙오자 캐치업 (팀 최고 레벨과 8+ 차이)
@@ -778,7 +834,7 @@ async function investGold(knobs: SkillKnobs, reserveOverride?: number): Promise<
     const carry = alive().filter(t2 => t2.level < 100)
       .sort((a, b) => b.level - a.level || b.attack - a.attack)[0];
     if (!carry) break;
-    if (store().money - carry.level * 25 < reserve) break;
+    if (store().money - carry.level * candyRate() < reserve) break;
     if (!store().useItem('candy', carry.id)) break;
   }
 }
@@ -924,6 +980,8 @@ export function emergencyCare(knobs: SkillKnobs, moneyFloor = 40): void {
   const store = () => useGameStore.getState();
   if (rng() >= knobs.careTickChance) return;
 
+  // (실험 기각 2026-07-14: 빈곤 보드 잡몬 생명유지 중단 — 패널 완전 중립(82.9 동률),
+  //  진짜 드레인은 반복 기절하는 주전 부활비라 잡몬 컷으로는 은행이 안 됨)
   for (const tw of [...store().towers]) {
     if (tw.isFainted) {
       const cost = tw.level * 10;
@@ -1073,7 +1131,7 @@ export function humanPolicy(hooks: StyleHooks, skill = SIM_SKILL): BotPolicy {
       // — 사탕이 몸 구매 문턱을 갉아먹는 빈곤 루프 방지 (몸 먼저, 사탕은 잉여).
       const styleReserve = hooks.candyReserve?.(knobs, urgent);
       let reserve = styleReserve !== undefined ? styleReserve : (urgent ? 60 : knobs.candyReserve);
-      const boardShort = store().towers.length < Math.min(6, bodyTarget(store().wave, urgent));
+      const boardShort = store().towers.length < Math.min(6, bodyTarget(store().wave, urgent, knobs));
       if (boardShort) reserve = Math.max(reserve, 260);
       await investGold(knobs, reserve);
       careFloor = store().towers.length < 4 ? 200 : (urgent ? 20 : 60);
@@ -1097,14 +1155,14 @@ export function humanPolicy(hooks: StyleHooks, skill = SIM_SKILL): BotPolicy {
       }
       emergencyCare(knobs, careFloor);
       // 후반 웨이브 중 사탕 — 킬 수입이 실시간으로 쌓이는데 놀리면 손해.
-      // 사람도 여유 골드가 차면 웨이브 중에 캐리를 먹인다.
-      if (store().wave >= 15) {
+      // (개발자 문답 2026-07-14: 실유저는 사탕 효율이 나빠 많이 안 씀 — 노브로 A/B 대상)
+      if (knobs.candyDuringWave && store().wave >= 15) {
         for (let k = 0; k < 6; k++) {
           const carry = store().towers.filter(t2 => !t2.isFainted && t2.level < 100)
             .sort((a, b) => b.level - a.level || b.attack - a.attack)[0];
           if (!carry) break;
           // 하한은 물약 비상금(400)만 — 사탕값 자체가 커도 잉여면 산다
-          if (store().money - carry.level * 25 < 400) break;
+          if (store().money - carry.level * candyRate() < 400) break;
           if (!store().useItem('candy', carry.id)) break;
         }
       }

@@ -102,7 +102,9 @@ hard 0%(p50 8) / extreme 0% — 4/5단 달성. hard는 봇 구조 한계로 진�
 - **코어 실력**: 모든 페르소나 공유 컨트롤러. `SkillKnobs`로 파라미터화,
   `knobsForSkill(skill 0~1)` 다이얼. `SIM_SKILL` env 일괄 지정(기본 1 = 오라클).
 - **스타일**: holdout/reroller/worker/tera/lossStreaker — 구매 취향·노브 오버라이드만 다름.
-- **튜너**: `npm run sim:tune` — 노브 힐클라임(SIM_TUNE_ITERS/SEEDS/MAPS). 결과 `tune.md`.
+- **튜너**: `npm run sim:tune` — simulated annealing(SIM_TUNE_ITERS/SEEDS/MAPS,
+  SIM_TUNE_T0/COOLING). 행동 노브 9개 + 구매 가중치 5개(buyW*/carryQualityBar) 탐색.
+  악화 스텝도 exp(Δ/T) 확률 수용 → 국소최적 탈출, best 별도 추적. 결과 `tune.md`.
 - **디버그**: `SIM_PROBE_MAP=easy_loop SIM_PROBE_SEED=... npx vitest run --config
   vitest.sim.config.ts sim/single/probe.sim.ts` — 웨이브별 골드/라이프/팀/기술 로그.
 
