@@ -14,6 +14,7 @@ import { saveService } from '../services/SaveService';
 import { calculateActiveSynergies } from '../utils/synergyManager';
 import { getMapById, getFacilityTiles, getBuildableTiles } from '../data/maps';
 import { rng } from '../utils/rng';
+import { BALANCE_OVERRIDES } from '../game/balanceOverrides';
 import { ACHIEVEMENTS } from '../data/achievements';
 import { achievementService } from '../services/AchievementService';
 
@@ -432,7 +433,8 @@ export const useGameStore = create<GameStore>((set, get) => ({
     if (itemType === 'candy') {
       const target = towers.find(t => t.id === targetTowerId);
       if (target && !target.isFainted && target.level < 100) {
-        const cost = target.level * 25;
+        // 시뮬 밸런스 실험 오버라이드 — 프로덕션은 미설정 = 레벨×25 유지
+        const cost = target.level * (BALANCE_OVERRIDES.candyCostPerLevel ?? 25);
         if (!get().spendMoney(cost)) return false;
         // 가격은 레벨×25 그대로. XP는 새 곡선 기준으로 정확히 +1레벨만큼 지급.
         get().addXpToTower(targetTowerId, xpToNextLevel(target.level));

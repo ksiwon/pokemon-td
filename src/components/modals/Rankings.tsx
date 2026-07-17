@@ -188,8 +188,8 @@ export const Rankings = ({ onClose, initialTab = 'ap' }: RankingsProps) => {
                   <TableHead $isAp={true}>
                     <ColRank>{t('rankings.colRank')}</ColRank>
                     <ColPlayer>{t('rankings.colPlayer')}</ColPlayer>
-                    <ColRating>{t('rankings.colAchCount') ?? '달성 수'}</ColRating>
-                    <ColScore>{t('rankings.colAP') ?? 'AP'}</ColScore>
+                    <ColRating>{t('rankings.colAchCount')}</ColRating>
+                    <ColScore>{t('rankings.colAP')}</ColScore>
                   </TableHead>
                   {displayedRankings.map((entry, index) => {
                     const rank = currentPage * PAGE_SIZE + index;

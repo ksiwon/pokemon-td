@@ -11,6 +11,7 @@ import { saveService } from '../services/SaveService';
 import { cardService } from '../services/CardService';
 import { getCriticalChance, getAOEDamageMultiplier } from '../utils/abilities';
 import { rng } from '../utils/rng';
+import { BALANCE_OVERRIDES } from './balanceOverrides';
 import { getBuffedStats } from '../utils/synergyManager';
 import { databaseService } from '../services/DatabaseService';
 import { getMapById, getFacilityTiles } from '../data/maps';
@@ -718,13 +719,18 @@ export class GameManager {
 
     // [BUG-1 FIX] isFainted 타워는 XP 지급 제외(쓰러진 상태 레벨업 방지).
     // 알바 포켓몬(숍·콘테스트 홀)도 근무 중이라 경험치를 받지 않는다.
-    const xpAmount = enemy.isBoss ? 50 : 10;
+    // 시뮬 밸런스 실험 오버라이드(xpPerKill/xpSplit) — 프로덕션은 미설정 = 10/50 유지.
+    const baseXp = BALANCE_OVERRIDES.xpPerKill ?? 10;
+    const xpAmount = enemy.isBoss ? baseXp * 5 : baseXp;
     const curMap = useGameStore.getState().currentMap;
-    useGameStore.getState().towers
-      .filter(t => !t.isFainted && !this.isOnWorkTile(t, curMap))
-      .forEach(t => {
-        addXpToTower(t.id, xpAmount);
-      });
+    const recipients = useGameStore.getState().towers
+      .filter(t => !t.isFainted && !this.isOnWorkTile(t, curMap));
+    const each = BALANCE_OVERRIDES.xpSplit && recipients.length > 0
+      ? Math.max(1, Math.round(xpAmount / recipients.length))
+      : xpAmount;
+    recipients.forEach(t => {
+      addXpToTower(t.id, each);
+    });
 
     // [수정 5] pendingStats 증가
     this.pendingStats.enemiesKilled++;
