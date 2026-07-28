@@ -10,6 +10,7 @@ import { databaseService } from '../../services/DatabaseService';
 import { HallOfFameEntry, LeaderboardEntry } from '../../types/multiplayer';
 import { MAPS } from '../../data/maps';
 import { authService } from '../../services/AuthService';
+import { quotaGuard } from '../../services/QuotaGuard';
 import { useTranslation } from '../../i18n';
 import { Emoji } from '../shared/Emoji';
 
@@ -45,7 +46,11 @@ export const HallOfFame = ({ onClose }: HallOfFameProps) => {
   const [myEntries, setMyEntries] = useState<HallOfFameEntry[]>([]);
   const [loading, setLoading] = useState(true);
   const [currentPage, setCurrentPage] = useState(0);
+  // [FREE-TIER] 무료 쿼터 소진 상태 — '기록 없음'과 구분해 안내한다.
+  const [quotaBlocked, setQuotaBlocked] = useState(() => quotaGuard.isTripped());
   const PAGE_SIZE = 10;
+
+  useEffect(() => quotaGuard.onChange(setQuotaBlocked), []);
 
   const user = authService.getCurrentUser();
   const selectedMapId = mapFilter === 'all' ? undefined : mapFilter;
@@ -167,6 +172,13 @@ export const HallOfFame = ({ onClose }: HallOfFameProps) => {
             </>
           )}
         </Body>
+
+        {/* [FREE-TIER] 쿼터 소진 안내 — '기록 없음'과 구분 */}
+        {quotaBlocked && (
+          <DataNotice>
+            <Emoji glyph="⚠️" size={13} /> {t('hallOfFame.quotaNotice')}
+          </DataNotice>
+        )}
 
         {/* ── 데이터 보존 안내 ── */}
         <DataNotice>

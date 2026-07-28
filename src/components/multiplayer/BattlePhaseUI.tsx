@@ -305,9 +305,21 @@ export const BattlePhaseUI: React.FC<BattlePhaseUIProps> = ({ roomId }) => {
 
   const forceFetchTowerDetails = useCallback((): Promise<void> => {
     return new Promise((resolve) => {
+      // [LEAK-FIX] RTDB onValue는 로컬 캐시가 있으면 콜백을 '동기'로 발화한다. 그 경우
+      //   unsub이 아직 null이라 예전 코드는 `unsub?.()`가 조용히 no-op이 되고, 이 1회성
+      //   구독이 세션 내내 남아 towerDetails가 바뀔 때마다 리렌더를 유발했다.
+      //   (off()가 애초에 동작하지 않아 가려져 있던 문제 — 이제 실제로 끊긴다)
       let unsub: (() => void) | null = null;
+      let unsubRequested = false;
       let resolved = false;
-      const done = () => { if (resolved) return; resolved = true; unsub?.(); resolve(); };
+      let timer: ReturnType<typeof setTimeout> | null = null;
+      const done = () => {
+        if (resolved) return;
+        resolved = true;
+        if (timer) { clearTimeout(timer); timer = null; }
+        if (unsub) unsub(); else unsubRequested = true;
+        resolve();
+      };
       unsub = multiplayerService.onAllTowerDetailsUpdate(roomId, (allTowers) => {
         allTowers.forEach((towers, userId) => {
           if (towers.length > 0) towerDetailsRef.current.set(userId, towers);
@@ -317,7 +329,8 @@ export const BattlePhaseUI: React.FC<BattlePhaseUIProps> = ({ roomId }) => {
         console.log(`[BattlePhaseUI] Synced towers for ${towerDetailsRef.current.size} players`);
         done();
       });
-      setTimeout(done, 3000);
+      if (unsubRequested) unsub();
+      else if (!resolved) timer = setTimeout(done, 3000);
     });
   }, [roomId]);
 

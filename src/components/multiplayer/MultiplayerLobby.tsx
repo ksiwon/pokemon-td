@@ -74,6 +74,10 @@ export const MultiplayerLobby = ({ onBack, onStartGame }: MultiplayerLobbyProps)
       setIsCheckingRejoin(false);
     };
     checkRejoin();
+
+    // [FREE-TIER] 로비를 떠나면 RTDB 동시 연결 슬롯을 반납한다.
+    //   (방에 들어가 있으면 게임 화면이 참조를 잡고 있으므로 실제로 끊기지 않음)
+    return () => { multiplayerService.teardownMultiplayer(); };
   }, []);
 
   useEffect(() => {

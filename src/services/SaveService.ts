@@ -7,7 +7,33 @@ const SAVE_KEY = 'pokemon-td-save';
 
 class SaveService {
   private static instance: SaveService;
-  private constructor() {}
+
+  // ─── [PERF] 세이브 캐시 + 지연 flush ────────────────────────────────────────
+  // 예전엔 load()가 매번 localStorage 전체를 JSON.parse + 정규화했고, save()가 그
+  // load()를 한 번 더 부른 뒤 JSON.stringify까지 했다. updateAchievement 1회 =
+  // 전체 세이브 2회 파싱 + 1회 직렬화. 그런데 AchievementService.onKill은 적 1마리
+  // 처치마다 임계값 5개를 돌며 updateAchievement를 부르고, onWaveComplete는 웨이브당
+  // 7회를 부른다 → 웨이브 한 판에 수백 회의 전체 세이브 직렬화 = 눈에 띄는 스터터.
+  // 파싱은 1회로 줄이고(메모리 캐시), 쓰기는 400ms로 묶는다. 탭 전환/종료 시 즉시 flush.
+  private _cache: SaveData | null = null;
+  private _dirty = false;
+  private _flushTimer: ReturnType<typeof setTimeout> | null = null;
+  private readonly FLUSH_DEBOUNCE_MS = 400;
+
+  private constructor() {
+    if (typeof window === 'undefined') return;
+    // 유실 방지 — 탭을 닫거나 백그라운드로 보낼 때 반드시 내려쓴다.
+    window.addEventListener('beforeunload', () => this.flush());
+    window.addEventListener('pagehide', () => this.flush());
+    document.addEventListener('visibilitychange', () => {
+      if (document.visibilityState === 'hidden') this.flush();
+    });
+    // 다른 탭이 세이브를 바꿨을 때: 내 변경이 없으면 캐시를 버리고 다시 읽는다.
+    //   (내 변경이 있으면 기존 동작대로 마지막 쓰기가 이긴다)
+    window.addEventListener('storage', (e) => {
+      if (e.key === SAVE_KEY && !this._dirty) this._cache = null;
+    });
+  }
 
   static getInstance() {
     if (!SaveService.instance) {
@@ -16,17 +42,37 @@ class SaveService {
     return SaveService.instance;
   }
 
-  save(data: Partial<SaveData>) {
+  /** 대기 중인 변경을 즉시 localStorage에 기록. */
+  flush(): void {
+    if (this._flushTimer) { clearTimeout(this._flushTimer); this._flushTimer = null; }
+    if (!this._dirty || !this._cache) return;
     try {
-      const existing = this.load();
-      const merged = { ...existing, ...data };
-      localStorage.setItem(SAVE_KEY, JSON.stringify(merged));
+      localStorage.setItem(SAVE_KEY, JSON.stringify(this._cache));
+      this._dirty = false; // 성공한 뒤에만 내린다 — 용량 초과로 실패하면 다음 기회에 재시도
     } catch (error) {
       console.error('Failed to save game:', error);
     }
   }
 
+  private scheduleFlush(): void {
+    this._dirty = true;
+    if (this._flushTimer) return;
+    this._flushTimer = setTimeout(() => {
+      this._flushTimer = null;
+      this.flush();
+    }, this.FLUSH_DEBOUNCE_MS);
+  }
+
+  save(data: Partial<SaveData>) {
+    const existing = this.load();
+    // 캐시 객체를 그대로 갱신 — load()가 반환한 참조를 호출부가 수정한 경우(updateStats,
+    // updateAchievement 등)도 동일 객체라 병합이 안전하다.
+    this._cache = { ...existing, ...data };
+    this.scheduleFlush();
+  }
+
   load(): SaveData {
+    if (this._cache) return this._cache;
     try {
       const saved = localStorage.getItem(SAVE_KEY);
       if (saved) {
@@ -59,15 +105,16 @@ class SaveService {
           }
         }
 
-        if (changed) {
-          localStorage.setItem(SAVE_KEY, JSON.stringify(parsed));
-        }
+        this._cache = parsed;
+        if (changed) this.scheduleFlush(); // 정규화 결과는 다음 flush에 함께 내려간다
         return parsed;
       }
     } catch (error) {
       console.error('Failed to load game:', error);
     }
-    return this.getDefaultSave();
+    // 세이브가 없거나 깨진 경우 — 기본값도 캐시해야 이후 save()가 같은 객체 위에 병합된다.
+    this._cache = this.getDefaultSave();
+    return this._cache;
   }
 
   getDefaultSave(): SaveData {
@@ -264,13 +311,29 @@ class SaveService {
       data.totalAP = data.achievements.reduce((sum, a) => sum + (a.totalPoints ?? 0), 0);
       this.save(data);
 
-      // 정규화된 최신 AP와 고유 업적 개수를 DB에 강제 반영하여 동기화 (단일 Bulk Batch)
+      // [FREE-TIER] DB에 실제로 '달라진' 업적만 골라 쓴다.
+      //   예전엔 진척도 있는 업적 전부를 무조건 재기록해, 새로고침 1회당
+      //   (업적 수 + 1)회의 Firestore 쓰기가 발생했다(80개 보유 시 81 write).
+      //   대부분의 세션은 로컬=DB라 변경분이 0 → 쓰기도 0이 된다.
+      const dbById = new Map((dbAchievements ?? []).map(a => [a.id, a]));
+      const changed = data.achievements.filter(a => {
+        if (!a.unlocked && (a.progress ?? 0) <= 0) return false; // 진척 없는 건 애초에 안 씀
+        const remote = dbById.get(a.id);
+        if (!remote) return true;                                // DB에 없음 → 신규 기록
+        return (
+          !!remote.unlocked !== !!a.unlocked ||
+          (remote.progress ?? 0) !== (a.progress ?? 0) ||
+          (remote.completions ?? 0) !== (a.completions ?? 0) ||
+          (remote.totalPoints ?? 0) !== (a.totalPoints ?? 0)
+        );
+      });
+
       import('./AuthService')
         .then(async ({ authService }) => {
           const user = authService.getCurrentUser();
           if (user && !authService.isOfflineMode()) {
             const unlockedCount = data.achievements.filter(a => a.unlocked).length;
-            await databaseService.updateUserAchievementsBulk(data.achievements, data.totalAP, unlockedCount);
+            await databaseService.updateUserAchievementsBulk(changed, data.totalAP, unlockedCount);
           }
         })
         .catch(() => {});
@@ -283,6 +346,9 @@ class SaveService {
   }
 
   clearSave() {
+    if (this._flushTimer) { clearTimeout(this._flushTimer); this._flushTimer = null; }
+    this._cache = null;
+    this._dirty = false; // 대기 중이던 flush가 삭제 직후 되살아나지 않도록
     localStorage.removeItem(SAVE_KEY);
     console.log('Save data cleared');
   }

@@ -15,7 +15,6 @@ import { Emoji } from '../shared/Emoji';
 import { multiplayerService } from '../../services/MultiplayerService';
 import { PlayerGameState, TowerDetail } from '../../types/multiplayer';
 import { authService } from '../../services/AuthService';
-import { useGameStore } from '../../store/gameStore';
 import { useTranslation } from '../../i18n';
 import { lMedia } from '../../utils/responsive.utils';
 import { ModalOverlay, ModalBox, ModalCloseBtn, MODAL_ACCENT } from '../shared/modal.styles';
@@ -38,7 +37,6 @@ export const MultiplayerView = ({ roomId, onClose }: MultiplayerViewProps) => {
   const [isRefreshing, setIsRefreshing] = useState(false);
 
   const user = authService.getCurrentUser();
-  const towers = useGameStore(s => s.towers);
 
   // ─── 수동 fetch ────────────────────────────────────────
   const fetchTowerDetails = useCallback(async () => {
@@ -91,27 +89,11 @@ export const MultiplayerView = ({ roomId, onClose }: MultiplayerViewProps) => {
     fetchTowerDetails();
   }, [fetchTowerDetails]);
 
-  // ─── 내 타워 정보 Firebase에 즉시 업로드 ─────────────────
-  useEffect(() => {
-    if (!user || !roomId) return;
-    const towerDetails: TowerDetail[] = towers.map(t => ({
-      pokemonId: t.pokemonId,
-      name: t.displayName,
-      level: t.level,
-      sprite: t.sprite,
-      position: t.position,
-      currentHp: t.currentHp,
-      maxHp: t.maxHp,
-      isFainted: t.isFainted,
-      attack: t.attack,
-      defense: t.defense,
-      specialAttack: t.specialAttack,
-      specialDefense: t.specialDefense,
-      speed: t.speed,
-      types: t.types,
-    }));
-    multiplayerService.updatePlayerTowerDetails(roomId, user.uid, towerDetails);
-  }, [towers, roomId, user]);
+  // [FIX] 내 타워 업로드는 GameLayout이 단독으로 담당한다.
+  //   예전엔 이 뷰도 같은 경로(towerDetails/{room}/{uid})에 썼는데, 여기서 만든
+  //   페이로드에는 equippedMoves/lifesteal/aoeBonus가 없어 normalizeTowerDetails가
+  //   기술 목록을 빈 배열로 덮어썼다(배틀에 기술 없는 팀이 올라감). 게다가 스로틀 맵을
+  //   공유해 두 경로가 서로의 예약 업로드를 취소했다. 읽기 전용 뷰로 되돌린다.
 
   // ─── [V5-FIX-MV-1] 정렬: Firebase 기준 ────────────────────
   const sortedPlayers = [...players].sort((a, b) => {

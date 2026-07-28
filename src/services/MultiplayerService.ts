@@ -30,10 +30,13 @@
 //   - throttle 무시 즉시 업로드 + tftPlacements 보존
 
 import {
-  ref, set, onValue, push, update, remove, get, off,
+  ref, set, onValue, push, update, remove, get,
   runTransaction, query, orderByChild, equalTo, endAt, startAt,
 } from 'firebase/database';
-import { rtdb, auth, serverNow, getServerTimeOffset, registerPresence, initRtdbListeners } from '../config/firebase';
+import {
+  rtdb, serverNow, getServerTimeOffset, registerPresence,
+  initRtdbListeners, releaseRtdbConnection,
+} from '../config/firebase';
 import {
   Room, RoomPlayer, PlayerGameState, AIDifficulty, TowerDetail,
   GamePhase, MultiplayerGameState, RoundMatchup, PvPBattleResult,
@@ -70,7 +73,8 @@ class MultiplayerService {
   private currentRoomId: string | null = null;
   private cleanupIntervalId: ReturnType<typeof setInterval> | null = null;
   private presenceCleanup: (() => void) | null = null;
-  private _multiplayerInitialized = false;
+  /** 멀티플레이어 화면 참조 수 — 0이 되면 RTDB 연결 슬롯을 반납한다. */
+  private _multiplayerRefs = 0;
 
   constructor() {
     // [FREE-1] constructor에서 startAutoCleanup() 제거.
@@ -79,16 +83,41 @@ class MultiplayerService {
   }
 
   /**
-   * [FREE-1] 멀티플레이어 로비 진입 시 반드시 한 번 호출.
+   * [FREE-1] 멀티플레이어 화면(로비/게임) 진입 시 호출.
    *   - RTDB 실시간 리스너를 lazy 초기화 (첫 연결 발생)
    *   - 만료 방 자동 정리 시작
-   * 이후 중복 호출은 no-op.
+   * teardownMultiplayer()와 짝을 이룬다(참조 카운트).
+   *
+   * 게임 화면도 호출해야 한다 — 게임 중 새로고침하면 로비를 거치지 않고 바로
+   * 게임 라우트로 복귀하는데, 그때 초기화가 없으면 serverTimeOffset이 0으로 남아
+   * 페이즈 타이머가 클라이언트 시계 오차만큼 어긋난다.
    */
   initForMultiplayer(): void {
-    if (this._multiplayerInitialized) return;
-    this._multiplayerInitialized = true;
-    initRtdbListeners();                         // [FREE-3] RTDB 연결 시작
-    this.startAutoCleanup();                     // 만료 방 정리 시작
+    this._multiplayerRefs++;
+    initRtdbListeners();                         // [FREE-3] RTDB 연결 시작(내부 refcount)
+    if (!this.cleanupIntervalId) this.startAutoCleanup();
+  }
+
+  /**
+   * [FREE-TIER] 멀티플레이어 화면에서 빠져나올 때 호출.
+   * 마지막 참조가 사라지고 방에 속해 있지도 않으면 정리 타이머를 끄고
+   * RTDB 동시 연결 슬롯을 반납한다.
+   */
+  teardownMultiplayer(): void {
+    if (this._multiplayerRefs > 0) this._multiplayerRefs--;
+    this.maybeReleaseConnection();
+  }
+
+  /**
+   * 참조가 0이고 방에도 속해 있지 않을 때만 실제로 연결을 반납한다.
+   * 방에 남아 있는데 끊으면 presence/게임 상태 동기화가 죽으므로, 방을 나가는
+   * 시점(clearCurrentRoom)에 한 번 더 시도한다. releaseRtdbConnection은 멱등.
+   */
+  private maybeReleaseConnection(): void {
+    if (this._multiplayerRefs > 0) return;
+    if (this.getCurrentRoomId()) return;
+    this.stopAutoCleanup();
+    releaseRtdbConnection();
   }
 
   // [V5-FIX-MS-9] 서버 시간은 firebase.ts 전역 값을 사용
@@ -104,40 +133,110 @@ class MultiplayerService {
     }, CLEANUP_INTERVAL);
   }
 
-  /**
-   * [FREE-TIER] RTDB REST의 shallow=true로 특정 경로의 최상위 키 목록만 조회.
-   *   SDK get()은 전체 서브트리를 다운로드하지만(방당 수십~수백 KB),
-   *   shallow는 키만 반환하므로 수십 바이트로 끝남. 고아 노드 스캔 전용.
-   * 실패(오프라인/토큰 없음/URL 미설정) 시 null — 호출부는 스캔을 건너뜀.
-   */
-  private async shallowKeys(path: string): Promise<string[] | null> {
+  // ─── [FREE-TIER] 고아 노드 회수 큐 ─────────────────────────────
+  // 예전 구현은 gameStates/towerDetails/battleResults/presence의 '루트'를 shallow REST로
+  // 훑어 rooms에 없는 키를 지웠다. 그런데 database.rules.json은 이 네 경로의 .read를
+  // $roomId 하위에만 두고 루트에는 두지 않는다(RTDB 규칙은 상위로 캐스케이드되지 않음).
+  // → 루트 조회는 항상 403 → 스캔이 한 번도 동작한 적이 없었고, deleteRoom이 중간에
+  //   실패해 생긴 고아 서브트리가 영구 잔존해 RTDB 1GB 저장 한도를 잠식했다.
+  // 루트 .read를 여는 것은 "로그인만 하면 전체 게임 데이터를 통째로 내려받을 수 있다"는
+  // 뜻이라 10GB 다운로드 한도상 더 위험하다. 그래서 방향을 뒤집는다:
+  //   삭제를 '시도한 방'을 로컬 큐에 적어 두고, 하위 경로가 전부 지워질 때까지 재시도한다.
+  // 큐는 localStorage에 있어 탭이 죽어도 다음 로비 진입 때 이어서 회수한다.
+  private static readonly ORPHAN_QUEUE_LS_KEY = 'ptd-orphan-cleanup-queue';
+  private static readonly ORPHAN_CHILD_PATHS = ['gameStates', 'towerDetails', 'battleResults', 'presence'] as const;
+  /** 큐 항목 최대 보관 기간 — 이보다 오래 실패하면 회수 불가로 보고 버린다(무한 재시도 방지). */
+  private static readonly ORPHAN_QUEUE_TTL = 24 * 60 * 60 * 1000;
+
+  private readOrphanQueue(): Record<string, number> {
     try {
-      const baseUrl = import.meta.env.VITE_FIREBASE_DATABASE_URL as string | undefined;
-      if (!baseUrl) return null;
-      const token = await auth?.currentUser?.getIdToken();
-      if (!token) return null;
-      const res = await fetch(
-        `${baseUrl.replace(/\/+$/, '')}/${path}.json?shallow=true&auth=${token}`
-      );
-      if (!res.ok) return null;
-      const data = await res.json();
-      if (!data || typeof data !== 'object') return [];
-      return Object.keys(data);
+      const raw = localStorage.getItem(MultiplayerService.ORPHAN_QUEUE_LS_KEY);
+      const parsed = raw ? JSON.parse(raw) : null;
+      return parsed && typeof parsed === 'object' ? parsed : {};
     } catch {
-      return null;
+      return {};
+    }
+  }
+
+  private writeOrphanQueue(q: Record<string, number>): void {
+    try {
+      localStorage.setItem(MultiplayerService.ORPHAN_QUEUE_LS_KEY, JSON.stringify(q));
+    } catch { /* ignore */ }
+  }
+
+  private enqueueOrphanCleanup(roomId: string): void {
+    const q = this.readOrphanQueue();
+    if (q[roomId] === undefined) {
+      q[roomId] = Date.now();
+      this.writeOrphanQueue(q);
+    }
+  }
+
+  private dequeueOrphanCleanup(roomId: string): void {
+    const q = this.readOrphanQueue();
+    if (q[roomId] !== undefined) {
+      delete q[roomId];
+      this.writeOrphanQueue(q);
     }
   }
 
   /**
-   * [V5-FIX-MS-2] 만료 방 + 고아 경로(gameStates/towerDetails) + 종료된 방 정리
+   * 큐에 남은 방들의 하위 경로를 재삭제 시도. 전부 성공하면 큐에서 제거.
+   * 하위 경로 삭제는 "방이 이미 없을 때"만 규칙이 허용하므로, rooms가 지워진 뒤에만 통한다.
+   */
+  private async drainOrphanQueue(): Promise<void> {
+    const q = this.readOrphanQueue();
+    const roomIds = Object.keys(q);
+    if (roomIds.length === 0) return;
+
+    const now = Date.now();
+    for (const roomId of roomIds) {
+      if (now - (q[roomId] ?? 0) > MultiplayerService.ORPHAN_QUEUE_TTL) {
+        this.dequeueOrphanCleanup(roomId);
+        continue;
+      }
+
+      // [SAFETY] 방이 아직 살아 있으면 절대 하위 경로를 지우지 않는다.
+      //   보안 룰은 "그 방의 멤버"에게도 gameStates/{room} 쓰기를 허용하므로,
+      //   rooms 삭제가 실패한 상태에서 그대로 밀어붙이면 진행 중인 게임의 상태를
+      //   날려버릴 수 있다. createdAt 스칼라 하나만 읽어 존재 여부를 확인(수 바이트).
+      let roomStillAlive = true;
+      try {
+        const probe = await get(ref(rtdb, `rooms/${roomId}/createdAt`));
+        roomStillAlive = probe.exists();
+      } catch {
+        continue; // 확인 자체가 실패하면 이번 회차는 건너뛴다(안전 우선)
+      }
+      if (roomStillAlive) continue; // 다음 회차에 재확인
+
+      const ok = await this.removeRoomChildren(roomId);
+      if (ok) {
+        this.dequeueOrphanCleanup(roomId);
+        console.log(`[MS] Orphan cleanup completed for ${roomId}`);
+      }
+    }
+  }
+
+  /** 방 하위 4개 경로를 삭제. 전부 성공했으면 true. */
+  private async removeRoomChildren(roomId: string): Promise<boolean> {
+    const results = await Promise.allSettled(
+      MultiplayerService.ORPHAN_CHILD_PATHS.map(p => remove(ref(rtdb, `${p}/${roomId}`)))
+    );
+    return results.every(r => r.status === 'fulfilled');
+  }
+
+  /**
+   * [V5-FIX-MS-2] 만료 방 + 종료된 방 정리 + 고아 회수 큐 배수
    * [FREE-TIER] 전체 트리 다운로드 제거:
    *   - 만료/종료 방은 서버측 쿼리(orderByChild)로 해당 방만 수신 (평상시 0건 = 몇 바이트).
    *     database.rules.json의 rooms .indexOn(["status","createdAt"])이 전제 —
    *     인덱스가 없으면 SDK가 전체를 받아 클라이언트에서 거르므로 절감 효과가 사라진다.
-   *   - 고아 스캔은 shallow REST로 키 목록만 비교.
    */
   private async cleanupExpiredRooms(): Promise<void> {
     try {
+      // 실패해서 남아 있던 하위 경로부터 회수(가장 싸고 확실한 절감).
+      await this.drainOrphanQueue();
+
       const now = Date.now();
       const roomsToDelete = new Set<string>();
 
@@ -167,25 +266,6 @@ class MultiplayerService {
       }
 
       for (const roomId of roomsToDelete) await this.deleteRoom(roomId);
-
-      // [FREE-TIER] 고아 노드 스캔은 25% 확률로만 실행. 키 목록만 비교하므로
-      //   실행돼도 다운로드는 수십 바이트 수준.
-      if (Math.random() >= 0.25) return;
-
-      const roomKeys = await this.shallowKeys('rooms');
-      if (roomKeys === null) return; // REST 불가 → 이번 회차 고아 스캔 생략
-      const aliveRooms = new Set(roomKeys);
-
-      for (const path of ['gameStates', 'towerDetails', 'battleResults', 'presence']) {
-        const keys = await this.shallowKeys(path);
-        if (!keys) continue;
-        for (const id of keys) {
-          if (!aliveRooms.has(id)) {
-            await remove(ref(rtdb, `${path}/${id}`)).catch(() => {});
-            console.log(`[MS] Cleaned orphan ${path}/${id}`);
-          }
-        }
-      }
     } catch (error: any) {
       if (error?.message?.includes('Permission denied')) return;
       console.error('Failed to cleanup expired rooms:', error);
@@ -194,20 +274,24 @@ class MultiplayerService {
 
   /**
    * [V5-FIX-MS-1] 방과 모든 관련 데이터 완전 삭제
+   * [FREE-TIER] 하위 경로 삭제가 하나라도 실패하면 회수 큐에 남겨 다음 회차에 재시도한다.
    */
   private async deleteRoom(roomId: string): Promise<void> {
+    // rooms 삭제 '전에' 큐에 적는다 — rooms를 지운 직후 탭이 죽어도 흔적이 남도록.
+    this.enqueueOrphanCleanup(roomId);
     try {
       // [SEC] rooms를 먼저 삭제해야 함 — 새 보안 룰에서 하위 경로(towerDetails 등)의
       // 전체 삭제는 "방이 없거나 만료/종료됨"일 때만 허용되므로 순서가 중요.
       await remove(ref(rtdb, `rooms/${roomId}`));
-      await Promise.allSettled([
-        remove(ref(rtdb, `gameStates/${roomId}`)),
-        remove(ref(rtdb, `towerDetails/${roomId}`)),
-        remove(ref(rtdb, `battleResults/${roomId}`)),
-        remove(ref(rtdb, `presence/${roomId}`)),
-      ]);
-      console.log(`[MS] Deleted room and all related data: ${roomId}`);
+      const ok = await this.removeRoomChildren(roomId);
+      if (ok) {
+        this.dequeueOrphanCleanup(roomId);
+        console.log(`[MS] Deleted room and all related data: ${roomId}`);
+      } else {
+        console.warn(`[MS] Room ${roomId} deleted but some child paths remain — queued for retry`);
+      }
     } catch (error) {
+      // rooms 삭제 자체가 실패했으면 하위 경로는 아직 지울 수 없다(규칙상). 큐에 남겨 둔다.
       console.error(`Failed to delete room ${roomId}:`, error);
     }
   }
@@ -376,6 +460,9 @@ class MultiplayerService {
     if (pendingTimer) { clearTimeout(pendingTimer); this.playerStateTimers.delete(pendingKey); }
     this.pendingPlayerState.delete(pendingKey);
     this.lastPlayerStateWrite.delete(pendingKey); // [FREE-TIER] 스로틀 타임스탬프도 정리(누수 방지)
+    // 타워 상세도 동일 — 퇴장 후 지연 업로드가 나가면 permission_denied만 남는다.
+    this.cancelPendingTowerUpdate(pendingKey);
+    this.lastTowerUpdate.delete(pendingKey);
 
     const roomRef = ref(rtdb, `rooms/${roomId}`);
 
@@ -731,9 +818,21 @@ class MultiplayerService {
   // 전체 보드(기술 포함 수십 KB)가 업로드·전파되던 것을 완화.
   // 정확한 상태가 필요한 시점(웨이브 종료/재접속/배틀 배치)은 flushTowerUpdate/
   // forcePushTowerDetailsFull/submitTFTPlacements가 즉시 쓰므로 게임 로직 영향 없음.
+  // [FIX] 스로틀 맵 키를 `roomId:userId`로 — 예전엔 userId만이라 같은 uid가
+  //   방을 옮기면 이전 방의 예약 업로드가 살아 남거나 서로의 타이머를 취소했다.
   private lastTowerUpdate: Map<string, number> = new Map();
   private towerUpdateThrottle = 3000;
   private towerUpdateTimeouts: Map<string, ReturnType<typeof setTimeout>> = new Map();
+
+  private towerKey(roomId: string, userId: string): string {
+    return `${roomId}:${userId}`;
+  }
+
+  /** 예약된 타워 업로드 취소(즉시 쓰기 직전에 호출). */
+  private cancelPendingTowerUpdate(key: string): void {
+    const t = this.towerUpdateTimeouts.get(key);
+    if (t) { clearTimeout(t); this.towerUpdateTimeouts.delete(key); }
+  }
 
   /**
    * [V5-FIX-MS-7] update() 를 써서 tftPlacements 같은 sibling 필드 보존
@@ -744,27 +843,26 @@ class MultiplayerService {
     towerDetails: TowerDetail[]
   ): Promise<void> {
     const now = Date.now();
-    const lastUpdate = this.lastTowerUpdate.get(userId) || 0;
-    if (this.towerUpdateTimeouts.has(userId)) {
-      clearTimeout(this.towerUpdateTimeouts.get(userId)!);
-      this.towerUpdateTimeouts.delete(userId);
-    }
+    const key = this.towerKey(roomId, userId);
+    const lastUpdate = this.lastTowerUpdate.get(key) || 0;
+    this.cancelPendingTowerUpdate(key);
+
     const doUpdate = async () => {
       const tRef = ref(rtdb, `towerDetails/${roomId}/${userId}`);
       await update(tRef, {
         towers: this.normalizeTowerDetails(towerDetails),
         updatedAt: this.now(),
       });
-      this.lastTowerUpdate.set(userId, Date.now());
+      this.lastTowerUpdate.set(key, Date.now());
     };
     if (now - lastUpdate >= this.towerUpdateThrottle) {
       await doUpdate();
     } else {
-      const timeout = setTimeout(async () => {
-        await doUpdate();
-        this.towerUpdateTimeouts.delete(userId);
+      const timeout = setTimeout(() => {
+        this.towerUpdateTimeouts.delete(key);
+        doUpdate().catch(err => console.warn('[MS] throttled tower update failed:', err));
       }, this.towerUpdateThrottle - (now - lastUpdate));
-      this.towerUpdateTimeouts.set(userId, timeout);
+      this.towerUpdateTimeouts.set(key, timeout);
     }
   }
 
@@ -811,16 +909,14 @@ class MultiplayerService {
     userId: string,
     towerDetails: TowerDetail[]
   ): Promise<void> {
-    if (this.towerUpdateTimeouts.has(userId)) {
-      clearTimeout(this.towerUpdateTimeouts.get(userId)!);
-      this.towerUpdateTimeouts.delete(userId);
-    }
+    const key = this.towerKey(roomId, userId);
+    this.cancelPendingTowerUpdate(key);
     const tRef = ref(rtdb, `towerDetails/${roomId}/${userId}`);
     await update(tRef, {
       towers: this.normalizeTowerDetails(towerDetails),
       updatedAt: this.now(),
     });
-    this.lastTowerUpdate.set(userId, Date.now());
+    this.lastTowerUpdate.set(key, Date.now());
     console.log(`[MS] flushTowerUpdate: ${towerDetails.length} towers for ${userId}`);
   }
 
@@ -836,16 +932,14 @@ class MultiplayerService {
     userId: string,
     towerDetails: TowerDetail[]
   ): Promise<void> {
-    if (this.towerUpdateTimeouts.has(userId)) {
-      clearTimeout(this.towerUpdateTimeouts.get(userId)!);
-      this.towerUpdateTimeouts.delete(userId);
-    }
+    const key = this.towerKey(roomId, userId);
+    this.cancelPendingTowerUpdate(key);
     const tRef = ref(rtdb, `towerDetails/${roomId}/${userId}`);
     await update(tRef, {
       towers: this.normalizeTowerDetails(towerDetails),
       updatedAt: this.now(),
     });
-    this.lastTowerUpdate.set(userId, Date.now());
+    this.lastTowerUpdate.set(key, Date.now());
   }
 
   /**
@@ -872,7 +966,9 @@ class MultiplayerService {
     callback: (placements: Map<string, { id: string; x: number; y: number }[]>) => void
   ): () => void {
     const tRef = ref(rtdb, `towerDetails/${roomId}`);
-    const listener = onValue(tRef, (snapshot) => {
+    // [LEAK-FIX] onValue의 반환값(Unsubscribe)을 그대로 돌려준다. off(ref,'value',unsub)은
+    //   SDK가 '원본 콜백 동일성'으로 매칭하므로 절대 해제되지 않는다(아래 모든 구독 동일).
+    return onValue(tRef, (snapshot) => {
       const combined = new Map<string, { id: string; x: number; y: number }[]>();
       if (!snapshot.exists()) { callback(combined); return; }
       const data = snapshot.val();
@@ -885,7 +981,6 @@ class MultiplayerService {
       });
       callback(combined);
     });
-    return () => off(tRef, 'value', listener);
   }
 
   async playerDefeated(roomId: string, userId: string): Promise<void> {
@@ -1298,7 +1393,7 @@ class MultiplayerService {
 
   onRoomUpdate(roomId: string, callback: (room: Room | null) => void): () => void {
     const roomRef = ref(rtdb, `rooms/${roomId}`);
-    const listener = onValue(roomRef, (snapshot) => {
+    return onValue(roomRef, (snapshot) => {
       if (!snapshot.exists()) { callback(null); return; }
       const room = snapshot.val() as Room;
       if (Date.now() - room.createdAt > ROOM_EXPIRY_TIME) {
@@ -1308,7 +1403,6 @@ class MultiplayerService {
       }
       callback(room);
     });
-    return () => off(roomRef, 'value', listener);
   }
 
   // [V5-FIX-MS-10] players 정규화
@@ -1320,12 +1414,11 @@ class MultiplayerService {
 
   onGameStateUpdate(roomId: string, callback: (players: PlayerGameState[]) => void): () => void {
     const gsRef = ref(rtdb, `gameStates/${roomId}`);
-    const listener = onValue(gsRef, (snapshot) => {
+    return onValue(gsRef, (snapshot) => {
       if (!snapshot.exists()) { callback([]); return; }
       const gs = snapshot.val();
       callback(this.normalizePlayers(gs.players));
     });
-    return () => off(gsRef, 'value', listener);
   }
 
   onGameStateUpdateWithPhase(
@@ -1333,7 +1426,7 @@ class MultiplayerService {
     callback: (state: MultiplayerGameState | null) => void
   ): () => void {
     const gsRef = ref(rtdb, `gameStates/${roomId}`);
-    const listener = onValue(gsRef, (snapshot) => {
+    return onValue(gsRef, (snapshot) => {
       if (!snapshot.exists()) { callback(null); return; }
       const gs = snapshot.val() as MultiplayerGameState;
       // [V5-FIX-MS-10] players / battleResults / rankings 정규화
@@ -1347,7 +1440,6 @@ class MultiplayerService {
       };
       callback(normalized);
     });
-    return () => off(gsRef, 'value', listener);
   }
 
   onMatchupUpdate(
@@ -1355,10 +1447,9 @@ class MultiplayerService {
     callback: (matchups: RoundMatchup | null) => void
   ): () => void {
     const matchupRef = ref(rtdb, `gameStates/${roomId}/roundMatchups`);
-    const listener = onValue(matchupRef, (snapshot) => {
+    return onValue(matchupRef, (snapshot) => {
       callback(snapshot.exists() ? snapshot.val() : null);
     });
-    return () => off(matchupRef, 'value', listener);
   }
 
   onTowerDetailsUpdate(
@@ -1367,12 +1458,11 @@ class MultiplayerService {
     callback: (towers: TowerDetail[]) => void
   ): () => void {
     const tRef = ref(rtdb, `towerDetails/${roomId}/${userId}`);
-    const listener = onValue(tRef, (snapshot) => {
+    return onValue(tRef, (snapshot) => {
       if (!snapshot.exists()) { callback([]); return; }
       const data = snapshot.val();
       callback(Array.isArray(data.towers) ? data.towers : []);
     });
-    return () => off(tRef, 'value', listener);
   }
 
   onAllTowerDetailsUpdate(
@@ -1380,7 +1470,7 @@ class MultiplayerService {
     callback: (allTowers: Map<string, TowerDetail[]>) => void
   ): () => void {
     const tRef = ref(rtdb, `towerDetails/${roomId}`);
-    const listener = onValue(tRef, (snapshot) => {
+    return onValue(tRef, (snapshot) => {
       const combined = new Map<string, TowerDetail[]>();
       if (snapshot.exists()) {
         snapshot.forEach((child) => {
@@ -1391,7 +1481,6 @@ class MultiplayerService {
       }
       callback(combined);
     });
-    return () => off(tRef, 'value', listener);
   }
 
   async getAllTowerDetailsOnce(roomId: string): Promise<Map<string, TowerDetail[]>> {
@@ -1423,10 +1512,9 @@ class MultiplayerService {
     callback: (presence: Record<string, { online: boolean; joinedAt?: number; lastSeen?: number }>) => void
   ): () => void {
     const pRef = ref(rtdb, `presence/${roomId}`);
-    const listener = onValue(pRef, (snap) => {
+    return onValue(pRef, (snap) => {
       callback(snap.exists() ? snap.val() : {});
     });
-    return () => off(pRef, 'value', listener);
   }
 
   getCurrentRoomId(): string | null {
@@ -1442,10 +1530,12 @@ class MultiplayerService {
     const user = authService.getCurrentUser();
     if (user && this.presenceCleanup) { this.presenceCleanup(); this.presenceCleanup = null; }
     if (user) {
+      // [FIX] offline 페이로드를 넘기지 않는다 — registerPresence의 기본값이
+      //   `{ online: false, lastSeen: serverTimestamp() }`라 서버가 '끊긴 시각'을 채운다.
+      //   예전엔 여기서 Date.now()를 넣어, 등록(=입장) 시각이 lastSeen으로 박혀 있었다.
       this.presenceCleanup = registerPresence(
         `presence/${roomId}/${user.uid}`,
         { online: true, joinedAt: Date.now() },
-        { online: false, lastSeen: Date.now() },
       );
     }
   }
@@ -1454,6 +1544,8 @@ class MultiplayerService {
     this.currentRoomId = null;
     localStorage.removeItem('currentRoomId');
     if (this.presenceCleanup) { this.presenceCleanup(); this.presenceCleanup = null; }
+    // 화면은 이미 내려갔는데 방에 묶여 있어 보류됐던 연결 반납을 여기서 마무리.
+    this.maybeReleaseConnection();
   }
 
   getRoomRemainingTime(room: Room): number {

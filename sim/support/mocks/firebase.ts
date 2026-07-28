@@ -9,6 +9,11 @@ export const googleProvider: any = undefined;
 
 export function initRtdbListeners(): void {}
 
+/** 실제 모듈과 표면을 맞추기 위한 no-op (시뮬은 소켓 자체가 없다). */
+export function releaseRtdbConnection(): void {}
+
+export function isRtdbReleased(): boolean { return false; }
+
 export function onRtdbConnected(cb: (c: boolean) => void): () => void {
   try { cb(false); } catch { /* ignore */ }
   return () => {};
