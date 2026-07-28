@@ -5,6 +5,7 @@ import { lMedia, media } from '../../utils/responsive.utils';
 import { Emoji } from '../shared/Emoji';
 import { databaseService, APRankingEntry, CardRankingEntry, QuizRankingEntry, PvpSeasonRankingEntry } from '../../services/DatabaseService';
 import { authService } from '../../services/AuthService';
+import { quotaGuard } from '../../services/QuotaGuard';
 import { saveService } from '../../services/SaveService';
 import { cardService } from '../../services/CardService';
 import { quizService } from '../../services/QuizService';
@@ -38,49 +39,53 @@ export const Rankings = ({ onClose, initialTab = 'ap' }: RankingsProps) => {
   const [myCardPvpRank, setMyCardPvpRank] = useState<number | null>(null);
   const [loading, setLoading] = useState(false);
   const [currentPage, setCurrentPage] = useState(0);
+  // [FREE-TIER] 무료 쿼터 소진 상태 — 빈 랭킹과 구분해 안내한다.
+  const [quotaBlocked, setQuotaBlocked] = useState(() => quotaGuard.isTripped());
   const PAGE_SIZE = 10;
+
+  useEffect(() => quotaGuard.onChange(setQuotaBlocked), []);
 
   const loadRankings = async () => {
     setLoading(true);
     try {
       if (activeTab === 'ap') {
         const [data, rank] = await Promise.all([
-          databaseService.getAPRanking(100),
+          databaseService.getAPRanking(),
           databaseService.getMyAPRank(),
         ]);
         setApRankings(data);
         setMyApRank(rank);
       } else if (activeTab === 'pvp') {
         const [data, rank] = await Promise.all([
-          databaseService.getPVPRanking(100),
+          databaseService.getPVPRanking(),
           databaseService.getMyPVPRank(),
         ]);
         setPvpRankings(data);
         setMyPvpRank(rank);
       } else if (activeTab === 'tower') {
         const [data, rank] = await Promise.all([
-          databaseService.getTowerRanking(100),
+          databaseService.getTowerRanking(),
           databaseService.getMyTowerRank(),
         ]);
         setCardRankings(data);
         setMyCardRank(rank);
       } else if (activeTab === 'cardpvp') {
         const [data, rank] = await Promise.all([
-          databaseService.getCardPvpRanking(100),
+          databaseService.getCardPvpRanking(),
           databaseService.getMyCardPvpRank(),
         ]);
         setCardPvpRankings(data);
         setMyCardPvpRank(rank);
       } else if (activeTab === 'quiz') {
         const [data, rank] = await Promise.all([
-          databaseService.getQuizRanking(100),
+          databaseService.getQuizRanking(),
           databaseService.getMyQuizRank(),
         ]);
         setQuizRankings(data);
         setMyQuizRank(rank);
       } else {
         const [data, rank] = await Promise.all([
-          databaseService.getCollectionRanking(100),
+          databaseService.getCollectionRanking(),
           databaseService.getMyCollectionRank(),
         ]);
         setCardRankings(data);
@@ -137,6 +142,12 @@ export const Rankings = ({ onClose, initialTab = 'ap' }: RankingsProps) => {
             {t('rankings.tabQuiz')}
           </Tab>
         </TabRow>
+
+        {quotaBlocked && (
+          <QuotaNotice>
+            <Emoji glyph="⚠️" size={13} /> {t('rankings.quotaNotice')}
+          </QuotaNotice>
+        )}
 
         {activeTab === 'ap' && (
           <MyRankBadgeWrapper>
@@ -365,6 +376,16 @@ const MyRankBadge = styled.div`
 const SeasonNote = styled.div`
   margin-top: 6px; font-size: 12px; font-weight: 600; color: rgba(251,191,36,0.85);
   ${media.mobile} { font-size: 11px; }
+`;
+
+// [FREE-TIER] 무료 쿼터 소진으로 최신 데이터를 못 받는 상태를 '빈 목록'과 구분해 알린다.
+const QuotaNotice = styled.div`
+  display: flex; align-items: flex-start; gap: 6px;
+  margin: 0 0 10px; padding: 9px 12px;
+  background: rgba(251,146,60,0.10); border: 1px solid rgba(251,146,60,0.28);
+  border-radius: 8px; color: rgba(251,146,60,0.95);
+  font-size: 12px; font-weight: 600; line-height: 1.5;
+  ${media.mobile} { font-size: 11px; padding: 8px 10px; }
 `;
 
 const StatusMsg = styled.div<{ $dimmed?: boolean }>`

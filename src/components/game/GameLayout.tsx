@@ -240,18 +240,37 @@ export const GameLayout: React.FC<GameLayoutProps> = ({ onLeaveGame }) => {
   // Effects — V6/V8 멀티플레이어 로직 전체 보존 + BUG-FIX
   // ─────────────────────────────────────────────────────────────
 
+  // ─── [FREE-TIER] RTDB 연결 참조 확보/반납 ──────────────────────
+  //   로비를 거치지 않고(게임 중 새로고침) 바로 이 화면으로 복귀하는 경로가 있어,
+  //   여기서도 초기화해야 serverTimeOffset이 잡히고 페이즈 타이머가 어긋나지 않는다.
+  //   화면을 떠날 때 참조를 반납하면 마지막 참조가 사라지는 시점에 동시 연결 슬롯이 회수된다.
+  useEffect(() => {
+    if (!isMultiplayer) return;
+    multiplayerService.initForMultiplayer();
+    return () => { multiplayerService.teardownMultiplayer(); };
+  }, [isMultiplayer]);
+
   // ─── 로딩 완료 리포트 ──────────────────────────────────────────
   useEffect(() => {
     if (!isMultiplayer || !multiRoomId || !user || loadingReportedRef.current) return;
-    const unsub = multiplayerService.onGameStateUpdateWithPhase(multiRoomId, state => {
+    // [LEAK-FIX] RTDB onValue는 로컬 캐시가 있으면 콜백을 '동기'로 한 번 발화한다.
+    //   그때는 아직 unsub 변수가 초기화되기 전이라 콜백 안에서 직접 부르면 TDZ ReferenceError다.
+    //   해제 요청을 플래그로 받아 두고, 구독이 반환된 뒤에 실제로 끊는다.
+    let unsub: (() => void) | null = null;
+    let unsubRequested = false;
+    const stop = () => { if (unsub) unsub(); else unsubRequested = true; };
+
+    unsub = multiplayerService.onGameStateUpdateWithPhase(multiRoomId, state => {
       if (!state || loadingReportedRef.current) return;
       loadingReportedRef.current = true;
-      if (state.currentPhase !== "loading") { setMultiLoading(false); unsub(); return; }
+      if (state.currentPhase !== "loading") { setMultiLoading(false); stop(); return; }
       multiplayerService.markPlayerLoaded(multiRoomId, user.uid)
-        .then(ok => { if (ok) unsub(); else loadingReportedRef.current = false; })
+        .then(ok => { if (ok) stop(); else loadingReportedRef.current = false; })
         .catch(() => { loadingReportedRef.current = false; });
     });
-    return unsub;
+    if (unsubRequested) unsub();
+
+    return () => { unsub?.(); };
   }, [isMultiplayer, multiRoomId, user]);
 
   // ─── [C1-FIX] 로딩 워치독 ──────────────────────────────────────

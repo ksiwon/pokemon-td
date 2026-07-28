@@ -687,6 +687,7 @@
     "scoreSuffix": "{n} pts",
     "colWins": "Wins",
     "winsSuffix": "{n}W",
+    "quotaNotice": "Server usage limit reached, so live rankings aren't available. Showing the last cached results; this recovers automatically in a few minutes.",
     "seasonNote": "🗓 This week's season · resets in {n}d · weekly reset"
   },
   "hallOfFame": {
@@ -711,6 +712,7 @@
     "rankSuffix": "#{rank}",
     "minuteSecond": "{m}m {s}s",
     "pokemonUsed": "Pokémon Used",
+    "quotaNotice": "Server usage limit reached, so live records aren't available. This recovers automatically in a few minutes.",
     "dataNotice": "Your top 10 records per map (by clear time) are kept permanently. Records ranked 11th or lower that are older than 60 days may be automatically removed."
   },
   "lobby": {

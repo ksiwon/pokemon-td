@@ -1,0 +1,80 @@
+{
+  "//": [
+    "복합 인덱스 정의. 예전엔 이 파일이 없어 firebase deploy로 인덱스가 배포되지 않았고,",
+    "콘솔 수동 생성에 의존했다. 인덱스가 빠지면 쿼리가 failed-precondition으로 죽는데",
+    "DatabaseService가 대부분 catch → [] 로 삼켜서 '랭킹이 그냥 비어 보임'으로만 나타나",
+    "원인 추적이 불가능했다.",
+    "",
+    "단일 필드 정렬/부등호(apRankings.totalAP, users.rating, cardRankings.collectionCount,",
+    "quizRankings.examBest, seasons/*/cardRankings.towerFloor, seasons/*/pvpRankings.wins,",
+    "cardDecks.rand, achievements.userId)는 Firestore가 자동 인덱싱하므로 여기 없어도 된다.",
+    "",
+    "배포: firebase deploy --only firestore:indexes"
+  ],
+  "indexes": [
+    {
+      "//": "cleanupOldHallOfFame — where(userId ==) + where(mapId ==)",
+      "collectionGroup": "hallOfFame",
+      "queryScope": "COLLECTION",
+      "fields": [
+        { "fieldPath": "userId", "order": "ASCENDING" },
+        { "fieldPath": "mapId", "order": "ASCENDING" }
+      ]
+    },
+    {
+      "//": "getUserHallOfFame — where(userId ==) + orderBy(timestamp desc)",
+      "collectionGroup": "hallOfFame",
+      "queryScope": "COLLECTION",
+      "fields": [
+        { "fieldPath": "userId", "order": "ASCENDING" },
+        { "fieldPath": "timestamp", "order": "DESCENDING" }
+      ]
+    },
+    {
+      "//": "getGlobalHallOfFame(mapId, 'clearTime') — where(mapId ==) + orderBy(clearTime asc)",
+      "collectionGroup": "hallOfFame",
+      "queryScope": "COLLECTION",
+      "fields": [
+        { "fieldPath": "mapId", "order": "ASCENDING" },
+        { "fieldPath": "clearTime", "order": "ASCENDING" }
+      ]
+    },
+    {
+      "//": "getGlobalHallOfFame(mapId, 'timestamp') — where(mapId ==) + orderBy(timestamp asc)",
+      "collectionGroup": "hallOfFame",
+      "queryScope": "COLLECTION",
+      "fields": [
+        { "fieldPath": "mapId", "order": "ASCENDING" },
+        { "fieldPath": "timestamp", "order": "ASCENDING" }
+      ]
+    },
+    {
+      "//": "getGlobalHighestWave / getMapLeaderboard('highestWave') — where(mapId ==) + orderBy(highestWave desc)",
+      "collectionGroup": "leaderboards",
+      "queryScope": "COLLECTION",
+      "fields": [
+        { "fieldPath": "mapId", "order": "ASCENDING" },
+        { "fieldPath": "highestWave", "order": "DESCENDING" }
+      ]
+    },
+    {
+      "//": "getUserRankForMap('highestWave') — where(mapId ==) + where(highestWave >)",
+      "collectionGroup": "leaderboards",
+      "queryScope": "COLLECTION",
+      "fields": [
+        { "fieldPath": "mapId", "order": "ASCENDING" },
+        { "fieldPath": "highestWave", "order": "ASCENDING" }
+      ]
+    },
+    {
+      "//": "getMapLeaderboard('clearTime') + getUserRankForMap('clearTime') — where(mapId ==) + clearTime asc/<",
+      "collectionGroup": "leaderboards",
+      "queryScope": "COLLECTION",
+      "fields": [
+        { "fieldPath": "mapId", "order": "ASCENDING" },
+        { "fieldPath": "clearTime", "order": "ASCENDING" }
+      ]
+    }
+  ],
+  "fieldOverrides": []
+}

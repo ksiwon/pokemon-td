@@ -11,12 +11,22 @@ import { db } from '../config/firebase';
 import { HallOfFameEntry, LeaderboardEntry } from '../types/multiplayer';
 import { Achievement } from '../types/game';
 import { authService } from './AuthService';
+import { quotaGuard, QuotaBlockedError } from './QuotaGuard';
 import { seasonId } from '../utils/season';
 import { CARD_STORAGE_KEY } from './CardService';
 import { QUIZ_STORAGE_KEY } from './QuizService';
 
 // [FREE-TIER] 무료 플랜 데이터 보존 한도
 const HALL_OF_FAME_MAX_AGE_DAYS = 60;  // 이 일수보다 오래된 자신의 기록은 삭제 후보
+
+// [FREE-TIER] "내 순위" 집계 스캔 상한. getCountFromServer는 인덱스 항목 1000개당 1 read라
+//   500이면 사실상 1 read. 이보다 뒤 순위는 "500+"로 표시된다.
+const RANK_SCAN_LIMIT = 500;
+
+// [FREE-TIER] 랭킹 목록 기본 조회 개수. 문서 1개 = 1 read라 곧 쿼터다.
+//   예전엔 100을 받아 10개씩 보여줬다(= 캐시 미스 1회당 100 read, 6개 탭이면 600).
+//   50이면 5페이지 — 사다리로 충분하면서 읽기를 절반으로 줄인다.
+export const RANKING_FETCH_LIMIT = 50;
 
 // ─── AP 랭킹 엔트리 타입 ──────────────────────────────────────────────────────
 export interface APRankingEntry {
@@ -80,10 +90,6 @@ class DatabaseService {
   private readonly EMPTY_CACHE_TTL = 60_000;
   private readonly LS_CACHE_PREFIX = 'ptd-fscache:';
 
-  // [FREE-TIER] 카드 랭킹 쓰기 중복 방지 — 세션 내 동일 값(층:수집수) 재기록 스킵.
-  private _lastCardRankSync = '';
-  private _lastSeasonSync = '';
-  private _lastQuizSync = -1;
 
   private async cachedRead<T>(key: string, loader: () => Promise<T>): Promise<T> {
     const hit = this._readCache.get(key);
@@ -91,6 +97,7 @@ class DatabaseService {
       return hit.data as T;
     }
     // localStorage 계층 (세션/새로고침 간 유지)
+    let staleFromLs: { data: T; ts: number } | null = null;
     try {
       const raw = localStorage.getItem(this.LS_CACHE_PREFIX + key);
       if (raw) {
@@ -99,11 +106,28 @@ class DatabaseService {
           this._readCache.set(key, { ...entry, ttl: this.READ_CACHE_TTL });
           return entry.data;
         }
+        staleFromLs = entry;             // 만료됐지만 차단 시 폴백용으로 들고 있는다
         localStorage.removeItem(this.LS_CACHE_PREFIX + key);
       }
     } catch { /* ignore */ }
 
-    const data = await loader();
+    // [FREE-TIER] 쿼터가 소진된 상태면 요청 자체를 보내지 않는다.
+    //   만료된 캐시라도 있으면 그걸 보여주는 편이 빈 화면보다 낫다.
+    if (quotaGuard.isTripped()) {
+      if (hit) return hit.data as T;
+      if (staleFromLs) return staleFromLs.data;
+      throw new QuotaBlockedError();
+    }
+
+    let data: T;
+    try {
+      data = await loader();
+      quotaGuard.reportSuccess();
+    } catch (err) {
+      quotaGuard.report(err);
+      throw err;                          // 실패는 캐시하지 않는다
+    }
+
     const isEmpty = Array.isArray(data) && data.length === 0;
     this._readCache.set(key, {
       data, ts: Date.now(),
@@ -115,6 +139,40 @@ class DatabaseService {
       } catch { /* quota 초과 등 — 무시 */ }
     }
     return data;
+  }
+
+  /**
+   * [FREE-TIER] Firestore 쓰기를 시도해도 되는 상태인지.
+   * 오프라인 세션이거나 무료 쿼터가 소진된 상태면 요청을 아예 만들지 않는다.
+   */
+  private canWrite(): boolean {
+    return !authService.isOfflineMode() && !quotaGuard.isTripped();
+  }
+
+  /**
+   * 쓰기 결과를 회로차단기에 보고하는 래퍼.
+   * 성공하면 차단을 풀고, resource-exhausted면 차단을 내린다. 에러는 그대로 전파.
+   */
+  private async runWrite<T>(fn: () => Promise<T>): Promise<T> {
+    try {
+      const r = await fn();
+      quotaGuard.reportSuccess();
+      return r;
+    } catch (err) {
+      quotaGuard.report(err);
+      throw err;
+    }
+  }
+
+  /**
+   * [FREE-TIER] "내 순위" 캐시 키. 예전엔 getMy*Rank 6종이 전부 캐시 미대상이라
+   * 랭킹 탭을 전환하거나 미니 포켓 허브를 열 때마다 매번 getDoc 1 + 집계 1 = 2 read가
+   * 그대로 나갔다. 내 기록을 쓰면 invalidateCache('myRank:')로 즉시 무효화된다.
+   * uid를 키에 포함 — 같은 브라우저에서 계정을 바꿔도 남의 순위가 보이지 않도록.
+   */
+  private myRankKey(board: string): string | null {
+    const uid = authService.getCurrentUser()?.uid;
+    return uid ? `myRank:${board}:${uid}` : null;
   }
 
   /** 내 기록 쓰기 직후 관련 랭킹 캐시 무효화 (키 prefix 매칭). */
@@ -130,6 +188,41 @@ class DatabaseService {
         if (prefixes.some(p => bare.startsWith(p))) localStorage.removeItem(k);
       }
     } catch { /* ignore */ }
+  }
+
+  // ─── [FREE-TIER] 중복 쓰기 방지: 마지막으로 서버에 기록한 값 기억 ──────────────
+  // 예전엔 이 상태가 인스턴스 필드(메모리)에만 있어 새로고침/새 탭마다 리셋됐고,
+  // 값이 그대로여도 같은 문서를 다시 썼다. localStorage로 올려 세션 간에도 유지한다.
+  // 키에 uid를 포함해 같은 브라우저에서 계정을 바꿔도 서로 섞이지 않는다.
+  private static readonly SYNC_LS_PREFIX = 'ptd-sync:';
+  private _syncMem = new Map<string, string>();
+
+  private syncKey(scope: string): string | null {
+    const uid = authService.getCurrentUser()?.uid;
+    return uid ? `${scope}:${uid}` : null;
+  }
+
+  /** 이미 같은 값을 기록했으면 true (쓰기 스킵). */
+  private alreadySynced(scope: string, value: string): boolean {
+    const key = this.syncKey(scope);
+    if (!key) return false;
+    const mem = this._syncMem.get(key);
+    if (mem !== undefined) return mem === value;
+    try {
+      const stored = localStorage.getItem(DatabaseService.SYNC_LS_PREFIX + key);
+      if (stored !== null) this._syncMem.set(key, stored);
+      return stored === value;
+    } catch {
+      return false;
+    }
+  }
+
+  /** 쓰기 성공 후 호출. 다음 호출부터 동일 값은 스킵된다. */
+  private markSynced(scope: string, value: string): void {
+    const key = this.syncKey(scope);
+    if (!key) return;
+    this._syncMem.set(key, value);
+    try { localStorage.setItem(DatabaseService.SYNC_LS_PREFIX + key, value); } catch { /* ignore */ }
   }
 
   /**
@@ -150,7 +243,7 @@ class DatabaseService {
     clearTime: number
   ): Promise<void> {
     const user = authService.getCurrentUser();
-    if (!user || authService.isOfflineMode()) return; // [FREE-TIER] 오프라인은 Firestore 쓰기 안 함
+    if (!user || !this.canWrite()) return; // [FREE-TIER] 오프라인/쿼터소진 시 Firestore 쓰기 안 함
 
     const entry: Omit<HallOfFameEntry, 'id'> = {
       userId: user.uid,
@@ -162,8 +255,8 @@ class DatabaseService {
       clearTime,
       timestamp: Date.now(),
     };
-    await addDoc(collection(db, 'hallOfFame'), entry);
-    this.invalidateCache('hof:');
+    await this.runWrite(() => addDoc(collection(db, 'hallOfFame'), entry));
+    this.invalidateCache('hof:', 'myHof:');
 
     // [FREE-TIER] 20% 확률로 오래된 기록 정리 (매번 실행 시 Firestore 쿼터 낭비)
     if (Math.random() < 0.2) {
@@ -230,83 +323,89 @@ class DatabaseService {
         console.log(`[DB] cleanupOldHallOfFame: deleted ${batch.length} own entries for map ${mapId}`);
       }
     } catch (err) {
+      quotaGuard.report(err);
       // 정리 실패는 무시 (게임 진행에 영향 없음)
       console.warn('[DB] cleanupOldHallOfFame failed:', err);
     }
   }
 
+  /**
+   * 내 전당 기록. [FREE-TIER] 예전엔 limit도 캐시도 없어 기록이 쌓인 유저일수록
+   * 탭을 열 때마다 그 수만큼 read가 나갔다. 상한 50 + 10분 캐시.
+   */
   async getUserHallOfFame(): Promise<HallOfFameEntry[]> {
     const user = authService.getCurrentUser();
     if (!user) return [];
 
-    const q = query(
-      collection(db, 'hallOfFame'),
-      where('userId', '==', user.uid),
-      orderBy('timestamp', 'desc')
-    );
-    const snapshot = await getDocs(q);
-    return snapshot.docs.map(doc => ({
-      id: doc.id,
-      ...doc.data(),
-    } as HallOfFameEntry));
+    try {
+      return await this.cachedRead(`myHof:${user.uid}`, async () => {
+        const q = query(
+          collection(db, 'hallOfFame'),
+          where('userId', '==', user.uid),
+          orderBy('timestamp', 'desc'),
+          limit(RANKING_FETCH_LIMIT)
+        );
+        const snapshot = await getDocs(q);
+        return snapshot.docs.map(doc => ({
+          id: doc.id,
+          ...doc.data(),
+        } as HallOfFameEntry));
+      });
+    } catch {
+      return [];
+    }
   }
 
   async getGlobalHallOfFame(
     mapId?: string,
     sortBy: 'clearTime' | 'timestamp' = 'clearTime'
   ): Promise<HallOfFameEntry[]> {
-    return this.cachedRead(`hof:${mapId ?? 'all'}:${sortBy}`, async () => {
-      try {
-        let q;
-        if (mapId) {
-          q = query(
-            collection(db, 'hallOfFame'),
-            where('mapId', '==', mapId),
-            orderBy(sortBy, 'asc'),
-            limit(20)
-          );
-        } else {
-          q = query(
-            collection(db, 'hallOfFame'),
-            orderBy(sortBy, 'asc'),
-            limit(20)
-          );
-        }
+    try {
+      return await this.cachedRead(`hof:${mapId ?? 'all'}:${sortBy}`, async () => {
+        const q = mapId
+          ? query(
+              collection(db, 'hallOfFame'),
+              where('mapId', '==', mapId),
+              orderBy(sortBy, 'asc'),
+              limit(20)
+            )
+          : query(
+              collection(db, 'hallOfFame'),
+              orderBy(sortBy, 'asc'),
+              limit(20)
+            );
         const snapshot = await getDocs(q);
         return snapshot.docs.map(doc => ({
           id: doc.id,
           ...doc.data(),
         } as HallOfFameEntry));
-      } catch {
-        return [];
-      }
-    });
+      });
+    } catch {
+      return [];
+    }
   }
 
   async getGlobalHighestWave(mapId?: string): Promise<LeaderboardEntry[]> {
-    return this.cachedRead(`highestWave:${mapId ?? 'all'}`, async () => {
-      try {
-        let q;
-        if (mapId) {
-          q = query(
-            collection(db, 'leaderboards'),
-            where('mapId', '==', mapId),
-            orderBy('highestWave', 'desc'),
-            limit(20)
-          );
-        } else {
-          q = query(
-            collection(db, 'leaderboards'),
-            orderBy('highestWave', 'desc'),
-            limit(20)
-          );
-        }
+    try {
+      return await this.cachedRead(`highestWave:${mapId ?? 'all'}`, async () => {
+        const q = mapId
+          ? query(
+              collection(db, 'leaderboards'),
+              where('mapId', '==', mapId),
+              orderBy('highestWave', 'desc'),
+              limit(20)
+            )
+          : query(
+              collection(db, 'leaderboards'),
+              orderBy('highestWave', 'desc'),
+              limit(20)
+            );
         const snapshot = await getDocs(q);
         return snapshot.docs.map(doc => doc.data() as LeaderboardEntry);
-      } catch {
-        return [];
-      }
-    });
+      });
+    } catch {
+      return [];
+    }
   }
 
   async updateLeaderboard(
@@ -315,7 +414,7 @@ class DatabaseService {
     highestWave: number
   ): Promise<void> {
     const user = authService.getCurrentUser();
-    if (!user || authService.isOfflineMode()) return; // [FREE-TIER] 오프라인은 Firestore 쓰기 안 함
+    if (!user || !this.canWrite()) return; // [FREE-TIER] 오프라인/쿼터소진 시 Firestore 쓰기 안 함
 
     const docRef = doc(db, 'leaderboards', `${user.uid}_${mapId}`);
     const docSnap = await getDoc(docRef);
@@ -332,7 +431,7 @@ class DatabaseService {
 
     if (!docSnap.exists()) {
       await setDoc(docRef, newEntry);
-      this.invalidateCache('mapLb:', 'highestWave:');
+      this.invalidateCache('mapLb:', 'highestWave:', 'myRank:');
       return;
     }
 
@@ -341,12 +440,12 @@ class DatabaseService {
     if (clearTime !== undefined) {
       if (!existing.clearTime || clearTime < existing.clearTime) {
         await setDoc(docRef, newEntry);
-        this.invalidateCache('mapLb:', 'highestWave:');
+        this.invalidateCache('mapLb:', 'highestWave:', 'myRank:');
       }
     } else {
       if (highestWave > (existing.highestWave ?? 0)) {
         await setDoc(docRef, { ...existing, highestWave, timestamp: Date.now() });
-        this.invalidateCache('mapLb:', 'highestWave:');
+        this.invalidateCache('mapLb:', 'highestWave:', 'myRank:');
       }
     }
   }
@@ -355,16 +454,21 @@ class DatabaseService {
     mapId: string,
     sortBy: 'clearTime' | 'highestWave'
   ): Promise<LeaderboardEntry[]> {
-    return this.cachedRead(`mapLb:${mapId}:${sortBy}`, async () => {
-      const q = query(
-        collection(db, 'leaderboards'),
-        where('mapId', '==', mapId),
-        orderBy(sortBy, sortBy === 'clearTime' ? 'asc' : 'desc'),
-        limit(10)
-      );
-      const snapshot = await getDocs(q);
-      return snapshot.docs.map(doc => doc.data() as LeaderboardEntry);
-    });
+    // [FIX] 유일하게 catch가 없어, 인덱스 누락/쿼터 소진 시 예외가 UI까지 튀어 올라갔다.
+    try {
+      return await this.cachedRead(`mapLb:${mapId}:${sortBy}`, async () => {
+        const q = query(
+          collection(db, 'leaderboards'),
+          where('mapId', '==', mapId),
+          orderBy(sortBy, sortBy === 'clearTime' ? 'asc' : 'desc'),
+          limit(10)
+        );
+        const snapshot = await getDocs(q);
+        return snapshot.docs.map(doc => doc.data() as LeaderboardEntry);
+      });
+    } catch {
+      return [];
+    }
   }
 
   async getUserRankForMap(
@@ -373,32 +477,41 @@ class DatabaseService {
   ): Promise<number | null> {
     const user = authService.getCurrentUser();
     if (!user) return null;
+    const cacheKey = this.myRankKey(`map:${mapId}:${sortBy}`);
+    if (!cacheKey) return null;
 
-    const userDocRef = doc(db, 'leaderboards', `${user.uid}_${mapId}`);
-    const userDoc = await getDoc(userDocRef);
-    if (!userDoc.exists()) return null;
+    try {
+      return await this.cachedRead(cacheKey, async () => {
+        const userDocRef = doc(db, 'leaderboards', `${user.uid}_${mapId}`);
+        const userDoc = await getDoc(userDocRef);
+        if (!userDoc.exists()) return null;
 
-    const userData = userDoc.data() as LeaderboardEntry;
-    const userValue = sortBy === 'clearTime' ? userData.clearTime : userData.highestWave;
-    if (!userValue) return null;
+        const userData = userDoc.data() as LeaderboardEntry;
+        const userValue = sortBy === 'clearTime' ? userData.clearTime : userData.highestWave;
+        if (!userValue) return null;
 
-    // [FIX-QUOTA] "나보다 나은 기록" 수를 집계 카운트로만 조회 (문서 다운로드 0, 1 read).
-    // clearTime: 낮을수록 좋음 → 내 값보다 작은 것이 나보다 앞 순위
-    // highestWave: 높을수록 좋음 → 내 값보다 큰 것이 나보다 앞 순위
-    const betterOp = sortBy === 'clearTime' ? '<' : '>' as const;
-    const q = query(
-      collection(db, 'leaderboards'),
-      where('mapId', '==', mapId),
-      where(sortBy, betterOp as any, userValue),
-      limit(500)
-    );
-    return this.countPlusOne(q);
+        // [FIX-QUOTA] "나보다 나은 기록" 수를 집계 카운트로만 조회 (문서 다운로드 0, 1 read).
+        // clearTime: 낮을수록 좋음 → 내 값보다 작은 것이 나보다 앞 순위
+        // highestWave: 높을수록 좋음 → 내 값보다 큰 것이 나보다 앞 순위
+        const betterOp = sortBy === 'clearTime' ? '<' : '>' as const;
+        const q = query(
+          collection(db, 'leaderboards'),
+          where('mapId', '==', mapId),
+          where(sortBy, betterOp as any, userValue),
+          limit(RANK_SCAN_LIMIT)
+        );
+        return this.countPlusOne(q);
+      });
+    } catch {
+      return null;
+    }
   }
 
   async updateUserRating(userId: string, newRating: number): Promise<void> {
+    if (!this.canWrite()) return;
     const docRef = doc(db, 'users', userId);
-    await updateDoc(docRef, { rating: newRating });
-    this.invalidateCache('pvpRanking:');
+    await this.runWrite(() => updateDoc(docRef, { rating: newRating }));
+    this.invalidateCache('pvpRanking:', 'myRank:');
   }
 
   // ─── [리뉴얼] 업적 저장 — AP 포함 (WriteBatch로 원자적 처리) ───────────────
@@ -407,7 +520,7 @@ class DatabaseService {
   // updateAPRanking의 불필요한 read(getDoc)도 제거 — AP가 낮아지는 경우는 없기 때문.
   async updateUserAchievement(achievement: Achievement, totalAP?: number, achievementCount?: number): Promise<void> {
     const user = authService.getCurrentUser();
-    if (!user || authService.isOfflineMode()) return; // [FREE-TIER] 오프라인은 Firestore 쓰기 안 함
+    if (!user || !this.canWrite()) return; // [FREE-TIER] 오프라인/쿼터소진 시 Firestore 쓰기 안 함
 
     const batch = writeBatch(db);
 
@@ -429,46 +542,74 @@ class DatabaseService {
       batch.set(apRef, apEntry);
     }
 
-    await batch.commit();
-    if (totalAP !== undefined) this.invalidateCache('apRanking:');
+    await this.runWrite(() => batch.commit());
+    if (totalAP !== undefined) {
+      this.markSynced('ap', `${totalAP}:${achievementCount ?? 1}`);
+      this.invalidateCache('apRanking:', 'myRank:', 'myAch:');
+    }
   }
 
-  async updateUserAchievementsBulk(achievements: Achievement[], totalAP: number, achievementCount: number): Promise<void> {
+  /**
+   * [FREE-TIER] 변경분만 받아 한 번의 WriteBatch로 반영.
+   * @param changed 호출부(SaveService)가 DB 값과 비교해 걸러낸 '실제로 달라진' 업적만.
+   *                빈 배열이고 AP도 그대로면 쓰기 0회로 끝난다.
+   */
+  async updateUserAchievementsBulk(changed: Achievement[], totalAP: number, achievementCount: number): Promise<void> {
     const user = authService.getCurrentUser();
-    if (!user || authService.isOfflineMode()) return;
+    if (!user || !this.canWrite()) return;
+
+    const apValue = `${totalAP}:${achievementCount}`;
+    const apNeedsWrite = !this.alreadySynced('ap', apValue);
+    if (changed.length === 0 && !apNeedsWrite) return; // 완전 no-op
 
     const batch = writeBatch(db);
 
-    for (const ach of achievements) {
-      if (ach.unlocked || (ach.progress ?? 0) > 0) {
-        const achRef = doc(db, 'achievements', `${user.uid}_${ach.id}`);
-        batch.set(achRef, { userId: user.uid, ...ach }, { merge: true });
-      }
+    for (const ach of changed) {
+      const achRef = doc(db, 'achievements', `${user.uid}_${ach.id}`);
+      batch.set(achRef, { userId: user.uid, ...ach }, { merge: true });
     }
 
-    const apRef = doc(db, 'apRankings', user.uid);
-    const apEntry: APRankingEntry = {
-      userId: user.uid,
-      userName: user.displayName,
-      totalAP,
-      achievementCount,
-      updatedAt: Date.now(),
-    };
-    batch.set(apRef, apEntry);
+    // 업적이 하나라도 바뀌면 AP도 재기록(집계값 정합성). 아니면 AP 변화가 있을 때만.
+    if (changed.length > 0 || apNeedsWrite) {
+      const apRef = doc(db, 'apRankings', user.uid);
+      const apEntry: APRankingEntry = {
+        userId: user.uid,
+        userName: user.displayName,
+        totalAP,
+        achievementCount,
+        updatedAt: Date.now(),
+      };
+      batch.set(apRef, apEntry);
+    }
 
-    await batch.commit();
-    this.invalidateCache('apRanking:');
+    await this.runWrite(() => batch.commit());
+    this.markSynced('ap', apValue);
+    this.invalidateCache('apRanking:', 'myRank:', 'myAch:');
   }
 
+  /**
+   * 내 업적 문서 전체. 문서 수 = read 수라 앱 로드/업적 모달마다 수십 read가 나갔다.
+   * [FREE-TIER] 10분 캐시 — 업적을 쓰면 invalidateCache('myAch:')로 즉시 무효화된다.
+   * (같은 앱 세션 안에서 앱 시작 동기화 + 업적 모달이 캐시를 공유하게 되는 효과)
+   */
   async getUserAchievements(): Promise<Achievement[]> {
     const user = authService.getCurrentUser();
     if (!user) return [];
-    const q = query(
-      collection(db, 'achievements'),
-      where('userId', '==', user.uid)
-    );
-    const snapshot = await getDocs(q);
-    return snapshot.docs.map(doc => doc.data() as Achievement);
+    try {
+      return await this.cachedRead(`myAch:${user.uid}`, async () => {
+        // limit은 보안 규칙의 list 상한(500)을 통과하기 위해서도 필요하다.
+        // 정의된 업적은 73개라 200이면 충분한 여유.
+        const q = query(
+          collection(db, 'achievements'),
+          where('userId', '==', user.uid),
+          limit(200)
+        );
+        const snapshot = await getDocs(q);
+        return snapshot.docs.map(doc => doc.data() as Achievement);
+      });
+    } catch {
+      return [];
+    }
   }
 
   // ─── AP 랭킹 ─────────────────────────────────────────────────────────────
@@ -481,7 +622,10 @@ class DatabaseService {
    */
   async updateAPRanking(totalAP: number, achievementCount: number): Promise<void> {
     const user = authService.getCurrentUser();
-    if (!user) return;
+    if (!user || !this.canWrite()) return;
+
+    const apValue = `${totalAP}:${achievementCount}`;
+    if (this.alreadySynced('ap', apValue)) return; // 동일 값 재기록 방지
 
     const entry: APRankingEntry = {
       userId: user.uid,
@@ -490,16 +634,17 @@ class DatabaseService {
       achievementCount,
       updatedAt: Date.now(),
     };
-    await setDoc(doc(db, 'apRankings', user.uid), entry);
-    this.invalidateCache('apRanking:');
+    await this.runWrite(() => setDoc(doc(db, 'apRankings', user.uid), entry));
+    this.markSynced('ap', apValue);
+    this.invalidateCache('apRanking:', 'myRank:', 'myAch:');
   }
 
   /**
    * 전체 AP 랭킹 Top 100 조회
    */
-  async getAPRanking(limitCount = 100): Promise<APRankingEntry[]> {
-    return this.cachedRead(`apRanking:${limitCount}`, async () => {
-      try {
+  async getAPRanking(limitCount = RANKING_FETCH_LIMIT): Promise<APRankingEntry[]> {
+    try {
+      return await this.cachedRead(`apRanking:${limitCount}`, async () => {
         const q = query(
           collection(db, 'apRankings'),
           orderBy('totalAP', 'desc'),
@@ -507,10 +652,10 @@ class DatabaseService {
         );
         const snapshot = await getDocs(q);
         return snapshot.docs.map(doc => doc.data() as APRankingEntry);
-      } catch {
-        return [];
-      }
-    });
+      });
+    } catch {
+      return [];
+    }
   }
 
   /**
@@ -519,29 +664,34 @@ class DatabaseService {
   async getMyAPRank(): Promise<number | null> {
     const user = authService.getCurrentUser();
     if (!user) return null;
+    const cacheKey = this.myRankKey('ap');
+    if (!cacheKey) return null;
 
+    // try/catch를 cachedRead '바깥'에 둔다 — loader가 throw하면 아무것도 캐시되지 않아
+    // 일시적 네트워크 실패가 10분간 '순위 없음'으로 굳지 않는다.
     try {
-      const myDoc = await getDoc(doc(db, 'apRankings', user.uid));
-      if (!myDoc.exists()) return null;
+      return await this.cachedRead(cacheKey, async () => {
+        const myDoc = await getDoc(doc(db, 'apRankings', user.uid));
+        if (!myDoc.exists()) return null;
 
-      const myAP = (myDoc.data() as APRankingEntry).totalAP;
-      // 나보다 AP 높은 사람 수 + 1 = 내 순위 — [FIX-QUOTA] 집계 카운트(1 read)
-      const RANK_SCAN_LIMIT = 500;
-      const q = query(
-        collection(db, 'apRankings'),
-        where('totalAP', '>', myAP),
-        limit(RANK_SCAN_LIMIT)
-      );
-      return this.countPlusOne(q);
+        const myAP = (myDoc.data() as APRankingEntry).totalAP;
+        // 나보다 AP 높은 사람 수 + 1 = 내 순위 — [FIX-QUOTA] 집계 카운트(1 read)
+        const q = query(
+          collection(db, 'apRankings'),
+          where('totalAP', '>', myAP),
+          limit(RANK_SCAN_LIMIT)
+        );
+        return this.countPlusOne(q);
+      });
     } catch {
       return null;
     }
   }
 
   // ─── PVP 랭킹 ────────────────────────────────────────────────────────────
-  async getPVPRanking(limitCount = 100): Promise<any[]> {
-    return this.cachedRead(`pvpRanking:${limitCount}`, async () => {
-      try {
+  async getPVPRanking(limitCount = RANKING_FETCH_LIMIT): Promise<any[]> {
+    try {
+      return await this.cachedRead(`pvpRanking:${limitCount}`, async () => {
         const q = query(
           collection(db, 'users'),
           orderBy('rating', 'desc'),
@@ -553,29 +703,32 @@ class DatabaseService {
           userName: doc.data().displayName,
           rating: doc.data().rating ?? 1000,
         }));
-      } catch (err) {
-        console.error('getPVPRanking failed:', err);
-        return [];
-      }
-    });
+      });
+    } catch (err) {
+      console.error('getPVPRanking failed:', err);
+      return [];
+    }
   }
 
   async getMyPVPRank(): Promise<number | null> {
     const user = authService.getCurrentUser();
     if (!user) return null;
+    const cacheKey = this.myRankKey('pvp');
+    if (!cacheKey) return null;
 
     try {
-      const myDoc = await getDoc(doc(db, 'users', user.uid));
-      if (!myDoc.exists()) return null;
+      return await this.cachedRead(cacheKey, async () => {
+        const myDoc = await getDoc(doc(db, 'users', user.uid));
+        if (!myDoc.exists()) return null;
 
-      const myRating = myDoc.data().rating ?? 1000;
-      const RANK_SCAN_LIMIT = 500;
-      const q = query(
-        collection(db, 'users'),
-        where('rating', '>', myRating),
-        limit(RANK_SCAN_LIMIT)
-      );
-      return this.countPlusOne(q); // [FIX-QUOTA] 집계 카운트(1 read)
+        const myRating = myDoc.data().rating ?? 1000;
+        const q = query(
+          collection(db, 'users'),
+          where('rating', '>', myRating),
+          limit(RANK_SCAN_LIMIT)
+        );
+        return this.countPlusOne(q); // [FIX-QUOTA] 집계 카운트(1 read)
+      });
     } catch (err) {
       console.error('getMyPVPRank failed:', err);
       return null;
@@ -590,10 +743,10 @@ class DatabaseService {
    */
   async updateCardRanking(collectionCount: number): Promise<void> {
     const user = authService.getCurrentUser();
-    if (!user || authService.isOfflineMode()) return;
+    if (!user || !this.canWrite()) return;
 
-    const key = `${collectionCount}`;
-    if (key === this._lastCardRankSync) return; // 동일 값 재기록 방지
+    const value = `${collectionCount}`;
+    if (this.alreadySynced('cardRank', value)) return; // 동일 값 재기록 방지(새로고침 후에도 유지)
 
     const entry: CardRankingEntry = {
       userId: user.uid,
@@ -603,9 +756,10 @@ class DatabaseService {
     };
     try {
       await setDoc(doc(db, 'cardRankings', user.uid), entry);
-      this._lastCardRankSync = key;
-      this.invalidateCache('collectionRanking:');
+      this.markSynced('cardRank', value);
+      this.invalidateCache('collectionRanking:', 'myRank:');
     } catch (err) {
+      quotaGuard.report(err);
       console.warn('[DB] updateCardRanking failed:', err);
     }
   }
@@ -617,11 +771,11 @@ class DatabaseService {
    */
   async updateTowerSeasonRanking(towerFloor: number): Promise<void> {
     const user = authService.getCurrentUser();
-    if (!user || authService.isOfflineMode()) return;
+    if (!user || !this.canWrite()) return;
 
     const season = seasonId();
-    const key = `${season}:${towerFloor}`;
-    if (key === this._lastSeasonSync) return;
+    const value = `${season}:${towerFloor}`;
+    if (this.alreadySynced('towerSeason', value)) return;
 
     const entry: CardRankingEntry = {
       userId: user.uid,
@@ -631,19 +785,20 @@ class DatabaseService {
     };
     try {
       await setDoc(doc(db, 'seasons', season, 'cardRankings', user.uid), entry);
-      this._lastSeasonSync = key;
-      this.invalidateCache('towerRanking:');
+      this.markSynced('towerSeason', value);
+      this.invalidateCache('towerRanking:', 'myRank:');
       this.cleanupMyOldSeasonEntries();
     } catch (err) {
+      quotaGuard.report(err);
       console.warn('[DB] updateTowerSeasonRanking failed:', err);
     }
   }
 
   /** 이번 주 시즌 타워 최고층 랭킹 Top N. */
-  async getTowerRanking(limitCount = 100): Promise<CardRankingEntry[]> {
+  async getTowerRanking(limitCount = RANKING_FETCH_LIMIT): Promise<CardRankingEntry[]> {
     const season = seasonId();
-    return this.cachedRead(`towerRanking:${season}:${limitCount}`, async () => {
-      try {
+    try {
+      return await this.cachedRead(`towerRanking:${season}:${limitCount}`, async () => {
         const q = query(
           collection(db, 'seasons', season, 'cardRankings'),
           orderBy('towerFloor', 'desc'),
@@ -651,16 +806,16 @@ class DatabaseService {
         );
         const snapshot = await getDocs(q);
         return snapshot.docs.map(doc => doc.data() as CardRankingEntry);
-      } catch {
-        return [];
-      }
-    });
+      });
+    } catch {
+      return [];
+    }
   }
 
   /** 전체 수집 종 수 랭킹 Top N. */
-  async getCollectionRanking(limitCount = 100): Promise<CardRankingEntry[]> {
-    return this.cachedRead(`collectionRanking:${limitCount}`, async () => {
-      try {
+  async getCollectionRanking(limitCount = RANKING_FETCH_LIMIT): Promise<CardRankingEntry[]> {
+    try {
+      return await this.cachedRead(`collectionRanking:${limitCount}`, async () => {
         const q = query(
           collection(db, 'cardRankings'),
           orderBy('collectionCount', 'desc'),
@@ -668,10 +823,10 @@ class DatabaseService {
         );
         const snapshot = await getDocs(q);
         return snapshot.docs.map(doc => doc.data() as CardRankingEntry);
-      } catch {
-        return [];
-      }
-    });
+      });
+    } catch {
+      return [];
+    }
   }
 
   /** 내 이번 주 시즌 타워 최고층 순위 (나보다 높은 층 수 + 1). */
@@ -679,18 +834,21 @@ class DatabaseService {
     const user = authService.getCurrentUser();
     if (!user) return null;
     const season = seasonId();
+    const cacheKey = this.myRankKey(`tower:${season}`);
+    if (!cacheKey) return null;
     try {
-      const myDoc = await getDoc(doc(db, 'seasons', season, 'cardRankings', user.uid));
-      if (!myDoc.exists()) return null;
+      return await this.cachedRead(cacheKey, async () => {
+        const myDoc = await getDoc(doc(db, 'seasons', season, 'cardRankings', user.uid));
+        if (!myDoc.exists()) return null;
 
-      const myValue = (myDoc.data() as CardRankingEntry).towerFloor ?? 0;
-      const RANK_SCAN_LIMIT = 500;
-      const q = query(
-        collection(db, 'seasons', season, 'cardRankings'),
-        where('towerFloor', '>', myValue),
-        limit(RANK_SCAN_LIMIT)
-      );
-      return this.countPlusOne(q); // [FIX-QUOTA] 집계 카운트(1 read)
+        const myValue = (myDoc.data() as CardRankingEntry).towerFloor ?? 0;
+        const q = query(
+          collection(db, 'seasons', season, 'cardRankings'),
+          where('towerFloor', '>', myValue),
+          limit(RANK_SCAN_LIMIT)
+        );
+        return this.countPlusOne(q); // [FIX-QUOTA] 집계 카운트(1 read)
+      });
     } catch {
       return null;
     }
@@ -700,18 +858,21 @@ class DatabaseService {
   async getMyCollectionRank(): Promise<number | null> {
     const user = authService.getCurrentUser();
     if (!user) return null;
+    const cacheKey = this.myRankKey('collection');
+    if (!cacheKey) return null;
     try {
-      const myDoc = await getDoc(doc(db, 'cardRankings', user.uid));
-      if (!myDoc.exists()) return null;
+      return await this.cachedRead(cacheKey, async () => {
+        const myDoc = await getDoc(doc(db, 'cardRankings', user.uid));
+        if (!myDoc.exists()) return null;
 
-      const myValue = (myDoc.data() as CardRankingEntry).collectionCount ?? 0;
-      const RANK_SCAN_LIMIT = 500;
-      const q = query(
-        collection(db, 'cardRankings'),
-        where('collectionCount', '>', myValue),
-        limit(RANK_SCAN_LIMIT)
-      );
-      return this.countPlusOne(q); // [FIX-QUOTA] 집계 카운트(1 read)
+        const myValue = (myDoc.data() as CardRankingEntry).collectionCount ?? 0;
+        const q = query(
+          collection(db, 'cardRankings'),
+          where('collectionCount', '>', myValue),
+          limit(RANK_SCAN_LIMIT)
+        );
+        return this.countPlusOne(q); // [FIX-QUOTA] 집계 카운트(1 read)
+      });
     } catch {
       return null;
     }
@@ -721,8 +882,9 @@ class DatabaseService {
   /** 내 모의고사 최고점 기록. 최고점은 단조 증가라 overwrite. 오프라인/비로그인 무시. */
   async updateQuizRanking(examBest: number): Promise<void> {
     const user = authService.getCurrentUser();
-    if (!user || authService.isOfflineMode()) return;
-    if (examBest === this._lastQuizSync) return;
+    if (!user || !this.canWrite()) return;
+    const value = `${examBest}`;
+    if (this.alreadySynced('quizRank', value)) return;
 
     const entry: QuizRankingEntry = {
       userId: user.uid,
@@ -732,17 +894,18 @@ class DatabaseService {
     };
     try {
       await setDoc(doc(db, 'quizRankings', user.uid), entry);
-      this._lastQuizSync = examBest;
-      this.invalidateCache('quizRanking:');
+      this.markSynced('quizRank', value);
+      this.invalidateCache('quizRanking:', 'myRank:');
     } catch (err) {
+      quotaGuard.report(err);
       console.warn('[DB] updateQuizRanking failed:', err);
     }
   }
 
   /** 전체 모의고사 최고점 랭킹 Top N. */
-  async getQuizRanking(limitCount = 100): Promise<QuizRankingEntry[]> {
-    return this.cachedRead(`quizRanking:${limitCount}`, async () => {
-      try {
+  async getQuizRanking(limitCount = RANKING_FETCH_LIMIT): Promise<QuizRankingEntry[]> {
+    try {
+      return await this.cachedRead(`quizRanking:${limitCount}`, async () => {
         const q = query(
           collection(db, 'quizRankings'),
           orderBy('examBest', 'desc'),
@@ -750,10 +913,10 @@ class DatabaseService {
         );
         const snapshot = await getDocs(q);
         return snapshot.docs.map(doc => doc.data() as QuizRankingEntry);
-      } catch {
-        return [];
-      }
-    });
+      });
+    } catch {
+      return [];
+    }
   }
 
   // ─── 미니 포켓 주간 시즌 공통: 구세즌 내 문서 lazy cleanup ────────────────
@@ -767,7 +930,7 @@ class DatabaseService {
     if (this._oldSeasonCleanupDone) return;
     this._oldSeasonCleanupDone = true;
     const user = authService.getCurrentUser();
-    if (!user || authService.isOfflineMode()) return;
+    if (!user || !this.canWrite()) return;
 
     // [FREE-TIER] 삭제 대상(2~5주 전)은 한 번 지우면 끝 — 주가 바뀌기 전엔 재삭제 불필요.
     // 세션마다 8 delete(write)를 낭비하지 않도록 '이번 주 이미 정리함'을 localStorage로 게이트.
@@ -795,30 +958,40 @@ class DatabaseService {
   async getMyPastSeasonRank(weekId: string, board: 'tower' | 'pvp'): Promise<number | null> {
     const user = authService.getCurrentUser();
     if (!user || authService.isOfflineMode()) return null;
+    // [FREE-TIER] 쿼터 소진은 '미랭크'가 아니라 '아직 확인 못 함'이다.
+    //   여기서 null을 돌려주면 호출부가 참가상으로 수령을 확정해 버려 실제 순위 보상을
+    //   영영 못 받는다. throw해서 다음 마운트에 재시도하게 만든다.
+    if (quotaGuard.isTripped()) throw new QuotaBlockedError();
+
     const coll = board === 'tower' ? 'cardRankings' : 'pvpRankings';
     const field = board === 'tower' ? 'towerFloor' : 'wins';
-    const myDoc = await getDoc(doc(db, 'seasons', weekId, coll, user.uid));
-    if (!myDoc.exists()) return null;
-    const myValue = (myDoc.data() as any)[field] ?? 0;
-    const q = query(
-      collection(db, 'seasons', weekId, coll),
-      where(field, '>', myValue),
-      limit(500)
-    );
-    return this.countPlusOne(q);
+    try {
+      const myDoc = await getDoc(doc(db, 'seasons', weekId, coll, user.uid));
+      quotaGuard.reportSuccess();
+      if (!myDoc.exists()) return null;
+      const myValue = (myDoc.data() as any)[field] ?? 0;
+      const q = query(
+        collection(db, 'seasons', weekId, coll),
+        where(field, '>', myValue),
+        limit(RANK_SCAN_LIMIT)
+      );
+      return await this.countPlusOne(q);
+    } catch (err) {
+      quotaGuard.report(err);
+      throw err; // 호출부(CardLabView)가 수령을 미루고 다음에 재시도한다
+    }
   }
 
   // ─── 미니 포켓 랜덤 대전 주간 승수 랭킹 ────────────────────────────────────
-  private _lastPvpSeasonSync = '';
 
   /** 이번 주 랜덤 대전 승수 기록. 단조 증가라 read 없이 overwrite. */
   async updateCardPvpSeasonRanking(wins: number): Promise<void> {
     const user = authService.getCurrentUser();
-    if (!user || authService.isOfflineMode()) return;
+    if (!user || !this.canWrite()) return;
 
     const season = seasonId();
-    const key = `${season}:${wins}`;
-    if (key === this._lastPvpSeasonSync) return;
+    const value = `${season}:${wins}`;
+    if (this.alreadySynced('pvpSeason', value)) return;
 
     const entry: PvpSeasonRankingEntry = {
       userId: user.uid,
@@ -828,19 +1001,20 @@ class DatabaseService {
     };
     try {
       await setDoc(doc(db, 'seasons', season, 'pvpRankings', user.uid), entry);
-      this._lastPvpSeasonSync = key;
-      this.invalidateCache('cardPvpRanking:');
+      this.markSynced('pvpSeason', value);
+      this.invalidateCache('cardPvpRanking:', 'myRank:');
       this.cleanupMyOldSeasonEntries();
     } catch (err) {
+      quotaGuard.report(err);
       console.warn('[DB] updateCardPvpSeasonRanking failed:', err);
     }
   }
 
   /** 이번 주 랜덤 대전 승수 랭킹 Top N. */
-  async getCardPvpRanking(limitCount = 100): Promise<PvpSeasonRankingEntry[]> {
+  async getCardPvpRanking(limitCount = RANKING_FETCH_LIMIT): Promise<PvpSeasonRankingEntry[]> {
     const season = seasonId();
-    return this.cachedRead(`cardPvpRanking:${season}:${limitCount}`, async () => {
-      try {
+    try {
+      return await this.cachedRead(`cardPvpRanking:${season}:${limitCount}`, async () => {
         const q = query(
           collection(db, 'seasons', season, 'pvpRankings'),
           orderBy('wins', 'desc'),
@@ -848,10 +1022,10 @@ class DatabaseService {
         );
         const snapshot = await getDocs(q);
         return snapshot.docs.map(doc => doc.data() as PvpSeasonRankingEntry);
-      } catch {
-        return [];
-      }
-    });
+      });
+    } catch {
+      return [];
+    }
   }
 
   /** 내 이번 주 랜덤 대전 승수 순위 (나보다 승수 많은 사람 수 + 1). */
@@ -859,18 +1033,21 @@ class DatabaseService {
     const user = authService.getCurrentUser();
     if (!user) return null;
     const season = seasonId();
+    const cacheKey = this.myRankKey(`cardPvp:${season}`);
+    if (!cacheKey) return null;
     try {
-      const myDoc = await getDoc(doc(db, 'seasons', season, 'pvpRankings', user.uid));
-      if (!myDoc.exists()) return null;
+      return await this.cachedRead(cacheKey, async () => {
+        const myDoc = await getDoc(doc(db, 'seasons', season, 'pvpRankings', user.uid));
+        if (!myDoc.exists()) return null;
 
-      const myValue = (myDoc.data() as PvpSeasonRankingEntry).wins;
-      const RANK_SCAN_LIMIT = 500;
-      const q = query(
-        collection(db, 'seasons', season, 'pvpRankings'),
-        where('wins', '>', myValue),
-        limit(RANK_SCAN_LIMIT)
-      );
-      return this.countPlusOne(q); // [FIX-QUOTA] 집계 카운트(1 read)
+        const myValue = (myDoc.data() as PvpSeasonRankingEntry).wins;
+        const q = query(
+          collection(db, 'seasons', season, 'pvpRankings'),
+          where('wins', '>', myValue),
+          limit(RANK_SCAN_LIMIT)
+        );
+        return this.countPlusOne(q); // [FIX-QUOTA] 집계 카운트(1 read)
+      });
     } catch {
       return null;
     }
@@ -888,7 +1065,7 @@ class DatabaseService {
   /** 현재 로컬 세이브를 Firestore에 백업. 성공 시 true. */
   async backupSaves(): Promise<boolean> {
     const user = authService.getCurrentUser();
-    if (!user || authService.isOfflineMode()) return false;
+    if (!user || !this.canWrite()) return false;
 
     const cards = localStorage.getItem(DatabaseService.CARDS_LS_KEY) ?? '';
     const quiz = localStorage.getItem(DatabaseService.QUIZ_LS_KEY) ?? '';
@@ -916,6 +1093,7 @@ class DatabaseService {
       try { localStorage.setItem(DatabaseService.LAST_BACKUP_LS_KEY, String(Date.now())); } catch { /* ignore */ }
       return true;
     } catch (err) {
+      quotaGuard.report(err);
       console.warn('[DB] backupSaves failed:', err);
       return false;
     }
@@ -944,7 +1122,7 @@ class DatabaseService {
     ownedCount: number; towerProgress: number; examBest: number; updatedAt: number;
   } | null> {
     const user = authService.getCurrentUser();
-    if (!user || authService.isOfflineMode()) return null;
+    if (!user || !this.canWrite()) return null;
     try {
       const snap = await getDoc(doc(db, 'backups', user.uid));
       if (!snap.exists()) return null;
@@ -955,6 +1133,7 @@ class DatabaseService {
         examBest: d.examBest ?? 0, updatedAt: d.updatedAt ?? 0,
       };
     } catch (err) {
+      quotaGuard.report(err);
       console.warn('[DB] fetchBackup failed:', err);
       return null;
     }
@@ -967,7 +1146,6 @@ class DatabaseService {
   }
 
   // ─── 미니 포켓 랜덤 대전 (비동기 PvP 덱 스냅샷) ────────────────────────────
-  private _lastDeckPublish = '';
 
   /**
    * 내 덱 스냅샷 발행 — 랜덤 대전 매칭 풀에 등록.
@@ -977,11 +1155,11 @@ class DatabaseService {
     deck: { pokemonId: number; stars: number; row: 'front' | 'back'; slot: number }[]
   ): Promise<void> {
     const user = authService.getCurrentUser();
-    if (!user || authService.isOfflineMode()) return;
+    if (!user || !this.canWrite()) return;
     if (deck.length === 0) return;
 
-    const key = JSON.stringify(deck);
-    if (key === this._lastDeckPublish) return;
+    const value = JSON.stringify(deck);
+    if (this.alreadySynced('deck', value)) return;
 
     const docData: CardDeckDoc = {
       userId: user.uid,
@@ -993,8 +1171,9 @@ class DatabaseService {
     };
     try {
       await setDoc(doc(db, 'cardDecks', user.uid), docData);
-      this._lastDeckPublish = key;
+      this.markSynced('deck', value);
     } catch (err) {
+      quotaGuard.report(err);
       console.warn('[DB] publishCardDeck failed:', err);
     }
   }
@@ -1009,7 +1188,7 @@ class DatabaseService {
    */
   async getRandomOpponentDeck(myPower = 0, excludeIds: string[] = []): Promise<CardDeckDoc | null> {
     const user = authService.getCurrentUser();
-    if (!user || authService.isOfflineMode()) return null;
+    if (!user || !this.canWrite()) return null;
     try {
       const r = Math.random();
       const fetchSide = async (op: '>=' | '<', dir: 'asc' | 'desc') => {
@@ -1040,6 +1219,7 @@ class DatabaseService {
       );
       return pool[0];
     } catch (err) {
+      quotaGuard.report(err);
       console.warn('[DB] getRandomOpponentDeck failed:', err);
       return null;
     }
@@ -1049,17 +1229,20 @@ class DatabaseService {
   async getMyQuizRank(): Promise<number | null> {
     const user = authService.getCurrentUser();
     if (!user) return null;
+    const cacheKey = this.myRankKey('quiz');
+    if (!cacheKey) return null;
     try {
-      const myDoc = await getDoc(doc(db, 'quizRankings', user.uid));
-      if (!myDoc.exists()) return null;
-      const myValue = (myDoc.data() as QuizRankingEntry).examBest;
-      const RANK_SCAN_LIMIT = 500;
-      const q = query(
-        collection(db, 'quizRankings'),
-        where('examBest', '>', myValue),
-        limit(RANK_SCAN_LIMIT)
-      );
-      return this.countPlusOne(q); // [FIX-QUOTA] 집계 카운트(1 read)
+      return await this.cachedRead(cacheKey, async () => {
+        const myDoc = await getDoc(doc(db, 'quizRankings', user.uid));
+        if (!myDoc.exists()) return null;
+        const myValue = (myDoc.data() as QuizRankingEntry).examBest;
+        const q = query(
+          collection(db, 'quizRankings'),
+          where('examBest', '>', myValue),
+          limit(RANK_SCAN_LIMIT)
+        );
+        return this.countPlusOne(q); // [FIX-QUOTA] 집계 카운트(1 read)
+      });
     } catch {
       return null;
     }

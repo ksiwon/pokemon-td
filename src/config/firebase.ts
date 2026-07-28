@@ -7,6 +7,7 @@
 //   무료 플랜 동시 연결 100개 한도를 멀티플레이어에만 사용하도록 보존
 
 import { initializeApp } from 'firebase/app';
+import { initializeAppCheck, ReCaptchaV3Provider } from 'firebase/app-check';
 import { getAuth, GoogleAuthProvider } from 'firebase/auth';
 import {
   initializeFirestore,
@@ -14,7 +15,7 @@ import {
   persistentMultipleTabManager,
 } from 'firebase/firestore';
 import {
-  getDatabase, ref, onValue, onDisconnect, set, serverTimestamp,
+  getDatabase, ref, onValue, onDisconnect, set, serverTimestamp, goOffline, goOnline,
 } from 'firebase/database';
 
 const firebaseConfig = {
@@ -39,6 +40,16 @@ let _googleProvider: GoogleAuthProvider | undefined;
 
 try {
   _app = initializeApp(firebaseConfig);
+
+  // [APP-CHECK] 무료 플랜엔 Cloud Functions가 없어 서버측 유량 제어가 불가능하다.
+  //   익명 로그인이 열려 있어 스크립트로 계정을 무한 생성하면 읽기/쓰기 쿼터를
+  //   외부에서 통째로 소진시킬 수 있는데, App Check(reCAPTCHA v3)는 Spark에서 무료로
+  //   "이 요청이 진짜 우리 웹앱에서 왔는가"를 검증해준다. 사실상 유일한 방어선.
+  //   ※ 코드만으로는 토큰을 붙일 뿐이고, 실제 차단은 Firebase 콘솔에서
+  //     Firestore/RTDB에 App Check '적용(enforce)'을 켜야 발동한다.
+  //   사이트 키가 없으면(로컬/미설정) 조용히 건너뛴다 — 기존 배포가 깨지지 않도록.
+  initAppCheck(_app);
+
   _auth = getAuth(_app);
   _db = initializeFirestore(_app, {
     localCache: persistentLocalCache({
@@ -48,6 +59,29 @@ try {
   _googleProvider = new GoogleAuthProvider();
 } catch (e) {
   console.error('[firebase] 초기화 실패 — 오프라인 모드로만 이용 가능합니다.', e);
+}
+
+function initAppCheck(app: ReturnType<typeof initializeApp>): void {
+  const siteKey = import.meta.env.VITE_FIREBASE_APPCHECK_SITE_KEY as string | undefined;
+  if (!siteKey) {
+    if (import.meta.env.PROD) {
+      console.warn('[firebase] App Check 사이트 키 미설정 — 쿼터 어뷰징 방어가 비활성화됩니다.');
+    }
+    return;
+  }
+  try {
+    // 개발 빌드에서는 디버그 토큰을 사용(콘솔에 출력되는 토큰을 Firebase 콘솔에 등록).
+    if (import.meta.env.DEV) {
+      (globalThis as any).FIREBASE_APPCHECK_DEBUG_TOKEN = true;
+    }
+    initializeAppCheck(app, {
+      provider: new ReCaptchaV3Provider(siteKey),
+      isTokenAutoRefreshEnabled: true,
+    });
+  } catch (e) {
+    // App Check 실패가 앱 전체를 막아선 안 된다(오프라인 모드 진입조차 못 하게 됨).
+    console.warn('[firebase] App Check 초기화 실패 — 검증 없이 계속합니다.', e);
+  }
 }
 
 // RTDB는 별도 격리 — databaseURL 미지정 등으로 실패해도 Auth/Firestore(및 오프라인)는 살린다.
@@ -72,11 +106,25 @@ let _rtdbConnected = false;
 let _serverTimeOffset = 0;
 let _rtdbListenersActive = false;
 
+// [FREE-TIER] 동시 연결 슬롯(무료 100개) 반납.
+//   예전엔 한 번 연결하면 탭이 닫힐 때까지 슬롯을 계속 점유했다. 로비만 열어 보고
+//   싱글로 돌아간 유저도 계속 1슬롯을 먹어, "12방 × 8명 = 96 + 여유 4" 산정이 실제와 달랐다.
+//   멀티 관련 화면이 전부 빠져나가면 goOffline()으로 소켓을 끊어 슬롯을 돌려준다.
+//   ※ "언제 반납할지"(참조 카운트)는 MultiplayerService가 단독으로 판단한다.
+//     여기서도 카운트를 세면 두 곳이 각자 세다가 어긋난다.
+let _rtdbIntentionallyOffline = false;
+
 /**
- * 멀티플레이어 진입 시 한 번만 호출. RTDB 실시간 구독을 시작한다.
- * 이후 중복 호출은 no-op.
+ * 멀티플레이어 화면(로비/게임) 진입 시 호출. RTDB 실시간 구독을 시작한다.
+ * 반납해 둔 연결이 있으면 다시 연결한다. 중복 호출은 안전(멱등).
  */
 export function initRtdbListeners(): void {
+  // 이전에 슬롯을 반납해 둔 상태면 다시 연결한다.
+  if (_rtdbIntentionallyOffline) {
+    _rtdbIntentionallyOffline = false;
+    try { goOnline(rtdb); } catch (e) { console.warn('[firebase] goOnline 실패:', e); }
+  }
+
   if (_rtdbListenersActive) return;
   _rtdbListenersActive = true;
 
@@ -95,6 +143,28 @@ export function initRtdbListeners(): void {
   onValue(ref(rtdb, '.info/serverTimeOffset'), (snap) => {
     _serverTimeOffset = snap.val() || 0;
   });
+}
+
+/**
+ * 멀티플레이어를 완전히 벗어났을 때 호출(호출 시점 판단은 MultiplayerService 담당).
+ * 소켓을 끊어 동시 연결 슬롯을 반납한다. 중복 호출은 안전(멱등).
+ * `.info/connected` 구독은 유지되므로 goOnline() 시 그대로 되살아난다.
+ */
+export function releaseRtdbConnection(): void {
+  if (_rtdbIntentionallyOffline) return;
+  try {
+    goOffline(rtdb);
+    _rtdbIntentionallyOffline = true;
+    _rtdbConnected = false;
+    console.log('[firebase] RTDB 연결 반납 — 동시 연결 슬롯 회수');
+  } catch (e) {
+    console.warn('[firebase] goOffline 실패:', e);
+  }
+}
+
+/** RTDB 연결을 의도적으로 끊어 둔 상태인지(디버그·테스트용). */
+export function isRtdbReleased(): boolean {
+  return _rtdbIntentionallyOffline;
 }
 
 /** RTDB 연결 상태 구독. 반환값은 구독 해제 함수. */

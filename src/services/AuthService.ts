@@ -9,6 +9,7 @@ import {
 } from 'firebase/auth';
 import { doc, setDoc, getDoc, serverTimestamp } from 'firebase/firestore';
 import { auth, googleProvider, db } from '../config/firebase';
+import { quotaGuard } from './QuotaGuard';
 import { User } from '../types/multiplayer';
 
 class AuthService {
@@ -23,18 +24,32 @@ class AuthService {
 
   // [FIX-QUOTA] lastLogin Firestore 쓰기 24시간 쿨다운
   // 매 auth 상태 변경마다 setDoc을 실행하는 낭비를 방지.
-  // uid → 마지막 기록 시각(ms) 맵. 앱 세션 내에서만 유효(재시작 시 리셋).
+  // [FREE-TIER] 예전엔 메모리 Map이라 새로고침/새 탭마다 리셋 → 쿨다운이 사실상
+  //   무력화되고 페이지 로드마다 1 write가 나갔다. localStorage로 올려 실제로 24h 유지.
   private _lastLoginWritten = new Map<string, number>();
   private readonly LAST_LOGIN_COOLDOWN_MS = 24 * 60 * 60 * 1000; // 24h
+  private readonly LAST_LOGIN_LS_PREFIX = 'ptd-lastlogin:';
 
   private shouldWriteLastLogin(uid: string): boolean {
-    const last = this._lastLoginWritten.get(uid);
+    let last = this._lastLoginWritten.get(uid);
+    if (last === undefined) {
+      try {
+        const raw = localStorage.getItem(this.LAST_LOGIN_LS_PREFIX + uid);
+        if (raw) {
+          last = Number(raw);
+          if (Number.isFinite(last)) this._lastLoginWritten.set(uid, last);
+          else last = undefined;
+        }
+      } catch { /* localStorage 불가 시 그냥 기록 */ }
+    }
     if (last === undefined) return true;
     return Date.now() - last > this.LAST_LOGIN_COOLDOWN_MS;
   }
 
   private markLastLoginWritten(uid: string): void {
-    this._lastLoginWritten.set(uid, Date.now());
+    const now = Date.now();
+    this._lastLoginWritten.set(uid, now);
+    try { localStorage.setItem(this.LAST_LOGIN_LS_PREFIX + uid, String(now)); } catch { /* ignore */ }
   }
 
   // [FREE-TIER] Firestore read 최대 대기 시간.
@@ -217,6 +232,9 @@ class AuthService {
     } catch (error: any) {
       // [FREE-TIER] resource-exhausted(쿼터 초과) / 타임아웃 / 네트워크 차단 모두 여기로.
       //   임시 유저를 반환해 로그인 차단을 방지한다. 싱글/스토리는 정상 이용 가능.
+      //   쿼터성 에러면 회로차단기를 내려, 이후 랭킹/전당/업적 화면이 실패 요청을
+      //   반복 발사하지 않도록 한다(로그인이 가장 먼저 쿼터 소진을 감지하는 지점).
+      quotaGuard.report(error);
       console.error('Firestore Error in getUserData (Quota Exceeded/timeout?):', error?.code || error?.message || error);
       return this.buildFallbackUser(firebaseUser);
     }
