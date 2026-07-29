@@ -95,6 +95,28 @@ describe('TFT 진영 공정성', () => {
     expect(pct).toBeLessThan(65);
   });
 
+  it('desync 방지 — 같은 전투를 양쪽 클라이언트 관점에서 돌리면 결과가 같아야', async () => {
+    // 클라이언트 A: 자기가 L (my=boardA, opp=boardB, myPosition='L')
+    // 클라이언트 B: 자기가 R (my=boardB, opp=boardA, myPosition='R')
+    // 물리적으로 동일한 전투이므로 승자(보드 기준)가 일치해야 한다.
+    const A = await board(MIXED);
+    const B = await board([1, 2, 25, 26, 143, 149]);
+    let mismatch = 0;
+    for (let s = 1; s <= 60; s++) {
+      const fromA = runArena(A.map(x => ({ ...x })), B.map(x => ({ ...x })), 'L', s); // my=A
+      const fromB = runArena(B.map(x => ({ ...x })), A.map(x => ({ ...x })), 'R', s); // my=B
+      // fromA가 'my'면 A 승, fromB가 'opp'면 A 승 → 서로 뒤집힌 표현이 일치해야 한다
+      const aWinsPerA = fromA === 'my' ? 'A' : fromA === 'opp' ? 'B' : 'draw';
+      const aWinsPerB = fromB === 'opp' ? 'A' : fromB === 'my' ? 'B' : 'draw';
+      if (aWinsPerA !== aWinsPerB) {
+        mismatch++;
+        if (mismatch <= 3) console.log(`  ✗ seed ${s}: A관점=${aWinsPerA} B관점=${aWinsPerB}`);
+      }
+    }
+    console.log(`  양측 관점 60판 비교 → 불일치 ${mismatch}건 (0이어야 desync 없음)`);
+    expect(mismatch).toBe(0);
+  });
+
   it('6마리 타입 시너지 — 약점 데미지가 실제로 반감되는가', async () => {
     const mono = await board(MONO_FIRE);
     const synergies = calculateActiveSynergies(
