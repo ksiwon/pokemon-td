@@ -7,7 +7,9 @@
 import { pokeAPI, PokemonData } from '../api/pokeapi';
 import { GameMove, MoveEffect, PokemonAbility } from '../types/game';
 import { TowerDetail } from '../types/multiplayer';
-import { mapAbilityToGameEffect, getCriticalChance, getAOEDamageMultiplier } from '../utils/abilities';
+import {
+  mapAbilityToGameEffect, getCriticalChance, getAOEDamageMultiplier, getLifestealRatio,
+} from '../utils/abilities';
 import { rng } from '../utils/rng';
 
 /** 구매가 공식: 25 + BST/600×200 (약 25~265G). PokemonPicker와 AI 밸런스 기준. */
@@ -194,6 +196,8 @@ export const buildTowerDetails = (towers: any[]): TowerDetail[] =>
       equippedMoves: t.equippedMoves,
       critChance,
       aoeBonus,
-      lifesteal:     0,
+      // [FIX] 흡혈 특성이 멀티에서 통째로 죽어 있었다(상수 0 하드코딩).
+      //   크리·AOE 특성은 위에서 계산해 넘기는데 흡혈만 누락 — 싱글(GameManager)과 동일하게 반영.
+      lifesteal:     getLifestealRatio(ability),
     });
   });

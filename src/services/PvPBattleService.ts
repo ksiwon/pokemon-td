@@ -21,6 +21,9 @@ import {
   PlayerGameState, BattleLogEntry,
 } from '../types/multiplayer';
 import { getTypeEffectiveness } from '../utils/typeEffectiveness';
+import { calculateActiveSynergies, getBuffedStats } from '../utils/synergyManager';
+import { GamePokemon, Synergy } from '../types/game';
+import { sortTeamDeterministic, sixPieceResistTypes } from '../game/arenaSim';
 
 // ─── 결정론적 RNG (mulberry32) ────────────────────────────────────
 function mulberry32(seed: number) {
@@ -181,25 +184,32 @@ class PvPBattleService {
     const seed = deriveBattleSeed(roundNumber, player1Id, player2Id);
     const rng = mulberry32(seed);
 
-    const team1Battle = safeTeam1
-      .filter(p => !p.isFainted && p.currentHp > 0)
-      // [V5] battleId 부여 전에 pokemonId+level로 안정 정렬 → Firebase 객체 key 순서 의존 제거
-      .slice()
-      .sort((a, b) => {
-        if (a.pokemonId !== b.pokemonId) return a.pokemonId - b.pokemonId;
-        if (a.level !== b.level) return b.level - a.level;
-        return (a.name || '').localeCompare(b.name || '');
-      })
-      .map((p, idx) => ({ ...p, battleId: `p1-${idx}` }));
-    const team2Battle = safeTeam2
-      .filter(p => !p.isFainted && p.currentHp > 0)
-      .slice()
-      .sort((a, b) => {
-        if (a.pokemonId !== b.pokemonId) return a.pokemonId - b.pokemonId;
-        if (a.level !== b.level) return b.level - a.level;
-        return (a.name || '').localeCompare(b.name || '');
-      })
-      .map((p, idx) => ({ ...p, battleId: `p2-${idx}` }));
+    // [FIX] TFTBattleArena(arenaSim)와 동일한 규칙으로 팀을 구성한다. 예전엔 이 엔진만
+    //   기절 유닛을 제외하고 시너지도 적용하지 않아, 같은 보드가 어느 엔진으로 판정되느냐에
+    //   따라 결과가 달라졌다(사람 매치도 stuck 타임아웃 시 이 엔진으로 강제 종료된다).
+    //     · TFT 규칙: 기절 포함 풀팀, 항상 풀HP, 상위 6마리
+    //     · 시너지 버프(getBuffedStats)를 전투 전에 적용
+    const prepare = (team: TowerDetail[], tag: 'p1' | 'p2') => {
+      const roster = sortTeamDeterministic(team).slice(0, 6);
+      const synergies: Synergy[] = calculateActiveSynergies(
+        roster.map(p => ({ ...p, isFainted: false })) as unknown as GamePokemon[],
+      );
+      return roster.map((p, idx) => {
+        const buffed = getBuffedStats({ ...p, isFainted: false } as unknown as GamePokemon, synergies);
+        const maxHp = p.maxHp > 0 ? p.maxHp : 100;
+        return {
+          ...p, ...buffed,
+          maxHp,
+          currentHp: maxHp,
+          isFainted: false,
+          battleId: `${tag}-${idx}`,
+          resistTypes: sixPieceResistTypes(p, synergies),
+        };
+      });
+    };
+
+    const team1Battle = prepare(safeTeam1, 'p1');
+    const team2Battle = prepare(safeTeam2, 'p2');
 
     let turn = 0;
     const maxTurns = 100;
@@ -210,10 +220,7 @@ class PvPBattleService {
       turn < maxTurns
     ) {
       turn++;
-      this.executeTurnWithLog(team1Battle, team2Battle, turn, battleLog, rng);
-      if (team2Battle.some(p => p.currentHp > 0)) {
-        this.executeTurnWithLog(team2Battle, team1Battle, turn, battleLog, rng);
-      }
+      this.executeTurnWithLog(team1Battle, team2Battle, turn, battleLog, rng, seed);
     }
 
     const team1Remaining = team1Battle.filter(p => p.currentHp > 0).length;
@@ -283,30 +290,39 @@ class PvPBattleService {
   }
 
   /**
-   * 한 턴 실행 — 공격자 정렬에 결정론 tiebreaker 추가
+   * 한 턴 실행 — 양 팀을 스피드 순으로 **통합** 정렬해 번갈아 행동시킨다.
+   * [FIX] 예전엔 team1 전원 공격 → team2 전원 공격의 진영 순차였다. 그래서
+   *   (a) 스피드가 팀 내부 정렬에만 쓰여 느린 team1 유닛이 빠른 team2 유닛보다 먼저 때리고,
+   *   (b) player1Id는 userId 사전순으로 정규화되므로 **uid가 앞선 쪽이 매 턴 전체 선공**했다.
+   *   동일 팀 거울전 측정 결과 team1 승률 91.5%. 통합 정렬 + 진영 무관 해시 tiebreak로 교정.
    */
   private executeTurnWithLog(
-    attackers: (TowerDetail & { battleId: string })[],
-    defenders: (TowerDetail & { battleId: string })[],
+    team1: (TowerDetail & { battleId: string })[],
+    team2: (TowerDetail & { battleId: string })[],
     turn: number,
     log: BattleLogEntry[],
-    rng: () => number
+    rng: () => number,
+    seed: number
   ): void {
-    const aliveAttackers = attackers.filter(p => p.currentHp > 0);
+    const all = [...team1, ...team2];
+    const tie = new Map<string, number>();
+    for (const u of all) tie.set(u.battleId, djb2(`${seed}:${u.battleId}`));
 
-    // 스피드 내림차순, 동률 시 battleId 사전순 (결정론)
-    aliveAttackers.sort((a, b) => {
-      const sa = a.speed ?? 100;
-      const sb = b.speed ?? 100;
-      if (sa !== sb) return sb - sa;
-      return a.battleId.localeCompare(b.battleId);
-    });
+    const actors = all
+      .filter(p => p.currentHp > 0)
+      .sort((a, b) => {
+        const sa = a.speed ?? 100;
+        const sb = b.speed ?? 100;
+        if (sa !== sb) return sb - sa;
+        return tie.get(a.battleId)! - tie.get(b.battleId)!;
+      });
 
-    for (const attacker of aliveAttackers) {
+    for (const attacker of actors) {
       if (attacker.currentHp <= 0) continue;
 
+      const defenders = attacker.battleId.startsWith('p1-') ? team2 : team1;
       const livingDefenders = defenders.filter(p => p.currentHp > 0);
-      if (livingDefenders.length === 0) break;
+      if (livingDefenders.length === 0) continue;
 
       // 최저 HP 타겟 — 동률 시 battleId 사전순
       const target = livingDefenders.reduce((best, p) => {
@@ -404,6 +420,12 @@ class PvPBattleService {
     // 타입 상성: 기술 타입 기준
     const typeEff = getTypeEffectiveness(moveType, defenderTypes);
 
+    // 6마리 타입 시너지: 그 타입 기준 2배 공격을 반감 (arenaSim·GameManager와 동일 규칙)
+    let sixPieceResist = 1.0;
+    for (const ty of (defender as { resistTypes?: string[] }).resistTypes ?? []) {
+      if (getTypeEffectiveness(moveType, [ty]) === 2) { sixPieceResist = 0.5; break; }
+    }
+
     // 자속 보정 (STAB): 공격자 타입과 기술 타입 일치 시 1.5배
     const isStab = attackerTypes.includes(moveType);
 
@@ -414,7 +436,7 @@ class PvPBattleService {
     const level = attacker.level;
     const base = ((2 * level / 5 + 2) * power * atkStat / Math.max(1, defStat) / 50 + 2);
     const randomFactor = 0.85 + r4 * 0.15;
-    let damage = base * typeEff * randomFactor;
+    let damage = base * typeEff * randomFactor * sixPieceResist;
     if (isStab) damage *= 1.5;
     if (isCrit) damage *= 1.5;
 

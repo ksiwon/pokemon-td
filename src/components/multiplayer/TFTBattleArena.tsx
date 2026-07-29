@@ -119,18 +119,17 @@ export const TFTBattleArena: React.FC<TFTBattleArenaProps> = ({
 
   const benchUnits = units.filter(u => u.team === 'my' && u.x === -1 && !u.fainted);
 
-  const mySynergies = useMemo(
-    () => calculateActiveSynergies(
-      sortTeamDeterministic(myTeam).filter(t => !t.isFainted) as unknown as GamePokemon[]
-    ),
-    [myTeam],
-  );
-  const oppSynergies = useMemo(
-    () => calculateActiveSynergies(
-      sortTeamDeterministic(opponentTeam).filter(t => !t.isFainted) as unknown as GamePokemon[]
-    ),
-    [opponentTeam],
-  );
+  // [FIX] 시너지 계산 대상 = 실제로 싸우는 유닛과 정확히 동일해야 한다.
+  //   buildUnits는 sortTeamDeterministic(team).slice(0,6)을 isFainted:false로 되살려 풀팀 전투하는데,
+  //   여기선 기절 유닛을 빼고 slice도 안 해서 어긋났다 →
+  //     · 웨이브에서 2마리 기절 = 6마리로 싸우는데 시너지는 4마리분
+  //     · 보드에 7마리 이상 = 6마리만 싸우는데 시너지는 전원분
+  const fightingUnits = (team: TowerDetail[]) =>
+    sortTeamDeterministic(team).slice(0, 6)
+      .map(t => ({ ...t, isFainted: false })) as unknown as GamePokemon[];
+
+  const mySynergies = useMemo(() => calculateActiveSynergies(fightingUnits(myTeam)), [myTeam]);
+  const oppSynergies = useMemo(() => calculateActiveSynergies(fightingUnits(opponentTeam)), [opponentTeam]);
 
   useEffect(() => {
     if (phase !== 'result') {
@@ -353,7 +352,8 @@ export const TFTBattleArena: React.FC<TFTBattleArenaProps> = ({
       const allFloats: FloatTxt[] = [];
       let done = false;
       for (let i = 0; i < ticksToRun; i++) {
-        const res = simulateTick(current, myPosition, rng);
+        // battleSeed는 양쪽 클라이언트가 동일하게 도출 — 행동 순서 tiebreak에 그대로 사용
+        const res = simulateTick(current, myPosition, rng, battleSeed ?? 0);
         current = res.units;
         if (allFloats.length < 60) res.floats.forEach(f => allFloats.length < 60 && allFloats.push(f));
         simTickRef.current++;

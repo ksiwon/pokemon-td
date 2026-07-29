@@ -13,6 +13,7 @@
     "sim:placement": "vitest run --config vitest.sim.config.ts sim/pvp/placement.sim.ts",
     "sim:cross": "vitest run --config vitest.sim.config.ts sim/pvp/crossValidate.sim.ts",
     "sim:cards": "vitest run --config vitest.sim.config.ts sim/cards/cardBattle.sim.ts",
+    "sim:fairness": "vitest run --config vitest.sim.config.ts sim/pvp/fairness.sim.ts",
     "sim:single": "vitest run --config vitest.sim.config.ts sim/single/single.sim.ts",
     "sim:multi": "vitest run --config vitest.sim.config.ts sim/multi/multi.sim.ts",
     "sim:report": "vitest run --config vitest.sim.config.ts sim/report/report.sim.ts",
