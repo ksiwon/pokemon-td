@@ -1094,7 +1094,8 @@
       "statTotal": "총합",
       "battleStats": "전투 스탯",
       "height": "키",
-      "weight": "몸무게"
+      "weight": "몸무게",
+      "beforeSynergy": "시너지 적용 전"
     },
     "common": {
       "back": "뒤로"
@@ -1211,7 +1212,9 @@
       "opponentDeck": "{name}의 덱",
       "unknownPlayer": "이름없는 트레이너",
       "vsResult": "vs {name} · 잔존 {p} : {e}",
-      "rematch": "다시 매칭"
+      "rematch": "다시 매칭",
+      "dailyLimitReached": "오늘의 랜덤 대전을 모두 소화했습니다 (하루 {n}판). 자정(KST)에 초기화돼요.",
+      "dailyLeft": "오늘 남은 대전 {n}/{total}판"
     },
     "daily": {
       "firstWin": "일일 첫 승"

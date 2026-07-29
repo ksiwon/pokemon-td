@@ -162,12 +162,28 @@ const TYPE_CHART: Record<string, Record<string, number>> = {
   }
 };
 
-export function getTypeEffectiveness(attackType: string, defenseTypes: string[]): number {
+/**
+ * 타입 상성 배율.
+ * @param trueImmunity 무효(0배)를 그대로 0으로 돌려줄지 여부.
+ *   - false(기본, TD 본편): 0배를 0.1배로 완화. 타워가 특정 적에게 아무것도 못 하고
+ *     굳어버리는 상황을 막기 위한 규칙 — 배치를 되돌릴 수 없는 TD에선 필요하다.
+ *   - true(카드 오토배틀): 원전대로 완전 무효. 덱을 매판 새로 짤 수 있는 모드라
+ *     면역이 덱빌딩의 축으로 기능해야 한다.
+ */
+export function getTypeEffectiveness(
+  attackType: string,
+  defenseTypes: string[],
+  trueImmunity = false,
+): number {
   let multiplier = 1;
   for (const defType of defenseTypes) {
     const eff = TYPE_CHART[attackType]?.[defType] ?? 1;
-    // 0배(무효)를 0.1배로 변경 - 극미한 데미지는 들어가게
-    multiplier *= (eff === 0 ? 0.1 : eff);
+    if (eff === 0) {
+      if (trueImmunity) return 0;
+      multiplier *= 0.1;
+    } else {
+      multiplier *= eff;
+    }
   }
   return multiplier;
 }

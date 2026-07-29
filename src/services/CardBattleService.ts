@@ -21,6 +21,21 @@ function mulberry32(seed: number) {
   };
 }
 
+/**
+ * uid+시드 → 진영과 무관한 결정론 정수(FNV-1a).
+ * [FIX] 행동 순서의 속도 동률을 uid 문자열 비교로 깨면 'enemy-*' < 'player-*' 라
+ *   **적이 항상 선공**한다. 전투가 1~3턴에 끝나는 알파스트라이크 구조라 이 한 줄이
+ *   거울전 승률을 24%까지 끌어내렸다(측정). 해시로 섞어 어느 진영도 편들지 않게 한다.
+ */
+function tieKey(uid: string, seed: number): number {
+  let h = (2166136261 ^ seed) >>> 0;
+  for (let i = 0; i < uid.length; i++) {
+    h ^= uid.charCodeAt(i);
+    h = Math.imul(h, 16777619);
+  }
+  return h >>> 0;
+}
+
 export type BattleSide = 'player' | 'enemy';
 
 /** 시너지로 부여되는 상태이상 종류. */
@@ -72,6 +87,8 @@ export interface BattleLogEntry {
   remainingHp: number;
   /** 로그 종류. 생략 시 'attack'(하위호환). dot=지속피해 틱, skip=행동불가, heal=흡혈 회복. */
   kind?: 'attack' | 'dot' | 'skip' | 'heal';
+  /** attack에서 실제 사용한 기술 타입(자기 타입 중 상대에게 가장 잘 통하는 쪽). */
+  moveType?: string;
   /** attack에서 이번 타격으로 부여한 상태이상. */
   inflicted?: StatusKind;
   /** dot/skip의 원인 상태이상. */
@@ -89,6 +106,20 @@ export interface BattleResult {
 export interface ActiveSynergy { type: string; count: number; tier: number; }
 
 const MAX_TURNS = 60;
+
+/**
+ * 기술 위력 배율 — 전투 길이를 정하는 유일한 노브.
+ * [밸런스] 구 공식은 실질 위력 (50+lv)×1.5(상수 자속)라 전투가 평균 2턴에 끝났다.
+ *   6유닛이 최저HP 대상에 집중포화하는 구조라 턴당 2~3마리가 증발 →
+ *   화상(2턴)·독(3턴)·마비 같은 상태이상이 발동할 시간 자체가 없었고,
+ *   승/패가 6v0 ↔ 0v6으로 갈리며 접전 구간이 사라졌다.
+ *   시뮬 스윕(거울전 200판 평균 턴 / 불6vs풀6 DoT 발동 틱):
+ *     1.00(구) → 2.0턴 / 14틱   ·   0.62 → 6.7턴 / 7틱
+ *     0.40     → 9.3턴 / 267틱  ·   0.28 → 12.4턴 / 440틱
+ *   0.40 채택 — 화상(2턴)·독(3턴)이 확실히 돌면서 재생 시간이 과하지 않은 지점.
+ *   덱별 타워 도달 층은 이 값에 거의 무관(도달 층은 statMult 곡선이 결정).
+ */
+const POWER_SCALE = 0.40;
 
 // ─── 스탯 파생 ─────────────────────────────────────────────────────
 const ARTWORK = (id: number) =>
@@ -235,6 +266,11 @@ class CardBattleService {
     const log: BattleLogEntry[] = [];
     let turn = 0;
 
+    // 진영 무관 동률 해소 키 — 속도 동률/틱 순서 모두 이걸로 정렬(결정론 유지, 편향 제거)
+    const tie = new Map<string, number>();
+    for (const c of all) tie.set(c.uid, tieKey(c.uid, seed));
+    const byTie = (a: BattleCard, b: BattleCard) => tie.get(a.uid)! - tie.get(b.uid)!;
+
     const sideAlive = (s: BattleSide) => all.some(c => c.side === s && c.currentHp > 0);
 
     while (sideAlive('player') && sideAlive('enemy') && turn < MAX_TURNS) {
@@ -243,7 +279,7 @@ class CardBattleService {
       // ─── 1) 턴 시작: 지속피해(화상/독) 틱 — uid순(결정론) ───
       const afflicted = all
         .filter(c => c.currentHp > 0 && ((c._burnTurns ?? 0) > 0 || (c._poisonTurns ?? 0) > 0))
-        .sort((a, b) => a.uid.localeCompare(b.uid));
+        .sort(byTie);
       for (const c of afflicted) {
         const tick = (status: StatusKind, pct: number) => {
           if (c.currentHp <= 0) return;
@@ -261,10 +297,10 @@ class CardBattleService {
       }
       if (!sideAlive('player') || !sideAlive('enemy')) break;
 
-      // ─── 2) 행동: 전 유닛 스피드 내림차순(동률 uid) ───
+      // ─── 2) 행동: 전 유닛 스피드 내림차순(동률은 진영 무관 해시) ───
       const actors = all
         .filter(c => c.currentHp > 0)
-        .sort((a, b) => (b.speed !== a.speed ? b.speed - a.speed : a.uid.localeCompare(b.uid)));
+        .sort((a, b) => (b.speed !== a.speed ? b.speed - a.speed : byTie(a, b)));
 
       for (const attacker of actors) {
         if (attacker.currentHp <= 0) continue;
@@ -286,13 +322,14 @@ class CardBattleService {
         const target = this.pickTarget(attacker, enemies);
         if (!target) break;
 
-        const { damage, isCrit, effectiveness } = this.calcDamage(attacker, target, rng);
+        const { damage, isCrit, effectiveness, moveType } = this.calcDamage(attacker, target, rng);
         target.currentHp = Math.max(0, target.currentHp - damage);
         const fainted = target.currentHp <= 0;
 
-        // 상태이상 부여(대상 생존 시에만) — rng 소비는 부여 능력 보유자만
+        // 상태이상 부여(대상 생존 + 실제로 피해를 준 경우에만) — rng 소비는 부여 능력 보유자만.
+        //   면역(0데미지)으로 튕긴 공격이 화상/마비를 거는 건 부자연스럽다.
         let inflicted: StatusKind | undefined;
-        if (attacker.inflicts && (attacker.inflictChance ?? 0) > 0 && !fainted) {
+        if (attacker.inflicts && (attacker.inflictChance ?? 0) > 0 && !fainted && damage > 0) {
           if (rng() < (attacker.inflictChance ?? 0)) {
             inflicted = attacker.inflicts;
             if (inflicted === 'burn') target._burnTurns = BURN_TURNS;
@@ -305,7 +342,7 @@ class CardBattleService {
           turn,
           attackerUid: attacker.uid,
           targetUid: target.uid,
-          damage, isCrit, effectiveness, fainted,
+          damage, isCrit, effectiveness, fainted, moveType,
           remainingHp: target.currentHp,
           ...(inflicted ? { inflicted } : {}),
         });
@@ -333,13 +370,19 @@ class CardBattleService {
     if (playerAlive > 0 && enemyAlive === 0) winner = 'player';
     else if (enemyAlive > 0 && playerAlive === 0) winner = 'enemy';
     else {
-      // 시간초과/동시전멸 — HP 비율 높은 쪽, 동률이면 enemy(방어자 유리)
+      // 시간초과/동시전멸 — 생존 수 → HP 비율 → 시드 동전던지기.
+      // [FIX] 기존엔 HP 비율 동률에서 무조건 enemy 승("방어자 유리")이었는데, 타워엔
+      //   방어자 개념이 없고 선공 편향과 방향이 같아 플레이어에게 이중 페널티였다.
       const ratio = (team: BattleCard[]) => {
         const cur = team.reduce((s, c) => s + c.currentHp, 0);
         const max = team.reduce((s, c) => s + c.maxHp, 0) || 1;
         return cur / max;
       };
-      winner = ratio(playerTeam) > ratio(enemyTeam) ? 'player' : 'enemy';
+      const rp = ratio(playerTeam);
+      const re = ratio(enemyTeam);
+      if (playerAlive !== enemyAlive) winner = playerAlive > enemyAlive ? 'player' : 'enemy';
+      else if (Math.abs(rp - re) > 1e-9) winner = rp > re ? 'player' : 'enemy';
+      else winner = mulberry32((seed ^ 0x5bf03635) >>> 0)() < 0.5 ? 'player' : 'enemy';
     }
 
     return { winner, playerAlive, enemyAlive, turns: turn, log };
@@ -361,26 +404,45 @@ class CardBattleService {
     );
   }
 
+  /**
+   * 데미지 1회.
+   * [FIX] 기술 타입을 types[0]으로 고정하던 걸 '자기 타입 중 상대에게 가장 잘 통하는 쪽'으로 변경.
+   *   - 기존엔 이중타입(526종)의 2번 타입이 공격에서 완전히 사장됐다(그중 289종이 손해).
+   *     리자몽은 영원히 불꽃으로만, 갸라도스는 물로만 때렸다.
+   *   - 또 moveType이 정의상 항상 자기 타입이라 STAB(자속) 판정이 1025종 전부 참 →
+   *     '자속 1.5배'는 전 유닛 공통 상수였다. 허구인 자속 항을 걷어내고, 대신 위력 상수를
+   *     올려 전체 데미지 수준을 보존한다(상수배는 승패에 영향 없음).
+   */
   private calcDamage(attacker: BattleCard, defender: BattleCard, rng: () => number) {
     const r1 = rng(); // crit
     const r2 = rng(); // damage variance
-    const moveType = attacker.types[0] ?? 'normal';
+
+    let moveType = attacker.types[0] ?? 'normal';
+    let effectiveness = getTypeEffectiveness(moveType, defender.types, true);
+    for (let i = 1; i < attacker.types.length; i++) {
+      const e = getTypeEffectiveness(attacker.types[i], defender.types, true);
+      if (e > effectiveness) { effectiveness = e; moveType = attacker.types[i]; }
+    }
+    // 완전 무효 — 카드 모드는 원전대로 0. 로그 패널의 '무효' 뱃지가 여기서 처음 켜진다.
+    if (effectiveness === 0) {
+      return { damage: 0, isCrit: false, effectiveness: 0, moveType };
+    }
+
     const special = attacker.specialAttack > attacker.attack;
     const atkStat = special ? attacker.specialAttack : attacker.attack;
     const defStat = special ? defender.specialDefense : defender.defense;
-    const power = 50 + attacker.level;
+    // 구 공식의 (50 + level) × 상수 자속 1.5 를 위력에 흡수한 뒤 POWER_SCALE로 전투 길이 조정
+    const power = (50 + attacker.level) * 1.5 * POWER_SCALE;
 
-    const effectiveness = getTypeEffectiveness(moveType, defender.types);
-    const stab = attacker.types.includes(moveType) ? 1.5 : 1.0;
     const isCrit = r1 < attacker.critChance;
     const variance = 0.85 + r2 * 0.15;
 
     const level = attacker.level;
     const base = ((2 * level) / 5 + 2) * power * atkStat / Math.max(1, defStat) / 50 + 2;
-    let dmg = base * effectiveness * variance * stab;
+    let dmg = base * effectiveness * variance;
     if (isCrit) dmg *= attacker.critMult ?? 1.5; // 악 시너지: 급소 배율 상승
 
-    return { damage: Math.max(1, Math.floor(dmg)), isCrit, effectiveness };
+    return { damage: Math.max(1, Math.floor(dmg)), isCrit, effectiveness, moveType };
   }
 
   // ─── 적 팀 생성(트레이너 타워) ────────────────────────────────────
@@ -405,16 +467,33 @@ class CardBattleService {
     const statMult = 0.55 + floor * 0.028 + (isBoss ? 0.1 : 0);
     const rarityBoost = Math.min(1.2, Math.max(0, floor - 3) * 0.03);
 
+    // [FIX] 층별 최소 레어도 — rarityBoost는 가중치만 밀어줄 뿐이라 고층에도 커먼이 섞여
+    //   난이도가 들쭉날쭉했다(측정: 전설덱이 F41에서 막히는데 F70은 클리어). 최소 등급을
+    //   깔아 층이 오를수록 확실히 강해지게 한다. 0=Bronze … 3=Diamond.
+    const minRank = Math.min(3, Math.floor((floor - 1) / 12));
+    const pickId = async (r: () => number): Promise<number> => {
+      if (minRank > 0) {
+        const pool = pokeAPI.getCardIdsAtLeastRarity(minRank);
+        if (pool.length > 0) return pool[Math.floor(r() * pool.length)];
+      }
+      return pokeAPI.getRandomCardId(rarityBoost, r);
+    };
+
+    // [DETERMINISM] 6마리 id를 먼저 뽑아 rng 스트림을 고정한다. 재시도가 주 스트림을 소비하면
+    //   캐시 상태(오프라인 여부)에 따라 기기마다 적팀이 달라졌다 — 재시도는 별도 스트림에서.
+    const ids: number[] = [];
+    for (let i = 0; i < 6; i++) ids.push(await pickId(rng));
+    const retryRng = mulberry32((seed ^ 0x9e3779b9) >>> 0);
+
     const rows: DeckRow[] = ['front', 'front', 'front', 'back', 'back', 'back'];
     const team: BattleCard[] = [];
 
     for (let i = 0; i < 6; i++) {
-      // 페치 실패(오프라인 등) 시 최대 5회까지 다른 후보로 재시도 — 팀이 6마리 미만이 되면
+      // 페치 실패(오프라인 등) 시 최대 4회까지 다른 후보로 재시도 — 팀이 6마리 미만이 되면
       //   simulate가 루프를 안 돌고 즉시 플레이어 승리 처리되어 '무혈 클리어+보상' 버그가 났었음.
-      let p: PokemonData | null = null;
-      for (let tryN = 0; tryN < 5 && !p; tryN++) {
-        const id = await pokeAPI.getRandomCardId(rarityBoost, rng);
-        p = await pokeAPI.getPokemon(id).catch(() => null);
+      let p: PokemonData | null = await pokeAPI.getPokemon(ids[i]).catch(() => null);
+      for (let tryN = 0; tryN < 4 && !p; tryN++) {
+        p = await pokeAPI.getPokemon(await pickId(retryRng)).catch(() => null);
       }
       if (!p) throw new Error('ENEMY_TEAM_INCOMPLETE');
       const row = rows[i];
