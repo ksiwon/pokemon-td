@@ -15,7 +15,7 @@ import {
 } from '../../src/game/arenaSim';
 import { calculateActiveSynergies } from '../../src/utils/synergyManager';
 import { TowerDetail } from '../../src/types/multiplayer';
-import { GamePokemon } from '../../src/types/game';
+import { GamePokemon, Synergy } from '../../src/types/game';
 
 export interface Placement { x: number; y: number }
 
@@ -54,10 +54,17 @@ export function runArenaBattle(
     myPlacements?: Placement[];
     oppPlacements?: Placement[];
     maxSeconds?: number;
+    /**
+     * 시너지 강제 지정 — 같은 보드를 "시너지 켠 쪽 vs 끈 쪽"으로 붙여
+     * 종족/타입 교란 없이 시너지 자체의 가치만 재기 위한 실험 훅.
+     * 미지정이면 실제 게임과 동일하게 팀 구성에서 계산한다.
+     */
+    mySynergies?: Synergy[];
+    oppSynergies?: Synergy[];
   }
 ): ArenaOutcome {
-  const mySyn = teamSynergies(myTeam);
-  const oppSyn = teamSynergies(oppTeam);
+  const mySyn = opts?.mySynergies ?? teamSynergies(myTeam);
+  const oppSyn = opts?.oppSynergies ?? teamSynergies(oppTeam);
 
   let units: Unit[] = buildUnits(myTeam, oppTeam, mySyn, oppSyn);
 

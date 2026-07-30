@@ -23,7 +23,7 @@ import {
 import { getTypeEffectiveness } from '../utils/typeEffectiveness';
 import { calculateActiveSynergies, getBuffedStats } from '../utils/synergyManager';
 import { GamePokemon, Synergy } from '../types/game';
-import { sortTeamDeterministic, sixPieceResistTypes } from '../game/arenaSim';
+import { sortTeamDeterministic, sixPieceResistTypes, attackSpeedMult } from '../game/arenaSim';
 
 // ─── 결정론적 RNG (mulberry32) ────────────────────────────────────
 function mulberry32(seed: number) {
@@ -204,6 +204,8 @@ class PvPBattleService {
           isFainted: false,
           battleId: `${tag}-${idx}`,
           resistTypes: sixPieceResistTypes(p, synergies),
+          // [FIX] 행동 게이지 — 스피드가 공격 횟수에 반영되도록. 아래 executeTurnWithLog 참고.
+          atkGauge: 0,
         };
       });
     };
@@ -297,8 +299,8 @@ class PvPBattleService {
    *   동일 팀 거울전 측정 결과 team1 승률 91.5%. 통합 정렬 + 진영 무관 해시 tiebreak로 교정.
    */
   private executeTurnWithLog(
-    team1: (TowerDetail & { battleId: string })[],
-    team2: (TowerDetail & { battleId: string })[],
+    team1: (TowerDetail & { battleId: string; atkGauge?: number })[],
+    team2: (TowerDetail & { battleId: string; atkGauge?: number })[],
     turn: number,
     log: BattleLogEntry[],
     rng: () => number,
@@ -320,33 +322,62 @@ class PvPBattleService {
     for (const attacker of actors) {
       if (attacker.currentHp <= 0) continue;
 
-      const defenders = attacker.battleId.startsWith('p1-') ? team2 : team1;
-      const livingDefenders = defenders.filter(p => p.currentHp > 0);
-      if (livingDefenders.length === 0) continue;
+      // [FIX] 스피드 → 공격 횟수.
+      //   예전엔 스피드가 '턴 내 행동 순서'에만 쓰였다. 한 턴에 전원이 정확히 1회씩
+      //   때리므로 스피드 5인 단단지와 110인 라이츄의 딜량이 같았다 — 이 엔진에서만
+      //   스피드가 사실상 죽은 스탯이었다(아레나·싱글은 공격 쿨다운에 반영).
+      //   아레나(arenaSim)의 speedMult를 그대로 써서 두 엔진이 같은 곡선을 갖게 한다:
+      //     cd = max(0.4, 1 - spd/400)  → spd 0은 1회/턴, spd 240+는 2.5회/턴.
+      //   느린 쪽을 1회 미만으로 깎지는 않으므로 기존 동작이 하한으로 보존된다.
+      const cd = attackSpeedMult(attacker.speed ?? 50);
+      attacker.atkGauge = (attacker.atkGauge ?? 0) + 1;
 
-      // 최저 HP 타겟 — 동률 시 battleId 사전순
-      const target = livingDefenders.reduce((best, p) => {
-        if (p.currentHp !== best.currentHp) return p.currentHp < best.currentHp ? p : best;
-        return p.battleId.localeCompare(best.battleId) < 0 ? p : best;
-      });
+      while (attacker.atkGauge >= cd && attacker.currentHp > 0) {
+        attacker.atkGauge -= cd;
 
-      const { damage, isCrit, moveName } = this.calculateBattleDamage(attacker, target, rng);
-      target.currentHp -= damage;
+        const defenders = attacker.battleId.startsWith('p1-') ? team2 : team1;
+        const livingDefenders = defenders.filter(p => p.currentHp > 0);
+        if (livingDefenders.length === 0) break;
 
-      const isFainted = target.currentHp <= 0;
+        // [FIX] 인접 슬롯 타겟 — 아레나의 '가장 가까운 적'을 위치 없이 근사한다.
+        //   예전엔 '최저 HP 집중포화'였다. 그러면 HP만 크고 방어가 종잇장인 유닛(럭키:
+        //   HP 488/방어 5)이 항상 마지막에 맞아서 끝까지 살아남는다. 아레나에서는 가장 가까운
+        //   적을 치므로 같은 럭키가 3초 만에 녹는다 → 같은 보드가 AI를 만나느냐 사람을
+        //   만나느냐로 승패가 뒤집혔다(내구 보드 tank6이 대표 사례).
+        //   교차검증 일치율: 최저HP 80.5% → 인접슬롯 89.3%, 방향 뒤집힘 4쌍 → 1쌍.
+        const myIdx = Number(attacker.battleId.split('-')[1]);
+        const target = livingDefenders.reduce((best, p) => {
+          const dp = Math.abs(Number(p.battleId.split('-')[1]) - myIdx);
+          const db = Math.abs(Number(best.battleId.split('-')[1]) - myIdx);
+          if (dp !== db) return dp < db ? p : best;
+          return p.battleId.localeCompare(best.battleId) < 0 ? p : best;
+        });
 
-      log.push({
-        turn,
-        attackerId: attacker.battleId,
-        targetId: target.battleId,
-        action: 'attack',
-        damage,
-        isCrit,
-        isMiss: false,
-        isFainted,
-        moveName: moveName ?? 'Attack',
-        timestamp: turn, // [V5] Date.now() 대신 turn 번호 (결정론)
-      });
+        const { damage, isCrit, moveName } = this.calculateBattleDamage(attacker, target, rng);
+        target.currentHp -= damage;
+
+        const isFainted = target.currentHp <= 0;
+
+        // [FIX] 흡혈 — buildTowerDetails가 lifesteal을 실어 보내고 아레나는 쓰는데
+        //   이 엔진만 무시하고 있었다(특성이 AI전에서만 죽는 문제).
+        const heal = Math.floor(damage * (attacker.lifesteal ?? 0));
+        if (heal > 0 && attacker.currentHp < attacker.maxHp) {
+          attacker.currentHp = Math.min(attacker.maxHp, attacker.currentHp + heal);
+        }
+
+        log.push({
+          turn,
+          attackerId: attacker.battleId,
+          targetId: target.battleId,
+          action: 'attack',
+          damage,
+          isCrit,
+          isMiss: false,
+          isFainted,
+          moveName: moveName ?? 'Attack',
+          timestamp: turn, // [V5] Date.now() 대신 turn 번호 (결정론)
+        });
+      }
     }
   }
 

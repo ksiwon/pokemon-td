@@ -213,6 +213,15 @@ export function calcDmg(a: Unit, d: Unit, rng: () => number): DmgResult {
   };
 }
 
+/**
+ * 스피드 → 공격 쿨다운 배율. 1.0이 기본 속도이고 작을수록 자주 때린다.
+ * PvPBattleService도 이 함수를 쓴다 — 두 엔진이 스피드를 다르게 취급하면
+ * 같은 보드가 AI를 만나느냐 사람을 만나느냐로 승패가 갈린다(교차검증 드리프트).
+ */
+export function attackSpeedMult(speed: number): number {
+  return Math.max(0.4, 1.0 - speed / 400);
+}
+
 export function dst(a: Unit, b: Unit) {
   return Math.sqrt((a.x - b.x) ** 2 + (a.y - b.y) ** 2);
 }
@@ -406,8 +415,7 @@ export function simulateTick(
 
           // [FIX-5] 스피드 기반 공격 쿨다운 (speed가 높을수록 빠른 공격)
           const spd = unit.detail.speed ?? 50;
-          const speedMult = Math.max(0.4, 1.0 - spd / 400);
-          unit.atkCd = ATK_COOLDOWN * speedMult;
+          unit.atkCd = ATK_COOLDOWN * attackSpeedMult(spd);
 
           const t2 = next.find(u => u.id === target.id);
           if (t2 && alive(t2)) {

@@ -9,7 +9,7 @@ import { describe, it, expect } from 'vitest';
 import { pvpBattleService } from '../../src/services/PvPBattleService';
 import { buildUnits, simulateTick, calcDmg, sixPieceResistTypes, Unit } from '../../src/game/arenaSim';
 import { calculateActiveSynergies } from '../../src/utils/synergyManager';
-import { mulberry32 } from '../../src/utils/rng';
+import { mulberry32, setRngSource } from '../../src/utils/rng';
 import { runArenaBattleTwoClients, roleBasedPlacements } from './arenaRunner';
 import { TowerDetail } from '../../src/types/multiplayer';
 import { GamePokemon } from '../../src/types/game';
@@ -162,4 +162,48 @@ describe('TFT 진영 공정성', () => {
     expect(ratio).toBeGreaterThan(0.45);
     expect(ratio).toBeLessThan(0.55);
   });
+
+  /**
+   * 시너지 단독 가치 — **같은 보드끼리** 붙이고 한쪽만 버프를 켠다.
+   *
+   * 예전엔 pvpMatrix가 "water6 vs nosyn6" 같은 서로 다른 보드 승률로 이걸 쟀는데,
+   * 그건 시너지가 아니라 두 보드의 종족 궁합을 재는 것이었다. 실제로 gen1x6은 노말 기술이
+   * 많고 nosyn6에는 노말 무효인 단칼빙이 있어서, 시너지가 멀쩡히 동작해도 41%가 나왔다.
+   * 여기서는 로스터가 양쪽 동일하므로 차이는 오직 시너지 버프뿐이다.
+   */
+  it('시너지 단독 가치 — 같은 보드, 한쪽만 버프 ON', async () => {
+    const { buildAllBoards } = await import('./boards');
+    const { runArenaBattle, teamSynergies } = await import('./arenaRunner');
+    setRngSource(mulberry32(20260711));
+    const boards = await buildAllBoards();
+
+    const N = 40;
+    const results: Array<{ name: string; syn: string; winRate: number }> = [];
+    for (const b of boards) {
+      const syn = teamSynergies(b.details);
+      if (!syn.length) continue;
+      let on = 0;
+      for (let s = 1; s <= N; s++) {
+        // 양방향 — 진영 편향이 섞이지 않게
+        if (runArenaBattle(b.details, b.details, 700_000 + s,
+          { mySynergies: syn, oppSynergies: [] }).myWon) on++;
+        if (!runArenaBattle(b.details, b.details, 700_000 + s,
+          { mySynergies: [], oppSynergies: syn }).myWon) on++;
+      }
+      const winRate = on / (N * 2);
+      results.push({ name: b.name, syn: syn.map(x => `${x.id}:L${x.level}`).join(' '), winRate });
+      console.log(`  ${b.name.padEnd(12)} [${syn.map(x => `${x.id}:L${x.level}`).join(' ')}] 시너지측 승률 ${(winRate * 100).toFixed(1)}%`);
+    }
+
+    // 시너지가 붙은 쪽이 유리해야 한다(하한). 상한은 판정하지 않고 신호로만 —
+    // 스탯 ×1.3은 공/방 양쪽에 걸려 dps비가 1.69배가 되므로 6v6에서 100%는 산술적 귀결이다.
+    // "그 설계가 맞느냐"는 밸런스 결정이라 하네스가 단독으로 실패시키지 않는다.
+    for (const r of results) {
+      expect(r.winRate).toBeGreaterThan(0.5);
+      if (r.winRate > 0.95) {
+        console.log(`  SIGNAL 시너지 결정력 과다: ${r.name}(${r.syn}) = ${(r.winRate * 100).toFixed(1)}% — 시너지만으로 승패 확정`);
+      }
+    }
+    expect(results.length).toBeGreaterThan(0);
+  }, 300_000);
 });
