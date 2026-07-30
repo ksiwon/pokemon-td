@@ -23,7 +23,21 @@ import {
 import { getTypeEffectiveness } from '../utils/typeEffectiveness';
 import { calculateActiveSynergies, getBuffedStats } from '../utils/synergyManager';
 import { GamePokemon, Synergy } from '../types/game';
-import { sortTeamDeterministic, sixPieceResistTypes, attackSpeedMult } from '../game/arenaSim';
+import {
+  sortTeamDeterministic, sixPieceResistTypes, attackSpeedMult,
+  statusTurns, dotPerTurn, StatusType,
+} from '../game/arenaSim';
+
+/**
+ * 전투 중 유닛 — TowerDetail에 이 엔진만의 전투 상태를 얹은 것.
+ *   atkGauge     스피드 기반 공격 횟수용 행동 게이지
+ *   statusEffect 상태이상 (지속시간은 턴 단위 — statusTurns가 초에서 환산)
+ */
+type BattleUnit = TowerDetail & {
+  battleId: string;
+  atkGauge?: number;
+  statusEffect?: { type: StatusType; turnsLeft: number };
+};
 
 // ─── 결정론적 RNG (mulberry32) ────────────────────────────────────
 function mulberry32(seed: number) {
@@ -299,8 +313,8 @@ class PvPBattleService {
    *   동일 팀 거울전 측정 결과 team1 승률 91.5%. 통합 정렬 + 진영 무관 해시 tiebreak로 교정.
    */
   private executeTurnWithLog(
-    team1: (TowerDetail & { battleId: string; atkGauge?: number })[],
-    team2: (TowerDetail & { battleId: string; atkGauge?: number })[],
+    team1: BattleUnit[],
+    team2: BattleUnit[],
     turn: number,
     log: BattleLogEntry[],
     rng: () => number,
@@ -309,6 +323,25 @@ class PvPBattleService {
     const all = [...team1, ...team2];
     const tie = new Map<string, number>();
     for (const u of all) tie.set(u.battleId, djb2(`${seed}:${u.battleId}`));
+
+    // ── [FIX] 상태이상 틱 — 아레나(simulateTick 앞부분)와 같은 위치·같은 순서 ──
+    //   지속피해를 먼저 넣고 지속시간을 깎는다. 아레나는 틱(1/30초), 여기는 턴 단위라
+    //   dotPerTurn/statusTurns가 초 기준 공용 상수에서 환산해준다.
+    for (const u of all) {
+      if (u.currentHp <= 0 || !u.statusEffect) continue;
+      const se = u.statusEffect;
+      const dot = dotPerTurn(u.maxHp, se.type);
+      if (dot > 0) {
+        u.currentHp = Math.max(0, u.currentHp - dot);
+        log.push({
+          turn, attackerId: u.battleId, targetId: u.battleId, action: 'attack',
+          damage: dot, isCrit: false, isMiss: false, isFainted: u.currentHp <= 0,
+          moveName: se.type === 'burn' ? '화상' : '독', timestamp: turn,
+        });
+      }
+      se.turnsLeft -= 1;
+      if (se.turnsLeft <= 0) u.statusEffect = undefined;
+    }
 
     const actors = all
       .filter(p => p.currentHp > 0)
@@ -322,6 +355,7 @@ class PvPBattleService {
     for (const attacker of actors) {
       if (attacker.currentHp <= 0) continue;
 
+
       // [FIX] 스피드 → 공격 횟수.
       //   예전엔 스피드가 '턴 내 행동 순서'에만 쓰였다. 한 턴에 전원이 정확히 1회씩
       //   때리므로 스피드 5인 단단지와 110인 라이츄의 딜량이 같았다 — 이 엔진에서만
@@ -331,6 +365,19 @@ class PvPBattleService {
       //   느린 쪽을 1회 미만으로 깎지는 않으므로 기존 동작이 하한으로 보존된다.
       const cd = attackSpeedMult(attacker.speed ?? 50);
       attacker.atkGauge = (attacker.atkGauge ?? 0) + 1;
+
+      // [FIX] 얼음/잠듦은 행동 불가, 마비는 25% 확률로 불가.
+      //   RNG를 추가 소비하지 않고 결정론적으로 판정한다(소비하면 같은 시드에서
+      //   양측 클라이언트의 난수열이 어긋난다 — 아레나도 같은 이유로 해시/틱 기반이다).
+      //   아레나는 행동 불가 중에도 쿨다운이 도므로 해동 즉시 1회 때린다. 여기서도
+      //   게이지를 cd에서 멈춰 '해동 즉시 1회'까지만 허용하고 몰아치기는 막는다.
+      const st = attacker.statusEffect?.type;
+      const blocked = st === 'freeze' || st === 'sleep' ||
+        (st === 'paralysis' && (tie.get(attacker.battleId)! + turn) % 4 === 0);
+      if (blocked) {
+        attacker.atkGauge = Math.min(attacker.atkGauge, cd);
+        continue;
+      }
 
       while (attacker.atkGauge >= cd && attacker.currentHp > 0) {
         attacker.atkGauge -= cd;
@@ -353,7 +400,8 @@ class PvPBattleService {
           return p.battleId.localeCompare(best.battleId) < 0 ? p : best;
         });
 
-        const { damage, isCrit, moveName } = this.calculateBattleDamage(attacker, target, rng);
+        const { damage, isCrit, moveName, statusInflicted, isAOE } =
+          this.calculateBattleDamage(attacker, target, rng);
         target.currentHp -= damage;
 
         const isFainted = target.currentHp <= 0;
@@ -377,6 +425,32 @@ class PvPBattleService {
           moveName: moveName ?? 'Attack',
           timestamp: turn, // [V5] Date.now() 대신 turn 번호 (결정론)
         });
+
+        // [FIX] AOE 스플래시 — 아레나는 대상 주변 1.6칸에 0.5배를 뿌리는데 이 엔진엔 없었다.
+        //   위치가 없으므로 타겟팅과 같은 근사(인접 슬롯)를 쓴다: 대상 바로 옆 슬롯에 0.5배.
+        if (isAOE) {
+          const tIdx = Number(target.battleId.split('-')[1]);
+          const aoeBonus = (attacker.aoeBonus ?? 0) > 0 ? (attacker.aoeBonus ?? 1.0) : 1.0;
+          const splashDmg = Math.floor(damage * 0.5 * aoeBonus);
+          const splashTargets = defenders
+            .filter(p => p.currentHp > 0 && p.battleId !== target.battleId &&
+              Math.abs(Number(p.battleId.split('-')[1]) - tIdx) === 1)
+            .sort((a, b) => a.battleId.localeCompare(b.battleId));
+          for (const sp of splashTargets) {
+            if (splashDmg <= 0) break;
+            sp.currentHp -= splashDmg;
+            log.push({
+              turn, attackerId: attacker.battleId, targetId: sp.battleId, action: 'attack',
+              damage: splashDmg, isCrit: false, isMiss: false, isFainted: sp.currentHp <= 0,
+              moveName: moveName ?? 'Attack', timestamp: turn,
+            });
+          }
+        }
+
+        // [FIX] 상태이상 부여 — 기절시킨 대상에는 걸지 않는다(아레나와 동일).
+        if (statusInflicted && !isFainted) {
+          target.statusEffect = { type: statusInflicted, turnsLeft: statusTurns(statusInflicted) };
+        }
       }
     }
   }
@@ -393,15 +467,23 @@ class PvPBattleService {
    *   r5 → 명중률 판정 (accuracy)
    */
   private calculateBattleDamage(
-    attacker: TowerDetail,
+    attacker: TowerDetail & { statusEffect?: { type: StatusType; turnsLeft: number } },
     defender: TowerDetail,
     rng: () => number
-  ): { damage: number; isCrit: boolean; moveName?: string } {
+  ): {
+    damage: number; isCrit: boolean; moveName?: string;
+    statusInflicted?: StatusType; isAOE: boolean;
+  } {
+    // [FIX] 난수 소비 순서를 arenaSim.calcDmg와 동일하게 맞춘다(6회):
+    //   r1 기술선택방식 · r2 기술인덱스 · r3 크리 · r4 데미지난수 · r5 상태이상 · r6 명중
+    //   예전엔 5회(상태이상 없음)라 두 엔진의 구조가 달랐다. 같은 순서로 맞춰두면
+    //   앞으로 한쪽에 판정이 추가돼도 다른 쪽에서 바로 어긋난 게 드러난다.
     const r1 = rng();
     const r2 = rng();
     const r3 = rng();
     const r4 = rng();
     const r5 = rng();
+    const r6 = rng();
 
     const attackerTypes = attacker.types ?? [];
     const defenderTypes = defender.types ?? [];
@@ -416,6 +498,8 @@ class PvPBattleService {
     let damageClass: 'physical' | 'special' = 'physical';
     let moveName: string | undefined;
     let accuracy = 100;
+    let moveEffect: { statusInflict?: string; statusChance?: number | null } | null = null;
+    let isAOE = false;
 
     if (damageMoves.length > 0) {
       let idx: number;
@@ -432,12 +516,14 @@ class PvPBattleService {
       damageClass = sel.damageClass === 'special' ? 'special' : 'physical';
       moveName = sel.displayName || sel.name;
       accuracy = sel.accuracy ?? 100;
+      moveEffect = sel.effect ?? null;
+      isAOE = sel.isAOE ?? false;
     }
 
     // 명중률 판정 (싱글플레이와 동일: hitChance = accuracy / 100)
-    const isMiss = r5 > (accuracy / 100);
+    const isMiss = r6 > (accuracy / 100);
     if (isMiss) {
-      return { damage: 0, isCrit: false, moveName };
+      return { damage: 0, isCrit: false, moveName, isAOE: false };
     }
 
     // 물리/특수 구분: damageClass에 따라 공/방 스탯 선택
@@ -464,14 +550,30 @@ class PvPBattleService {
     const critRate = attacker.critChance ?? 0.0625;
     const isCrit = r3 < critRate;
 
+    // [FIX] 번 상태이상: 물리 공격력 절반 (아레나와 동일)
+    const burnPenalty = (attacker.statusEffect?.type === 'burn' && damageClass === 'physical') ? 0.5 : 1.0;
+
     const level = attacker.level;
     const base = ((2 * level / 5 + 2) * power * atkStat / Math.max(1, defStat) / 50 + 2);
     const randomFactor = 0.85 + r4 * 0.15;
-    let damage = base * typeEff * randomFactor * sixPieceResist;
+    let damage = base * typeEff * randomFactor * sixPieceResist * burnPenalty;
     if (isStab) damage *= 1.5;
     if (isCrit) damage *= 1.5;
 
-    return { damage: Math.max(1, Math.floor(damage)), isCrit, moveName };
+    // [FIX] 상태이상 부여 — 아레나에만 있고 이 엔진엔 없었다(정합성 매트릭스에서 검출).
+    //   이미 상태이상이 걸린 대상에는 덮어쓰지 않는 규칙도 동일.
+    let statusInflicted: StatusType | undefined;
+    const already = (defender as { statusEffect?: unknown }).statusEffect;
+    if (!already && moveEffect?.statusInflict && moveEffect.statusChance != null) {
+      if (r5 * 100 < (moveEffect.statusChance ?? 0)) {
+        const s = moveEffect.statusInflict as StatusType;
+        if (s === 'burn' || s === 'poison' || s === 'paralysis' || s === 'freeze' || s === 'sleep') {
+          statusInflicted = s;
+        }
+      }
+    }
+
+    return { damage: Math.max(1, Math.floor(damage)), isCrit, moveName, statusInflicted, isAOE };
   }
 }
 

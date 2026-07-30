@@ -213,6 +213,40 @@ export function calcDmg(a: Unit, d: Unit, rng: () => number): DmgResult {
   };
 }
 
+// ─── 상태이상 공용 정의 ──────────────────────────────────────────────────────
+// 아레나는 틱(1/30초), AI서비스는 턴 단위라 단위가 다르다. 숫자를 각자 들고 있으면
+// 반드시 갈라지므로 "초" 기준 하나만 두고 각 엔진이 자기 단위로 환산해 쓴다.
+export type StatusType = 'burn' | 'poison' | 'paralysis' | 'freeze' | 'sleep';
+
+/** 상태이상 지속시간(초). */
+export const STATUS_SECONDS: Record<StatusType, number> = {
+  burn: 5, poison: 5, paralysis: 4, freeze: 3, sleep: 2,
+};
+
+/** 지속피해 — 초당 최대HP 비율. 번 1/16, 독 1/8. */
+export const DOT_PER_SECOND: Partial<Record<StatusType, number>> = {
+  burn: 1 / 16, poison: 1 / 8,
+};
+
+/**
+ * AI서비스의 한 '턴'이 아레나 시간으로 몇 초인가.
+ * 스피드 0인 유닛의 공격 주기(ATK_COOLDOWN × speedMult(0) = 1.3초)를 1턴으로 본다.
+ * 상태이상 지속시간을 두 엔진에서 같은 체감으로 맞추는 환산 상수.
+ */
+export const SERVICE_TURN_SECONDS = ATK_COOLDOWN;
+
+/** 상태이상 지속 턴 수(AI서비스용) — 최소 1턴. */
+export function statusTurns(type: StatusType): number {
+  return Math.max(1, Math.round(STATUS_SECONDS[type] / SERVICE_TURN_SECONDS));
+}
+
+/** 한 턴 동안의 지속피해(AI서비스용). */
+export function dotPerTurn(maxHp: number, type: StatusType): number {
+  const perSec = DOT_PER_SECOND[type];
+  if (!perSec) return 0;
+  return Math.max(1, Math.floor(maxHp * perSec * SERVICE_TURN_SECONDS));
+}
+
 /**
  * 스피드 → 공격 쿨다운 배율. 1.0이 기본 속도이고 작을수록 자주 때린다.
  * PvPBattleService도 이 함수를 쓴다 — 두 엔진이 스피드를 다르게 취급하면
@@ -355,9 +389,8 @@ export function simulateTick(
 
     // 독/번 틱 데미지
     if (se.type === 'burn' || se.type === 'poison') {
-      const tickDmg = se.type === 'burn'
-        ? Math.max(1, Math.floor(unit.maxHp / 16 / FPS))   // 번: 1/16 HP/초
-        : Math.max(1, Math.floor(unit.maxHp / 8 / FPS));   // 독: 1/8 HP/초
+      // 번 1/16 HP/초, 독 1/8 HP/초 — 초당 비율은 DOT_PER_SECOND가 단일 출처(AI서비스와 공유)
+      const tickDmg = Math.max(1, Math.floor(unit.maxHp * DOT_PER_SECOND[se.type]! / FPS));
       unit.hp = Math.max(0, unit.hp - tickDmg);
       if (unit.hp <= 0) unit.fainted = true;
     }
@@ -501,13 +534,9 @@ export function simulateTick(
 
               // ── 상태이상 부여 ─────────────────────────────────────
               if (statusInflicted && !t2.fainted) {
-                const DURATION: Record<string, number> = {
-                  burn: FPS * 5, poison: FPS * 5, paralysis: FPS * 4,
-                  freeze: FPS * 3, sleep: FPS * 2,
-                };
                 t2.statusEffect = {
                   type: statusInflicted,
-                  turnsLeft: DURATION[statusInflicted] ?? FPS * 3,
+                  turnsLeft: Math.round((STATUS_SECONDS[statusInflicted] ?? 3) * FPS),
                 };
                 const SE_ICONS: Record<string, string> = {
                   burn: '🔥', poison: '☠️', paralysis: '⚡', freeze: '❄️', sleep: '💤',

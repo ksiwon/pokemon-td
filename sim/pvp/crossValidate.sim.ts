@@ -14,7 +14,14 @@ import { buildAllBoards } from './boards';
 import { runArenaBattle } from './arenaRunner';
 import { writeReport, writeMetrics, mdTable, pct } from '../support/report';
 
-const SEEDS = 20;
+/**
+ * [표본] 예전 값은 20이었다. '방향 뒤집힘' 판정은 양 엔진에서 |승률−0.5|>0.15 를 요구하는데,
+ * n=20이면 참값이 50%인 쌍도 한쪽 꼬리에 9.0% 확률로 떨어진다 → 28쌍이면 **오탐 0.45건/실행**.
+ * 즉 "뒤집힘 4쌍" 안에 노이즈가 섞여 있을 수 있었다. n=60이면 기대 오탐 0.01건.
+ */
+const SEEDS = Number(process.env.SIM_CROSS_SEEDS ?? 60);
+/** 뒤집힘으로 인정할 최소 편향폭. n=60의 95% CI 반폭(12.6%p)보다 커야 노이즈와 구분된다. */
+const FLIP_MARGIN = 0.15;
 
 describe('P0c: 엔진 교차검증 (PvPBattleService vs arenaSim)', () => {
   it('보드 전쌍 × 시드 20 — 승자 일치율', async () => {
@@ -61,7 +68,7 @@ describe('P0c: 엔진 교차검증 (PvPBattleService vs arenaSim)', () => {
     // 방향 불일치(한 엔진은 A 우세, 다른 엔진은 B 우세)인 쌍
     const flipped = rows.filter(r =>
       (r.svcWinA - 0.5) * (r.arenaWinA - 0.5) < 0 &&
-      Math.abs(r.svcWinA - 0.5) > 0.15 && Math.abs(r.arenaWinA - 0.5) > 0.15
+      Math.abs(r.svcWinA - 0.5) > FLIP_MARGIN && Math.abs(r.arenaWinA - 0.5) > FLIP_MARGIN
     );
 
     let md = `# 전투 엔진 교차검증\n\n`;

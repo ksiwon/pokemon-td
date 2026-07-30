@@ -34,6 +34,8 @@ function sampleSizeOf(name: string, m: any): { label: string; value: number } | 
   if (name === 'single-runs' && typeof m.seeds === 'number') return { label: '시드/맵·페르소나', value: m.seeds };
   if (name === 'multi-runs' && typeof m.games === 'number') return { label: '게임', value: m.games };
   if (name === 'pvp-matrix' && typeof m.seedsPerPair === 'number') return { label: '시드/쌍', value: m.seedsPerPair };
+  if (name === 'engine-cross-validation' && typeof m.seeds === 'number') return { label: '시드/쌍', value: m.seeds };
+  if (name === 'arena-placement' && typeof m.seeds === 'number') return { label: '시드/배치', value: m.seeds };
   return null;
 }
 
@@ -52,8 +54,16 @@ function extractHeadlines(name: string, m: any): Headline[] {
       }
       break;
     case 'arena-placement':
-      push('avgSpread', '배치 민감도(무작위 스프레드)', m.avgSpread, 'pct');
+      // avgSpread(max−min)는 극값 통계라 표본 노이즈에 끌려간다 → 헤드라인은 보정 σ.
+      push('avgStdTrue', '배치 민감도(노이즈 보정 σ)', m.avgStdTrue, 'pct');
       push('avgRoleDelta', '역할배치(탱전열) 효과', m.avgRoleDelta, 'pct');
+      break;
+    case 'mechanic-parity':
+      push('drift', '아레나↔AI서비스 메커닉 드리프트 수', (m.arenaVsServiceDrift ?? []).length);
+      break;
+    case 'determinism':
+      push('desyncMismatch', 'desync 불일치 건수', m.desyncMismatch);
+      push('desyncRuns', 'desync 검사 판수', m.desyncRuns);
       break;
     case 'engine-cross-validation':
       push('overallAgreement', '두 전투엔진 승자 일치율', m.overallAgreement, 'pct');

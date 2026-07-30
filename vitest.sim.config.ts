@@ -23,6 +23,11 @@ export default defineConfig({
   },
   test: {
     environment: 'node',
+    // ⚠ report.sim.ts는 다른 시뮬이 쓴 metrics/*.json을 읽어 비교표를 만든다. 파일 간 병렬
+    //   실행이라 같이 돌리면 **직전 실행의 낡은 메트릭**을 읽는다(실제로 그랬다: 교차검증
+    //   92.7%가 92.3%로, 시드 60이 20으로 찍혔다 — 비교표가 한 실행 뒤처졌다).
+    //   그래서 `npm run sim`은 --exclude로 리포트를 빼고 돌린 뒤 sim:report를 이어 붙인다.
+    //   여기 include에서 빼지 않는 이유: sim:report가 이 설정으로 직접 실행돼야 하기 때문.
     include: ['sim/**/*.sim.ts'],
     setupFiles: ['sim/support/bootstrap.ts'],
     // 시뮬 로그(승률 요약 등)는 사람이 읽는 산출물 — 콘솔 가로채기 비활성화
