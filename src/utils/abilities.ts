@@ -130,14 +130,21 @@ export function applyAbilityEffects(
 /**
  * 크리티컬 확률 계산 (특성 고려)
  */
+/**
+ * 기본 크리티컬 확률 — 본가와 동일한 1/24 (4.17%).
+ * 전 엔진 공용 상수. 예전엔 싱글TD만 1/24이고 아레나·AI서비스의 폴백은 0.0625,
+ * 카드는 0.0625 하드코딩이라 세 값이 공존했다. 멀티는 buildTowerDetails가
+ * getCriticalChance로 채워 실제로는 1/24이 들어가므로 폴백 0.0625는 죽은 값이면서,
+ * critChance가 비는 순간 조용히 6.25%가 되는 함정이었다.
+ */
+export const BASE_CRIT_CHANCE = 1 / 24;
+
 export function getCriticalChance(ability: PokemonAbility | undefined): number {
-  const baseCritChance = 1 / 24; // 기본 4.17%
-  
   if (ability && ability.effect === 'crit') {
-    return baseCritChance * ability.value;
+    return BASE_CRIT_CHANCE * ability.value;
   }
-  
-  return baseCritChance;
+
+  return BASE_CRIT_CHANCE;
 }
 
 /**

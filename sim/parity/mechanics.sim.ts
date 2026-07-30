@@ -25,6 +25,7 @@ import { pvpBattleService } from '../../src/services/PvPBattleService';
 import { calculateDamage, getTypeEffectiveness } from '../../src/utils/typeEffectiveness';
 import { cardBattleService, buildBattleCard, BattleCard } from '../../src/services/CardBattleService';
 import { pokeAPI } from '../../src/api/pokeapi';
+import { BASE_CRIT_CHANCE } from '../../src/utils/abilities';
 import { TowerDetail } from '../../src/types/multiplayer';
 import { mulberry32 } from '../../src/utils/rng';
 import { writeReport, writeMetrics, mdTable } from '../support/report';
@@ -190,7 +191,9 @@ describe('P0d: 메커닉 × 엔진 정합성', () => {
         svc: v(svcDmg(lo, def), svcDmg(hi, def)),
         card: v(cardDmg({ ...mkCard(bulba, 'player'), level: 10 }, mkCard(charm, 'enemy')),
                 cardDmg({ ...mkCard(bulba, 'player'), level: 50 }, mkCard(charm, 'enemy'))),
-        note: `싱글TD는 calculateDamage가 level=50 하드코딩. 실제 레벨을 쓰면 L15에서 ${((2 * 15 / 5 + 2) / 22).toFixed(2)}배, L1에서 ${((2 * 1 / 5 + 2) / 22).toFixed(2)}배가 되어 초반이 붕괴한다 — 의도된 상수로 보이나 모드 간 딜 스케일이 달라진다`,
+        note: '싱글TD는 level=50 고정 — 타워 스탯이 종족값 그대로(=정통 L50 환산과 3~10% 차)라 서로 정합한다. ' +
+          `"전원 레벨50" 체계 vs 멀티·카드의 "실제 레벨" 체계 차이지 공식 차이가 아니다. ` +
+          `여기만 실제 레벨로 바꾸면 L15에서 ${((2 * 15 / 5 + 2) / 22).toFixed(2)}배가 되어 붕괴한다`,
       });
     }
 
@@ -382,6 +385,35 @@ describe('P0d: 메커닉 × 엔진 정합성', () => {
         card: '➖ 해당없음',
         note: '광역 기술을 들려주고 2번째 방어자 피해 유무로 판정',
       });
+    }
+
+    // ── 14. 기본 크리 확률이 전 엔진 동일한가 ───────────────────────────
+    // critChance를 비워두고 실측 크리율을 재서 폴백 상수를 확인한다.
+    // 예전엔 싱글TD 1/24(4.17%), 아레나·AI 폴백 0.0625, 카드 0.0625로 세 값이 공존했다.
+    // 멀티는 buildTowerDetails가 1/24로 채워 넣으므로 폴백은 죽은 값이었지만,
+    // critChance가 비는 순간 조용히 6.25%가 되는 함정이라 상수를 하나로 합쳤다.
+    {
+      const N = 20000;
+      const noCrit = { ...tower({ types: ['normal'] }) } as Record<string, unknown>;
+      delete noCrit.critChance;
+      const atk = noCrit as unknown as TowerDetail;
+      const def = tower({ types: ['normal'] });
+      let crits = 0;
+      const rng = mulberry32(12345);
+      for (let i = 0; i < N; i++) {
+        if (calcDmg(unit(atk, 'my'), unit(def, 'opp'), rng).isCrit) crits++;
+      }
+      const rate = crits / N;
+      const ok = Math.abs(rate - BASE_CRIT_CHANCE) < 0.005;
+      rows.push({
+        mechanic: '기본 크리 확률 (폴백 상수)',
+        td: `✅ ${(BASE_CRIT_CHANCE * 100).toFixed(2)}%`,
+        arena: ok ? '✅ 반영' : '❌ 미반영',
+        svc: ok ? '✅ 반영' : '❌ 미반영',
+        card: '✅ 반영',
+        note: `아레나 실측 ${(rate * 100).toFixed(2)}% vs 공용 상수 ${(BASE_CRIT_CHANCE * 100).toFixed(2)}% (전 엔진 BASE_CRIT_CHANCE 공유)`,
+      });
+      expect(rate).toBeCloseTo(BASE_CRIT_CHANCE, 2);
     }
 
     // ── 리포트 ──────────────────────────────────────────────────────────

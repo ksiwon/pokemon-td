@@ -90,6 +90,13 @@
       "arena": "✅ 반영",
       "svc": "✅ 반영",
       "card": "➖ 해당없음"
+    },
+    {
+      "mechanic": "기본 크리 확률 (폴백 상수)",
+      "td": "✅ 4.17%",
+      "arena": "✅ 반영",
+      "svc": "✅ 반영",
+      "card": "✅ 반영"
     }
   ],
   "arenaVsServiceDrift": []

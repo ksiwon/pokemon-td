@@ -6,9 +6,19 @@
 //   2) 컴포넌트와 시뮬이 같은 코드를 쓰므로 모델 드리프트 원천 차단
 //
 // ⚠ 이 파일의 수치/로직을 바꾸면 실제 멀티 인간전 결과가 바뀐다. 순수 이동만 허용.
+//
+// [엔진 정합성] 전투 엔진이 4개 공존한다(싱글TD / 아레나 / AI서비스 / 카드).
+//   여기와 PvPBattleService는 **같은 멀티 매치**를 판정하므로(사람 상대냐 AI 상대냐,
+//   교착 시 강제종료냐의 차이) 메커닉이 어긋나면 "상대가 누구냐에 따라 규칙이 바뀐다".
+//   그래서 아래 값들은 이 파일이 단일 출처이고 PvPBattleService가 import해서 쓴다:
+//     attackSpeedMult · STATUS_SECONDS · DOT_PER_SECOND · statusTurns · dotPerTurn
+//   크리 기본값은 utils/abilities.BASE_CRIT_CHANCE가 단일 출처(네 엔진 공용).
+//   새 메커닉을 추가하면 sim/parity/mechanics.sim.ts(npm run sim:parity)에 행을 추가할 것 —
+//   그 테스트가 두 엔진 간 드리프트 0을 강제한다.
 
 import { TowerDetail } from '../types/multiplayer';
 import { getTypeEffectiveness } from '../utils/typeEffectiveness';
+import { BASE_CRIT_CHANCE } from '../utils/abilities';
 import { getBuffedStats } from '../utils/synergyManager';
 import { GamePokemon, Synergy } from '../types/game';
 import { mulberry32 } from '../utils/rng';
@@ -173,7 +183,7 @@ export function calcDmg(a: Unit, d: Unit, rng: () => number): DmgResult {
   const isStab = attackerTypes.includes(moveType);
 
   // 크리티컬
-  const critRate = a.detail.critChance ?? 0.0625;
+  const critRate = a.detail.critChance ?? BASE_CRIT_CHANCE;
   const isCrit = r3 < critRate;
 
   // 번 상태이상: 물리 공격력 절반

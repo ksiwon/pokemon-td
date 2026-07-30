@@ -15,12 +15,20 @@
 // [V5-FIX-PVP-4] 빈 팀 처리 — 양측이 모두 빈 팀이면 무승부 대신
 //   "포켓몬이 더 많았어야 하는 쪽(= 살아있어야 할 플레이어)"을 기준으로 player1 승이 아닌
 //   플레이어 ID 사전순 결정론으로 처리 (극단적 엣지 케이스 방어)
+//
+// [엔진 정합성] 이 엔진과 arenaSim은 **같은 멀티 매치**를 판정한다(AI 상대냐 사람 상대냐,
+//   교착 시 강제종료냐의 차이). 한쪽에만 있는 메커닉은 곧 "상대가 누구냐로 규칙이 바뀐다"라
+//   반드시 일치해야 한다. 실제로 시너지·행동순서·스피드·흡혈·상태이상·AOE가 차례로 여기서만
+//   빠져 있었고, 그때마다 같은 보드의 승패가 엔진에 따라 뒤집혔다(교차검증 80.5% → 92.7%).
+//   그래서 공유 가능한 수치는 전부 arenaSim / utils.abilities에서 import한다(중복 정의 금지).
+//   새 메커닉 추가 시 sim/parity/mechanics.sim.ts에 행을 추가할 것 — 드리프트 0을 강제한다.
 
 import {
   TowerDetail, PvPBattleResult, RoundMatchup, EncounterRecord,
   PlayerGameState, BattleLogEntry,
 } from '../types/multiplayer';
 import { getTypeEffectiveness } from '../utils/typeEffectiveness';
+import { BASE_CRIT_CHANCE } from '../utils/abilities';
 import { calculateActiveSynergies, getBuffedStats } from '../utils/synergyManager';
 import { GamePokemon, Synergy } from '../types/game';
 import {
@@ -547,7 +555,7 @@ class PvPBattleService {
     const isStab = attackerTypes.includes(moveType);
 
     // 크리티컬 (기본 6.25%)
-    const critRate = attacker.critChance ?? 0.0625;
+    const critRate = attacker.critChance ?? BASE_CRIT_CHANCE;
     const isCrit = r3 < critRate;
 
     // [FIX] 번 상태이상: 물리 공격력 절반 (아레나와 동일)

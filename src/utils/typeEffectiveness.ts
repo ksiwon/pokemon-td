@@ -236,17 +236,34 @@ export function stabMultiplier(
   return 1.0;
 }
 
+/**
+ * 싱글TD 데미지 공식.
+ *
+ * [레벨 항이 50 고정인 이유 — 버그가 아니라 다른 체계다]
+ *   싱글TD는 타워 스탯으로 **종족값을 그대로** 쓴다. 그런데 정통 공식으로 환산하면
+ *   비HP 스탯 `(2B×L)/100+5` 는 L=50에서 종족값과 3~10% 차이밖에 안 난다
+ *   (종족값 100 → 105). 즉 **싱글TD는 "전원 레벨 50 포켓몬"인 세계**이고,
+ *   레벨 항 50 고정은 그 스케일과 서로 정합한다. `level` 필드는 포켓몬 레벨이 아니라
+ *   스탯을 5%씩 올리는 별도 강화 트랙이다.
+ *   멀티·카드는 반대로 "포켓몬이 실제 레벨"인 체계라 스탯도 레벨도 실제 값을 쓴다.
+ *   여기만 실제 레벨로 바꾸면 스탯(레벨50 스케일)과 레벨 항(레벨1~N)이 어긋나 붕괴한다.
+ *   → 데미지 **공식**은 네 엔진이 이미 동일하다. 남은 건 '레벨이 무엇인가'라는 설계 차이라
+ *     통일하려면 스탯 파생·웨이브 HP·구매가를 통째로 재보정해야 한다(별도 결정 사항).
+ *
+ * @param randomFactor 데미지 난수(0.85~1.0). 1이면 난수 없음(구 동작).
+ */
 export function calculateDamage(
   attackerAttack: number,
   defenderDefense: number,
   movePower: number,
   typeEffectiveness: number,
   isCrit: boolean = false,
-  stab: number = 1 // 자속 보정 배율 (1=없음, 1.5/2.0=자속·테라)
+  stab: number = 1, // 자속 보정 배율 (1=없음, 1.5/2.0=자속·테라)
+  randomFactor: number = 1
 ): number {
   const level = 50;
   const base = ((2 * level / 5 + 2) * movePower * attackerAttack / defenderDefense / 50 + 2);
-  let damage = base * typeEffectiveness;
+  let damage = base * typeEffectiveness * randomFactor;
 
   // 자속 보정 적용 (배율)
   damage *= stab;
@@ -255,4 +272,9 @@ export function calculateDamage(
   if (isCrit) damage *= 1.5;
 
   return Math.max(1, Math.floor(damage));
+}
+
+/** 데미지 난수 0.85~1.0 — 아레나·AI서비스·카드가 모두 쓰는 폭. */
+export function damageRandomFactor(r: number): number {
+  return 0.85 + r * 0.15;
 }

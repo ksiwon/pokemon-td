@@ -7,6 +7,7 @@
 
 import { pokeAPI, PokemonData } from '../api/pokeapi';
 import { getTypeEffectiveness } from '../utils/typeEffectiveness';
+import { BASE_CRIT_CHANCE } from '../utils/abilities';
 import { DeckRow } from '../types/cards';
 
 // ─── 결정론 RNG(mulberry32) ────────────────────────────────────────
@@ -166,7 +167,7 @@ export function buildBattleCard(
     specialDefense: mk(b.specialDefense, defMult),
     // [FIX] 속도도 별/층 배율 반영 — 고성 유닛이 선공(기존엔 원본 종족 속도라 별이 턴순서에 무영향).
     speed: Math.max(1, Math.floor(b.speed * fullMult)),
-    critChance: 0.0625,
+    critChance: BASE_CRIT_CHANCE,
     canPenetrate: false, // applySynergies에서 확정
   };
 }
