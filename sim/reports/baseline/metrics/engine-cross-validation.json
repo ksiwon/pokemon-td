@@ -1,8 +1,7 @@
 {
   "seeds": 20,
-  "overallAgreement": 0.7857142857142857,
+  "overallAgreement": 0.8053571428571429,
   "flippedPairs": [
-    "nosyn6 vs water6",
     "water6 vs gen1x6",
     "water6 vs tank6",
     "gen1x6 vs tank6",
@@ -11,20 +10,20 @@
   "rows": [
     {
       "pair": "nosyn6 vs water6",
-      "svcWinA": 0.85,
+      "svcWinA": 0,
       "arenaWinA": 0,
-      "agreement": 0.15
+      "agreement": 1
     },
     {
       "pair": "nosyn6 vs gen1x6",
-      "svcWinA": 1,
-      "arenaWinA": 0.65,
-      "agreement": 0.65
+      "svcWinA": 0.8,
+      "arenaWinA": 0.55,
+      "agreement": 0.55
     },
     {
       "pair": "nosyn6 vs mid4",
-      "svcWinA": 0.05,
-      "arenaWinA": 0,
+      "svcWinA": 0,
+      "arenaWinA": 0.05,
       "agreement": 0.95
     },
     {
@@ -36,8 +35,8 @@
     {
       "pair": "nosyn6 vs tank6",
       "svcWinA": 0,
-      "arenaWinA": 0.15,
-      "agreement": 0.85
+      "arenaWinA": 0.2,
+      "agreement": 0.8
     },
     {
       "pair": "nosyn6 vs charizard3",
@@ -53,15 +52,15 @@
     },
     {
       "pair": "water6 vs gen1x6",
-      "svcWinA": 0.1,
+      "svcWinA": 0,
       "arenaWinA": 0.95,
-      "agreement": 0.15
+      "agreement": 0.05
     },
     {
       "pair": "water6 vs mid4",
-      "svcWinA": 0,
+      "svcWinA": 0.2,
       "arenaWinA": 0,
-      "agreement": 1
+      "agreement": 0.8
     },
     {
       "pair": "water6 vs expensive3",
@@ -71,9 +70,9 @@
     },
     {
       "pair": "water6 vs tank6",
-      "svcWinA": 0,
+      "svcWinA": 0.1,
       "arenaWinA": 1,
-      "agreement": 0
+      "agreement": 0.1
     },
     {
       "pair": "water6 vs charizard3",
@@ -83,15 +82,15 @@
     },
     {
       "pair": "water6 vs charmander3",
-      "svcWinA": 0.15,
+      "svcWinA": 0.05,
       "arenaWinA": 0,
-      "agreement": 0.85
+      "agreement": 0.95
     },
     {
       "pair": "gen1x6 vs mid4",
-      "svcWinA": 0.7,
-      "arenaWinA": 0.6,
-      "agreement": 0.6
+      "svcWinA": 1,
+      "arenaWinA": 0.5,
+      "agreement": 0.5
     },
     {
       "pair": "gen1x6 vs expensive3",
@@ -101,9 +100,9 @@
     },
     {
       "pair": "gen1x6 vs tank6",
-      "svcWinA": 0,
+      "svcWinA": 0.15,
       "arenaWinA": 1,
-      "agreement": 0
+      "agreement": 0.15
     },
     {
       "pair": "gen1x6 vs charizard3",
@@ -120,14 +119,14 @@
     {
       "pair": "mid4 vs expensive3",
       "svcWinA": 0,
-      "arenaWinA": 0,
-      "agreement": 1
+      "arenaWinA": 0.05,
+      "agreement": 0.95
     },
     {
       "pair": "mid4 vs tank6",
       "svcWinA": 0,
-      "arenaWinA": 0.95,
-      "agreement": 0.05
+      "arenaWinA": 1,
+      "agreement": 0
     },
     {
       "pair": "mid4 vs charizard3",

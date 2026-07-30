@@ -1,7 +1,7 @@
 // sim/multi/multi.sim.ts
 // P2 — 멀티플레이 몬테카를로: 8인 팟 × 시드
 // 실행: npm run sim:multi
-//   환경변수: SIM_GAMES(기본 2), SIM_MULTI_MAP(기본 medium_merge), SIM_ENGINE(arena|service)
+//   환경변수: SIM_GAMES(기본 4), SIM_MULTI_MAP(기본 medium_merge), SIM_ENGINE(arena|service)
 //
 // 측정(개발자 시그널 대응):
 //   - 게임 길이(라운드/배틀 수)          ← "멀티가 너무 빨리 끝남, 알바 못 씀"
@@ -13,7 +13,9 @@ import { describe, it, expect } from 'vitest';
 import { runMultiGame, MultiGameResult } from './orchestrator';
 import { writeReport, writeMetrics, mdTable, pct, fx } from '../support/report';
 
-const GAMES = Number(process.env.SIM_GAMES ?? 2);
+// 2게임은 평균 라운드/순위 지표가 한 판 결과에 통째로 끌려다녔다. 싱글이 벽시계를 지배하므로
+// 4게임은 병렬 실행상 사실상 공짜다(단일 실행 시간은 늘어난다).
+const GAMES = Number(process.env.SIM_GAMES ?? 4);
 // 기본 easiest: 봇이 사람보다 약해 어려운 맵에선 PvE 전멸이 배틀 신호를 덮는다.
 // 어려운 방 기준을 보려면 SIM_MULTI_MAP=medium_merge 등으로 실행.
 const MAP_ID = process.env.SIM_MULTI_MAP ?? 'easiest_straight';

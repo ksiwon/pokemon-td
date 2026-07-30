@@ -5,21 +5,21 @@
     {
       "matchup": "water6 vs nosyn6",
       "baseline": 1,
-      "randMean": 0.9749999999999999,
-      "randMin": 0.75,
+      "randMean": 0.9944444444444444,
+      "randMin": 0.8333333333333334,
       "randMax": 1,
-      "randStd": 0.055486067653994935,
+      "randStd": 0.025760051376376953,
       "rolePlace": 1,
-      "invertPlace": 0.9166666666666666,
-      "roleDelta": 0.08333333333333337
+      "invertPlace": 1,
+      "roleDelta": 0
     },
     {
       "matchup": "tank6 vs expensive3",
       "baseline": 0,
-      "randMean": 0.020833333333333332,
+      "randMean": 0.043055555555555555,
       "randMin": 0,
-      "randMax": 0.3333333333333333,
-      "randStd": 0.06566081474207122,
+      "randMax": 0.5,
+      "randStd": 0.09561165988608729,
       "rolePlace": 0,
       "invertPlace": 0,
       "roleDelta": 0
@@ -27,26 +27,26 @@
     {
       "matchup": "gen1x6 vs mid4",
       "baseline": 0.6666666666666666,
-      "randMean": 0.6263888888888888,
+      "randMean": 0.5819444444444445,
       "randMin": 0,
       "randMax": 1,
-      "randStd": 0.39630576096347564,
+      "randStd": 0.37220926594366377,
       "rolePlace": 0.75,
-      "invertPlace": 0.8333333333333334,
-      "roleDelta": -0.08333333333333337
+      "invertPlace": 0.9166666666666666,
+      "roleDelta": -0.16666666666666663
     },
     {
       "matchup": "nosyn6 vs tank6",
-      "baseline": 0.16666666666666666,
-      "randMean": 0.4902777777777777,
+      "baseline": 0.08333333333333333,
+      "randMean": 0.49305555555555564,
       "randMin": 0,
       "randMax": 1,
-      "randStd": 0.3846269436772066,
+      "randStd": 0.37276856670189834,
       "rolePlace": 0.25,
-      "invertPlace": 0.3333333333333333,
-      "roleDelta": -0.08333333333333331
+      "invertPlace": 0.4166666666666667,
+      "roleDelta": -0.16666666666666669
     }
   ],
-  "avgSpread": 0.6458333333333333,
-  "avgRoleDelta": 0.06250000000000001
+  "avgSpread": 0.6666666666666666,
+  "avgRoleDelta": 0.08333333333333333
 }

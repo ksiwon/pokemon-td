@@ -1,7 +1,11 @@
 // sim/single/single.sim.ts
 // P1 — 싱글플레이 몬테카를로: 페르소나 × 난이도 × 시드
 // 실행: npm run sim:single
-//   환경변수: SIM_SEEDS(기본 3), SIM_MAPS(기본 easiest_straight,medium_merge), SIM_MAX_WAVES(기본 50)
+//   환경변수: SIM_SEEDS(기본 10), SIM_MAPS(기본 easiest_straight,medium_merge), SIM_MAX_WAVES(기본 50)
+//
+// [표본] SIM_SEEDS=3(맵당 12판)은 클리어율 95% CI가 ±28%p라 사다리 목표(±10%p 단위) 판정이
+//   불가능했다 — 같은 코드로 easy_loop이 75%/53%를 오갔다. 기본 10(맵당 40판, ±15%p)으로 올렸다.
+//   빠른 스모크가 필요하면 `SIM_SEEDS=3 npm run sim` (판정용 아님, 크래시 확인용).
 //
 // 산출: sim/reports/current/single-runs.md + metrics/single-runs.json
 
@@ -10,7 +14,7 @@ import { runSingleGame, SingleRunResult } from './runner';
 import { PERSONAS } from './botPolicies';
 import { writeReport, writeMetrics, mdTable, pct, fx } from '../support/report';
 
-const SEEDS = Number(process.env.SIM_SEEDS ?? 3);
+const SEEDS = Number(process.env.SIM_SEEDS ?? 10);
 const MAX_WAVES = Number(process.env.SIM_MAX_WAVES ?? 50);
 // 기본 = 난이도 사다리 5맵 (개발자 확인 인간 기준과 봇 클리어율을 비교하는 캘리브레이션)
 const MAP_IDS = (process.env.SIM_MAPS ??
@@ -36,6 +40,20 @@ const TARGET_CLEAR: Record<string, number> = {
   hard_dual_path: 0.10,
   extreme_central: 0.01,
 };
+
+/**
+ * 비율의 95% Wilson 점수구간 [lo, hi].
+ * 정규근사(p̂±1.96√(p̂q̂/n))는 p̂=0에서 폭이 0이 되어 "0/40이면 참값도 0"이라는 헛소리를 한다.
+ * Wilson은 0/40 → [0, 8.8%] 로 제대로 나와서, 목표 10%를 배제할 수 있는지 판정이 가능하다.
+ */
+function wilson(k: number, n: number): [number, number] {
+  if (n <= 0) return [0, 1];
+  const z = 1.96, p = k / n, z2 = z * z;
+  const denom = 1 + z2 / n;
+  const center = (p + z2 / (2 * n)) / denom;
+  const half = (z / denom) * Math.sqrt((p * (1 - p)) / n + z2 / (4 * n * n));
+  return [Math.max(0, center - half), Math.min(1, center + half)];
+}
 
 function quantile(sorted: number[], q: number): number {
   if (sorted.length === 0) return 0;
@@ -121,28 +139,37 @@ describe('P1: 싱글 헤드리스 몬테카를로', () => {
     md += `봇 클리어율이 인간 기준(개발자 확인)을 재현할수록 하네스의 절대값 신뢰도가 높다.\n\n`;
     const mapAgg = MAP_IDS.map(mapId => {
       const rs = runs.filter(r => r.mapId === mapId);
-      const clear = rs.filter(r => r.victory).length / Math.max(1, rs.length);
+      const wins = rs.filter(r => r.victory).length;
+      const clear = wins / Math.max(1, rs.length);
       const waves = rs.map(r => r.wavesCleared).sort((a, b) => a - b);
-      return { mapId, clear, p50: quantile(waves, 0.5), best: waves[waves.length - 1] ?? 0 };
+      const [ciLo, ciHi] = wilson(wins, rs.length);
+      return { mapId, clear, games: rs.length, ciLo, ciHi, p50: quantile(waves, 0.5), best: waves[waves.length - 1] ?? 0 };
     });
     md += mdTable(
-      ['맵', '인간 기준', '목표(판당)', '봇 클리어율', 'Δ', '봇 도달 p50', '봇 최고'],
+      ['맵', '인간 기준', '목표(판당)', '봇 클리어율', '95% CI', 'Δ', '판정', '봇 도달 p50', '봇 최고'],
       mapAgg.map(m => {
         const tgt = TARGET_CLEAR[m.mapId];
+        // 목표가 신뢰구간 안이면 "이 표본으로는 목표와 구분 불가" — 미달로 읽으면 안 된다.
+        const verdict = tgt === undefined ? '—'
+          : tgt >= m.ciLo && tgt <= m.ciHi ? '판정불가'
+          : m.clear > tgt ? '초과' : '미달';
         return [
           m.mapId, HUMAN_LADDER[m.mapId] ?? '—',
           tgt !== undefined ? pct(tgt, 0) : '—',
           pct(m.clear, 0),
-          tgt !== undefined ? (m.clear - tgt >= 0 ? '+' : '') + Math.round((m.clear - tgt) * 100) + '%p' : '—',
+          `${pct(m.ciLo, 0)}~${pct(m.ciHi, 0)} (n=${m.games})`,
+          tgt === undefined ? '—' : ((m.clear - tgt) >= 0 ? '+' : '') + Math.round((m.clear - tgt) * 100) + '%p',
+          verdict,
           m.p50, m.best,
         ];
       })
     );
+    md += `\n> 95% CI는 Wilson 점수구간. **목표가 CI 안에 들어오면 판정불가** — 시드를 늘려야 미달/초과를 말할 수 있다.\n`;
     md += `\n`;
     mapAgg.forEach(m => {
       const tgt = TARGET_CLEAR[m.mapId];
       console.log(
-        `[ladder] ${m.mapId}: 클리어 ${pct(m.clear, 0)}` +
+        `[ladder] ${m.mapId}: 클리어 ${pct(m.clear, 0)} [${pct(m.ciLo, 0)}~${pct(m.ciHi, 0)}] n=${m.games}` +
         (tgt !== undefined ? ` (목표 ${pct(tgt, 0)}, Δ${Math.round((m.clear - tgt) * 100)}%p)` : '') +
         `, p50 ${m.p50}, 최고 ${m.best}`
       );
