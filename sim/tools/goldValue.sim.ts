@@ -17,7 +17,9 @@
 
 import { describe, it, expect } from 'vitest';
 import { pokeAPI } from '../../src/api/pokeapi';
-import { computePokemonCost } from '../../src/game/towerFactory';
+import {
+  computePokemonCost, COST_CURVE_EXPONENT, COST_CURVE_K, COST_MIN,
+} from '../../src/game/towerFactory';
 import { setBalanceOverrides } from '../../src/game/balanceOverrides';
 import { getGenerationById } from '../../src/utils/synergyManager';
 import { buildBoard, BuiltBoard } from '../support/teamBuilder';
@@ -134,7 +136,9 @@ describe.skipIf(!process.env.SIM_GOLD)('수량 vs 품질: 골드 등가 검증',
 
     // ── A. 동일 골드에서 N=3..6 보드 ─────────────────────────────────────
     // N마리로 GOLD를 다 쓰는 BST: cost(b) = GOLD/N  →  b = (GOLD/N - 25)/200*600
-    const bstFor = (n: number) => ((GOLD / n) - 25) / 200 * 600;
+    // 예산을 N마리로 나눈 단가에 해당하는 BST — 현재 프로덕션 곡선을 역산한다
+    // (구식 선형 공식을 하드코딩하면 가격표를 바꾼 뒤 시뮬이 엉뚱한 보드를 만든다).
+    const bstFor = (n: number) => 600 * Math.pow((GOLD / n) / COST_CURVE_K, 1 / COST_CURVE_EXPONENT);
     const K = Number(process.env.SIM_GOLD_ROSTERS ?? 4);
     const groups: Array<{ n: number; bst: number; boards: BuiltBoard[] }> = [];
     for (const n of [6, 5, 4, 3]) {

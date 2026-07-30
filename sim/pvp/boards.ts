@@ -1,12 +1,16 @@
 // sim/pvp/boards.ts
 // 대표 보드 아키타입 fixture — Riot GAT의 "board string" 방식.
 // 실험 설계:
-//   [수량 vs 품질]  nosyn6(저가6) / mid4(중가4) / expensive3(고가3) — 구매골드 근사 등가
+//   [수량 vs 품질]  nosyn6(저가6) / mid4(중가4) / expensive3(고가3)
+//     ⚠ 구매가 곡선이 k·(BST/600)^1.5 로 바뀐 뒤로는 이 셋의 골드가 더 이상 등가가 아니다
+//       (고정 로스터라 맞출 수 없음). 수량vs품질의 정식 측정은 sim/tools/goldValue.sim.ts
+//       (npm run sim:gold) — 현재 가격 곡선을 역산해 매번 동일 골드 보드를 새로 만든다.
 //   [시너지 가치]   water6(타입6) vs nosyn6, gen1x6(세대6) vs nosyn6 — BST·레벨 동일
 //   [진화 가치]     charizard3(진화체) vs charmander3(미진화) — 동일 기본형·동일 레벨
 //   [역할 축]       tank6(내구) — 상대 축
 // 모든 보드 lv15 기준(진화 실험만 lv36). 레벨업은 실전에서 무료(XP)이므로
 // 골드 등가는 구매가(Σbuy) 기준으로 본다. candy 비용은 참고치로만 기록.
+// 시너지 실험(water6/gen1x6 vs nosyn6)은 셋 다 6마리·유사 BST라 새 곡선에서도 등가 유지.
 
 import { buildBoard, BuiltBoard } from '../support/teamBuilder';
 

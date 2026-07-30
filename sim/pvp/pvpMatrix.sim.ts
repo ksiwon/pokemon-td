@@ -94,11 +94,15 @@ describe('P0a: PvP 보드 매트릭스', () => {
         expect: '>0.5 (진화가 이득이어야 함)',
         pass: pair('charizard3', 'charmander3') > 0.5,
       },
+      // [참고 지표로 강등] 구매가 곡선이 k·(BST/600)^1.5 로 바뀌면서 이 두 보드는 더 이상
+      //   등가골드가 아니다(nosyn6 ~603G vs expensive3 ~774G). 고정 로스터라 골드를 맞출 수
+      //   없으므로 판정에서 빼고, 수량vs품질의 정식 측정은 sim:gold(goldValue.sim.ts)가 맡는다.
+      //   그쪽은 매 실행마다 현재 가격 곡선을 역산해 동일 골드 보드를 새로 구성한다.
       {
-        name: '수량vs품질: 저가6 vs 고가3 (근사 등가골드) — 45~65% 밴드',
+        name: '수량vs품질 (참고용 — 등가골드 아님, 정식 측정은 npm run sim:gold)',
         value: pair('nosyn6', 'expensive3'),
-        expect: '0.35~0.65 (한쪽 일방적이면 밸런스 문제)',
-        pass: pair('nosyn6', 'expensive3') >= 0.35 && pair('nosyn6', 'expensive3') <= 0.65,
+        expect: `참고 (골드 ${buyGoldOf(boards[idx('nosyn6')])}G vs ${buyGoldOf(boards[idx('expensive3')])}G)`,
+        pass: true,
       },
       {
         name: '선공(p1) 이점 — AI vs AI 매치는 userId 정렬순이 선공이 됨',
