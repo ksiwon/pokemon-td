@@ -281,12 +281,24 @@ export const TFTBattleArena: React.FC<TFTBattleArenaProps> = ({
       // [DET] 배치 확정: oppPlacementsRef.current로 최신값 참조 (dependency 없음)
       const latestOppPlacements = oppPlacementsRef.current;
       const oppDefaults = myPosition === 'L' ? R_POS : L_POS;
+      // [FIX] 수신 배치를 **배열 인덱스가 아니라 id로** 매칭한다. 전송 측은 x>=0인 유닛만
+      //   보내므로(submitTFTPlacements), 상대가 한 마리라도 벤치에 남기면 배열이 밀려
+      //   엉뚱한 유닛 위치가 적용되고 → 양측 보드가 갈려 desync가 된다.
+      //   (지금은 프렙 종료 시 autoPlaceRemainingUnits가 6마리를 다 채워 우연히 맞았을 뿐이다.
+      //    시뮬 측정: 상대 배치가 어긋나면 80판 중 77판에서 양측 승자가 불일치.)
+      //   전송 측 id는 자기 기준 'my-N' → 수신 측의 'op-N'과 같은 N을 가리킨다.
+      const oppByIndex = new Map<number, { x: number; y: number }>();
+      for (const p of latestOppPlacements ?? []) {
+        const n = parseInt(String(p.id ?? '').split('-')[1]);
+        if (Number.isFinite(n)) oppByIndex.set(n, { x: p.x, y: p.y });
+      }
       setUnits(currentUnits => {
         const finalized = currentUnits.map(u => {
           if (u.team === 'opp') {
             const idx = parseInt(u.id.split('-')[1]);
-            if (!isOpponentAI && latestOppPlacements && latestOppPlacements[idx]) {
-              return { ...u, x: latestOppPlacements[idx].x, y: latestOppPlacements[idx].y };
+            const recv = oppByIndex.get(idx);
+            if (!isOpponentAI && recv) {
+              return { ...u, x: recv.x, y: recv.y };
             }
             // AI 또는 배치 미수신: 기본 위치
             const pos = oppDefaults[idx] ?? { x: myPosition === 'L' ? 4 + (idx % 2) : idx % 2, y: idx };

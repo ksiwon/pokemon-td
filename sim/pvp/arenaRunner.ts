@@ -25,9 +25,16 @@ export interface ArenaOutcome {
   timedOut: boolean;
 }
 
+/**
+ * 시너지 계산 — TFTBattleArena와 **동일한 대상**이어야 한다.
+ * 컴포넌트는 slice(0,6) 후 isFainted:false로 되살려 풀팀 전투하므로 여기도 같은 기준.
+ * (예전엔 `.filter(!isFainted)` + slice 없음이라, 기절 유닛이 있거나 보드가 7마리 이상일 때
+ *  하네스가 실제 게임과 다른 전력을 측정했다.)
+ */
 export function teamSynergies(team: TowerDetail[]) {
   return calculateActiveSynergies(
-    sortTeamDeterministic(team).filter(t => !t.isFainted) as unknown as GamePokemon[]
+    sortTeamDeterministic(team).slice(0, 6)
+      .map(t => ({ ...t, isFainted: false })) as unknown as GamePokemon[]
   );
 }
 
@@ -70,7 +77,9 @@ export function runArenaBattle(
   let done = false;
 
   while (tick < maxTicks) {
-    const res = simulateTick(units, 'L', rng);
+    // seed 전달 필수 — 컴포넌트는 simulateTick(..., battleSeed)로 행동 순서를 정한다.
+    // 빠뜨리면 seed=0으로 굳어 실제 게임과 다른 순서를 측정한다.
+    const res = simulateTick(units, 'L', rng, seed);
     units = res.units;
     tick++;
     if (res.done) { done = true; break; }
@@ -108,6 +117,88 @@ export function runArenaBattle(
     ticks: tick,
     timedOut: !done && tick >= maxTicks,
   };
+}
+
+// ─── 2-클라이언트 러너 (desync 검출) ────────────────────────────────────────
+// runArenaBattle은 단일 권위 시뮬이라 "양쪽 화면이 같은 결과를 보는가"를 검증하지 못한다.
+// 여기서는 실제 대전처럼 클라이언트를 **두 개** 세운다:
+//   클라 A: my=A(L진영), opp=B  ·  myPosition='L'   (A = player1 = uid 사전순 앞)
+//   클라 B: my=B(R진영), opp=A  ·  myPosition='R'
+// 각자 자기 배치는 로컬 상태에서, 상대 배치는 '수신한 배열'에서 가져오고(미수신 시 기본 배치),
+// 자기 rng·자기 틱 루프를 독립적으로 돌린 뒤 승자를 보드 기준으로 비교한다.
+
+export interface TwoClientOutcome {
+  /** 양쪽 클라이언트가 같은 승자를 봤는가 (false = desync). */
+  agree: boolean;
+  /** 클라 A가 본 승자(보드 기준 'A'|'B'). */
+  perA: 'A' | 'B';
+  /** 클라 B가 본 승자(보드 기준 'A'|'B'). */
+  perB: 'A' | 'B';
+  ticksA: number;
+  ticksB: number;
+}
+
+/** 한 클라이언트 관점의 전투를 끝까지 돌린다. 반환: 내가 이겼는가. */
+function runOneClient(
+  myTeam: TowerDetail[],
+  oppTeam: TowerDetail[],
+  myPosition: 'L' | 'R',
+  seed: number,
+  myPlace: Placement[],
+  /** 네트워크로 받은 상대 배치. null이면 컴포넌트처럼 기본 배치로 폴백. */
+  recvOppPlace: Placement[] | null,
+  maxSeconds: number,
+): { myWon: boolean; ticks: number } {
+  let units = buildUnits(myTeam, oppTeam, teamSynergies(myTeam), teamSynergies(oppTeam));
+  const oppSide: 'L' | 'R' = myPosition === 'L' ? 'R' : 'L';
+  const oppFallback = defaultPlacements(units.filter(u => u.team === 'opp').length, oppSide);
+
+  let mi = 0, oi = 0;
+  units = units.map(u => {
+    if (u.team === 'my') { const p = myPlace[mi++] ?? { x: 0, y: 0 }; return { ...u, x: p.x, y: p.y }; }
+    const idx = oi++;
+    const p = (recvOppPlace && recvOppPlace[idx]) ?? oppFallback[idx];
+    return { ...u, x: p.x, y: p.y };
+  });
+
+  const rng = mulberry32(seed);
+  const maxTicks = Math.floor(maxSeconds * FPS);
+  let tick = 0;
+  for (; tick < maxTicks; tick++) {
+    const res = simulateTick(units, myPosition, rng, seed);
+    units = res.units;
+    if (res.done) break;
+  }
+  const alive = (u: Unit) => !u.fainted && u.hp > 0 && u.x >= 0;
+  const my = units.filter(u => u.team === 'my' && alive(u)).length;
+  const opp = units.filter(u => u.team === 'opp' && alive(u)).length;
+  return { myWon: my > opp || (my === opp && my > 0 && myPosition === 'L'), ticks: tick };
+}
+
+export function runArenaBattleTwoClients(
+  teamA: TowerDetail[],
+  teamB: TowerDetail[],
+  seed: number,
+  opts?: {
+    placementsA?: Placement[];
+    placementsB?: Placement[];
+    /** A가 B의 배치를 못 받은 상황 재현(수신 경쟁 조건). */
+    dropBToA?: boolean;
+    /** B가 A의 배치를 못 받은 상황 재현. */
+    dropAToB?: boolean;
+    maxSeconds?: number;
+  },
+): TwoClientOutcome {
+  const maxSeconds = opts?.maxSeconds ?? 60;
+  const placeA = opts?.placementsA ?? defaultPlacements(Math.min(6, teamA.length), 'L');
+  const placeB = opts?.placementsB ?? defaultPlacements(Math.min(6, teamB.length), 'R');
+
+  const a = runOneClient(teamA, teamB, 'L', seed, placeA, opts?.dropBToA ? null : placeB, maxSeconds);
+  const b = runOneClient(teamB, teamA, 'R', seed, placeB, opts?.dropAToB ? null : placeA, maxSeconds);
+
+  const perA: 'A' | 'B' = a.myWon ? 'A' : 'B';
+  const perB: 'A' | 'B' = b.myWon ? 'B' : 'A';
+  return { agree: perA === perB, perA, perB, ticksA: a.ticks, ticksB: b.ticks };
 }
 
 /** 좌열(0,1) 12칸 중 6칸 무작위 배치 — 시드 결정론. */

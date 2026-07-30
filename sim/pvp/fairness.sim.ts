@@ -10,6 +10,7 @@ import { pvpBattleService } from '../../src/services/PvPBattleService';
 import { buildUnits, simulateTick, calcDmg, sixPieceResistTypes, Unit } from '../../src/game/arenaSim';
 import { calculateActiveSynergies } from '../../src/utils/synergyManager';
 import { mulberry32 } from '../../src/utils/rng';
+import { runArenaBattleTwoClients, roleBasedPlacements } from './arenaRunner';
 import { TowerDetail } from '../../src/types/multiplayer';
 import { GamePokemon } from '../../src/types/game';
 import { pokeAPI } from '../../src/api/pokeapi';
@@ -95,26 +96,39 @@ describe('TFT 진영 공정성', () => {
     expect(pct).toBeLessThan(65);
   });
 
-  it('desync 방지 — 같은 전투를 양쪽 클라이언트 관점에서 돌리면 결과가 같아야', async () => {
-    // 클라이언트 A: 자기가 L (my=boardA, opp=boardB, myPosition='L')
-    // 클라이언트 B: 자기가 R (my=boardB, opp=boardA, myPosition='R')
-    // 물리적으로 동일한 전투이므로 승자(보드 기준)가 일치해야 한다.
+  it('desync 방지 — 클라이언트 2개를 독립 구동해 결과가 일치해야', async () => {
     const A = await board(MIXED);
     const B = await board([1, 2, 25, 26, 143, 149]);
+
+    // (1) 정상: 양쪽이 서로의 배치를 수신
     let mismatch = 0;
-    for (let s = 1; s <= 60; s++) {
-      const fromA = runArena(A.map(x => ({ ...x })), B.map(x => ({ ...x })), 'L', s); // my=A
-      const fromB = runArena(B.map(x => ({ ...x })), A.map(x => ({ ...x })), 'R', s); // my=B
-      // fromA가 'my'면 A 승, fromB가 'opp'면 A 승 → 서로 뒤집힌 표현이 일치해야 한다
-      const aWinsPerA = fromA === 'my' ? 'A' : fromA === 'opp' ? 'B' : 'draw';
-      const aWinsPerB = fromB === 'opp' ? 'A' : fromB === 'my' ? 'B' : 'draw';
-      if (aWinsPerA !== aWinsPerB) {
+    for (let s = 1; s <= 80; s++) {
+      const r = runArenaBattleTwoClients(A, B, s, {
+        placementsA: roleBasedPlacements(A, 'L'),
+        placementsB: roleBasedPlacements(B, 'R'),
+      });
+      if (!r.agree) {
         mismatch++;
-        if (mismatch <= 3) console.log(`  ✗ seed ${s}: A관점=${aWinsPerA} B관점=${aWinsPerB}`);
+        if (mismatch <= 3) console.log(`  ✗ seed ${s}: A관점=${r.perA} B관점=${r.perB} (틱 ${r.ticksA}/${r.ticksB})`);
       }
     }
-    console.log(`  양측 관점 60판 비교 → 불일치 ${mismatch}건 (0이어야 desync 없음)`);
+    console.log(`  클라 2개 독립 구동 80판 → 불일치 ${mismatch}건`);
     expect(mismatch).toBe(0);
+
+    // (2) 배치 수신 실패(경쟁 조건)는 반드시 갈린다 — 컴포넌트의 기본배치 폴백이 위험하다는 근거.
+    //     실제로는 isOpponentReady 게이트가 사람 상대에선 수신 전 진입을 막지만,
+    //     그 게이트가 무력화되면 어떻게 되는지 회귀로 고정해 둔다.
+    let dropMismatch = 0;
+    for (let s = 1; s <= 80; s++) {
+      const r = runArenaBattleTwoClients(A, B, s, {
+        placementsA: roleBasedPlacements(A, 'L'),
+        placementsB: roleBasedPlacements(B, 'R'),
+        dropBToA: true,
+      });
+      if (!r.agree) dropMismatch++;
+    }
+    console.log(`  상대 배치 미수신 시 80판 → 불일치 ${dropMismatch}건 (0이 아니어야 정상: 폴백은 위험)`);
+    expect(dropMismatch).toBeGreaterThan(0);
   });
 
   it('6마리 타입 시너지 — 약점 데미지가 실제로 반감되는가', async () => {
