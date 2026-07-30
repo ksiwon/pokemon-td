@@ -12,6 +12,16 @@ export interface BalanceOverrides {
   xpSplit?: boolean;
   /** 사탕 레벨당 단가 (기본 25) */
   candyCostPerLevel?: number;
+  /**
+   * 구매가 곡선 교체 — "수량 vs 품질" 실험용.
+   * 기본식은 `25 + (BST/600)*200` 으로 BST에 **선형**인데, 전투력은 BST에 초선형이다
+   * (데미지 ∝ 공/방 → 스탯을 한 유닛에 몰면 딜·생존이 곱으로 작용). 게다가 고정비 25G가
+   * 골드당 BST를 고BST 쪽에 유리하게 만든다(측정: BST/G 2.37 → 2.67).
+   * 결과적으로 같은 골드에서 3마리가 6마리를 100% 이긴다(sim:gold).
+   *   exponent: cost = k * (BST/600)^exponent  (1.0이면 사실상 기존과 같은 형태)
+   *   k:        BST 600 기준가
+   */
+  costCurve?: { exponent: number; k: number };
 }
 
 export let BALANCE_OVERRIDES: BalanceOverrides = {};

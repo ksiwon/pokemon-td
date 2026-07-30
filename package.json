@@ -20,7 +20,8 @@
     "sim:baseline": "node sim/tools/baseline.mjs",
     "sim:tune": "cross-env SIM_TUNE=1 vitest run --config vitest.sim.config.ts sim/tools/tune.sim.ts",
     "sim:validate": "cross-env SIM_VALIDATE=1 vitest run --config vitest.sim.config.ts sim/tools/validate.sim.ts",
-    "sim:balance": "cross-env SIM_BALANCE=1 vitest run --config vitest.sim.config.ts sim/tools/balance.sim.ts"
+    "sim:balance": "cross-env SIM_BALANCE=1 vitest run --config vitest.sim.config.ts sim/tools/balance.sim.ts",
+    "sim:gold": "cross-env SIM_GOLD=1 vitest run --config vitest.sim.config.ts sim/tools/goldValue.sim.ts"
   },
   "dependencies": {
     "@emailjs/browser": "^4.4.1",

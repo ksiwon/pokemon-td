@@ -11,9 +11,12 @@ import {
   mapAbilityToGameEffect, getCriticalChance, getAOEDamageMultiplier, getLifestealRatio,
 } from '../utils/abilities';
 import { rng } from '../utils/rng';
+import { BALANCE_OVERRIDES } from './balanceOverrides';
 
 /** 구매가 공식: 25 + BST/600×200 (약 25~265G). PokemonPicker와 AI 밸런스 기준. */
 export function computePokemonCost(statTotal: number): number {
+  const c = BALANCE_OVERRIDES.costCurve;
+  if (c) return Math.max(1, Math.round(c.k * Math.pow(statTotal / 600, c.exponent)));
   return Math.floor(25 + (statTotal / 600) * 200);
 }
 
