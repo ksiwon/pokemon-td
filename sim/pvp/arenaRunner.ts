@@ -1,9 +1,11 @@
 // sim/pvp/arenaRunner.ts
 // 헤드리스 아레나 러너 — 인간전 전투 엔진(src/game/arenaSim)을 브라우저 없이 구동.
 // TFTBattleArena 컴포넌트의 오케스트레이션을 재현:
-//   시너지 = calculateActiveSynergies(sortTeamDeterministic(team).filter(!isFainted))
+//   시너지 = calculateActiveSynergies(sortTeamDeterministic(team).slice(0,6) 전원 isFainted:false)
 //   배치   = 지정 배치 or 기본 지그재그(L_POS/R_POS, autoPlaceRemainingUnits와 동일)
-//   전투   = simulateTick 반복, 시드 mulberry32
+//   전투   = simulateTick(units, myPosition, rng, seed) 반복, 시드 mulberry32
+// ⚠ 컴포넌트를 고칠 때 이 파일도 같이 고쳐야 한다(하네스가 실제 게임과 다른 걸 재게 된다).
+//   양쪽 클라이언트 관점을 동시에 검증하려면 runArenaBattleTwoClients를 쓴다.
 // 컴포넌트에는 전투 시간 상한이 없지만(교착 시 BattlePhaseUI 워치독이 처리),
 // 헤드리스는 maxSeconds 초과 시 HP비율 → 스피드합 → 시드 순 결정론 타이브레이크.
 

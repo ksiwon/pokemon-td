@@ -22,9 +22,10 @@ describe('P0a: PvP 보드 매트릭스', () => {
     const boards = await buildAllBoards();
     const n = boards.length;
 
-    // ── 풀리그: 모든 쌍 × 시드 40 × 양방향(선공 교대) ────────────────────
-    // simulateBattle은 매 턴 team1이 먼저 공격 → 선공(p1) 이점이 존재한다.
-    // 공정 비교를 위해 각 쌍을 양방향으로 돌려 평균, 선공 이점은 별도 지표로 측정.
+    // ── 풀리그: 모든 쌍 × 시드 40 × 양방향(p1/p2 교대) ────────────────────
+    // 예전엔 simulateBattle이 team1 전원 → team2 전원의 진영 순차라 선공 이점이 컸다(거울전 91.5%).
+    // 지금은 양 팀 통합 스피드 정렬로 교정됐지만, 양방향 평균은 그대로 유지한다 —
+    // 편향이 재발하면 firstMoverEdge 지표가 0.5를 벗어나 바로 드러난다(회귀 감시용).
     const winrate: number[][] = Array.from({ length: n }, () => Array(n).fill(0));
     let p1Wins = 0;
     let orderedGames = 0;
@@ -68,21 +69,24 @@ describe('P0a: PvP 보드 매트릭스', () => {
     const idx = (name: string) => boards.findIndex(b => b.name === name);
     const pair = (a: string, b: string) => winrate[idx(a)][idx(b)];
 
-    // ⚠ 이 엔진(PvPBattleService)은 시너지 버프를 적용하지 않는다(알려진 엔진 드리프트 —
-    //   인간전 아레나는 getBuffedStats 적용). 여기의 타입/세대 보드 비교는 순수하게
-    //   "타입 구성(공격/방어 상성)" 가치만 측정한다. 시너지 버프 가치는 아레나 매트릭스에서 측정.
+    // 이 엔진도 이제 getBuffedStats(시너지)를 적용한다 — 예전엔 미적용이라 인간전 아레나와
+    //   전력이 달랐다(엔진 드리프트). 따라서 아래 타입/세대 보드 비교는 "타입 구성 가치 +
+    //   시너지 버프"를 합쳐 측정한다. 위치/이동이 없는 점만 아레나와 다르다.
     const checks = [
+      // [밴드 재조정] 예전 밴드(0.35~0.65)는 '시너지 미적용 엔진'에서 타입 구성만의 가치를
+      //   재던 것이다. 이제 이 엔진도 시너지를 적용하므로 기대치는 "시너지 보드가 이긴다"로 바뀐다.
+      //   과대 여부는 아래 magnitude 경고로 따로 감시(밴드에 섞으면 상시 WARN이 되어 신호가 죽는다).
       {
-        name: '타입 구성 가치 (water6 vs nosyn6, 등가골드·시너지버프 미적용 엔진)',
+        name: '타입 시너지 가치 (water6 vs nosyn6, 등가골드)',
         value: pair('water6', 'nosyn6'),
-        expect: '≈0.5 안팎 (참고 지표)',
-        pass: pair('water6', 'nosyn6') >= 0.35 && pair('water6', 'nosyn6') <= 0.65,
+        expect: '>0.55 (시너지를 맞춘 쪽이 이겨야 함)',
+        pass: pair('water6', 'nosyn6') > 0.55,
       },
       {
-        name: '세대 보드 vs 무시너지 보드 (등가골드·시너지버프 미적용 엔진)',
+        name: '세대 시너지 가치 (gen1x6 vs nosyn6, 등가골드)',
         value: pair('gen1x6', 'nosyn6'),
-        expect: '≈0.5 안팎 (참고 지표)',
-        pass: pair('gen1x6', 'nosyn6') >= 0.35 && pair('gen1x6', 'nosyn6') <= 0.65,
+        expect: '>0.55 (시너지를 맞춘 쪽이 이겨야 함)',
+        pass: pair('gen1x6', 'nosyn6') > 0.55,
       },
       {
         name: '진화 가치 (charizard3 vs charmander3, 동일 구매가/레벨)',
@@ -161,6 +165,12 @@ describe('P0a: PvP 보드 매트릭스', () => {
     console.log('\n=== PvP 매트릭스 요약 ===');
     ranking.forEach((r, k) => console.log(`${k + 1}. ${r.name}: 평균승률 ${pct(r.avg)} (구매 ${r.buyGold}G)`));
     checks.forEach(c => console.log(`${c.pass ? 'PASS' : 'WARN'} ${c.name}: ${pct(c.value)}`));
+
+    // 시너지 과대 감시 — 무시너지 보드를 상대로 100%면 시너지가 승패를 단독 결정한다.
+    for (const [a, b] of [['water6', 'nosyn6'], ['gen1x6', 'nosyn6']] as const) {
+      const v = pair(a, b);
+      if (v > 0.95) console.log(`SIGNAL 시너지 과대? ${a} vs ${b} = ${pct(v)} — 무시너지 보드가 전패`);
+    }
 
     // 하네스 자체 무결성(밸런스 판정은 리포트로): 매트릭스가 완전하고 대칭 합이 1인지
     for (let i = 0; i < n; i++) {

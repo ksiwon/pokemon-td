@@ -1,8 +1,10 @@
 // sim/pvp/crossValidate.sim.ts
 // P0c — 두 전투 엔진 교차검증
-//   엔진A: PvPBattleService.simulateBattle (AI vs AI 매치, 타임아웃 보충에 사용 — 시너지 미적용)
-//   엔진B: arenaSim (인간 참여 매치 — 시너지 적용, 위치/이동 있음)
+//   엔진A: PvPBattleService.simulateBattle (AI vs AI 매치 + 타임아웃 보충)
+//   엔진B: arenaSim (인간 참여 매치 — 6x6 그리드 위치/이동 있음)
 // 같은 매치에서 어느 정도 결과가 일치하는지 측정 → 멀티 공정성(AI전 vs 인간전) 정량화.
+// 두 엔진 모두 이제 시너지(getBuffedStats)·6마리 약점반감·진영 무관 행동순서를 공유한다.
+// 남은 차이는 '위치/이동/사거리'와 '턴제 vs 쿨다운' 뿐 → 일치율이 낮으면 그 축의 영향이다.
 // 실행: npm run sim:cross
 
 import { describe, it, expect } from 'vitest';
@@ -64,8 +66,9 @@ describe('P0c: 엔진 교차검증 (PvPBattleService vs arenaSim)', () => {
 
     let md = `# 전투 엔진 교차검증\n\n`;
     md += `두 엔진이 실서비스에 공존한다:\n`;
-    md += `- **PvPBattleService**: AI vs AI 매치 + 타임아웃 보충. 시너지 버프 미적용, 위치 없음(최저HP 타겟).\n`;
-    md += `- **arenaSim**: 인간 참여 매치. 시너지 적용, 6×6 그리드 이동/사거리.\n\n`;
+    md += `- **PvPBattleService**: AI vs AI 매치 + 타임아웃 보충. 턴제, 위치 없음(최저HP 타겟).\n`;
+    md += `- **arenaSim**: 인간 참여 매치. 쿨다운 기반, 6×6 그리드 이동/사거리.\n`;
+    md += `- 공통: 시너지 버프 · 6마리 타입시너지 약점반감 · 진영 무관 행동순서.\n\n`;
     md += `**전체 승자 일치율: ${pct(overall)}** (시드 ${SEEDS} × ${rows.length}쌍)\n\n`;
     md += `## 쌍별 비교\n\n`;
     md += mdTable(
@@ -80,8 +83,8 @@ describe('P0c: 엔진 교차검증 (PvPBattleService vs arenaSim)', () => {
         )
       : `없음\n`;
     md += `\n> 뒤집히는 쌍이 많으면: 같은 보드로 AI를 만나느냐 사람을 만나느냐에 따라\n`;
-    md += `> 승패가 달라진다 = 매칭 운이 밸런스를 좌우. 해소 레버: PvPBattleService에\n`;
-    md += `> getBuffedStats(시너지) 적용, 또는 AI 매치도 arenaSim으로 해석.\n`;
+    md += `> 승패가 달라진다 = 매칭 운이 밸런스를 좌우. 시너지·행동순서는 이미 통일했으므로\n`;
+    md += `> 남은 원인은 위치/이동 축이다. 더 줄이려면 AI 매치도 arenaSim으로 해석해야 한다.\n`;
 
     writeReport('engine-cross-validation', md);
     writeMetrics('engine-cross-validation', {
