@@ -147,8 +147,12 @@ export interface TwoClientOutcome {
   ticksB: number;
 }
 
-/** 한 클라이언트 관점의 전투를 끝까지 돌린다. 반환: 내가 이겼는가. */
-function runOneClient(
+/**
+ * 한 클라이언트 관점의 전투를 끝까지 돌린다. 반환: 내가 이겼는가.
+ * 2인 프로토콜 하네스(sim/multi2)는 각 클라가 **RTDB로 받은 자기 시야의 팀/배치**로
+ * 이걸 따로 돌린다 — 그래서 export 한다.
+ */
+export function runArenaBattleAsClient(
   myTeam: TowerDetail[],
   oppTeam: TowerDetail[],
   myPosition: 'L' | 'R',
@@ -157,7 +161,7 @@ function runOneClient(
   /** 네트워크로 받은 상대 배치. null이면 컴포넌트처럼 기본 배치로 폴백. */
   recvOppPlace: Placement[] | null,
   maxSeconds: number,
-): { myWon: boolean; ticks: number } {
+): { myWon: boolean; ticks: number; done: boolean; myRemaining: number; oppRemaining: number } {
   let units = buildUnits(myTeam, oppTeam, teamSynergies(myTeam), teamSynergies(oppTeam));
   const oppSide: 'L' | 'R' = myPosition === 'L' ? 'R' : 'L';
   const oppFallback = defaultPlacements(units.filter(u => u.team === 'opp').length, oppSide);
@@ -173,15 +177,18 @@ function runOneClient(
   const rng = mulberry32(seed);
   const maxTicks = Math.floor(maxSeconds * FPS);
   let tick = 0;
+  let done = false;
   for (; tick < maxTicks; tick++) {
     const res = simulateTick(units, myPosition, rng, seed);
     units = res.units;
-    if (res.done) break;
+    if (res.done) { done = true; break; }
   }
   const alive = (u: Unit) => !u.fainted && u.hp > 0 && u.x >= 0;
   const my = units.filter(u => u.team === 'my' && alive(u)).length;
   const opp = units.filter(u => u.team === 'opp' && alive(u)).length;
-  return { myWon: my > opp || (my === opp && my > 0 && myPosition === 'L'), ticks: tick };
+  // ⚠ done=false 는 "컴포넌트라면 onBattleComplete 를 아직 안 불렀을 상태"다.
+  //   TFTBattleArena 에는 자체 타임아웃이 없다 — 교착은 BattlePhaseUI 90s 워치독이 처리한다.
+  return { myWon: my > opp || (my === opp && my > 0 && myPosition === 'L'), ticks: tick, done, myRemaining: my, oppRemaining: opp };
 }
 
 export function runArenaBattleTwoClients(
@@ -202,8 +209,8 @@ export function runArenaBattleTwoClients(
   const placeA = opts?.placementsA ?? defaultPlacements(Math.min(6, teamA.length), 'L');
   const placeB = opts?.placementsB ?? defaultPlacements(Math.min(6, teamB.length), 'R');
 
-  const a = runOneClient(teamA, teamB, 'L', seed, placeA, opts?.dropBToA ? null : placeB, maxSeconds);
-  const b = runOneClient(teamB, teamA, 'R', seed, placeB, opts?.dropAToB ? null : placeA, maxSeconds);
+  const a = runArenaBattleAsClient(teamA, teamB, 'L', seed, placeA, opts?.dropBToA ? null : placeB, maxSeconds);
+  const b = runArenaBattleAsClient(teamB, teamA, 'R', seed, placeB, opts?.dropAToB ? null : placeA, maxSeconds);
 
   const perA: 'A' | 'B' = a.myWon ? 'A' : 'B';
   const perB: 'A' | 'B' = b.myWon ? 'B' : 'A';

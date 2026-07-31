@@ -17,6 +17,9 @@ export default defineConfig({
       // ^.*: 지정자 전체를 소비해야 '../' 접두어가 남지 않는다.
       // './DatabaseService' 같은 동일 디렉터리 상대 import도 매칭되도록 파일명 기준.
       { find: /^.*[/\\]config[/\\]firebase$/, replacement: r('sim/support/mocks/firebase.ts') },
+      // MultiplayerService 는 firebase/database 를 직접 import 한다. 인메모리 RTDB 로 갈아끼워
+      // 실코드(방·페이즈·트랜잭션 1500줄)를 그대로 구동한다 — sim/net/rtdb.ts 헤더 참조.
+      { find: /^firebase\/database$/, replacement: r('sim/net/rtdb.ts') },
       { find: /^.*[/\\]AuthService$/, replacement: r('sim/support/mocks/AuthService.ts') },
       { find: /^.*[/\\]DatabaseService$/, replacement: r('sim/support/mocks/DatabaseService.ts') },
     ],

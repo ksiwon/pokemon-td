@@ -29,6 +29,10 @@ npm run sim:report     # 5) sim/reports/current/balance-compare.md 에 전후 �
 | `sim:cross` | 두 전투엔진(PvPBattleService vs arenaSim) 승자 일치율·뒤집힘 쌍 | `engine-cross-validation.md` |
 | `sim:single` | 싱글 50웨이브 몬테카를로 — 페르소나×맵×시드 | `single-runs.md` |
 | `sim:multi` | 멀티 8인 팟 — 게임 길이·라이프 손실 출처·데스스파이럴·연패EV | `multi-runs.md` |
+| `sim:2p` | **2인 멀티 프로토콜** — 실 MultiplayerService를 인메모리 RTDB 위에서 구동 | `multi-2p-protocol.md`, `multi-2p-wire.md` |
+| `sim:2p:rtdb` | 가짜 RTDB가 실제 RTDB 규칙을 지키는지 (상위 결론의 전제) | — |
+| `sim:2p:lobby` | 방 생성/참가/시작/퇴장 수명주기 | — |
+| `sim:2p:wire` | 보드가 Firebase를 왕복할 때 무엇이 사라지는가 | `multi-2p-wire.md` |
 | `sim:report` | 위 지표들을 baseline과 전후 비교 | `balance-compare.md` |
 
 환경변수로 규모 조절: `SIM_SEEDS`(싱글 시드 수), `SIM_MAPS`, `SIM_PERSONAS`,
@@ -61,6 +65,9 @@ sim/
   pvp/               P0: boards.ts(아키타입) · pvpMatrix · arenaRunner · placement · crossValidate
   single/            P1: runner.ts(헤드리스 게임루프) · botPolicies.ts(페르소나) · single.sim.ts
   multi/             P2: orchestrator.ts(페이즈머신 로컬재현) · multi.sim.ts
+  net/               인메모리 RTDB(rtdb.ts) + 클라이언트 모듈그래프 격리(clientKit.ts)
+  multi2/            P-2/P-3: 2인 프로토콜 — client.ts(헤드리스 클라) · match.ts(러너+불변식)
+                     · twoPlayer/lobby/rtdbSemantics/wireFidelity.sim.ts
   report/            종합 전후 비교 생성기
   tools/             prefetch(레코딩) · baseline.mjs
 ```
@@ -73,12 +80,47 @@ sim/
 - 구매/기술/특성: `src/game/towerFactory.ts` — PokemonPicker도 이걸 씀
 - 보상: `src/services/battleRewards.ts` — MultiplayerService도 이걸 씀
 - 매칭/bye: `PvPBattleService.generateMatchups` 그대로
+- 방·페이즈·트랜잭션: `MultiplayerService` **전체** (sim/multi2 한정 — 아래 참조)
 
 ### 결정론
 
 `src/utils/rng.ts` 의 `rng()` 가 게임로직 전체의 난수원 (기본 Math.random — 프로덕션 불변).
 시뮬은 `setRngSource(mulberry32(seed))` 로 교체 + vitest fake timers(Date 포함) + HTTP 디스크
 캐시 → **같은 시드는 항상 같은 결과** (single.sim.ts 의 결정론 테스트가 회귀 감시).
+
+## 2인 멀티 프로토콜 하네스 (sim/multi2 + sim/net)
+
+`sim/multi`(8인 팟)는 페이즈 머신을 **로컬에서 다시 구현해** 우회한다 — 밸런스를 재는 데는
+그걸로 충분하지만, 그 결과 `MultiplayerService` 1500줄(방·페이즈·트랜잭션·스로틀·정리)은
+시뮬에서 한 줄도 실행된 적이 없었다. `sim/multi2`가 그 공백을 메운다.
+
+- `sim/net/rtdb.ts` — `firebase/database` 자리를 그대로 대체하는 인메모리 RTDB.
+  null 프루닝(빈 배열/객체 = 노드 삭제), 배열↔객체 강제, undefined 거부, push 정렬키,
+  **로컬 캐시 트리 기반 트랜잭션 재시도**, `onValue`의 동기 첫 발화, 쿼리, `onDisconnect`,
+  오프라인 큐를 재현한다. 클라이언트별 지연·시계오차 주입.
+- `sim/net/clientKit.ts` — 클라이언트마다 `vi.resetModules()` + 동적 import 로
+  **모듈 그래프를 분리**한다. 두 플레이어가 각자의 `gameStore`/`multiplayerService`를 갖고,
+  공유하는 것은 RTDB 하나뿐 — 실제 브라우저 두 대와 같은 구조.
+- `sim/multi2/client.ts` — `GameLayout` + `BattlePhaseUI`의 **프로토콜 미러**.
+  ⚠ 컴포넌트의 멀티 흐름을 고치면 여기도 같이 고쳐야 한다(arenaRunner ↔ TFTBattleArena와 동일 계약).
+- `sim/multi2/match.ts` — 시나리오 러너 + 불변식 11종(라운드 단조성, 결과 유일성,
+  양측 로컬 결과 일치, 아레나 입력 동일성, 보상 중복/누락, 보상 정산 완결, 고아 노드 등).
+
+⚠ **보드 생성 전 `setRngSource(mulberry32(...))` 를 반드시 건다.** `mapAbilityToGameEffect`는
+매핑 목록에 없는 특성에 rng로 효과를 하나 뽑는데(crit/lifesteal/speed/tank), 기본 난수원이
+`Math.random`이라 시드를 안 잡으면 실행마다 다른 보드로 다른 게임을 재게 된다. `critChance`를
+와이어에 태우기 전에는 그 추첨이 멀티 결과에 영향이 없어 드러나지 않았다. `S0 보드 결정론`이 감시.
+
+이 하네스가 잡아 고친 결함(전부 재현 테스트가 남아 있다):
+- presence 고아 되살아남 — `leaveRoom`이 방을 지운 **뒤에** presence offline을 써서 영구 고아
+  (`lobby.sim.ts`가 순서를 못 박음)
+- **배틀 중 끊김 = 패배 페널티 회피** — 보상 적용 창이 `roundNumber === currentRound` 하나뿐이라
+  그 순간 오프라인이면 영영 미적용. 누적 원장(`rewardLedger`/`appliedReward`)으로 전환 (`S11`,`S12`)
+- `normalizeTowerDetails`가 `critChance`를 떨구어 멀티에서 크리 특성이 전부 죽어 있었음 (`wireFidelity`)
+- 재접속 복원이 `ability: ""`로 두어 다음 업로드에서 특성 파생값이 0이 됨 (`wireFidelity`, `S12`)
+
+재현하지 않는 것(결론을 여기까지만 믿을 것): 트랜잭션의 로컬 낙관적 반영(applyLocally),
+보안 룰, 대역폭 쿼터, 화면/입력.
 
 ## 주의: vitest 실행 시 드라이브 문자 케이스
 
@@ -148,6 +190,7 @@ AOE 잠재력 구매 평가(aoePowerOf — L60까지) / AOE 기술 가중 웨이
 - 봇 미사용 기능: 융합, 거다이/메가는 웨이브끝 픽에 나올 때만.
 - 멀티에 실제 AIPlayer(easy/medium/hard) 로직은 미참여 — 페르소나 봇으로 대체.
 - 멀티 웨이브는 순차 실행(실게임은 병렬)이지만 플레이어 간 상호작용이 없어 결과 동치.
+- 2인 하네스의 웨이브는 합성(시간·누수·보드만 흉내) — PvE 밸런스는 `sim:single`이 담당.
 
 여담: probe의 "누적킬 항상 0"은 하네스 버그가 아니라 **실게임 버그**였다(타워
 kills/damageDealt를 아무 데서도 증가시키지 않음) — 2026-07-12 GameManager.applyDamage에서

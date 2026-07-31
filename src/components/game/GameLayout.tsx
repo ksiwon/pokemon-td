@@ -61,6 +61,7 @@ import { authService } from "../../services/AuthService";
 import { PlayerGameState, GamePhase } from "../../types/multiplayer";
 import { aiPlayerManager } from "../../services/AIPlayer";
 import { buildTowerDetails } from "../../game/towerFactory";
+import { fromWireAbility } from "../../utils/abilities";
 import { lMedia } from "../../utils/responsive.utils";
 import { Emoji } from "../shared/Emoji";
 import { Store, Award } from "lucide-react";
@@ -235,6 +236,13 @@ export const GameLayout: React.FC<GameLayoutProps> = ({ onLeaveGame }) => {
   const lastPhaseRef           = useRef<GamePhase | null>(null);
   // [C4-FIX] 상대별 '연속 오프라인 시작 시각' 기록(연결끊김 몰수 워치독용)
   const presenceOfflineSinceRef = useRef<Record<string, number>>({});
+  // [REWARD-LEDGER] 서버 누적 원장 중 내가 로컬에 이미 반영한 몫.
+  //   서버의 rewardLedger 와의 차이만 적용하므로, 결과 도착 순간 접속이 끊겨 있었어도
+  //   복귀 시 정확히 한 번 정산된다(라운드 목록이 잘려도 무관 — 누적합이라서).
+  const appliedRewardRef  = useRef<{ gold: number; lives: number }>({ gold: 0, lives: 0 });
+  //   정산 중에는 일반 동기화가 끼어들면 안 된다: lives/money 와 appliedReward 가
+  //   서로 다른 트랜잭션으로 갈라져 올라가면 이중 적용/미적용이 생긴다.
+  const applyingRewardRef = useRef(false);
 
   // ─────────────────────────────────────────────────────────────
   // Effects — V6/V8 멀티플레이어 로직 전체 보존 + BUG-FIX
@@ -403,17 +411,40 @@ export const GameLayout: React.FC<GameLayoutProps> = ({ onLeaveGame }) => {
               lives: restored.lives, money: restored.money, wave: restored.wave,
               towers: restored.towerDetails?.length, isAlive: restored.isAlive,
             });
+            // [REWARD-LEDGER] 끊겨 있는 동안 확정된 PvP 보상 정산.
+            //   서버 원장 - 내가 반영한 누적 = 못 받은 몫. 배틀 페이즈에 끊겨 있었다면
+            //   여기서 패배 페널티가 뒤늦게(그러나 정확히 한 번) 들어온다.
+            const pendGold  = restored.rewardLedger.gold  - restored.appliedReward.gold;
+            const pendLives = restored.rewardLedger.lives - restored.appliedReward.lives;
+
             useGameStore.setState({
-              lives: restored.lives,
-              money: restored.money,
+              lives: Math.max(0, restored.lives + pendLives),
+              money: restored.money + pendGold,
               wave:  restored.wave,
               gameSpeed: 3,
               isWaveActive: false,
               isPaused: false,
             });
+            appliedRewardRef.current = {
+              gold:  restored.rewardLedger.gold,
+              lives: restored.rewardLedger.lives,
+            };
             // [V5-FIX-GL-4] 재접속 시 이미 처리된 라운드 보상은 재적용 방지
+            //   (라운드 마커는 이제 **토스트 전용**이다 — 금액 적용은 위 원장이 담당한다)
             lastAppliedRoundRef.current    = restored.currentRound;
             lastAppliedByeRoundRef.current = restored.currentRound;
+
+            if (pendGold !== 0 || pendLives !== 0) {
+              console.log(`[GameLayout] 미적용 PvP 보상 정산: gold ${pendGold}, lives ${pendLives}`);
+              const s = useGameStore.getState();
+              // lives/money 와 appliedReward 를 한 트랜잭션으로. syncReadyRef 가 아직 false 라
+              // 스토어 구독이 끼어들지 않으므로 이 쓰기 하나로 원자성이 보장된다.
+              await multiplayerService.updatePlayerState(multiRoomId, user.uid, {
+                lives: s.lives, money: s.money,
+                appliedReward: { ...appliedRewardRef.current },
+              });
+              await multiplayerService.flushPlayerState(multiRoomId, user.uid);
+            }
 
             if (restored.towerDetails?.length) {
               const restoredTowers = restored.towerDetails.map((td: any, idx: number) => ({
@@ -443,7 +474,11 @@ export const GameLayout: React.FC<GameLayoutProps> = ({ onLeaveGame }) => {
                 sellValue:      td.level * 20,
                 kills:          0,
                 damageDealt:    0,
-                ability:        "",
+                // [REJOIN-FIX] 예전엔 무조건 "" 였다. 복원 직후 lifesteal/aoeBonus 값 자체는
+                //   살아 있어도, 다음 업로드에서 buildTowerDetails 가 ability 로 파생값을
+                //   재계산하므로 흡혈 0.15 → 0, 크리 ×2 → 기본으로 리셋됐다.
+                //   = 새로고침 한 번이면 그 게임 내내 특성 없는 팀. (sim:2p:wire 가 감시)
+                ability:        fromWireAbility(td.ability) ?? "",
                 lifesteal:      td.lifesteal ?? 0,
                 aoeBonus:       td.aoeBonus  ?? 0,
                 statusEffect:   undefined,
@@ -486,6 +521,9 @@ export const GameLayout: React.FC<GameLayoutProps> = ({ onLeaveGame }) => {
     const unsubscribe = useGameStore.subscribe((state, prevState) => {
       if (!syncReadyRef.current) return;
       if (defeatedRef.current) return;
+      // [REWARD-LEDGER] 정산 중 addMoney/addLives 가 트리거한 중간 상태는 흘리지 않는다.
+      //   정산 코드가 끝난 뒤 lives/money/appliedReward 를 한 번에 올린다.
+      if (applyingRewardRef.current) return;
       const changed =
         state.wave   !== prevState.wave   ||
         state.lives  !== prevState.lives  ||
@@ -568,29 +606,63 @@ export const GameLayout: React.FC<GameLayoutProps> = ({ onLeaveGame }) => {
   }, [multiRoomId, user]);
 
   // ─── [V6-FIX-GL-3] 배틀 결과 → 로컬에 보상 적용 + 토스트 ──────────
+  // [REWARD-LEDGER] 금액은 라운드가 아니라 **서버 누적 원장과의 차이**로 적용한다.
+  //   예전엔 `roundNumber === currentRound` 인 순간에만 적용해서, 그 창에 접속이 끊겨
+  //   있으면 패배 페널티가 영영 사라졌다(= 지겠다 싶으면 끊는 게 이득). 원장 차이 방식은
+  //   창을 놓쳐도 다음 스냅샷에서, 아예 나갔다 와도 재접속 복원에서 정확히 한 번 정산한다.
+  //   토스트만 라운드 단위로 남긴다.
   useEffect(() => {
     if (!multiRoomId || !user) return;
     const unsubscribe = multiplayerService.onGameStateUpdateWithPhase(multiRoomId, (state) => {
       if (!state) return;
+
+      // 토스트(표시 전용) — 이번 라운드 내 결과가 처음 보일 때 한 번.
       const myResult = (state.battleResults || []).find(r =>
         r.roundNumber === state.currentRound &&
         r.roundNumber > lastAppliedRoundRef.current &&
         (r.player1Id === user.uid || r.player2Id === user.uid)
       );
-      if (!myResult) return;
-      lastAppliedRoundRef.current = myResult.roundNumber;
-      const myReward = user.uid === myResult.player1Id ? myResult.rewardP1 : myResult.rewardP2;
-      if (!myReward) return;
-      const { addMoney, addLives } = useGameStore.getState();
-      if (myReward.gold  !== 0) addMoney(myReward.gold);
-      if (myReward.lives !== 0) addLives(myReward.lives);
-      setBattleResultToast({
-        won:        user.uid === myResult.winnerId,
-        goldDelta:  myReward.gold,
-        livesDelta: myReward.lives,
-        round:      myResult.roundNumber,
-      });
-      setTimeout(() => setBattleResultToast(null), 5000);
+      if (myResult) {
+        lastAppliedRoundRef.current = myResult.roundNumber;
+        const rw = user.uid === myResult.player1Id ? myResult.rewardP1 : myResult.rewardP2;
+        if (rw) {
+          setBattleResultToast({
+            won:        user.uid === myResult.winnerId,
+            goldDelta:  rw.gold,
+            livesDelta: rw.lives,
+            round:      myResult.roundNumber,
+          });
+          setTimeout(() => setBattleResultToast(null), 5000);
+        }
+      }
+
+      // 금액 적용 — 복원이 끝나기 전엔 손대지 않는다(restore 가 원장 기준선을 세운다).
+      if (!syncReadyRef.current || applyingRewardRef.current) return;
+      const me = (state.players || []).find(p => p.userId === user.uid);
+      const ledger = me?.rewardLedger;
+      if (!ledger) return;
+      const dGold  = ledger.gold  - appliedRewardRef.current.gold;
+      const dLives = ledger.lives - appliedRewardRef.current.lives;
+      if (dGold === 0 && dLives === 0) return;
+
+      applyingRewardRef.current = true;
+      try {
+        const { addMoney, addLives } = useGameStore.getState();
+        if (dGold  !== 0) addMoney(dGold);
+        if (dLives !== 0) addLives(dLives);
+      } finally {
+        applyingRewardRef.current = false;
+      }
+      appliedRewardRef.current = { gold: ledger.gold, lives: ledger.lives };
+
+      // lives/money 와 마커를 한 번에 올린다. 여기서 갈라지면 이중 적용이 생긴다.
+      const s = useGameStore.getState();
+      multiplayerService.updatePlayerState(multiRoomId, user.uid, {
+        wave: s.wave, lives: s.lives, money: s.money, towers: s.towers.length,
+        appliedReward: { ...appliedRewardRef.current },
+      })
+        .then(() => multiplayerService.flushPlayerState(multiRoomId, user.uid))
+        .catch(err => console.warn('[GameLayout] 보상 정산 업로드 실패:', err));
     });
     return unsubscribe;
   }, [multiRoomId, user]);

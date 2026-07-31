@@ -9,6 +9,7 @@ import { GameMove, MoveEffect, PokemonAbility } from '../types/game';
 import { TowerDetail } from '../types/multiplayer';
 import {
   mapAbilityToGameEffect, getCriticalChance, getAOEDamageMultiplier, getLifestealRatio,
+  toWireAbility,
 } from '../utils/abilities';
 import { rng } from '../utils/rng';
 import { BALANCE_OVERRIDES } from './balanceOverrides';
@@ -223,5 +224,8 @@ export const buildTowerDetails = (towers: any[]): TowerDetail[] =>
       // [FIX] 흡혈 특성이 멀티에서 통째로 죽어 있었다(상수 0 하드코딩).
       //   크리·AOE 특성은 위에서 계산해 넘기는데 흡혈만 누락 — 싱글(GameManager)과 동일하게 반영.
       lifesteal:     getLifestealRatio(ability),
+      // [REJOIN-FIX] 특성 원본(설명문 제외)도 함께 보낸다. 전투는 위 파생값만 쓰지만,
+      //   재접속 복원이 이걸 못 받으면 다음 업로드에서 파생값이 통째로 리셋된다.
+      ability:       ability ? toWireAbility(ability) : null,
     });
   });

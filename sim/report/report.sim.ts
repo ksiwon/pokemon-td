@@ -79,6 +79,10 @@ function extractHeadlines(name: string, m: any): Headline[] {
         push(`ladder.${l.mapId}.clearRate`, `사다리 ${l.mapId} 클리어율`, l.clear, 'pct', l.games);
       }
       break;
+    case 'multi-2p-protocol':
+      push('scenarios', '2인 프로토콜 시나리오 수', m.scenarios);
+      push('violations', '2인 프로토콜 위반 건수', (m.violations ?? []).length);
+      break;
     case 'multi-runs':
       push('avgRounds', '멀티 평균 게임 길이(라운드)', m.avgRounds);
       push('avgBattles', '멀티 평균 배틀 수', m.avgBattles);

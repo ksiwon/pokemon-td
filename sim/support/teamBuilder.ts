@@ -12,7 +12,7 @@ import {
   growStatsToLevel, candyCostToLevel,
 } from '../../src/game/towerFactory';
 import { mapAbilityToGameEffect } from '../../src/utils/abilities';
-import { getCriticalChance, getAOEDamageMultiplier } from '../../src/utils/abilities';
+import { getCriticalChance, getAOEDamageMultiplier, toWireAbility } from '../../src/utils/abilities';
 import { calculateActiveSynergies } from '../../src/utils/synergyManager';
 
 export interface BoardMember {
@@ -97,6 +97,8 @@ export async function buildTowerDetail(member: BoardMember): Promise<{ detail: T
     critChance,
     aoeBonus,
     lifesteal: 0,
+    // buildTowerDetails 와 동일 — 전투에는 안 쓰이지만 재접속 복원이 이걸 본다.
+    ability: ability ? toWireAbility(ability) : null,
   };
 
   // 골드 등가: 구매가는 기본형 기준(진화는 레벨업 부산물 = 무료)
