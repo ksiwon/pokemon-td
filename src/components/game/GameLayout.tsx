@@ -787,8 +787,11 @@ export const GameLayout: React.FC<GameLayoutProps> = ({ onLeaveGame }) => {
   }, [storyChapterId, storyChapterNumber, storyTotalWaves, navigate]);
 
   const handleResetAndLeave = () => {
-    if (multiRoomId) multiplayerService.leaveRoom(multiRoomId).catch(() => {});
-    onLeaveGame(); // resetGame() + navigate('/map-select' or '/lobby')
+    // [FIX] leaveRoom을 여기서 또 부르지 않는다. onLeaveGame(App.handleLeaveGame)이 이미
+    //   같은 방에 leaveRoom을 부르는데, 둘이 동시에 나가면 같은 rooms/{id} 노드에 트랜잭션
+    //   두 개가 붙는다. 한쪽이 방을 지우는 동안 다른 쪽이 재시도를 반복하면서 퇴장이
+    //   늘어졌고, App 쪽은 그 await 뒤에 navigate 하므로 "메인 메뉴로"가 먹통으로 보였다.
+    onLeaveGame(); // resetGame() + leaveRoom + navigate('/map-select' or '/lobby')
     // 스토리 모드일 때는 /story로 오버라이드
     if (isStoryMode) navigate('/story');
   };
@@ -1502,6 +1505,11 @@ const Lbl = styled.span`
 
 const UtilRow = styled.div`
   display: flex; gap: 5px;
+  /* [FIX] 메뉴·설정은 전체화면 모달(ModalOverlay, z-index 1000) 위에 남긴다.
+     웨이브 보상·알바 마일스톤·진화 확인이 큐에 쌓여 있으면 오버레이가 HUD를 통째로 덮어
+     "메뉴" 자체를 누를 수 없었다 → 모달을 전부 소화하기 전엔 게임에서 나갈 방법이 없었다.
+     햄버거 백드롭(4000)/패널(4001)보다는 낮게 둬서 메뉴가 열리면 정상적으로 덮인다. */
+  position: relative; z-index: 1100;
   ${L768} { gap: 3px; }
 `;
 

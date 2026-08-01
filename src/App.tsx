@@ -22,6 +22,9 @@ import { pokeAPI } from './api/pokeapi';
 import { getMapById } from './data/maps';
 import { useTranslation } from './i18n';
 
+/** 멀티 퇴장 정리를 기다려 주는 상한(ms). 넘으면 정리는 백그라운드에 맡기고 화면부터 뺀다. */
+const LEAVE_ROOM_NAV_TIMEOUT = 2000;
+
 import { Emoji } from "./components/shared/Emoji";
 import { LoginScreen } from "./components/auth/LoginScreen";
 import { MainMenu } from "./components/menu/MainMenu";
@@ -186,18 +189,20 @@ function App() {
   const handleLeaveGame = useCallback(async () => {
     const multiRoomId = multiplayerService.getCurrentRoomId();
     resetGame();
-    if (multiRoomId) {
-      try {
-        await multiplayerService.leaveRoom(multiRoomId);
-      } catch (err) {
-        console.warn('[App] leaveRoom failed:', err);
-      }
-      multiplayerService.clearCurrentRoom();
-      navigate('/lobby');
-    } else {
+    if (!multiRoomId) {
       multiplayerService.clearCurrentRoom();
       navigate('/map-select');
+      return;
     }
+    // [FIX] 퇴장 정리가 늦어도 화면 전환은 막지 않는다.
+    //   예전엔 leaveRoom을 무조건 끝까지 await 한 뒤에 navigate 해서, RTDB 트랜잭션이
+    //   경합·재시도로 늘어지면 "메인 메뉴로"를 눌러도 게임 화면에 그대로 갇혔다.
+    //   정리는 백그라운드에서 계속되고, 실패해도 방 만료 정리·고아 회수 큐가 받아준다.
+    const leaving = multiplayerService.leaveRoom(multiRoomId)
+      .catch(err => { console.warn('[App] leaveRoom failed:', err); });
+    await Promise.race([leaving, new Promise(r => setTimeout(r, LEAVE_ROOM_NAV_TIMEOUT))]);
+    multiplayerService.clearCurrentRoom(); // 타임아웃/실패 경로에서도 방 상태를 남기지 않는다
+    navigate('/lobby');
   }, [resetGame, navigate]);
 
 
