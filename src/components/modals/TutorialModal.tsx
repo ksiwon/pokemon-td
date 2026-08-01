@@ -23,14 +23,29 @@ const KEYS = {
   cards: 'pokemon-td-tutorial-cards-v1',
 } as const;
 
-export const hasTowerTutorialSeen  = () => localStorage.getItem(KEYS.tower) === 'true';
-export const hasMultiTutorialSeen  = () => localStorage.getItem(KEYS.multi) === 'true';
-export const hasStoryTutorialSeen  = () => localStorage.getItem(KEYS.story) === 'true';
-export const hasCardsTutorialSeen  = () => localStorage.getItem(KEYS.cards) === 'true';
-export const markTowerTutorialSeen = () => localStorage.setItem(KEYS.tower, 'true');
-export const markMultiTutorialSeen = () => localStorage.setItem(KEYS.multi, 'true');
-export const markStoryTutorialSeen = () => localStorage.setItem(KEYS.story, 'true');
-export const markCardsTutorialSeen = () => localStorage.setItem(KEYS.cards, 'true');
+type TutorialMode = keyof typeof KEYS;
+
+const isSeen = (mode: TutorialMode): boolean => {
+  try { return localStorage.getItem(KEYS[mode]) === 'true'; } catch { return false; }
+};
+
+/**
+ * [FIX] "다시 보지 않기"를 **체크하는 순간** 기록한다.
+ * 예전엔 닫기 애니메이션(260ms) 뒤 setTimeout 안에서만 기록해서, 그 사이에 모달이
+ * 언마운트되거나(부모가 라우팅) 탭이 닫히면 체크가 통째로 날아갔다. 체크박스는 즉시
+ * 저장되는 설정으로 다루고, 해제하면 다시 보이도록 지운다.
+ */
+const setSeen = (mode: TutorialMode, seen: boolean): void => {
+  try {
+    if (seen) localStorage.setItem(KEYS[mode], 'true');
+    else localStorage.removeItem(KEYS[mode]);
+  } catch { /* 사파리 프라이빗 등 — 저장 실패는 무시(그냥 다시 보인다) */ }
+};
+
+export const hasTowerTutorialSeen  = () => isSeen('tower');
+export const hasMultiTutorialSeen  = () => isSeen('multi');
+export const hasStoryTutorialSeen  = () => isSeen('story');
+export const hasCardsTutorialSeen  = () => isSeen('cards');
 
 // ─── 슬라이드 타입 ───────────────────────────────────────────────────────────
 type TFunc = (key: string, params?: Record<string, string | number>) => string;
@@ -218,7 +233,7 @@ const buildCardsSlides = (t: TFunc): Slide[] => [
 
 // ─── 메인 컴포넌트 ───────────────────────────────────────────────────────────
 interface TutorialModalProps {
-  mode: 'tower' | 'multi' | 'story' | 'cards';
+  mode: TutorialMode;
   onClose: () => void;
   onProceed?: () => void;
 }
@@ -234,8 +249,10 @@ export const TutorialModal: React.FC<TutorialModalProps> = ({ mode, onClose, onP
 
   const [page, setPage]         = useState(0);
   const [dir, setDir]           = useState<'fwd' | 'bck'>('fwd');
-  const [dontShow, setDontShow] = useState(false);
+  const [dontShow, setDontShow] = useState(() => isSeen(mode)); // 도움말로 다시 열었을 때 현재 설정 반영
   const [exiting, setExiting]   = useState(false);
+
+  const toggleDontShow = (v: boolean) => { setDontShow(v); setSeen(mode, v); };
 
   // 모드별 테마색 (tower=청록 / multi=보라 / story=주황 / cards=자홍)
   const accent = mode === 'tower' ? '#4fc3f7'
@@ -256,16 +273,16 @@ export const TutorialModal: React.FC<TutorialModalProps> = ({ mode, onClose, onP
 
   const isLast = page === slides.length - 1;
 
-  const close = (proceed = false) => {
+  /**
+   * [FIX] 어떤 경로로 닫든 목적지는 같다 — onProceed가 있으면(=모드 진입 직전에 뜬 튜토리얼)
+   * ✕나 배경 클릭도 그 모드로 들어간다. 예전엔 ✕가 onClose로 빠져 메인 메뉴로 튕겨서,
+   * "설명은 됐고 바로 시작하자"는 자연스러운 동작이 뒤로가기가 됐다.
+   * 도움말로 연 경우(onProceed 없음)는 그대로 닫힌다.
+   */
+  const close = () => {
     setExiting(true);
     setTimeout(() => {
-      if (dontShow) {
-        if (mode === 'tower')      markTowerTutorialSeen();
-        else if (mode === 'multi') markMultiTutorialSeen();
-        else if (mode === 'cards') markCardsTutorialSeen();
-        else                       markStoryTutorialSeen();
-      }
-      if (proceed && onProceed) onProceed();
+      if (onProceed) onProceed();
       else onClose();
     }, 260);
   };
@@ -327,11 +344,11 @@ export const TutorialModal: React.FC<TutorialModalProps> = ({ mode, onClose, onP
           <DontShowRow>
             <Checkbox
               type="checkbox"
-              id="dontShow"
+              id={`dontShow-${mode}`}
               checked={dontShow}
-              onChange={e => setDontShow(e.target.checked)}
+              onChange={e => toggleDontShow(e.target.checked)}
             />
-            <label htmlFor="dontShow">{t('tutorial.dontShowAgain')}</label>
+            <label htmlFor={`dontShow-${mode}`}>{t('tutorial.dontShowAgain')}</label>
           </DontShowRow>
 
           <NavButtons>
@@ -342,7 +359,7 @@ export const TutorialModal: React.FC<TutorialModalProps> = ({ mode, onClose, onP
               $grad={grad}
               $shadow={shadow}
               $isLast={isLast}
-              onClick={() => isLast ? close(true) : go(page + 1)}
+              onClick={() => isLast ? close() : go(page + 1)}
             >
               {isLast
                 ? (onProceed ? <>{t('tutorial.start')} <Emoji glyph="🚀" size={14} /></> : t('tutorial.next'))

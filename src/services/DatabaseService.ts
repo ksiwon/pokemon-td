@@ -128,7 +128,11 @@ class DatabaseService {
       throw err;                          // 실패는 캐시하지 않는다
     }
 
-    const isEmpty = Array.isArray(data) && data.length === 0;
+    // [FIX] "결과 없음"은 오래 캐시하지 않는다.
+    //   getMy*Rank는 내 기록 문서가 없으면 null(=미등록)을 준다. 예전엔 null이 배열이 아니라서
+    //   일반 값으로 취급돼 10분 + localStorage에 박혔고, 방금 첫 기록을 세운 유저가 리더보드엔
+    //   자기 이름이 보이는데 "내 순위"만 계속 미등록으로 남았다. []와 같은 부류로 묶는다.
+    const isEmpty = data == null || (Array.isArray(data) && data.length === 0);
     this._readCache.set(key, {
       data, ts: Date.now(),
       ttl: isEmpty ? this.EMPTY_CACHE_TTL : this.READ_CACHE_TTL,
@@ -770,6 +774,22 @@ class DatabaseService {
    * 호출부(CardService.recordWeeklyBestFloor)가 '이번 주 개선 시에만' floor를 넘겨줌.
    */
   async updateTowerSeasonRanking(towerFloor: number): Promise<void> {
+    // [FIX] 같은 값의 기록 쓰기가 이미 날아가고 있으면 그 약속을 공유한다.
+    //   TrainerTower는 fire-and-forget으로 쏘고, 허브(CardLabView)는 내 순위를 읽기 전에
+    //   await 한다. 중복 제거가 없으면 그 창에서 setDoc이 두 번 나가고(무료 쿼터 낭비),
+    //   더 나쁘게는 허브가 write 완료 전에 읽어 "미등록"을 캐시한다.
+    const key = `towerSeason:${seasonId()}:${towerFloor}`;
+    const running = this._inflightWrites.get(key);
+    if (running) return running;
+    const p = this.doUpdateTowerSeasonRanking(towerFloor)
+      .finally(() => { this._inflightWrites.delete(key); });
+    this._inflightWrites.set(key, p);
+    return p;
+  }
+
+  private _inflightWrites = new Map<string, Promise<void>>();
+
+  private async doUpdateTowerSeasonRanking(towerFloor: number): Promise<void> {
     const user = authService.getCurrentUser();
     if (!user || !this.canWrite()) return;
 

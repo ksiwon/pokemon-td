@@ -67,6 +67,14 @@ export const CardLabView = () => {
     let alive = true;
     (async () => {
       await databaseService.updateCardRanking(ownedIds.length).catch(() => {});
+      // [FIX] 타워 시즌 기록 쓰기를 **읽기 전에** 매듭짓는다. TrainerTower가 쏜 쓰기는
+      //   fire-and-forget이라, 층을 깨고 허브로 돌아온 직후엔 아직 날아가는 중일 수 있다.
+      //   그 상태로 getMyTowerRank를 부르면 서버에 문서가 없어 "미등록"을 읽는다
+      //   (리더보드엔 이미 내 기록이 보이는데 내 순위줄만 미등록으로 남던 원인).
+      //   실제로 진행 중인 쓰기가 있으면 같은 약속을 공유하므로 write가 늘지 않는다.
+      if (weeklyBestFloor > 0) {
+        await databaseService.updateTowerSeasonRanking(weeklyBestFloor).catch(() => {});
+      }
       if (authService.isOfflineMode() || !authService.getCurrentUser()) {
         if (alive) setRankInfo(null);
         return;

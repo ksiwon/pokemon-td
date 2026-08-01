@@ -65,16 +65,22 @@ export const RandomBattle = ({ onBack }: { onBack: () => void }) => {
   const [hpMap, setHpMap] = useState<Record<string, number>>({});
   const [hit, setHit] = useState<string | null>(null);
   const [statusMap, setStatusMap] = useState<UnitStatusMap>({});
+  // [FIX] 매칭 실패 안내는 alert()가 아니라 화면 내 배너로. alert은 이 화면의 다른 UI와
+  //   톤이 다를 뿐 아니라, 다이얼로그를 억제하는 환경(인앱 브라우저 등)에선 아무것도 뜨지 않아
+  //   "상대 찾기 버튼이 먹통"으로 보인다. 상대 풀이 빈 초기에는 거의 모든 유저가 밟는 경로다.
+  const [notice, setNotice] = useState<string | null>(null);
   const timer = useRef<number | null>(null);
+
+  const fail = (msg: string) => { setNotice(msg); setPhase('idle'); };
 
   const startMatch = async () => {
     if (!online) return;
-    if (deck.length === 0) { alert(t('cards.alerts.deckEmpty')); return; }
+    setNotice(null);
+    if (deck.length === 0) { fail(t('cards.alerts.deckEmpty')); return; }
     // [FIX] 일일 판수 상한 — 무제한이면 "다시 매칭" 연타로 주간 승수 랭킹을 도배할 수 있고
     //   매 판 Firestore 쿼리 2회가 나가 무료 쿼터도 샌다. 차감은 매칭 시작 전에.
     if (!cardService.consumePvpMatch()) {
-      alert(t('cards.pvp.dailyLimitReached', { n: CardService.PVP_DAILY_LIMIT }));
-      setPhase('idle');
+      fail(t('cards.pvp.dailyLimitReached', { n: CardService.PVP_DAILY_LIMIT }));
       return;
     }
     setPhase('matching');
@@ -87,8 +93,7 @@ export const RandomBattle = ({ onBack }: { onBack: () => void }) => {
       const opp = await databaseService.getRandomOpponentDeck(myPower, loadRecentOpps());
       if (!opp) {
         cardService.refundPvpMatch(); // 상대가 없는 건 플레이어 탓이 아니다
-        alert(t('cards.pvp.noOpponent'));
-        setPhase('idle');
+        fail(t('cards.pvp.noOpponent'));
         return;
       }
       pushRecentOpp(opp.userId);
@@ -102,7 +107,7 @@ export const RandomBattle = ({ onBack }: { onBack: () => void }) => {
           stars: s.stars, row: s.row, slot: s.slot, side: 'player', uid: `player-${s.pokemonId}`,
         }));
       }
-      if (player.length === 0) { alert(t('cards.alerts.deckLoadFail')); setPhase('idle'); return; }
+      if (player.length === 0) { cardService.refundPvpMatch(); fail(t('cards.alerts.deckLoadFail')); return; }
 
       // 3) 상대 팀 빌드 — 스냅샷 값은 buildBattleCard가 별 1~5로 clamp(위조 방어)
       const enemy: BattleCard[] = [];
@@ -121,7 +126,7 @@ export const RandomBattle = ({ onBack }: { onBack: () => void }) => {
       }
       if (enemy.length === 0) {
         cardService.refundPvpMatch();
-        alert(t('cards.pvp.opponentLoadFail')); setPhase('idle'); return;
+        fail(t('cards.pvp.opponentLoadFail')); return;
       }
 
       // 4) 시뮬레이션 — 시드는 매칭 쌍+스냅샷 시각으로 고정(같은 상대 재도전 리롤 방지)
@@ -165,8 +170,7 @@ export const RandomBattle = ({ onBack }: { onBack: () => void }) => {
     } catch (e) {
       cardService.refundPvpMatch(); // 전투가 성립하지 않았으므로 판수 반환
       console.warn('[RandomBattle] 매칭/전투 준비 실패', e);
-      alert(t('cards.alerts.battlePrepError'));
-      setPhase('idle');
+      fail(t('cards.alerts.battlePrepError'));
     }
   };
 
@@ -260,6 +264,7 @@ export const RandomBattle = ({ onBack }: { onBack: () => void }) => {
               ? t('cards.tower.noDeck')
               : t('cards.pvp.desc', { n: deck.length })}
           </Desc>
+          {notice && <NoticeBar role="status">{notice}</NoticeBar>}
           {!online && <OfflineHint>{t('cards.pvp.loginNeeded')}</OfflineHint>}
           {online && matchesLeft === 0 && (
             <OfflineHint>{t('cards.pvp.dailyLimitReached', { n: CardService.PVP_DAILY_LIMIT })}</OfflineHint>
@@ -374,6 +379,12 @@ const Desc = styled.div`font-size: 15px; color: rgba(255,255,255,0.6); text-alig
 const OfflineHint = styled.div`
   font-size: 13px; color: #fbbf24; background: rgba(251,191,36,0.1);
   border: 1px solid rgba(251,191,36,0.25); padding: 8px 14px; border-radius: 8px;
+`;
+// 매칭 실패 안내 배너(구 alert). 상대 없음/일일 상한/로딩 실패 공용.
+const NoticeBar = styled.div`
+  font-size: 13px; color: #fca5a5; background: rgba(248,113,113,0.1);
+  border: 1px solid rgba(248,113,113,0.3); padding: 10px 16px; border-radius: 10px;
+  max-width: 380px; text-align: center; line-height: 1.55;
 `;
 const StartBtn = styled.button<{ $on: boolean }>`
   display: flex; align-items: center; gap: 8px; margin-top: 8px; padding: 14px 36px; border-radius: 12px; border: none;
