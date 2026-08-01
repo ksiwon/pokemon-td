@@ -6,9 +6,19 @@
 //   2) 컴포넌트와 시뮬이 같은 코드를 쓰므로 모델 드리프트 원천 차단
 //
 // ⚠ 이 파일의 수치/로직을 바꾸면 실제 멀티 인간전 결과가 바뀐다. 순수 이동만 허용.
+//
+// [엔진 정합성] 전투 엔진이 4개 공존한다(싱글TD / 아레나 / AI서비스 / 카드).
+//   여기와 PvPBattleService는 **같은 멀티 매치**를 판정하므로(사람 상대냐 AI 상대냐,
+//   교착 시 강제종료냐의 차이) 메커닉이 어긋나면 "상대가 누구냐에 따라 규칙이 바뀐다".
+//   그래서 아래 값들은 이 파일이 단일 출처이고 PvPBattleService가 import해서 쓴다:
+//     attackSpeedMult · STATUS_SECONDS · DOT_PER_SECOND · statusTurns · dotPerTurn
+//   크리 기본값은 utils/abilities.BASE_CRIT_CHANCE가 단일 출처(네 엔진 공용).
+//   새 메커닉을 추가하면 sim/parity/mechanics.sim.ts(npm run sim:parity)에 행을 추가할 것 —
+//   그 테스트가 두 엔진 간 드리프트 0을 강제한다.
 
 import { TowerDetail } from '../types/multiplayer';
 import { getTypeEffectiveness } from '../utils/typeEffectiveness';
+import { BASE_CRIT_CHANCE } from '../utils/abilities';
 import { getBuffedStats } from '../utils/synergyManager';
 import { GamePokemon, Synergy } from '../types/game';
 import { mulberry32 } from '../utils/rng';
@@ -41,6 +51,22 @@ export interface Unit {
     type: 'burn' | 'poison' | 'paralysis' | 'freeze' | 'sleep';
     turnsLeft: number;   // 남은 지속 틱 수
   };
+  /**
+   * 6마리 타입 시너지(level 3)로 약점이 반감되는 타입 목록.
+   * [FIX] 시너지 설명은 "(6) 스탯 1.3배, 해당 타입 약점 데미지 0.5배"인데 이 방어 효과가
+   *   싱글(GameManager)에만 구현돼 있었다. 스탯 배율은 4마리(level 2)와 똑같이 1.3이라,
+   *   TFT에서는 한 타입을 6마리까지 모을 이유가 전혀 없었다. 여기서 되살린다.
+   */
+  resistTypes?: string[];
+}
+
+/** 팀 시너지에서 level 3(6마리) 타입 목록 중 해당 유닛이 가진 것만 추린다. */
+export function sixPieceResistTypes(detail: TowerDetail, synergies: Synergy[]): string[] {
+  const own = new Set(detail.types ?? []);
+  return synergies
+    .filter(s => s.level === 3 && s.id.startsWith('type:'))
+    .map(s => s.id.split(':')[1])
+    .filter(ty => own.has(ty));
 }
 
 export interface FloatTxt {
@@ -147,11 +173,17 @@ export function calcDmg(a: Unit, d: Unit, rng: () => number): DmgResult {
   // 타입 상성: 기술 타입 기준
   const eff = getTypeEffectiveness(moveType, defenderTypes);
 
+  // 6마리 타입 시너지: 그 타입 기준 2배로 들어오는 공격을 반감(GameManager와 동일 규칙)
+  let sixPieceResist = 1.0;
+  for (const ty of d.resistTypes ?? []) {
+    if (getTypeEffectiveness(moveType, [ty]) === 2) { sixPieceResist = 0.5; break; }
+  }
+
   // 자속 보정 (STAB)
   const isStab = attackerTypes.includes(moveType);
 
   // 크리티컬
-  const critRate = a.detail.critChance ?? 0.0625;
+  const critRate = a.detail.critChance ?? BASE_CRIT_CHANCE;
   const isCrit = r3 < critRate;
 
   // 번 상태이상: 물리 공격력 절반
@@ -161,7 +193,7 @@ export function calcDmg(a: Unit, d: Unit, rng: () => number): DmgResult {
   const lvl = a.detail.level;
   const base = ((2 * lvl / 5 + 2) * power * atkStat / Math.max(defStat, 1)) / 50 + 2;
   const randomFactor = 0.85 + r4 * 0.15;
-  let dmg = base * eff * randomFactor * burnPenalty;
+  let dmg = base * eff * randomFactor * burnPenalty * sixPieceResist;
   if (isStab) dmg *= 1.5;
   if (isCrit) dmg *= 1.5;
 
@@ -191,23 +223,88 @@ export function calcDmg(a: Unit, d: Unit, rng: () => number): DmgResult {
   };
 }
 
+// ─── 상태이상 공용 정의 ──────────────────────────────────────────────────────
+// 아레나는 틱(1/30초), AI서비스는 턴 단위라 단위가 다르다. 숫자를 각자 들고 있으면
+// 반드시 갈라지므로 "초" 기준 하나만 두고 각 엔진이 자기 단위로 환산해 쓴다.
+export type StatusType = 'burn' | 'poison' | 'paralysis' | 'freeze' | 'sleep';
+
+/** 상태이상 지속시간(초). */
+export const STATUS_SECONDS: Record<StatusType, number> = {
+  burn: 5, poison: 5, paralysis: 4, freeze: 3, sleep: 2,
+};
+
+/** 지속피해 — 초당 최대HP 비율. 번 1/16, 독 1/8. */
+export const DOT_PER_SECOND: Partial<Record<StatusType, number>> = {
+  burn: 1 / 16, poison: 1 / 8,
+};
+
+/**
+ * AI서비스의 한 '턴'이 아레나 시간으로 몇 초인가.
+ * 스피드 0인 유닛의 공격 주기(ATK_COOLDOWN × speedMult(0) = 1.3초)를 1턴으로 본다.
+ * 상태이상 지속시간을 두 엔진에서 같은 체감으로 맞추는 환산 상수.
+ */
+export const SERVICE_TURN_SECONDS = ATK_COOLDOWN;
+
+/** 상태이상 지속 턴 수(AI서비스용) — 최소 1턴. */
+export function statusTurns(type: StatusType): number {
+  return Math.max(1, Math.round(STATUS_SECONDS[type] / SERVICE_TURN_SECONDS));
+}
+
+/** 한 턴 동안의 지속피해(AI서비스용). */
+export function dotPerTurn(maxHp: number, type: StatusType): number {
+  const perSec = DOT_PER_SECOND[type];
+  if (!perSec) return 0;
+  return Math.max(1, Math.floor(maxHp * perSec * SERVICE_TURN_SECONDS));
+}
+
+/**
+ * 스피드 → 공격 쿨다운 배율. 1.0이 기본 속도이고 작을수록 자주 때린다.
+ * PvPBattleService도 이 함수를 쓴다 — 두 엔진이 스피드를 다르게 취급하면
+ * 같은 보드가 AI를 만나느냐 사람을 만나느냐로 승패가 갈린다(교차검증 드리프트).
+ */
+export function attackSpeedMult(speed: number): number {
+  return Math.max(0.4, 1.0 - speed / 400);
+}
+
 export function dst(a: Unit, b: Unit) {
   return Math.sqrt((a.x - b.x) ** 2 + (a.y - b.y) ** 2);
 }
 
-export function buildCanonicalOrder(units: Unit[], myPosition: 'L' | 'R'): Unit[] {
+/** 보드 기준 진영(L/R) — 클라이언트마다 다른 my/opp를 양쪽에서 같은 값으로 환산. */
+function boardSide(u: Unit, myPosition: 'L' | 'R'): 'L' | 'R' {
+  return (u.team === 'my') === (myPosition === 'L') ? 'L' : 'R';
+}
+
+/** 문자열+시드 → 결정론 정수(FNV-1a). 진영과 무관한 행동 순서 tiebreak용. */
+function hashKey(key: string, seed: number): number {
+  let h = (2166136261 ^ seed) >>> 0;
+  for (let i = 0; i < key.length; i++) {
+    h ^= key.charCodeAt(i);
+    h = Math.imul(h, 16777619);
+  }
+  return h >>> 0;
+}
+
+/**
+ * 한 틱 안에서 유닛이 행동하는 순서.
+ * [FIX] 예전엔 L팀 전원 → R팀 전원 순이었다. myPosition은 player1Id(=userId 사전순 앞선 쪽)가
+ *   항상 L이므로, 초기 쿨다운이 양팀 동일한 상황에서 **uid가 사전순으로 앞선 플레이어가
+ *   매 틱 먼저 때리는** 구조적 이점이 있었다. 보드 기준 canonical 키를 시드로 해싱해
+ *   어느 진영도 편들지 않게 하되, 양쪽 클라이언트에서 동일한 순서가 나오도록 유지한다.
+ */
+export function buildCanonicalOrder(units: Unit[], myPosition: 'L' | 'R', seed = 0): Unit[] {
   const alive = (u: Unit) => !u.fainted && u.hp > 0 && u.x >= 0;
-  const aliveUnits = units.filter(alive);
+  const key = (u: Unit) => `${boardSide(u, myPosition)}-${u.id.split('-')[1]}`;
 
-  const lTeam = aliveUnits
-    .filter(u => (myPosition === 'L' ? u.team === 'my' : u.team === 'opp'))
-    .sort((a, b) => parseInt(a.id.split('-')[1]) - parseInt(b.id.split('-')[1]));
-
-  const rTeam = aliveUnits
-    .filter(u => (myPosition === 'R' ? u.team === 'my' : u.team === 'opp'))
-    .sort((a, b) => parseInt(a.id.split('-')[1]) - parseInt(b.id.split('-')[1]));
-
-  return [...lTeam, ...rTeam];
+  return units
+    .filter(alive)
+    .map(u => ({ u, k: key(u) }))
+    .sort((a, b) => {
+      const ha = hashKey(a.k, seed);
+      const hb = hashKey(b.k, seed);
+      return ha !== hb ? ha - hb : a.k.localeCompare(b.k);
+    })
+    .map(x => x.u);
 }
 
 export function sortTeamDeterministic(team: TowerDetail[]): TowerDetail[] {
@@ -239,6 +336,7 @@ export function buildUnits(
     const buffed = getBuffedStats(p, mySynergies);
     units.push({
       id: `my-${i}`,
+      resistTypes: sixPieceResistTypes(d, mySynergies),
       detail: { ...d, ...buffed },
       team: 'my',
       x: -1,  // 벤치 (prep 중 플레이어가 배치)
@@ -258,6 +356,7 @@ export function buildUnits(
     const buffed = getBuffedStats(p, oppSynergies);
     units.push({
       id: `op-${i}`,
+      resistTypes: sixPieceResistTypes(d, oppSynergies),
       detail: { ...d, ...buffed },
       team: 'opp',
       x: -2,  // 숨김 (prep 중 보이면 안 됨 — reveal 직전에 배치 확정)
@@ -277,6 +376,8 @@ export function simulateTick(
   units: Unit[],
   myPosition: 'L' | 'R',
   rng: () => number,
+  /** 행동 순서 tiebreak 시드 — 양쪽 클라이언트가 공유하는 battleSeed를 넘긴다. */
+  seed = 0,
 ): { units: Unit[]; floats: FloatTxt[]; done: boolean } {
   const next = units.map(u => ({ ...u, isAtk: false, isHit: false }));
   const alive = (u: Unit) => !u.fainted && u.hp > 0 && u.x >= 0;
@@ -287,7 +388,7 @@ export function simulateTick(
     return { units: next, floats: [], done: true };
   }
 
-  const canonicalOrder = buildCanonicalOrder(next, myPosition);
+  const canonicalOrder = buildCanonicalOrder(next, myPosition, seed);
   const floats: FloatTxt[] = [];
   let floatSeq = 0;
 
@@ -298,9 +399,8 @@ export function simulateTick(
 
     // 독/번 틱 데미지
     if (se.type === 'burn' || se.type === 'poison') {
-      const tickDmg = se.type === 'burn'
-        ? Math.max(1, Math.floor(unit.maxHp / 16 / FPS))   // 번: 1/16 HP/초
-        : Math.max(1, Math.floor(unit.maxHp / 8 / FPS));   // 독: 1/8 HP/초
+      // 번 1/16 HP/초, 독 1/8 HP/초 — 초당 비율은 DOT_PER_SECOND가 단일 출처(AI서비스와 공유)
+      const tickDmg = Math.max(1, Math.floor(unit.maxHp * DOT_PER_SECOND[se.type]! / FPS));
       unit.hp = Math.max(0, unit.hp - tickDmg);
       if (unit.hp <= 0) unit.fainted = true;
     }
@@ -358,8 +458,7 @@ export function simulateTick(
 
           // [FIX-5] 스피드 기반 공격 쿨다운 (speed가 높을수록 빠른 공격)
           const spd = unit.detail.speed ?? 50;
-          const speedMult = Math.max(0.4, 1.0 - spd / 400);
-          unit.atkCd = ATK_COOLDOWN * speedMult;
+          unit.atkCd = ATK_COOLDOWN * attackSpeedMult(spd);
 
           const t2 = next.find(u => u.id === target.id);
           if (t2 && alive(t2)) {
@@ -445,13 +544,9 @@ export function simulateTick(
 
               // ── 상태이상 부여 ─────────────────────────────────────
               if (statusInflicted && !t2.fainted) {
-                const DURATION: Record<string, number> = {
-                  burn: FPS * 5, poison: FPS * 5, paralysis: FPS * 4,
-                  freeze: FPS * 3, sleep: FPS * 2,
-                };
                 t2.statusEffect = {
                   type: statusInflicted,
-                  turnsLeft: DURATION[statusInflicted] ?? FPS * 3,
+                  turnsLeft: Math.round((STATUS_SECONDS[statusInflicted] ?? 3) * FPS),
                 };
                 const SE_ICONS: Record<string, string> = {
                   burn: '🔥', poison: '☠️', paralysis: '⚡', freeze: '❄️', sleep: '💤',

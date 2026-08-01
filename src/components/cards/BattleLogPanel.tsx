@@ -6,6 +6,7 @@ import { useEffect, useMemo, useRef } from 'react';
 import styled from 'styled-components';
 import { ScrollText, Flame, Skull, Zap, Snowflake } from 'lucide-react';
 import { media } from '../../utils/responsive.utils';
+import { getTypeColor } from '../../utils/typeEffectiveness';
 import { useTranslation } from '../../i18n';
 import {
   BattleCard, BattleLogEntry, StatusKind, BURN_TURNS, POISON_TURNS,
@@ -122,9 +123,12 @@ export const BattleLogPanel = ({ log, units, count }: Props) => {
         g.push(
           <Line key={i}>
             <Name $side={atk?.side ?? 'player'}>{atk?.name ?? '???'}</Name>
+            {/* 이중타입은 상대에게 더 잘 통하는 쪽으로 때린다 — 어느 타입을 썼는지 표시 */}
+            {e.moveType && <Badge $c={getTypeColor(e.moveType)}>{t(`types.${e.moveType}`)}</Badge>}
             <Arrow>→</Arrow>
             <Name $side={tgt?.side ?? 'enemy'}>{tgt?.name ?? '???'}</Name>
-            <Dmg $crit={e.isCrit}>-{e.damage}</Dmg>
+            {/* 무효는 '-0' 대신 아래 '효과 없음' 뱃지로만 표기 */}
+            {e.effectiveness > 0 && <Dmg $crit={e.isCrit}>-{e.damage}</Dmg>}
             {e.isCrit && <Badge $c="#fbbf24">{t('cards.battleLog.crit')}</Badge>}
             {e.effectiveness >= 2 && <Badge $c="#34d399">{t('cards.battleLog.superEffective')}</Badge>}
             {e.effectiveness > 0 && e.effectiveness <= 0.5 && <Badge $c="#94a3b8">{t('cards.battleLog.notEffective')}</Badge>}

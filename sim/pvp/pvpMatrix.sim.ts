@@ -22,9 +22,10 @@ describe('P0a: PvP 보드 매트릭스', () => {
     const boards = await buildAllBoards();
     const n = boards.length;
 
-    // ── 풀리그: 모든 쌍 × 시드 40 × 양방향(선공 교대) ────────────────────
-    // simulateBattle은 매 턴 team1이 먼저 공격 → 선공(p1) 이점이 존재한다.
-    // 공정 비교를 위해 각 쌍을 양방향으로 돌려 평균, 선공 이점은 별도 지표로 측정.
+    // ── 풀리그: 모든 쌍 × 시드 40 × 양방향(p1/p2 교대) ────────────────────
+    // 예전엔 simulateBattle이 team1 전원 → team2 전원의 진영 순차라 선공 이점이 컸다(거울전 91.5%).
+    // 지금은 양 팀 통합 스피드 정렬로 교정됐지만, 양방향 평균은 그대로 유지한다 —
+    // 편향이 재발하면 firstMoverEdge 지표가 0.5를 벗어나 바로 드러난다(회귀 감시용).
     const winrate: number[][] = Array.from({ length: n }, () => Array(n).fill(0));
     let p1Wins = 0;
     let orderedGames = 0;
@@ -68,21 +69,25 @@ describe('P0a: PvP 보드 매트릭스', () => {
     const idx = (name: string) => boards.findIndex(b => b.name === name);
     const pair = (a: string, b: string) => winrate[idx(a)][idx(b)];
 
-    // ⚠ 이 엔진(PvPBattleService)은 시너지 버프를 적용하지 않는다(알려진 엔진 드리프트 —
-    //   인간전 아레나는 getBuffedStats 적용). 여기의 타입/세대 보드 비교는 순수하게
-    //   "타입 구성(공격/방어 상성)" 가치만 측정한다. 시너지 버프 가치는 아레나 매트릭스에서 측정.
+    // [측정 설계 수정] 예전엔 "water6 vs nosyn6", "gen1x6 vs nosyn6" 승률로 시너지 가치를
+    //   쟀는데, 이건 시너지를 재는 게 아니라 **두 보드의 종족 궁합**을 재는 것이었다.
+    //   실제로 gen1x6은 노말 기술 4개를 들고 있고 nosyn6에는 노말 무효인 단칼빙(강철/고스트)이
+    //   있어서, 시너지가 정상 작동해도 41%가 나왔다(오탐 WARN의 정체).
+    //   시너지 단독 가치는 sim:fairness의 "시너지 ON/OFF 거울전"이 잰다 — 같은 보드끼리
+    //   한쪽만 버프를 켜므로 종족/타입 교란이 원천적으로 없다.
+    //   여기서는 보드 궁합 자체를 기록만 하고 판정하지 않는다.
     const checks = [
       {
-        name: '타입 구성 가치 (water6 vs nosyn6, 등가골드·시너지버프 미적용 엔진)',
+        name: '보드 궁합 water6 vs nosyn6 (참고 — 시너지 단독가치는 sim:fairness)',
         value: pair('water6', 'nosyn6'),
-        expect: '≈0.5 안팎 (참고 지표)',
-        pass: pair('water6', 'nosyn6') >= 0.35 && pair('water6', 'nosyn6') <= 0.65,
+        expect: '참고 (물 6마리 vs 잡탕 6마리의 상성 결과)',
+        pass: true,
       },
       {
-        name: '세대 보드 vs 무시너지 보드 (등가골드·시너지버프 미적용 엔진)',
+        name: '보드 궁합 gen1x6 vs nosyn6 (참고 — 시너지 단독가치는 sim:fairness)',
         value: pair('gen1x6', 'nosyn6'),
-        expect: '≈0.5 안팎 (참고 지표)',
-        pass: pair('gen1x6', 'nosyn6') >= 0.35 && pair('gen1x6', 'nosyn6') <= 0.65,
+        expect: '참고 (1세대 스타터 6마리 vs 잡탕 6마리의 상성 결과)',
+        pass: true,
       },
       {
         name: '진화 가치 (charizard3 vs charmander3, 동일 구매가/레벨)',
@@ -90,11 +95,15 @@ describe('P0a: PvP 보드 매트릭스', () => {
         expect: '>0.5 (진화가 이득이어야 함)',
         pass: pair('charizard3', 'charmander3') > 0.5,
       },
+      // [참고 지표로 강등] 구매가 곡선이 k·(BST/600)^1.5 로 바뀌면서 이 두 보드는 더 이상
+      //   등가골드가 아니다(nosyn6 ~603G vs expensive3 ~774G). 고정 로스터라 골드를 맞출 수
+      //   없으므로 판정에서 빼고, 수량vs품질의 정식 측정은 sim:gold(goldValue.sim.ts)가 맡는다.
+      //   그쪽은 매 실행마다 현재 가격 곡선을 역산해 동일 골드 보드를 새로 구성한다.
       {
-        name: '수량vs품질: 저가6 vs 고가3 (근사 등가골드) — 45~65% 밴드',
+        name: '수량vs품질 (참고용 — 등가골드 아님, 정식 측정은 npm run sim:gold)',
         value: pair('nosyn6', 'expensive3'),
-        expect: '0.35~0.65 (한쪽 일방적이면 밸런스 문제)',
-        pass: pair('nosyn6', 'expensive3') >= 0.35 && pair('nosyn6', 'expensive3') <= 0.65,
+        expect: `참고 (골드 ${buyGoldOf(boards[idx('nosyn6')])}G vs ${buyGoldOf(boards[idx('expensive3')])}G)`,
+        pass: true,
       },
       {
         name: '선공(p1) 이점 — AI vs AI 매치는 userId 정렬순이 선공이 됨',
@@ -161,6 +170,9 @@ describe('P0a: PvP 보드 매트릭스', () => {
     console.log('\n=== PvP 매트릭스 요약 ===');
     ranking.forEach((r, k) => console.log(`${k + 1}. ${r.name}: 평균승률 ${pct(r.avg)} (구매 ${r.buyGold}G)`));
     checks.forEach(c => console.log(`${c.pass ? 'PASS' : 'WARN'} ${c.name}: ${pct(c.value)}`));
+
+    // (시너지 과대 감시는 sim:fairness의 ON/OFF 거울전으로 이관 — 여기서 보던 보드 대결은
+    //  종족 궁합이 섞여 있어 과대/과소를 판별할 수 없었다.)
 
     // 하네스 자체 무결성(밸런스 판정은 리포트로): 매트릭스가 완전하고 대칭 합이 1인지
     for (let i = 0; i < n; i++) {

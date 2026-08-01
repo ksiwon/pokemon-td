@@ -7,12 +7,39 @@
 import { pokeAPI, PokemonData } from '../api/pokeapi';
 import { GameMove, MoveEffect, PokemonAbility } from '../types/game';
 import { TowerDetail } from '../types/multiplayer';
-import { mapAbilityToGameEffect, getCriticalChance, getAOEDamageMultiplier } from '../utils/abilities';
+import {
+  mapAbilityToGameEffect, getCriticalChance, getAOEDamageMultiplier, getLifestealRatio,
+  toWireAbility,
+} from '../utils/abilities';
 import { rng } from '../utils/rng';
+import { BALANCE_OVERRIDES } from './balanceOverrides';
 
 /** 구매가 공식: 25 + BST/600×200 (약 25~265G). PokemonPicker와 AI 밸런스 기준. */
+/**
+ * 구매가 곡선. 기본값 `269 × (BST/600)^1.5`.
+ *
+ * [밸런스] 구식 `25 + (BST/600)*200` 은 두 가지 문제가 있었다(sim:gold 측정).
+ *   1. 고정비 25G가 약한 유닛에 비율상 더 무거웠다 → 스탯 1점당 가격이
+ *      BST 275에서 0.42G, BST 625에서 0.37G. 강한 놈이 골드당 스탯이 더 쌌다.
+ *   2. 가격이 BST에 선형인데 전투력은 초선형이다. 데미지 ∝ 공/방 이라 스탯을
+ *      한 유닛에 몰면 딜과 생존이 곱으로 작용한다.
+ *   결과: 같은 골드에서 고가 3마리가 저가 6마리를 100% 이겼다(0.1% 승률).
+ *
+ * 전력 모델 `N²·BST³` 에서 예산 G의 마리 수 N=G/cost 를 대입하면
+ * 전력 ∝ (G/cost)²·BST³ 이고, 이게 BST와 무관해지려면 cost ∝ BST^1.5 다.
+ * k=269 는 BST 450을 구식 가격(175G)에 맞춘 값 — 총 지출 규모를 가장 덜 흔든다.
+ *   BST 300: 125G → 95G · BST 450: 175G(불변) · BST 600: 225G → 269G
+ */
+export const COST_CURVE_EXPONENT = 1.5;
+export const COST_CURVE_K = 269;
+/** 최저 구매가 — 극저 BST가 사실상 공짜가 되어 6칸 채우기가 지배전략이 되는 것 방지. */
+export const COST_MIN = 40;
+
 export function computePokemonCost(statTotal: number): number {
-  return Math.floor(25 + (statTotal / 600) * 200);
+  const c = BALANCE_OVERRIDES.costCurve;
+  const exponent = c?.exponent ?? COST_CURVE_EXPONENT;
+  const k = c?.k ?? COST_CURVE_K;
+  return Math.max(COST_MIN, Math.round(k * Math.pow(statTotal / 600, exponent)));
 }
 
 export function statTotalOf(p: PokemonData): number {
@@ -194,6 +221,11 @@ export const buildTowerDetails = (towers: any[]): TowerDetail[] =>
       equippedMoves: t.equippedMoves,
       critChance,
       aoeBonus,
-      lifesteal:     0,
+      // [FIX] 흡혈 특성이 멀티에서 통째로 죽어 있었다(상수 0 하드코딩).
+      //   크리·AOE 특성은 위에서 계산해 넘기는데 흡혈만 누락 — 싱글(GameManager)과 동일하게 반영.
+      lifesteal:     getLifestealRatio(ability),
+      // [REJOIN-FIX] 특성 원본(설명문 제외)도 함께 보낸다. 전투는 위 파생값만 쓰지만,
+      //   재접속 복원이 이걸 못 받으면 다음 업로드에서 파생값이 통째로 리셋된다.
+      ability:       ability ? toWireAbility(ability) : null,
     });
   });

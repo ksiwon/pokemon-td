@@ -1,7 +1,9 @@
 // src/game/GameManager.ts
 import { useGameStore, INITIAL_LIVES_SINGLE } from '../store/gameStore';
 import { GamePokemon, Enemy, Projectile, Position, GameMove } from '../types/game';
-import { calculateDamage, getTypeEffectiveness, stabMultiplier } from '../utils/typeEffectiveness';
+import {
+  calculateDamage, getTypeEffectiveness, stabMultiplier, damageRandomFactor,
+} from '../utils/typeEffectiveness';
 import {
   heldDamageMultiplier, heldCritBonus, heldLifesteal,
   heldRecoilRatio, heldRegenPerSec,
@@ -13,6 +15,17 @@ import { getCriticalChance, getAOEDamageMultiplier } from '../utils/abilities';
 import { rng } from '../utils/rng';
 import { BALANCE_OVERRIDES } from './balanceOverrides';
 import { getBuffedStats } from '../utils/synergyManager';
+
+/**
+ * 싱글TD 데미지 난수 on/off. 아레나·AI서비스·카드는 전부 0.85~1.0을 굴리는데
+ * 싱글TD만 없어서 "같은 입력이면 항상 같은 데미지"였다(정합성 매트릭스에서 검출).
+ * 켜면 평균 딜이 0.925배가 되므로 밸런스 영향이 있다 → 시뮬로 재고 켠다.
+ */
+export const DAMAGE_VARIANCE_DEFAULT = true;
+function singleDamageRandom(): number {
+  const on = BALANCE_OVERRIDES.singleDamageVariance ?? DAMAGE_VARIANCE_DEFAULT;
+  return on ? damageRandomFactor(rng()) : 1;
+}
 import { databaseService } from '../services/DatabaseService';
 import { getMapById, getFacilityTiles } from '../data/maps';
 import { pokeAPI } from '../api/pokeapi';
@@ -369,7 +382,10 @@ export class GameManager {
       }
     }
 
-    const dmg = calculateDamage(enemy.attack, buffedStats.defense, 40, eff, false, 1);
+    // [통일] 데미지 난수 — 아레나·AI서비스·카드는 모두 0.85~1.0을 굴리는데 싱글TD만 없었다.
+    const dmg = calculateDamage(
+      enemy.attack, buffedStats.defense, 40, eff, false, 1, singleDamageRandom()
+    );
     // [BUG-FIX] ability.effect === 'tank' 적용: 피해 감소 특성 반영
     const tankMultiplier = tower.ability?.effect === 'tank' ? (tower.ability.value ?? 0.75) : 1.0;
     const finalDmg = Math.max(1, Math.floor(dmg * finalDamageMultiplier * tankMultiplier));
@@ -630,7 +646,9 @@ export class GameManager {
 
     const defense =
       proj.damageClass === 'physical' ? enemy.defense : enemy.specialDefense;
-    let dmg = calculateDamage(proj.attackPower, defense, proj.damage, eff, isCrit, stab);
+    let dmg = calculateDamage(
+      proj.attackPower, defense, proj.damage, eff, isCrit, stab, singleDamageRandom()
+    );
 
     // 지닌 도구 데미지 배율 (생명의구슬/달인의띠/근육밴드/신비의구슬)
     if (held) {

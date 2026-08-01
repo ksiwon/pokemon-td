@@ -12,6 +12,23 @@ export interface BalanceOverrides {
   xpSplit?: boolean;
   /** 사탕 레벨당 단가 (기본 25) */
   candyCostPerLevel?: number;
+  /**
+   * 구매가 곡선 교체 — "수량 vs 품질" 실험용.
+   * 기본식은 `25 + (BST/600)*200` 으로 BST에 **선형**인데, 전투력은 BST에 초선형이다
+   * (데미지 ∝ 공/방 → 스탯을 한 유닛에 몰면 딜·생존이 곱으로 작용). 게다가 고정비 25G가
+   * 골드당 BST를 고BST 쪽에 유리하게 만든다(측정: BST/G 2.37 → 2.67).
+   * 결과적으로 같은 골드에서 3마리가 6마리를 100% 이긴다(sim:gold).
+   *   exponent: cost = k * (BST/600)^exponent  (1.0이면 사실상 기존과 같은 형태)
+   *   k:        BST 600 기준가
+   */
+  costCurve?: { exponent: number; k: number };
+  /**
+   * 싱글TD 데미지 난수(0.85~1.0) 사용 여부 — 다른 세 엔진과의 통일 실험용.
+   * 싱글TD만 난수가 없어 같은 입력이면 항상 같은 데미지였다. 켜면 평균 딜이 0.925배로
+   * 내려가므로(≈7.5% 하향) 사다리 클리어율에 영향이 있다 → A/B로 재고 결정한다.
+   * 미설정 시 프로덕션 기본값을 따른다(DAMAGE_VARIANCE_DEFAULT).
+   */
+  singleDamageVariance?: boolean;
 }
 
 export let BALANCE_OVERRIDES: BalanceOverrides = {};

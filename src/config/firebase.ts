@@ -70,9 +70,26 @@ function initAppCheck(app: ReturnType<typeof initializeApp>): void {
     return;
   }
   try {
-    // 개발 빌드에서는 디버그 토큰을 사용(콘솔에 출력되는 토큰을 Firebase 콘솔에 등록).
+    // 개발 빌드는 reCAPTCHA 대신 '디버그 토큰'으로 통과한다(구글이 정한 로컬 개발 경로).
+    //   → 사이트 키는 DEV에서 검증에 쓰이지 않는다. .env에 키를 넣어도 이 토큰을
+    //     Firebase 콘솔에 등록하지 않으면 enforce가 켜진 순간 로컬이 막힌다.
+    //
+    //   VITE_FIREBASE_APPCHECK_DEBUG_TOKEN을 지정하면 그 값을 고정 토큰으로 쓴다.
+    //   지정하지 않으면 SDK가 브라우저 프로필마다 랜덤 UUID를 새로 만들어 콘솔에 찍고,
+    //   기기·브라우저를 바꿀 때마다 등록을 반복해야 한다.
+    //
+    //   ※ 이 토큰은 App Check를 무력화하는 값이다. 커밋·프로덕션 환경변수 금지.
+    //     아래 분기는 PROD 빌드에서 통째로 제거되므로 배포 번들에는 남지 않는다.
     if (import.meta.env.DEV) {
-      (globalThis as any).FIREBASE_APPCHECK_DEBUG_TOKEN = true;
+      const debugToken = import.meta.env.VITE_FIREBASE_APPCHECK_DEBUG_TOKEN as string | undefined;
+      (globalThis as any).FIREBASE_APPCHECK_DEBUG_TOKEN = debugToken || true;
+      if (!debugToken) {
+        console.info(
+          '[firebase] App Check 디버그 토큰 자동 생성 모드입니다. 아래 로그의 토큰을 ' +
+          'Firebase 콘솔(App Check → 앱 → ⋮ → 디버그 토큰 관리)에 등록하세요. ' +
+          '.env의 VITE_FIREBASE_APPCHECK_DEBUG_TOKEN에 고정값을 넣으면 재등록이 필요 없습니다.'
+        );
+      }
     }
     initializeAppCheck(app, {
       provider: new ReCaptchaV3Provider(siteKey),

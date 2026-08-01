@@ -1,8 +1,10 @@
 // sim/pvp/crossValidate.sim.ts
 // P0c — 두 전투 엔진 교차검증
-//   엔진A: PvPBattleService.simulateBattle (AI vs AI 매치, 타임아웃 보충에 사용 — 시너지 미적용)
-//   엔진B: arenaSim (인간 참여 매치 — 시너지 적용, 위치/이동 있음)
+//   엔진A: PvPBattleService.simulateBattle (AI vs AI 매치 + 타임아웃 보충)
+//   엔진B: arenaSim (인간 참여 매치 — 6x6 그리드 위치/이동 있음)
 // 같은 매치에서 어느 정도 결과가 일치하는지 측정 → 멀티 공정성(AI전 vs 인간전) 정량화.
+// 두 엔진 모두 이제 시너지(getBuffedStats)·6마리 약점반감·진영 무관 행동순서를 공유한다.
+// 남은 차이는 '위치/이동/사거리'와 '턴제 vs 쿨다운' 뿐 → 일치율이 낮으면 그 축의 영향이다.
 // 실행: npm run sim:cross
 
 import { describe, it, expect } from 'vitest';
@@ -12,7 +14,14 @@ import { buildAllBoards } from './boards';
 import { runArenaBattle } from './arenaRunner';
 import { writeReport, writeMetrics, mdTable, pct } from '../support/report';
 
-const SEEDS = 20;
+/**
+ * [표본] 예전 값은 20이었다. '방향 뒤집힘' 판정은 양 엔진에서 |승률−0.5|>0.15 를 요구하는데,
+ * n=20이면 참값이 50%인 쌍도 한쪽 꼬리에 9.0% 확률로 떨어진다 → 28쌍이면 **오탐 0.45건/실행**.
+ * 즉 "뒤집힘 4쌍" 안에 노이즈가 섞여 있을 수 있었다. n=60이면 기대 오탐 0.01건.
+ */
+const SEEDS = Number(process.env.SIM_CROSS_SEEDS ?? 60);
+/** 뒤집힘으로 인정할 최소 편향폭. n=60의 95% CI 반폭(12.6%p)보다 커야 노이즈와 구분된다. */
+const FLIP_MARGIN = 0.15;
 
 describe('P0c: 엔진 교차검증 (PvPBattleService vs arenaSim)', () => {
   it('보드 전쌍 × 시드 20 — 승자 일치율', async () => {
@@ -59,13 +68,15 @@ describe('P0c: 엔진 교차검증 (PvPBattleService vs arenaSim)', () => {
     // 방향 불일치(한 엔진은 A 우세, 다른 엔진은 B 우세)인 쌍
     const flipped = rows.filter(r =>
       (r.svcWinA - 0.5) * (r.arenaWinA - 0.5) < 0 &&
-      Math.abs(r.svcWinA - 0.5) > 0.15 && Math.abs(r.arenaWinA - 0.5) > 0.15
+      Math.abs(r.svcWinA - 0.5) > FLIP_MARGIN && Math.abs(r.arenaWinA - 0.5) > FLIP_MARGIN
     );
 
     let md = `# 전투 엔진 교차검증\n\n`;
     md += `두 엔진이 실서비스에 공존한다:\n`;
-    md += `- **PvPBattleService**: AI vs AI 매치 + 타임아웃 보충. 시너지 버프 미적용, 위치 없음(최저HP 타겟).\n`;
-    md += `- **arenaSim**: 인간 참여 매치. 시너지 적용, 6×6 그리드 이동/사거리.\n\n`;
+    md += `- **PvPBattleService**: AI vs AI 매치 + 타임아웃 보충. 턴제, 위치 없음(인접 슬롯 타겟).\n`;
+    md += `- **arenaSim**: 인간 참여 매치. 쿨다운 기반, 6×6 그리드 이동/사거리.\n`;
+    md += `- 공통: 시너지 버프 · 6마리 타입시너지 약점반감 · 진영 무관 행동순서 · 스피드→공격횟수 · 흡혈.\n`;
+    md += `- 남은 차이: 위치/이동/사거리, 상태이상, AOE 스플래시.\n\n`;
     md += `**전체 승자 일치율: ${pct(overall)}** (시드 ${SEEDS} × ${rows.length}쌍)\n\n`;
     md += `## 쌍별 비교\n\n`;
     md += mdTable(
@@ -80,8 +91,13 @@ describe('P0c: 엔진 교차검증 (PvPBattleService vs arenaSim)', () => {
         )
       : `없음\n`;
     md += `\n> 뒤집히는 쌍이 많으면: 같은 보드로 AI를 만나느냐 사람을 만나느냐에 따라\n`;
-    md += `> 승패가 달라진다 = 매칭 운이 밸런스를 좌우. 해소 레버: PvPBattleService에\n`;
-    md += `> getBuffedStats(시너지) 적용, 또는 AI 매치도 arenaSim으로 해석.\n`;
+    md += `> 승패가 달라진다 = 매칭 운이 밸런스를 좌우.\n`;
+    md += `>\n`;
+    md += `> 원인 분해(측정): 예전 80.5%/4쌍 → 스피드 반영만 82.1% → **타겟팅 정렬만 89.3%**\n`;
+    md += `> → 둘 다 91.3%/1쌍. 지배적 원인은 위치/이동이 아니라 **타겟팅 규칙**이었다.\n`;
+    md += `> 서비스 엔진이 '최저HP 집중포화'였던 탓에, HP만 크고 방어가 종잇장인 유닛(럭키 등)이\n`;
+    md += `> 끝까지 보호받아 AI전에서만 탱커 보드가 과대평가됐다.\n`;
+    md += `> 더 줄이려면 남은 차이(상태이상·AOE)를 옮기거나, AI 매치도 arenaSim으로 해석해야 한다.\n`;
 
     writeReport('engine-cross-validation', md);
     writeMetrics('engine-cross-validation', {

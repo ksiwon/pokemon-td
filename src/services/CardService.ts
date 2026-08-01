@@ -58,7 +58,7 @@ export const PACK_DEFS: Record<PackType, PackDef> = {
 
 type Listener = (state: CardSaveState) => void;
 
-class CardService {
+export class CardService {
   private state: CardSaveState;
   private snapshot: CardSaveState;
   private listeners = new Set<Listener>();
@@ -215,7 +215,14 @@ class CardService {
       entry.stars += 1;
       starUp = true;
     }
-    return { pokemonId, rarity, isNew: false, starUp, stars: entry.stars, refundCoins: 0 };
+    // 최대 별에 도달하고도 남은 중복은 영영 쓸 데가 없다 → 그 자리에서 코인 환급.
+    let refundCoins = 0;
+    if (entry.stars >= MAX_STARS && entry.copies > 0) {
+      refundCoins = RARITY_REFUND[rarity] * entry.copies;
+      entry.copies = 0;
+      this.state.wallet.coins += refundCoins;
+    }
+    return { pokemonId, rarity, isNew: false, starUp, stars: entry.stars, refundCoins };
   }
 
   /** 도감 열람 시 NEW 뱃지 해제. */
@@ -385,6 +392,39 @@ class CardService {
     return s && s.weekId === wk ? s.wins : 0;
   }
 
+  // ─── 랜덤 대전 일일 판수 제한 ────────────────────────────────────────────────
+  // [FREE-TIER/무결성] 매칭 1회 = Firestore 쿼리 2회(최대 10 read)에 주간 승수 랭킹까지
+  //   올라간다. 제한이 없으면 "다시 매칭" 연타로 시즌 보드를 승수로 도배할 수 있고
+  //   무료 쿼터도 샌다. 하루 상한을 둬 실력이 아니라 시간만으로 1위가 되는 걸 막는다.
+  static readonly PVP_DAILY_LIMIT = 30;
+
+  /** 오늘 남은 랜덤 대전 판수(KST 자정 리셋). */
+  getPvpMatchesLeft(): number {
+    const today = dayId();
+    const d = this.state.daily;
+    const used = d && d.dayId === today ? (d.pvpMatches ?? 0) : 0;
+    return Math.max(0, CardService.PVP_DAILY_LIMIT - used);
+  }
+
+  /** 소모한 1판 되돌리기 — 상대를 못 찾았거나 매칭이 실패한 경우(플레이어 책임 아님). */
+  refundPvpMatch(): void {
+    const d = this.state.daily;
+    if (!d || d.dayId !== dayId() || !d.pvpMatches) return;
+    d.pvpMatches -= 1;
+    this.persist();
+  }
+
+  /** 대전 1판 소모 기록. 상한을 넘었으면 false(호출자가 매칭을 중단). */
+  consumePvpMatch(): boolean {
+    const today = dayId();
+    let d = this.state.daily;
+    if (!d || d.dayId !== today) { d = { dayId: today, winClaimed: false, pvpMatches: 0 }; this.state.daily = d; }
+    if ((d.pvpMatches ?? 0) >= CardService.PVP_DAILY_LIMIT) return false;
+    d.pvpMatches = (d.pvpMatches ?? 0) + 1;
+    this.persist();
+    return true;
+  }
+
   /**
    * 대전 결과 기록(통산 + 주간). 승리 시 이번 주 누적 승수를 반환
    * (=Firestore 주간 랭킹에 기록할 값), 패배면 null.
@@ -420,7 +460,12 @@ class CardService {
     const d = this.state.daily;
     if (d && d.dayId === today && d.winClaimed) return null;
 
-    this.state.daily = { dayId: today, winClaimed: true };
+    // 같은 날짜면 pvpMatches를 보존(통째로 덮어쓰면 일일 판수 카운터가 리셋된다)
+    this.state.daily = {
+      dayId: today,
+      winClaimed: true,
+      pvpMatches: d && d.dayId === today ? (d.pvpMatches ?? 0) : 0,
+    };
     const reward = { coins: 30, starShards: 1 };
     this.state.wallet.coins += reward.coins;
     this.state.wallet.starShards += reward.starShards;

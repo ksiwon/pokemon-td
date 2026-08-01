@@ -42,6 +42,7 @@ import {
   GamePhase, MultiplayerGameState, RoundMatchup, PvPBattleResult,
 } from '../types/multiplayer';
 import { pvpBattleService } from './PvPBattleService';
+import { BASE_CRIT_CHANCE, toWireAbility } from '../utils/abilities';
 import { calcBattleRewards } from './battleRewards';
 import { authService } from './AuthService';
 import { databaseService } from './DatabaseService';
@@ -64,9 +65,11 @@ const MAX_ACTIVE_ROOMS = 12;
 //   레이스 컨디션 방지는 GameLayout의 "로컬 낙관적 갱신 플래그"가 담당.
 // [C2-FIX] isAlive 제거 — 생존 여부는 playerDefeated/leaveRoom 단일 경로만 변경.
 //   클라이언트 동기화가 isAlive:false를 먼저 써서 탈락 순위·레이팅이 누락되던 버그 방지.
+// [REWARD-LEDGER] appliedReward 는 "내가 여기까지 반영했다"는 클라 마커라 클라가 쓴다.
+//   서버 원장(rewardLedger)은 여기 없다 — submitBattleResult 트랜잭션 전용.
 const CLIENT_WRITABLE_PLAYER_FIELDS: Array<keyof PlayerGameState> = [
   'wave', 'towers', 'waveCompleted',
-  'money', 'lives',
+  'money', 'lives', 'appliedReward',
 ];
 
 class MultiplayerService {
@@ -501,6 +504,13 @@ class MultiplayerService {
     });
 
     if (shouldDelete) {
+      // [FIX] 프레즌스 해제를 방 삭제보다 **먼저** 한다.
+      //   presenceCleanup은 `presence/{roomId}/{uid}`에 offline 페이로드를 쓴다. 예전엔
+      //   deleteRoom() → clearCurrentRoom() 순서라, 방과 하위 경로를 다 지운 **뒤에** 그 쓰기가
+      //   나가 presence 노드가 되살아났다. deleteRoom은 이미 성공으로 보고 회수 큐에서 항목을
+      //   빼버린 뒤라 다시 훑지도 않는다 → 영구 고아. (RTDB 저장 한도를 갉는 그 경로)
+      //   sim/multi2/lobby.sim.ts "마지막 사람이 나가면 …" 이 이 순서를 못 박는다.
+      this.releasePresence();
       await this.deleteRoom(roomId);
     } else {
       // gameStates 에서 isAlive=false 표시
@@ -871,6 +881,14 @@ class MultiplayerService {
    *   - currentCooldown 등 런타임 필드 제거
    *   - equippedMoves를 name 기준 사전순 정렬 (Firebase key 순서 의존 제거)
    *   - undefined 제거
+   *
+   * ⚠ 이 화이트리스트는 **멀티 전투의 실제 입력**이다. BattlePhaseUI 는 자기 팀조차
+   *   towerDetailsRef(= 여기를 통과해 RTDB 를 한 바퀴 돈 값)에서 꺼내므로,
+   *   여기서 빠진 필드는 그 순간 멀티에서 존재하지 않는 것이 된다.
+   *   [FIX] critChance 가 빠져 있어 크리 특성(blaze/torrent/overgrow/guts/swarm/
+   *   huge-power/pure-power/hustle → ×2)이 멀티에서 통째로 죽어 있었다. lifesteal/aoeBonus 는
+   *   살아 있었으므로 "특성은 되는데 크리만 안 되는" 조용한 비대칭이었다.
+   *   sim/multi2/wireFidelity.sim.ts 가 이 목록의 소실 필드를 매번 전수 대조한다.
    */
   private normalizeTowerDetails(towerDetails: TowerDetail[]): TowerDetail[] {
     return (towerDetails || []).map(td => {
@@ -900,6 +918,9 @@ class MultiplayerService {
         equippedMoves: sortedMoves,
         lifesteal: td.lifesteal ?? 0,
         aoeBonus: td.aoeBonus ?? 0,
+        critChance: td.critChance ?? BASE_CRIT_CHANCE,
+        // [REJOIN-FIX] 전투에는 안 쓰이지만 재접속 복원이 특성을 되살리려면 필요하다.
+        ability: td.ability ? toWireAbility(td.ability) : null,
       };
     });
   }
@@ -1087,6 +1108,14 @@ class MultiplayerService {
    *
    * 탈락 처리: 클라이언트가 보상 적용 후 lives <= 0 이면 playerDefeated() 호출.
    * 여기서는 트랜잭션으로 중복만 차단.
+   *
+   * [REWARD-LEDGER FIX] 예전엔 여기서 끝이라 **배틀 페이즈에 접속이 끊겨 있으면 패배
+   *   페널티가 통째로 증발**했다. 클라의 적용 조건이 `r.roundNumber === currentRound`
+   *   라서 그 창을 놓치면 끝이고, 재접속 경로는 lastAppliedRound 를 현재 라운드로
+   *   올려 한 번 더 막았다("질 것 같으면 끊어라"가 성립). sim/multi2 S11 이 실측했다.
+   *   → 여기서 플레이어별 **누적 보상 원장(rewardLedger)** 을 함께 적는다. 클라는
+   *   자기가 반영한 누적합(appliedReward)과의 차이만 적용하므로, 며칠을 끊겼다 와도
+   *   battleResults 가 잘려 나갔어도 정확히 한 번 정산된다.
    */
   async submitBattleResult(roomId: string, result: PvPBattleResult): Promise<void> {
     const gsRef = ref(rtdb, `gameStates/${roomId}`);
@@ -1134,10 +1163,20 @@ class MultiplayerService {
           newMoney = (p.money ?? 0) + goldDelta;
         }
 
+        // [REWARD-LEDGER] 누적 원장. AI 는 위에서 이미 즉시 반영했으므로 원장을 읽는 주체가
+        //   없지만(AI 클라는 재접속하지 않는다), 경로를 하나로 유지하려고 똑같이 적는다.
+        const prev = p.rewardLedger ?? { gold: 0, lives: 0, round: 0 };
+        const rewardLedger = {
+          gold: prev.gold + goldDelta,
+          lives: prev.lives + livesDelta,
+          round: result.roundNumber,
+        };
+
         return {
           ...p,
           lives: newLives,
           money: newMoney,
+          rewardLedger,
           battleRecord: {
             wins: isWinner ? (p.battleRecord?.wins ?? 0) + 1 : (p.battleRecord?.wins ?? 0),
             losses: isLoser ? (p.battleRecord?.losses ?? 0) + 1 : (p.battleRecord?.losses ?? 0),
@@ -1339,6 +1378,9 @@ class MultiplayerService {
     isAlive: boolean;
     currentRound: number;
     currentPhase: GamePhase;
+    /** [REWARD-LEDGER] 서버가 확정한 누적 보상 / 이 클라가 이미 반영한 누적 보상. */
+    rewardLedger: { gold: number; lives: number; round: number };
+    appliedReward: { gold: number; lives: number };
   } | null> {
     try {
       const [gsSnap, tdSnap] = await Promise.all([
@@ -1363,6 +1405,8 @@ class MultiplayerService {
         isAlive: playerState.isAlive,
         currentRound: gs.currentRound,
         currentPhase: gs.currentPhase,
+        rewardLedger: playerState.rewardLedger ?? { gold: 0, lives: 0, round: 0 },
+        appliedReward: playerState.appliedReward ?? { gold: 0, lives: 0 },
       };
     } catch (err) {
       console.error('[MS] getPlayerStateForRejoin error:', err);
@@ -1540,10 +1584,15 @@ class MultiplayerService {
     }
   }
 
+  /** presence 훅 해제(멱등). 방 삭제 전에 먼저 불러야 고아 노드가 되살아나지 않는다. */
+  private releasePresence(): void {
+    if (this.presenceCleanup) { this.presenceCleanup(); this.presenceCleanup = null; }
+  }
+
   clearCurrentRoom(): void {
     this.currentRoomId = null;
     localStorage.removeItem('currentRoomId');
-    if (this.presenceCleanup) { this.presenceCleanup(); this.presenceCleanup = null; }
+    this.releasePresence();
     // 화면은 이미 내려갔는데 방에 묶여 있어 보류됐던 연결 반납을 여기서 마무리.
     this.maybeReleaseConnection();
   }

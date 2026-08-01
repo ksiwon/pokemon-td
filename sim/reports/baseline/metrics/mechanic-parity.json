@@ -1,0 +1,103 @@
+{
+  "rows": [
+    {
+      "mechanic": "이중타입 방어 (2번째 타입까지 곱)",
+      "td": "✅ 반영",
+      "arena": "✅ 반영",
+      "svc": "✅ 반영",
+      "card": "✅ 반영"
+    },
+    {
+      "mechanic": "무효 상성 (노말 → 고스트)",
+      "td": "✅ ×0.1",
+      "arena": "✅ 반영",
+      "svc": "✅ 반영",
+      "card": "✅ 반영"
+    },
+    {
+      "mechanic": "STAB (자속 1.5배)",
+      "td": "✅ 반영 (stabMultiplier, 테라 포함)",
+      "arena": "✅ 반영",
+      "svc": "✅ 반영",
+      "card": "➖ 해당없음"
+    },
+    {
+      "mechanic": "물리/특수 분리",
+      "td": "✅ 반영 (damageClass로 방어/특방 선택)",
+      "arena": "✅ 반영",
+      "svc": "✅ 반영",
+      "card": "✅ 반영"
+    },
+    {
+      "mechanic": "레벨 → 데미지 공식 (2L/5+2)",
+      "td": "❌ 미반영",
+      "arena": "✅ 반영",
+      "svc": "✅ 반영",
+      "card": "✅ 반영"
+    },
+    {
+      "mechanic": "크리티컬",
+      "td": "✅ 반영",
+      "arena": "✅ 반영",
+      "svc": "✅ 반영",
+      "card": "✅ 반영"
+    },
+    {
+      "mechanic": "명중률 (빗나감)",
+      "td": "✅ 반영 (hitChance = accuracy/100)",
+      "arena": "✅ 반영",
+      "svc": "✅ 반영",
+      "card": "➖ 해당없음"
+    },
+    {
+      "mechanic": "데미지 난수폭 (0.85~1.0)",
+      "td": "❌ 미반영",
+      "arena": "✅ 반영",
+      "svc": "✅ 반영",
+      "card": "✅ 반영"
+    },
+    {
+      "mechanic": "6마리 타입시너지 약점반감",
+      "td": "✅ 반영 (GameManager 피격 경로)",
+      "arena": "✅ 반영",
+      "svc": "✅ 반영",
+      "card": "➖ 해당없음"
+    },
+    {
+      "mechanic": "흡혈 (lifesteal)",
+      "td": "✅ 반영 (drainPercent > ability.lifesteal)",
+      "arena": "✅ 반영",
+      "svc": "✅ 반영",
+      "card": "➖ 해당없음"
+    },
+    {
+      "mechanic": "스피드 → 공격 빈도",
+      "td": "✅ 반영 (공격 쿨다운)",
+      "arena": "✅ 반영",
+      "svc": "✅ 반영",
+      "card": "➖ 해당없음"
+    },
+    {
+      "mechanic": "상태이상 부여 (독/화상/마비…)",
+      "td": "✅ 반영 (proj.effect.statusInflict)",
+      "arena": "✅ 반영",
+      "svc": "✅ 반영",
+      "card": "✅ 반영 (화상/독/마비/얼음)"
+    },
+    {
+      "mechanic": "AOE 스플래시 (인접 피해)",
+      "td": "✅ 반영 (aoeRadius + 특성 배율)",
+      "arena": "✅ 반영",
+      "svc": "✅ 반영",
+      "card": "➖ 해당없음"
+    },
+    {
+      "mechanic": "기본 크리 확률 (폴백 상수)",
+      "td": "✅ 4.17%",
+      "arena": "✅ 반영",
+      "svc": "✅ 반영",
+      "card": "✅ 반영"
+    }
+  ],
+  "arenaVsServiceDrift": []
+}

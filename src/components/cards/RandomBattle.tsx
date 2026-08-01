@@ -9,7 +9,7 @@ import { media } from '../../utils/responsive.utils';
 import { ArrowLeft, Swords, FastForward, ChevronsRight, RefreshCw } from 'lucide-react';
 import { pokeAPI } from '../../api/pokeapi';
 import { useTranslation } from '../../i18n';
-import { cardService } from '../../services/CardService';
+import { cardService, CardService } from '../../services/CardService';
 import { databaseService, CardDeckDoc } from '../../services/DatabaseService';
 import { authService } from '../../services/AuthService';
 import { useCardState } from '../../hooks/useCardState';
@@ -70,6 +70,13 @@ export const RandomBattle = ({ onBack }: { onBack: () => void }) => {
   const startMatch = async () => {
     if (!online) return;
     if (deck.length === 0) { alert(t('cards.alerts.deckEmpty')); return; }
+    // [FIX] 일일 판수 상한 — 무제한이면 "다시 매칭" 연타로 주간 승수 랭킹을 도배할 수 있고
+    //   매 판 Firestore 쿼리 2회가 나가 무료 쿼터도 샌다. 차감은 매칭 시작 전에.
+    if (!cardService.consumePvpMatch()) {
+      alert(t('cards.pvp.dailyLimitReached', { n: CardService.PVP_DAILY_LIMIT }));
+      setPhase('idle');
+      return;
+    }
     setPhase('matching');
     try {
       // 1) 내 덱 발행(변경 시에만 실제 write) + 상대 찾기
@@ -79,6 +86,7 @@ export const RandomBattle = ({ onBack }: { onBack: () => void }) => {
       const myPower = myDeck.reduce((s, d) => s + d.stars, 0);
       const opp = await databaseService.getRandomOpponentDeck(myPower, loadRecentOpps());
       if (!opp) {
+        cardService.refundPvpMatch(); // 상대가 없는 건 플레이어 탓이 아니다
         alert(t('cards.pvp.noOpponent'));
         setPhase('idle');
         return;
@@ -111,7 +119,10 @@ export const RandomBattle = ({ onBack }: { onBack: () => void }) => {
           uid: `enemy-${i}`,
         }));
       }
-      if (enemy.length === 0) { alert(t('cards.pvp.opponentLoadFail')); setPhase('idle'); return; }
+      if (enemy.length === 0) {
+        cardService.refundPvpMatch();
+        alert(t('cards.pvp.opponentLoadFail')); setPhase('idle'); return;
+      }
 
       // 4) 시뮬레이션 — 시드는 매칭 쌍+스냅샷 시각으로 고정(같은 상대 재도전 리롤 방지)
       const seed = hashSeed(`${user!.uid}|${opp.userId}|${opp.updatedAt}`);
@@ -152,6 +163,7 @@ export const RandomBattle = ({ onBack }: { onBack: () => void }) => {
       setStep(0);
       setPhase('battle');
     } catch (e) {
+      cardService.refundPvpMatch(); // 전투가 성립하지 않았으므로 판수 반환
       console.warn('[RandomBattle] 매칭/전투 준비 실패', e);
       alert(t('cards.alerts.battlePrepError'));
       setPhase('idle');
@@ -172,7 +184,8 @@ export const RandomBattle = ({ onBack }: { onBack: () => void }) => {
         window.setTimeout(() => setHit(null), 180 / speed);
       }
       setStep(s => s + 1);
-    }, 620 / speed);
+      // 전투 길이 증가에 맞춘 재생 단축(TrainerTower와 동일)
+    }, 380 / speed);
     return () => { if (timer.current) clearTimeout(timer.current); };
   }, [phase, step, log, speed]); // eslint-disable-line react-hooks/exhaustive-deps
 
@@ -227,6 +240,9 @@ export const RandomBattle = ({ onBack }: { onBack: () => void }) => {
   };
 
   const oppName = opponent?.userName || t('cards.pvp.unknownPlayer');
+  // state.daily가 바뀔 때마다 재계산(판수 차감이 즉시 반영)
+  const matchesLeft = useMemo(() => cardService.getPvpMatchesLeft(), [state.daily]);
+  const canMatch = online && deck.length > 0 && matchesLeft > 0;
 
   return (
     <Root>
@@ -245,9 +261,13 @@ export const RandomBattle = ({ onBack }: { onBack: () => void }) => {
               : t('cards.pvp.desc', { n: deck.length })}
           </Desc>
           {!online && <OfflineHint>{t('cards.pvp.loginNeeded')}</OfflineHint>}
-          <StartBtn $on={online && deck.length > 0} onClick={startMatch} disabled={!online || deck.length === 0}>
+          {online && matchesLeft === 0 && (
+            <OfflineHint>{t('cards.pvp.dailyLimitReached', { n: CardService.PVP_DAILY_LIMIT })}</OfflineHint>
+          )}
+          <StartBtn $on={canMatch} onClick={startMatch} disabled={!canMatch}>
             <Swords size={18} /> {t('cards.pvp.find')}
           </StartBtn>
+          {online && <Hint>{t('cards.pvp.dailyLeft', { n: matchesLeft, total: CardService.PVP_DAILY_LIMIT })}</Hint>}
           <Hint>{t('cards.pvp.hint')}</Hint>
         </Center>
       )}
@@ -298,10 +318,12 @@ export const RandomBattle = ({ onBack }: { onBack: () => void }) => {
               </RewardRow>
             )}
             <ResultBtns>
-              <PrimaryBtn onClick={() => { reset(); startMatch(); }}>
-                <RefreshCw size={14} style={{ marginRight: 6, verticalAlign: -2 }} />
-                {t('cards.pvp.rematch')}
-              </PrimaryBtn>
+              {matchesLeft > 0 && (
+                <PrimaryBtn onClick={() => { reset(); startMatch(); }}>
+                  <RefreshCw size={14} style={{ marginRight: 6, verticalAlign: -2 }} />
+                  {t('cards.pvp.rematch')}
+                </PrimaryBtn>
+              )}
               <GhostBtn onClick={onBack}>{t('cards.tower.exit')}</GhostBtn>
             </ResultBtns>
           </ResultCard>

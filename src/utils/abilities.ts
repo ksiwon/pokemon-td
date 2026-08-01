@@ -1,8 +1,29 @@
 // src/utils/abilities.ts
 
 import { PokemonAbility } from '../types/game';
+import { WireAbility } from '../types/multiplayer';
 import { PokemonAbilityData } from '../api/pokeapi';
 import { rng } from './rng';
+
+/**
+ * 특성 → 와이어 표현. 설명문을 떼어 낸 압축본만 RTDB 로 보낸다.
+ * 업로드/정규화 양쪽(towerFactory.buildTowerDetails, MultiplayerService.normalizeTowerDetails)이
+ * 이 함수 하나만 쓰도록 해서 필드 목록이 두 곳에서 갈라지지 않게 한다.
+ */
+export function toWireAbility(a: { name?: string; displayName?: string; effect: PokemonAbility['effect']; value?: number }): WireAbility {
+  return {
+    name: a.name ?? '',
+    displayName: a.displayName ?? '',
+    effect: a.effect,
+    value: a.value ?? 0,
+  };
+}
+
+/** 와이어 특성 → 로컬 특성. 설명문은 왕복에서 사라지므로 빈 문자열로 되살린다. */
+export function fromWireAbility(a: WireAbility | null | undefined): PokemonAbility | undefined {
+  if (!a || !a.effect) return undefined;
+  return { name: a.name ?? '', displayName: a.displayName ?? '', description: '', effect: a.effect, value: a.value ?? 0 };
+}
 
 /**
  * 특성 이름을 기반으로 게임 내 특성 효과를 매핑
@@ -130,14 +151,21 @@ export function applyAbilityEffects(
 /**
  * 크리티컬 확률 계산 (특성 고려)
  */
+/**
+ * 기본 크리티컬 확률 — 본가와 동일한 1/24 (4.17%).
+ * 전 엔진 공용 상수. 예전엔 싱글TD만 1/24이고 아레나·AI서비스의 폴백은 0.0625,
+ * 카드는 0.0625 하드코딩이라 세 값이 공존했다. 멀티는 buildTowerDetails가
+ * getCriticalChance로 채워 실제로는 1/24이 들어가므로 폴백 0.0625는 죽은 값이면서,
+ * critChance가 비는 순간 조용히 6.25%가 되는 함정이었다.
+ */
+export const BASE_CRIT_CHANCE = 1 / 24;
+
 export function getCriticalChance(ability: PokemonAbility | undefined): number {
-  const baseCritChance = 1 / 24; // 기본 4.17%
-  
   if (ability && ability.effect === 'crit') {
-    return baseCritChance * ability.value;
+    return BASE_CRIT_CHANCE * ability.value;
   }
-  
-  return baseCritChance;
+
+  return BASE_CRIT_CHANCE;
 }
 
 /**

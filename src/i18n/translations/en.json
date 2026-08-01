@@ -1094,7 +1094,8 @@
       "statTotal": "Total",
       "battleStats": "Battle Stats",
       "height": "Height",
-      "weight": "Weight"
+      "weight": "Weight",
+      "beforeSynergy": "before synergy"
     },
     "common": {
       "back": "Back"
@@ -1211,7 +1212,9 @@
       "opponentDeck": "{name}'s Deck",
       "unknownPlayer": "Unknown Trainer",
       "vsResult": "vs {name} · {p} : {e} left",
-      "rematch": "Rematch"
+      "rematch": "Rematch",
+      "dailyLimitReached": "You've used all of today's random battles ({n}/day). Resets at midnight KST.",
+      "dailyLeft": "{n}/{total} battles left today"
     },
     "daily": {
       "firstWin": "Daily First Win"

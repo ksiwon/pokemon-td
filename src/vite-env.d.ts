@@ -11,6 +11,8 @@ interface ImportMetaEnv {
   readonly VITE_FIREBASE_DATABASE_URL?: string
   /** App Check(reCAPTCHA v3) 사이트 키. 없으면 App Check 비활성. */
   readonly VITE_FIREBASE_APPCHECK_SITE_KEY?: string
+  /** 로컬 개발용 App Check 고정 디버그 토큰. DEV 빌드에서만 사용, 커밋 금지. */
+  readonly VITE_FIREBASE_APPCHECK_DEBUG_TOKEN?: string
   readonly VITE_SENTRY_DSN?: string
 }
 interface ImportMeta {

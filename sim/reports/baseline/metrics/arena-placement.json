@@ -1,52 +1,59 @@
 {
   "randomPlacements": 60,
-  "seeds": 12,
+  "seeds": 100,
   "rows": [
     {
       "matchup": "water6 vs nosyn6",
       "baseline": 1,
-      "randMean": 0.9749999999999999,
-      "randMin": 0.75,
+      "randMean": 0.9836666666666667,
+      "randMin": 0.78,
       "randMax": 1,
-      "randStd": 0.055486067653994935,
-      "rolePlace": 1,
-      "invertPlace": 0.9166666666666666,
-      "roleDelta": 0.08333333333333337
+      "randStd": 0.03919892288769628,
+      "randStdTrue": 0.03729953827536689,
+      "rolePlace": 0.99125,
+      "invertPlace": 1,
+      "roleDelta": -0.008750000000000036
     },
     {
       "matchup": "tank6 vs expensive3",
       "baseline": 0,
-      "randMean": 0.020833333333333332,
+      "randMean": 0.03200000000000001,
       "randMin": 0,
-      "randMax": 0.3333333333333333,
-      "randStd": 0.06566081474207122,
+      "randMax": 0.51,
+      "randStd": 0.08280096617793781,
+      "randStdTrue": 0.0813314207425396,
       "rolePlace": 0,
-      "invertPlace": 0,
-      "roleDelta": 0
+      "invertPlace": 0.00125,
+      "roleDelta": -0.00125
     },
     {
       "matchup": "gen1x6 vs mid4",
-      "baseline": 0.6666666666666666,
-      "randMean": 0.6263888888888888,
+      "baseline": 0.46,
+      "randMean": 0.5916666666666667,
       "randMin": 0,
       "randMax": 1,
-      "randStd": 0.39630576096347564,
-      "rolePlace": 0.75,
-      "invertPlace": 0.8333333333333334,
-      "roleDelta": -0.08333333333333337
+      "randStd": 0.344403671421907,
+      "randStdTrue": 0.34261356592457853,
+      "rolePlace": 0.78875,
+      "invertPlace": 0.89375,
+      "roleDelta": -0.1050000000000001
     },
     {
       "matchup": "nosyn6 vs tank6",
-      "baseline": 0.16666666666666666,
-      "randMean": 0.4902777777777777,
-      "randMin": 0,
+      "baseline": 0.16,
+      "randMean": 0.4911666666666666,
+      "randMin": 0.02,
       "randMax": 1,
-      "randStd": 0.3846269436772066,
-      "rolePlace": 0.25,
-      "invertPlace": 0.3333333333333333,
-      "roleDelta": -0.08333333333333331
+      "randStd": 0.36006523328727835,
+      "randStdTrue": 0.35839115812506056,
+      "rolePlace": 0.1425,
+      "invertPlace": 0.24,
+      "roleDelta": -0.0975
     }
   ],
-  "avgSpread": 0.6458333333333333,
-  "avgRoleDelta": 0.06250000000000001
+  "avgSpread": 0.6775,
+  "avgStdTrue": 0.20490892076688638,
+  "avgRoleDelta": 0.05312500000000003,
+  "expectedNullSpread": 0.2312997621195884,
+  "roleDeltaCI": 0.049
 }

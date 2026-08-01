@@ -123,7 +123,8 @@ export const CardDetailModal = ({ pokemonId, stars, rarity, onClose }: Props) =>
                 <>
                   <SectionLbl>
                     {t('cards.detail.battleStats')}
-                    <SubLbl>★{stars} · Lv.{battle.level}</SubLbl>
+                    {/* 덱 시너지 배율(최대 1.5배)은 편성 후에 붙으므로 여기 수치엔 미반영 */}
+                    <SubLbl>★{stars} · Lv.{battle.level} · {t('cards.detail.beforeSynergy')}</SubLbl>
                   </SectionLbl>
                   <BattleGrid>
                     <BStat><BLbl>{t('picker.hp')}</BLbl><BVal>{battle.maxHp}</BVal></BStat>

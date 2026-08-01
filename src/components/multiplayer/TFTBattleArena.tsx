@@ -119,18 +119,17 @@ export const TFTBattleArena: React.FC<TFTBattleArenaProps> = ({
 
   const benchUnits = units.filter(u => u.team === 'my' && u.x === -1 && !u.fainted);
 
-  const mySynergies = useMemo(
-    () => calculateActiveSynergies(
-      sortTeamDeterministic(myTeam).filter(t => !t.isFainted) as unknown as GamePokemon[]
-    ),
-    [myTeam],
-  );
-  const oppSynergies = useMemo(
-    () => calculateActiveSynergies(
-      sortTeamDeterministic(opponentTeam).filter(t => !t.isFainted) as unknown as GamePokemon[]
-    ),
-    [opponentTeam],
-  );
+  // [FIX] 시너지 계산 대상 = 실제로 싸우는 유닛과 정확히 동일해야 한다.
+  //   buildUnits는 sortTeamDeterministic(team).slice(0,6)을 isFainted:false로 되살려 풀팀 전투하는데,
+  //   여기선 기절 유닛을 빼고 slice도 안 해서 어긋났다 →
+  //     · 웨이브에서 2마리 기절 = 6마리로 싸우는데 시너지는 4마리분
+  //     · 보드에 7마리 이상 = 6마리만 싸우는데 시너지는 전원분
+  const fightingUnits = (team: TowerDetail[]) =>
+    sortTeamDeterministic(team).slice(0, 6)
+      .map(t => ({ ...t, isFainted: false })) as unknown as GamePokemon[];
+
+  const mySynergies = useMemo(() => calculateActiveSynergies(fightingUnits(myTeam)), [myTeam]);
+  const oppSynergies = useMemo(() => calculateActiveSynergies(fightingUnits(opponentTeam)), [opponentTeam]);
 
   useEffect(() => {
     if (phase !== 'result') {
@@ -282,12 +281,24 @@ export const TFTBattleArena: React.FC<TFTBattleArenaProps> = ({
       // [DET] 배치 확정: oppPlacementsRef.current로 최신값 참조 (dependency 없음)
       const latestOppPlacements = oppPlacementsRef.current;
       const oppDefaults = myPosition === 'L' ? R_POS : L_POS;
+      // [FIX] 수신 배치를 **배열 인덱스가 아니라 id로** 매칭한다. 전송 측은 x>=0인 유닛만
+      //   보내므로(submitTFTPlacements), 상대가 한 마리라도 벤치에 남기면 배열이 밀려
+      //   엉뚱한 유닛 위치가 적용되고 → 양측 보드가 갈려 desync가 된다.
+      //   (지금은 프렙 종료 시 autoPlaceRemainingUnits가 6마리를 다 채워 우연히 맞았을 뿐이다.
+      //    시뮬 측정: 상대 배치가 어긋나면 80판 중 77판에서 양측 승자가 불일치.)
+      //   전송 측 id는 자기 기준 'my-N' → 수신 측의 'op-N'과 같은 N을 가리킨다.
+      const oppByIndex = new Map<number, { x: number; y: number }>();
+      for (const p of latestOppPlacements ?? []) {
+        const n = parseInt(String(p.id ?? '').split('-')[1]);
+        if (Number.isFinite(n)) oppByIndex.set(n, { x: p.x, y: p.y });
+      }
       setUnits(currentUnits => {
         const finalized = currentUnits.map(u => {
           if (u.team === 'opp') {
             const idx = parseInt(u.id.split('-')[1]);
-            if (!isOpponentAI && latestOppPlacements && latestOppPlacements[idx]) {
-              return { ...u, x: latestOppPlacements[idx].x, y: latestOppPlacements[idx].y };
+            const recv = oppByIndex.get(idx);
+            if (!isOpponentAI && recv) {
+              return { ...u, x: recv.x, y: recv.y };
             }
             // AI 또는 배치 미수신: 기본 위치
             const pos = oppDefaults[idx] ?? { x: myPosition === 'L' ? 4 + (idx % 2) : idx % 2, y: idx };
@@ -353,7 +364,8 @@ export const TFTBattleArena: React.FC<TFTBattleArenaProps> = ({
       const allFloats: FloatTxt[] = [];
       let done = false;
       for (let i = 0; i < ticksToRun; i++) {
-        const res = simulateTick(current, myPosition, rng);
+        // battleSeed는 양쪽 클라이언트가 동일하게 도출 — 행동 순서 tiebreak에 그대로 사용
+        const res = simulateTick(current, myPosition, rng, battleSeed ?? 0);
         current = res.units;
         if (allFloats.length < 60) res.floats.forEach(f => allFloats.length < 60 && allFloats.push(f));
         simTickRef.current++;

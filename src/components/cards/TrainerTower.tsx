@@ -42,6 +42,8 @@ export const TrainerTower = ({ onBack }: { onBack: () => void }) => {
   const [hit, setHit] = useState<string | null>(null);
   const [statusMap, setStatusMap] = useState<UnitStatusMap>({});
   const timer = useRef<number | null>(null);
+  // 같은 층 재도전 횟수. 적팀 구성은 층 고정(리롤 방지)이되 전투 난수는 시도마다 달라진다.
+  const attempts = useRef<{ floor: number; n: number }>({ floor, n: 0 });
 
   const startBattle = async () => {
     if (deck.length === 0) { alert(t('cards.alerts.deckEmpty')); return; }
@@ -60,8 +62,16 @@ export const TrainerTower = ({ onBack }: { onBack: () => void }) => {
       }
       if (player.length === 0) { alert(t('cards.alerts.deckLoadFail')); setPhase('idle'); return; }
 
-      const seed = currentFloor * 1000 + 7;
-      const enemy = await cardBattleService.generateEnemyTeam(currentFloor, seed);
+      // 적팀 구성 시드는 층 고정 — 약한 적이 나올 때까지 리롤(retry-scum)을 막는다.
+      const teamSeed = currentFloor * 1000 + 7;
+      const enemy = await cardBattleService.generateEnemyTeam(currentFloor, teamSeed);
+
+      // [FIX] 전투 난수는 시도마다 다르게. 기존엔 전투 시드도 층 고정이라 같은 덱으로
+      //   재도전하면 로그 한 줄까지 똑같은 패배가 무한 반복됐다("재도전" 버튼이 무의미).
+      //   적 구성은 그대로라 리롤 악용은 여전히 불가하고, 급소·난수 변동만 열린다.
+      if (attempts.current.floor !== currentFloor) attempts.current = { floor: currentFloor, n: 0 };
+      const attempt = attempts.current.n++;
+      const seed = teamSeed + attempt * 7919;
 
       // 시뮬레이션(사본을 변형) → 로그
       const pSim = player.map(c => ({ ...c }));
@@ -72,21 +82,26 @@ export const TrainerTower = ({ onBack }: { onBack: () => void }) => {
       //   (기존엔 재생 완료 시점 finish에서 지급 → 중도 이탈 시 이긴 전투가 조용히 무효)
       let rw: Reward | null = null;
       if (res.winner === 'player') {
-        const firstClear = currentFloor > cardService.getTowerProgress();
+        // 도전 층은 항상 towerProgress+1이므로 승리 = 언제나 그 층의 첫 클리어.
+        // (예전엔 '재도전 보상' 분기가 있었지만 도달 불가능한 죽은 코드였다.)
         const boss = currentFloor % 10 === 0;
         // [경제] 타워(미니 포켓)는 소액만 — 재화 farm은 싱글/멀티로 유도(오토배틀은 도전·소비 콘텐츠).
-        //   첫클리어도 소량, 재도전은 극소량(파밍 차단).
-        const coins = firstClear ? 10 + currentFloor * 2 : 2 + Math.floor(currentFloor / 2);
-        const shards = firstClear ? (boss ? 5 : currentFloor % 5 === 0 ? 2 : 0) : 0;
+        const coins = 10 + currentFloor * 2;
+        const shards = boss ? 5 : currentFloor % 5 === 0 ? 2 : 0;
         cardService.grantRewards({ coins, starShards: shards });
-        if (firstClear) cardService.setTowerProgress(currentFloor);
+        cardService.setTowerProgress(currentFloor);
         // [주간 시즌] 이번 주 최고층 갱신 시에만 Firestore 시즌 랭킹 기록(오프라인/비로그인 무시).
-        //   all-time firstClear와 무관 — 매주 다시 오르는 경쟁이므로 이번 주 기준으로 판정.
         const weeklyBest = cardService.recordWeeklyBestFloor(currentFloor);
         if (weeklyBest !== null) databaseService.updateTowerSeasonRanking(weeklyBest).catch(() => {});
         // 일일 첫 승 보너스(타워/랜덤대전 공통, KST 자정 리셋)
         const daily = cardService.claimDailyFirstWin();
-        rw = { coins, starShards: shards, firstClear, daily };
+        rw = { coins, starShards: shards, firstClear: true, daily };
+      } else {
+        // [FIX] 패배해도 '이번 주 도달 층'은 현재 진행도로 기록한다. 예전엔 승리 시에만
+        //   기록해서, 상한에 도달해 더 못 이기는 최상위 유저가 새 주 시즌 보드에서
+        //   아예 사라졌다(주간 랭킹이 통산 진행도의 재방송이 되는 문제도 함께 완화).
+        const weeklyBest = cardService.recordWeeklyBestFloor(cardService.getTowerProgress());
+        if (weeklyBest !== null) databaseService.updateTowerSeasonRanking(weeklyBest).catch(() => {});
       }
 
       // 재생용: 시너지 적용된 사본(pSim/eSim)을 풀피로 리셋
@@ -128,7 +143,9 @@ export const TrainerTower = ({ onBack }: { onBack: () => void }) => {
         window.setTimeout(() => setHit(null), 180 / speed);
       }
       setStep(s => s + 1);
-    }, 620 / speed);
+      // [밸런스 연동] 전투가 평균 2턴 → 9턴으로 길어져 로그 엔트리 수가 늘었다.
+      //   엔트리당 620ms면 재생이 1분을 넘겨 380ms로 단축(2x/4x·건너뛰기는 그대로).
+    }, 380 / speed);
     return () => { if (timer.current) clearTimeout(timer.current); };
   }, [phase, step, log, speed]); // eslint-disable-line react-hooks/exhaustive-deps
 
