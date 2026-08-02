@@ -25,6 +25,7 @@ import { PackOpening } from './PackOpening';
 import { DeckBuilder } from './DeckBuilder';
 import { TrainerTower } from './TrainerTower';
 import { RandomBattle } from './RandomBattle';
+import { showToast } from '../shared/Toast';
 
 type SubView = 'hub' | 'deck' | 'tower' | 'pvp';
 
@@ -150,7 +151,7 @@ export const CardLabView = () => {
     try {
       const ok = await databaseService.backupSaves();
       if (ok) setLastBackupAt(Date.now());
-      else alert(t('cards.backup.backupFail'));
+      else showToast(t('cards.backup.backupFail'));
     } finally {
       setBackupBusy(false);
     }
@@ -161,7 +162,7 @@ export const CardLabView = () => {
     setBackupBusy(true);
     try {
       const backup = await databaseService.fetchBackup();
-      if (!backup) { alert(t('cards.backup.noBackup')); return; }
+      if (!backup) { showToast(t('cards.backup.noBackup')); return; }
       const when = new Date(backup.updatedAt).toLocaleString();
       const ok = window.confirm(t('cards.backup.restoreConfirm', {
         time: when,
@@ -195,7 +196,7 @@ export const CardLabView = () => {
       setOpening({ type, results, filterType });
     } catch (e) {
       console.warn('[CardLab] 개봉 실패', e);
-      alert(t('cards.alerts.openFail'));
+      showToast(t('cards.alerts.openFail'));
     } finally {
       setBusy(false);
     }

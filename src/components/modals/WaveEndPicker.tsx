@@ -10,6 +10,7 @@ import { useTranslation } from '../../i18n';
 import { useGameStore } from '../../store/gameStore';
 import { Item } from '../../types/game';
 import { multiplayerService } from '../../services/MultiplayerService';
+import { showToast } from '../shared/Toast';
 
 // 싱글플레이에서만 isPaused:false 해제 (멀티플레이는 BattlePhaseUI가 관리)
 function resumeSingleOnly() {
@@ -37,7 +38,7 @@ export const WaveEndPicker: React.FC = () => {
       if (!targetTower) {
         // [A4] 대상 포켓몬 없으면 UI 피드백 후 정리
         console.warn(`[WaveEndPicker] targetPokemonId ${item.targetPokemonId} not found in towers`);
-        alert(t('waveEnd.evolveTargetNotFound'));
+        showToast(t('waveEnd.evolveTargetNotFound'));
         setWaveEndItemPick(null);
         resumeSingleOnly();
         return;

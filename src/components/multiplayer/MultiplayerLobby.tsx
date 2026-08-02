@@ -14,6 +14,7 @@ import { useTranslation } from '../../i18n';
 import { AchievementsPanel } from '../modals/Achievements';
 import { HallOfFame } from '../modals/HallOfFame';
 import { Rankings } from '../modals/Rankings';
+import { showToast } from '../shared/Toast';
 
 interface MultiplayerLobbyProps {
   onBack: () => void;
@@ -48,7 +49,7 @@ export const MultiplayerLobby = ({ onBack, onStartGame }: MultiplayerLobbyProps)
   // [FREE-TIER] 오프라인 모드 직접 접근 방어 — RTDB 연결 시도 전에 즉시 복귀
   useEffect(() => {
     if (authService.isOfflineMode()) {
-      alert(t('mainMenu.offlineMultiBlocked'));
+      showToast(t('mainMenu.offlineMultiBlocked'));
       onBack();
     }
     // 최초 1회만 검사
@@ -101,7 +102,7 @@ export const MultiplayerLobby = ({ onBack, onStartGame }: MultiplayerLobbyProps)
           setView('list');
           setCurrentRoom(null);
           if (wasKicked) {
-            alert(t('lobby.kicked'));
+            showToast(t('lobby.kicked'));
           }
           return;
         }
@@ -123,7 +124,7 @@ export const MultiplayerLobby = ({ onBack, onStartGame }: MultiplayerLobbyProps)
       const roomId = await multiplayerService.createRoom(selectedMap, selectedMapData.name);
       const room = await multiplayerService.rejoinRoom(roomId);
       setCurrentRoom(room.room); setView('room');
-    } catch (err: any) { alert(err.message); }
+    } catch (err: any) { showToast(err.message); }
   };
 
   const handleJoinRoom = async (roomId: string) => {
@@ -131,7 +132,7 @@ export const MultiplayerLobby = ({ onBack, onStartGame }: MultiplayerLobbyProps)
       await multiplayerService.joinRoom(roomId);
       const room = await multiplayerService.rejoinRoom(roomId);
       setCurrentRoom(room.room); setView('room');
-    } catch (err: any) { alert(err.message); }
+    } catch (err: any) { showToast(err.message); }
   };
 
   const handleLeaveRoomConfirmed = async () => {
@@ -145,7 +146,7 @@ export const MultiplayerLobby = ({ onBack, onStartGame }: MultiplayerLobbyProps)
   const handleAddAI = async (difficulty: AIDifficulty) => {
     if (currentRoom) {
       try { await multiplayerService.addAI(currentRoom.id, difficulty); }
-      catch (err: any) { alert(err.message); }
+      catch (err: any) { showToast(err.message); }
     }
   };
 
@@ -156,7 +157,7 @@ export const MultiplayerLobby = ({ onBack, onStartGame }: MultiplayerLobbyProps)
   const handleStartGame = async () => {
     if (currentRoom) {
       try { await multiplayerService.startGame(currentRoom.id); }
-      catch (err: any) { alert(err.message); }
+      catch (err: any) { showToast(err.message); }
     }
   };
 
@@ -166,7 +167,7 @@ export const MultiplayerLobby = ({ onBack, onStartGame }: MultiplayerLobbyProps)
     try {
       await multiplayerService.kickPlayer(currentRoom.id, kickConfirm.player.userId);
     } catch (err: any) {
-      alert(err.message);
+      showToast(err.message);
     }
   };
 
