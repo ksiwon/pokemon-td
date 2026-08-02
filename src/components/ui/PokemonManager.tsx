@@ -12,6 +12,7 @@ import { getMapById, getFacilityTiles } from '../../data/maps';
 import { Gender } from '../../types/game';
 import { FUSION_DATA } from '../../data/evolution';
 import { Emoji } from '../shared/Emoji';
+import { showToast } from '../shared/Toast';
 
 // ─── 반응형 헬퍼 → lMedia 사용 ───────────────────────────────────────────────
 const L1024 = lMedia.tablet;   // ≤1024px landscape (iPad 등)
@@ -53,10 +54,10 @@ export const PokemonManager: React.FC<{ onClose: () => void }> = ({ onClose }) =
   };
 
   const handleSell = (towerId: string, towerDisplayName: string, level: number) => {
-    if (isWaveActive) { alert(t('facility.alertSellDuringWave')); return; }
+    if (isWaveActive) { showToast(t('facility.alertSellDuringWave')); return; }
     const tower = towers.find(t => t.id === towerId);
     if (tower && checkIsOnWork(tower)) {
-      alert(t('facility.alertCannotSell'));
+      showToast(t('facility.alertCannotSell'));
       return;
     }
     const sellPrice = level * 20;
@@ -80,20 +81,20 @@ export const PokemonManager: React.FC<{ onClose: () => void }> = ({ onClose }) =
     if (!tower) return;
 
     if (checkIsOnWork(tower)) {
-      alert(t('facility.alertCannotFuse'));
+      showToast(t('facility.alertCannotFuse'));
       return;
     }
 
     if (!selectedBase) {
       const canBeBase = FUSION_DATA.some(f => f.base === tower.pokemonId);
       if (!canBeBase) {
-        alert(t('alerts.cannotFuseBase'));
+        showToast(t('alerts.cannotFuseBase'));
         return;
       }
       setSelectedBase(towerId);
     } else {
       if (selectedBase === towerId) {
-        alert(t('alerts.cannotSelectSamePokemon'));
+        showToast(t('alerts.cannotSelectSamePokemon'));
         return;
       }
 
@@ -112,7 +113,7 @@ export const PokemonManager: React.FC<{ onClose: () => void }> = ({ onClose }) =
       );
 
       if (!fusion) {
-        alert(t('alerts.cannotFusePokemon'));
+        showToast(t('alerts.cannotFusePokemon'));
         setSelectedBase(null);
         return;
       }
@@ -127,9 +128,9 @@ export const PokemonManager: React.FC<{ onClose: () => void }> = ({ onClose }) =
         // [FIX-2] spendMoney는 gameStore.fusePokemon 내부에서 처리 — 이중 차감 방지
         fusePokemon(selectedBase, towerId, 'dna-splicers').then(success => {
           if (success) {
-            alert(t('alerts.fusionSuccess'));
+            showToast(t('alerts.fusionSuccess'), 'success');
           } else {
-            alert(t('alerts.fusionFailed'));
+            showToast(t('alerts.fusionFailed'));
           }
           setFusionMode(false);
           setSelectedBase(null);

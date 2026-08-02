@@ -64,6 +64,7 @@ import { buildTowerDetails } from "../../game/towerFactory";
 import { fromWireAbility } from "../../utils/abilities";
 import { lMedia } from "../../utils/responsive.utils";
 import { Emoji } from "../shared/Emoji";
+import { showToast } from "../shared/Toast";
 import { Store, Award } from "lucide-react";
 
 interface GameLayoutProps {
@@ -752,7 +753,7 @@ export const GameLayout: React.FC<GameLayoutProps> = ({ onLeaveGame }) => {
       const available = storyAccumulatedPool.filter(id => !placed.has(id));
       if (available.length === 0) { setShowPicker(true); return; }
     }
-    if (!spendMoney(20)) { alert(t("gameLayout.notEnoughMoneyPicker")); return; }
+    if (!spendMoney(20)) { showToast(t("gameLayout.notEnoughMoneyPicker")); return; }
     setShowPicker(true);
   };
 

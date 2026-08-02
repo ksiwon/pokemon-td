@@ -7,6 +7,7 @@ import {
   ModalScrollBody, ModalFooter, MODAL_ACCENT,
 } from '../shared/modal.styles';
 import { Emoji } from '../shared/Emoji';
+import { showToast } from '../shared/Toast';
 import { media } from '../../utils/responsive.utils';
 
 export const WorkMilestoneModal: React.FC = () => {
@@ -21,7 +22,7 @@ export const WorkMilestoneModal: React.FC = () => {
   const handleChoice = (withdraw: boolean) => {
     const res = resolvePrompt(currentPrompt.towerId, withdraw);
     if (!res.success && res.message) {
-      alert(t(res.message));
+      showToast(t(res.message));
     }
   };
 

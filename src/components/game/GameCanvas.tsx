@@ -21,6 +21,7 @@ import { GamePokemon } from "../../types/game";
 import { lMedia, isMobileOrTablet, isTouchDevice } from "../../utils/responsive.utils";
 import { buyableHeldItems, shopTier, wavesToNextTier, getHeldItem } from "../../data/heldItems";
 import { Emoji } from "../shared/Emoji";
+import { showToast } from "../shared/Toast";
 
 const TILE_SIZE = 64;
 const MAP_WIDTH = 15;
@@ -740,7 +741,7 @@ export const GameCanvas: React.FC = () => {
         const B = towers.find(t => t.id !== A.id && Math.floor(t.position.x / TILE_SIZE) === Math.floor(snappedX / TILE_SIZE) && Math.floor(t.position.y / TILE_SIZE) === Math.floor(snappedY / TILE_SIZE));
         if (B) {
           if (isOnWork(A) || isOnWork(B)) {
-            alert(t('facility.alertCannotMoveSwap'));
+            showToast(t('facility.alertCannotMoveSwap'));
             return;
           }
           const updateTower = useGameStore.getState().updateTower;
@@ -749,9 +750,9 @@ export const GameCanvas: React.FC = () => {
           setSelectedTowerForReposition(null);
           return;
         }
-        if (!isValidPlacement(snappedX, snappedY, A.id)) { alert(t('alerts.cannotPlaceHere')); return; }
+        if (!isValidPlacement(snappedX, snappedY, A.id)) { showToast(t('alerts.cannotPlaceHere')); return; }
         if (isOnWork(A)) {
-          alert(t('facility.alertCannotMove'));
+          showToast(t('facility.alertCannotMove'));
           return;
         }
         useGameStore.getState().updateTower(A.id, { position: { x: snappedX, y: snappedY } });
@@ -760,7 +761,7 @@ export const GameCanvas: React.FC = () => {
         const clicked = towers.find(t => Math.abs(t.position.x - pos.x) < 32 && Math.abs(t.position.y - pos.y) < 32);
         if (clicked) {
           if (isOnWork(clicked)) {
-            alert(t('facility.alertCannotSelect'));
+            showToast(t('facility.alertCannotSelect'));
             return;
           }
           setSelectedTowerForReposition(clicked);
@@ -778,9 +779,9 @@ export const GameCanvas: React.FC = () => {
     }
 
     if (!pokemonToPlace) return;
-    if (towers.length >= 6) { alert(t('alerts.maxPokemon')); if (pokemonToPlace.originalCost) addMoney(pokemonToPlace.originalCost); setPokemonToPlace(null); return; }
-    if (!isValidPlacement(snappedX, snappedY)) { alert(t('alerts.cannotPlaceHere')); return; }
-    if (!spendMoney(pokemonToPlace.cost || 0)) { alert(t('alerts.notEnoughMoneyWithCost', { cost: pokemonToPlace.cost })); setPokemonToPlace(null); return; }
+    if (towers.length >= 6) { showToast(t('alerts.maxPokemon')); if (pokemonToPlace.originalCost) addMoney(pokemonToPlace.originalCost); setPokemonToPlace(null); return; }
+    if (!isValidPlacement(snappedX, snappedY)) { showToast(t('alerts.cannotPlaceHere')); return; }
+    if (!spendMoney(pokemonToPlace.cost || 0)) { showToast(t('alerts.notEnoughMoneyWithCost', { cost: pokemonToPlace.cost })); setPokemonToPlace(null); return; }
 
     const poke = pokemonToPlace;
     addTower({
@@ -1174,7 +1175,7 @@ export const GameCanvas: React.FC = () => {
         const canEquip = !isWaveActive;
         const close = () => setManageTowerId(null);
         const buy = (id: string, cost: number) => {
-          if (money < cost) { alert(t('alerts.notEnoughMoneyWithCost', { cost })); return; }
+          if (money < cost) { showToast(t('alerts.notEnoughMoneyWithCost', { cost })); return; }
           if (!spendMoney(cost)) return;
           useGameStore.getState().addHeldItem(id);
         };

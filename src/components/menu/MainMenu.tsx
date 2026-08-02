@@ -11,6 +11,7 @@ import { AchievementsPanel } from '../modals/Achievements';
 import { HallOfFame } from '../modals/HallOfFame';
 import { Rankings } from '../modals/Rankings';
 import { TutorialModal, hasTowerTutorialSeen, hasMultiTutorialSeen, hasStoryTutorialSeen, hasCardsTutorialSeen } from '../modals/TutorialModal';
+import { showToast } from '../shared/Toast';
 
 export const MainMenu = () => {
   const navigate = useNavigate();
@@ -39,7 +40,7 @@ export const MainMenu = () => {
 
   const handleMultiPlay = () => {
     // [FREE-TIER] 오프라인 모드: 멀티플레이 차단
-    if (isOffline) { alert(t('mainMenu.offlineMultiBlocked')); return; }
+    if (isOffline) { showToast(t('mainMenu.offlineMultiBlocked')); return; }
     if (!hasMultiTutorialSeen()) { setPendingNav('/lobby'); setTutorial('multi'); }
     else navigate('/lobby');
   };
@@ -55,11 +56,11 @@ export const MainMenu = () => {
 
   // [FREE-TIER] 오프라인 모드: 서버 의존 기능(랭킹/전당) 차단
   const handleRankings = () => {
-    if (isOffline) { alert(t('mainMenu.offlineRankingBlocked')); return; }
+    if (isOffline) { showToast(t('mainMenu.offlineRankingBlocked')); return; }
     setShowRankings(true);
   };
   const handleHallOfFame = () => {
-    if (isOffline) { alert(t('mainMenu.offlineRankingBlocked')); return; }
+    if (isOffline) { showToast(t('mainMenu.offlineRankingBlocked')); return; }
     setShowHallOfFame(true);
   };
 

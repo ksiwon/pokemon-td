@@ -9,6 +9,7 @@ import { useTranslation } from "../../i18n";
 import { useGameStore } from "../../store/gameStore";
 import { canEvolveWithItem, getEvolvableWithItem } from "../../data/evolution";
 import { Emoji } from "../shared/Emoji";
+import { showToast } from "../shared/Toast";
 import {
   EVOLUTION_ITEMS_BY_CATEGORY,
   EVOLUTION_ITEMS,
@@ -66,23 +67,23 @@ export const Shop: React.FC<Props> = ({ embedded = false }) => {
 
   // ── Handlers ──────────────────────────────────────────────────
 
-  const handleBuyPotion      = () => { if (money < 20)  { alert(t("alerts.notEnoughMoney")); return; } setItemMode("potion"); };
-  const handleBuyPotionGood  = () => { if (money < 100) { alert(t("alerts.notEnoughMoney")); return; } setItemMode("potion_good"); };
-  const handleBuyPotionSuper = () => { if (money < 500) { alert(t("alerts.notEnoughMoney")); return; } setItemMode("potion_super"); };
+  const handleBuyPotion      = () => { if (money < 20)  { showToast(t("alerts.notEnoughMoney")); return; } setItemMode("potion"); };
+  const handleBuyPotionGood  = () => { if (money < 100) { showToast(t("alerts.notEnoughMoney")); return; } setItemMode("potion_good"); };
+  const handleBuyPotionSuper = () => { if (money < 500) { showToast(t("alerts.notEnoughMoney")); return; } setItemMode("potion_super"); };
   const handleBuyCandy       = () => setItemMode("candy");
   const handleBuyRevive      = () => setItemMode("revive");
 
   const handleBuyExpCandy = () => {
     const alive = towers.filter(t => !t.isFainted);
-    if (alive.length < 2) { alert(t("alerts.cannotUseItem")); return; }
+    if (alive.length < 2) { showToast(t("alerts.cannotUseItem")); return; }
     const min = Math.min(...alive.map(t => t.level));
-    if (!alive.some(t => t.level > min)) { alert(t("alerts.cannotUseItem")); return; }
+    if (!alive.some(t => t.level > min)) { showToast(t("alerts.cannotUseItem")); return; }
     setItemMode("exp_candy");
   };
 
   const handleBuyEvolutionItem = (item: EvolutionItem) => {
-    if (money < item.price) { alert(t("alerts.notEnoughMoney")); return; }
-    if (!useGameStore.getState().spendMoney(item.price)) { alert(t("alerts.notEnoughMoney")); return; }
+    if (money < item.price) { showToast(t("alerts.notEnoughMoney")); return; }
+    if (!useGameStore.getState().spendMoney(item.price)) { showToast(t("alerts.notEnoughMoney")); return; }
     setItemMode(item.id);
   };
 
@@ -109,7 +110,7 @@ export const Shop: React.FC<Props> = ({ embedded = false }) => {
         const higher = [...new Set(alive.map(tt => tt.level))].filter(l => l > tower.level).sort((a, b) => a - b);
         cost = higher.length ? higher[0] * 50 : 0;
       }
-      if (cost > 0 && money < cost) { alert(t("alerts.notEnoughMoney")); return; }
+      if (cost > 0 && money < cost) { showToast(t("alerts.notEnoughMoney")); return; }
       useItem(itemMode, towerId);
       setItemMode("none");
     } else {

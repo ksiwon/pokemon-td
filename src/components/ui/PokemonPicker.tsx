@@ -16,6 +16,7 @@ import {
 } from '../../game/towerFactory';
 import { ModalOverlay, ModalBox, ModalCloseBtn, MODAL_ACCENT } from '../shared/modal.styles';
 import { Emoji } from '../shared/Emoji';
+import { showToast } from '../shared/Toast';
 
 const REROLL_COST = 20;
 const TYPE_ICON_API_BASE = 'https://www.serebii.net/pokedex-bw/type/';
@@ -159,7 +160,7 @@ export const PokemonPicker: React.FC<{ onClose: () => void; storyHeroPool?: numb
     } catch (e) {
       console.error('[PokemonPicker] 포켓몬 후보 로드 실패', e);
       setChoices([]);
-      alert(t('alerts.skillLoadFailed'));
+      showToast(t('alerts.skillLoadFailed'));
     } finally {
       setIsLoading(false);
     }
@@ -196,7 +197,7 @@ export const PokemonPicker: React.FC<{ onClose: () => void; storyHeroPool?: numb
       // Pay for the new pokemon
       if (!store.spendMoney(choice.cost)) {
         if (refund) store.spendMoney(refund); // 롤백: 방금 준 환불 회수(보유물 변경 없음)
-        alert(t('alerts.notEnoughMoneyWithCost', { cost: choice.cost }));
+        showToast(t('alerts.notEnoughMoneyWithCost', { cost: choice.cost }));
         setIsLoading(false);
         return;
       }
@@ -211,7 +212,7 @@ export const PokemonPicker: React.FC<{ onClose: () => void; storyHeroPool?: numb
       });
     } catch (error) {
       console.error("Failed to fetch moves:", error);
-      alert(t('alerts.skillLoadFailed'));
+      showToast(t('alerts.skillLoadFailed'));
     }
 
     setIsLoading(false);
@@ -220,7 +221,7 @@ export const PokemonPicker: React.FC<{ onClose: () => void; storyHeroPool?: numb
   
   const handleReroll = () => {
     if (!spendMoney(REROLL_COST)) {
-      alert(t('alerts.notEnoughMoneyWithCost', { cost: REROLL_COST }));
+      showToast(t('alerts.notEnoughMoneyWithCost', { cost: REROLL_COST }));
       return;
     }
     loadChoices();

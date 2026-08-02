@@ -3,6 +3,7 @@ import React, { useState } from 'react';
 import styled from 'styled-components';
 import { useTranslation } from '../../i18n';
 import { Emoji } from '../shared/Emoji';
+import { showToast } from '../shared/Toast';
 import {
   ModalOverlay, ModalBox, ModalHeader, ModalTitle, ModalCloseBtn,
   ModalScrollBody, MODAL_ACCENT,
@@ -45,11 +46,11 @@ export const BugReport: React.FC<BugReportProps> = ({ onClose }) => {
         'gjdzeRNJdHhXF2hZu'
       );
       
-      alert(t('settings.bugReportSuccess'));
+      showToast(t('settings.bugReportSuccess'), 'success');
       onClose();
     } catch (error) {
       console.error('Email sending failed:', error);
-      alert(t('settings.bugReportFail'));
+      showToast(t('settings.bugReportFail'));
     } finally {
       setIsSending(false);
     }

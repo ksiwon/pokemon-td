@@ -30,6 +30,7 @@ import { LoginScreen } from "./components/auth/LoginScreen";
 import { MainMenu } from "./components/menu/MainMenu";
 import { ProtectedRoute } from "./components/auth/ProtectedRoute";
 import { FloatingSettings } from "./components/ui/FloatingSettings";
+import { ToastHost } from "./components/shared/Toast";
 
 // [PERF] 라우트 레벨 코드 스플리팅 — 초기 로드는 로그인/메뉴만.
 //   무거운 서브트리(게임 UI, 카드, 퀴즈 은행, 스토리 대사, 멀티 로비)는 진입 시 로드.
@@ -310,6 +311,8 @@ function App() {
     </Routes>
     </Suspense>
     {location.pathname !== '/game' && <FloatingSettings />}
+    {/* alert() 대체 — 라우트 밖 최상단에 한 번만 둔다(화면 전환에도 살아남아야 함) */}
+    <ToastHost />
     </>
   );
 }

@@ -14,6 +14,7 @@ import {
   cardBattleService, buildBattleCard, BattleCard, BattleResult, BattleLogEntry,
 } from '../../services/CardBattleService';
 import { BattleLogPanel, nextStatusMap, UnitStatusMap, UnitStatusBadge } from './BattleLogPanel';
+import { showToast } from '../shared/Toast';
 
 type Phase = 'idle' | 'loading' | 'battle' | 'result';
 type Reward = {
@@ -46,7 +47,7 @@ export const TrainerTower = ({ onBack }: { onBack: () => void }) => {
   const attempts = useRef<{ floor: number; n: number }>({ floor, n: 0 });
 
   const startBattle = async () => {
-    if (deck.length === 0) { alert(t('cards.alerts.deckEmpty')); return; }
+    if (deck.length === 0) { showToast(t('cards.alerts.deckEmpty')); return; }
     const currentFloor = floor; // 이번 전투 층 고정
     setFoughtFloor(currentFloor);
     setPhase('loading');
@@ -60,7 +61,7 @@ export const TrainerTower = ({ onBack }: { onBack: () => void }) => {
         if (!p) continue;
         player.push(buildBattleCard(p, { stars: entry.stars, row: s.row, slot: s.slot, side: 'player', uid: `player-${s.pokemonId}` }));
       }
-      if (player.length === 0) { alert(t('cards.alerts.deckLoadFail')); setPhase('idle'); return; }
+      if (player.length === 0) { showToast(t('cards.alerts.deckLoadFail')); setPhase('idle'); return; }
 
       // 적팀 구성 시드는 층 고정 — 약한 적이 나올 때까지 리롤(retry-scum)을 막는다.
       const teamSeed = currentFloor * 1000 + 7;
@@ -124,7 +125,7 @@ export const TrainerTower = ({ onBack }: { onBack: () => void }) => {
       setPhase('battle');
     } catch (e) {
       console.warn('[TrainerTower] 전투 준비 실패', e);
-      alert(t('cards.alerts.battlePrepError'));
+      showToast(t('cards.alerts.battlePrepError'));
       setPhase('idle');
     }
   };
