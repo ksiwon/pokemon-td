@@ -19,14 +19,14 @@ interface StoryOpeningProps {
 const CHAR_SPEED = 30;
 
 const BG_IMAGES: Record<string, string> = {
-  easiest_straight:       '/images/maps/easiest_straight.png',
-  easy_loop:              '/images/maps/easy_loop.png',
-  extreme_aggro_shortcut: '/images/maps/extreme_aggro_shortcut.png',
-  medium_multi_s:         '/images/maps/medium_multi_s.png',
-  medium_merge:           '/images/maps/medium_merge.png',
-  hard_straight_wide:     '/images/maps/hard_straight_wide.png',
-  hard_dual_path:         '/images/maps/hard_dual_path.png',
-  extreme_central:        '/images/maps/extreme_central.png',
+  easiest_straight:       '/images/maps/easiest_straight.webp',
+  easy_loop:              '/images/maps/easy_loop.webp',
+  extreme_aggro_shortcut: '/images/maps/extreme_aggro_shortcut.webp',
+  medium_multi_s:         '/images/maps/medium_multi_s.webp',
+  medium_merge:           '/images/maps/medium_merge.webp',
+  hard_straight_wide:     '/images/maps/hard_straight_wide.webp',
+  hard_dual_path:         '/images/maps/hard_dual_path.webp',
+  extreme_central:        '/images/maps/extreme_central.webp',
 };
 
 const SPEAKER_SPRITES: Record<string, string> = {

@@ -3,7 +3,7 @@ import { useState } from "react";
 import styled, { keyframes } from "styled-components";
 import { media, lMedia } from "../../utils/responsive.utils";
 import { useTranslation } from "../../i18n";
-import { MAPS } from "../../data/maps";
+import { MAPS, mapThumbnail } from "../../data/maps";
 import { useGameStore } from "../../store/gameStore";
 import { Difficulty, MapData } from "../../types/game";
 import { useNavigate } from "react-router-dom";
@@ -91,7 +91,7 @@ export const MapSelector: React.FC<{ onSelect: (mapId: string) => void }> = ({ o
               return (
                 <Card
                   key={map.id}
-                  $img={map.backgroundImage ?? ""}
+                  $img={mapThumbnail(map)}
                   $color={meta?.color ?? '#fff'}
                   $delay={i * 40}
                   onMouseEnter={() => setHovered(map.id)}

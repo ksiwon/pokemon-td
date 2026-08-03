@@ -81,13 +81,13 @@ export const LoginScreen = () => {
               </BrandFeatures>
             </BrandContent>
             <BrandLogoWrap>
-              <BrandLogo src="/images/pokemon-aegis.png" alt="Pokemon Aegis" />
+              <BrandLogo src="/images/pokemon-aegis.webp" alt="Pokemon Aegis" />
             </BrandLogoWrap>
           </BrandPanel>
 
           <FormPanel>
             <FormCard>
-              <MobileLogo src="/images/pokemon-aegis.png" alt="Pokemon Aegis" />
+              <MobileLogo src="/images/pokemon-aegis.webp" alt="Pokemon Aegis" />
               <FormHeading>{t('login.signInHeading')}</FormHeading>
               <FormSubheading>{t('login.title')}</FormSubheading>
 

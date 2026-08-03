@@ -7,3 +7,26 @@ status = 200
 for = "/*"
 [headers.values]
 Cross-Origin-Opener-Policy = "same-origin-allow-popups"
+
+# ── 캐시 정책 ────────────────────────────────────────────────────────────────
+# Netlify 기본값은 `max-age=0, must-revalidate`라, 파일이 안 바뀌어도 방문할 때마다
+# 조건부 요청이 나간다(304라도 왕복 비용은 든다). 아래 두 규칙으로 재방문 트래픽을 없앤다.
+
+# 해시가 박힌 빌드 산출물 — 내용이 바뀌면 파일명이 바뀌므로 영구 캐시해도 안전.
+[[headers]]
+for = "/assets/*"
+[headers.values]
+Cache-Control = "public, max-age=31536000, immutable"
+
+# 맵 배경·썸네일 등 정적 이미지 — 파일명이 그대로라 immutable은 쓰지 않고,
+# 30일 캐시 + 만료 뒤 백그라운드 재검증(stale-while-revalidate)으로 처리한다.
+# 이미지를 교체할 땐 파일명을 바꾸거나 Netlify 캐시를 비울 것.
+[[headers]]
+for = "/images/*"
+[headers.values]
+Cache-Control = "public, max-age=2592000, stale-while-revalidate=86400"
+
+[[headers]]
+for = "/sounds/*"
+[headers.values]
+Cache-Control = "public, max-age=2592000, stale-while-revalidate=86400"

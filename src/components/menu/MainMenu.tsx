@@ -81,7 +81,7 @@ export const MainMenu = () => {
         {/* ── Top bar ── */}
         <TopBar>
           <LogoMark>
-            <LogoImg src="/images/pokemon-aegis.png" alt="" />
+            <LogoImg src="/images/pokemon-aegis.webp" alt="" />
             <LogoText>
               <LogoMain>POKEMON AEGIS</LogoMain>
             </LogoText>

@@ -12,7 +12,7 @@ export const MAPS: MapData[] = [
     difficulty: "easiest",
     description: "폭이 1줄(실제 3칸)인 기본 맵입니다. 화력 집중이 용이합니다.",
     backgroundType: "grass",
-    backgroundImage: "/images/maps/easiest_straight.png",
+    backgroundImage: "/images/maps/easiest_straight.webp",
     teraTiles: [
       { type: "fire", spots: [{ x: 5, y: 3 }, { x: 9, y: 3 }, { x: 3, y: 5 }] },
       { type: "water", spots: [{ x: 10, y: 5 }, { x: 12, y: 3 }, { x: 6, y: 5 }] },
@@ -34,7 +34,7 @@ export const MAPS: MapData[] = [
     difficulty: "easy",
     description: "맵 외곽을 순환합니다. 타워를 배치할 내부 공간이 한정됩니다.",
     backgroundType: "grass",
-    backgroundImage: "/images/maps/easy_loop.png",
+    backgroundImage: "/images/maps/easy_loop.webp",
     teraTiles: [{ type: "water", spots: [{ x: 7, y: 2 }, { x: 9, y: 2 }, { x: 4, y: 7 }] }],
     spawns: [{ x: -T, y: 1.5 * T }],
     objectives: [{ x: -T, y: 3.5 * T }], // 스폰 바로 아래가 골인
@@ -58,7 +58,7 @@ export const MAPS: MapData[] = [
     description:
       "기본 경로는 매우 깁니다. 중앙에 타워를 배치해 적의 경로를 바꾸세요.",
     backgroundType: "water",
-    backgroundImage: "/images/maps/extreme_aggro_shortcut.png",
+    backgroundImage: "/images/maps/extreme_aggro_shortcut.webp",
     teraTiles: [{ type: "electric", spots: [{ x: 6, y: 7 }, { x: 8, y: 7 }, { x: 11, y: 4 }] }],
     spawns: [{ x: -T, y: 1.5 * T }],
     objectives: [{ x: 16 * T, y: 1.5 * T }],
@@ -83,7 +83,7 @@ export const MAPS: MapData[] = [
     difficulty: "medium",
     description: "경로가 길게 굽이쳐, 타워가 공격할 수 있는 시간이 깁니다.",
     backgroundType: "cave",
-    backgroundImage: "/images/maps/medium_multi_s.png",
+    backgroundImage: "/images/maps/medium_multi_s.webp",
     teraTiles: [{ type: "ground", spots: [{ x: 7, y: 4 }, { x: 4, y: 2 }, { x: 10, y: 4 }] }],
     spawns: [{ x: -T, y: 1.5 * T }],
     objectives: [{ x: 16 * T, y: 8.5 * T }],
@@ -108,7 +108,7 @@ export const MAPS: MapData[] = [
     difficulty: "medium",
     description: "두 갈래의 길이 중앙에서 합쳐집니다. 초반 방어가 중요합니다.",
     backgroundType: "desert",
-    backgroundImage: "/images/maps/medium_merge.png",
+    backgroundImage: "/images/maps/medium_merge.webp",
     teraTiles: [{ type: "water", spots: [{ x: 9, y: 3 }, { x: 3, y: 3 }, { x: 9, y: 5 }] }],
     spawns: [
       { x: -T, y: 2.5 * T },
@@ -138,7 +138,7 @@ export const MAPS: MapData[] = [
     difficulty: "hard",
     description: "중앙의 넓은 통로(폭 3칸)로 적이 지나갑니다. 딜로스에 주의하세요.",
     backgroundType: "grass",
-    backgroundImage: "/images/maps/hard_straight_wide.png",
+    backgroundImage: "/images/maps/hard_straight_wide.webp",
     teraTiles: [
       { type: "fire", spots: [{ x: 8, y: 2 }, { x: 4, y: 2 }, { x: 11, y: 2 }] },
       { type: "grass", spots: [{ x: 8, y: 6 }, { x: 4, y: 6 }, { x: 11, y: 6 }] },
@@ -176,7 +176,7 @@ export const MAPS: MapData[] = [
     difficulty: "hard",
     description: "두 경로가 완전히 분리되어, 양쪽을 따로 방어해야 합니다.",
     backgroundType: "snow",
-    backgroundImage: "/images/maps/hard_dual_path.png",
+    backgroundImage: "/images/maps/hard_dual_path.webp",
     teraTiles: [
       { type: "fire", spots: [{ x: 8, y: 2 }, { x: 4, y: 2 }, { x: 11, y: 2 }] },
       { type: "ice", spots: [{ x: 8, y: 7 }, { x: 4, y: 7 }, { x: 11, y: 7 }] },
@@ -208,7 +208,7 @@ export const MAPS: MapData[] = [
     difficulty: "expert",
     description: "네 방향에서 적들이 생성되어 중앙으로 돌격합니다.",
     backgroundType: "cave",
-    backgroundImage: "/images/maps/extreme_central.png",
+    backgroundImage: "/images/maps/extreme_central.webp",
     teraTiles: [
       { type: "fighting", spots: [{ x: 5, y: 3 }, { x: 3, y: 5 }, { x: 11, y: 5 }] },
       { type: "fighting", spots: [{ x: 9, y: 5 }, { x: 11, y: 3 }, { x: 5, y: 5 }] },
@@ -314,6 +314,14 @@ const farthestTilesFromPath = (map: MapData, n: number): { x: number; y: number 
   }
   return picked;
 };
+
+/**
+ * 맵 카드용 썸네일 경로. 배경 원본(1920w, ~150KB)을 카드에 그대로 쓰면
+ * 맵 선택 화면 한 번 여는 데 8장 = 1.2MB가 나간다. 480w 썸네일(~13KB)로 대체.
+ * (배경/썸네일은 같은 파일명, 폴더만 thumbs/ 로 다르다)
+ */
+export const mapThumbnail = (map?: MapData): string =>
+  map?.backgroundImage ? map.backgroundImage.replace('/maps/', '/maps/thumbs/') : '';
 
 const _facilityCache = new Map<string, { shopTiles: { x: number; y: number }[]; contestTiles: { x: number; y: number }[] }>();
 
