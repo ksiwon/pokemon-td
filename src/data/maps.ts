@@ -323,6 +323,14 @@ const farthestTilesFromPath = (map: MapData, n: number): { x: number; y: number 
 export const mapThumbnail = (map?: MapData): string =>
   map?.backgroundImage ? map.backgroundImage.replace('/maps/', '/maps/thumbs/') : '';
 
+/**
+ * id로 썸네일 경로 얻기(스토리 챕터 카드·멀티 로비 방 목록처럼 MapData가 아니라
+ * mapId만 들고 있는 화면용).
+ * ⚠ `/images/maps/${id}.png` 같은 문자열을 화면마다 직접 만들지 말 것 —
+ *   확장자를 webp로 바꿀 때 이 방식만 누락돼 실제로 이미지가 깨졌다.
+ */
+export const mapThumbnailById = (mapId: string): string => mapThumbnail(getMapById(mapId));
+
 const _facilityCache = new Map<string, { shopTiles: { x: number; y: number }[]; contestTiles: { x: number; y: number }[] }>();
 
 /** 시설 타일 = 길에서 가장 먼 두 칸(가장 먼 칸=프렌들리숍, 그다음=콘테스트 홀). 맵별 1회 계산 캐시. */

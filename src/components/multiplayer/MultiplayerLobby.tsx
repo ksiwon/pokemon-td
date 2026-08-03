@@ -8,7 +8,7 @@ import { Emoji } from '../shared/Emoji';
 import { media, lMedia } from '../../utils/responsive.utils';
 import { multiplayerService } from '../../services/MultiplayerService';
 import { Room, AIDifficulty } from '../../types/multiplayer';
-import { MAPS } from '../../data/maps';
+import { MAPS, mapThumbnailById } from '../../data/maps';
 import { authService } from '../../services/AuthService';
 import { useTranslation } from '../../i18n';
 import { AchievementsPanel } from '../modals/Achievements';
@@ -234,7 +234,7 @@ export const MultiplayerLobby = ({ onBack, onStartGame }: MultiplayerLobbyProps)
               {rooms.map(room => (
                 <RoomRow key={room.id}>
                   <RoomMapCell>
-                    <RoomMapThumb src={`/images/maps/${room.mapId}.png`} alt="" />
+                    <RoomMapThumb src={mapThumbnailById(room.mapId)} alt="" />
                     <RoomMapInfo>
                       <RoomName>{room.name}</RoomName>
                       <RoomMapName>{mapLabel(room)}</RoomMapName>
@@ -337,7 +337,7 @@ export const MultiplayerLobby = ({ onBack, onStartGame }: MultiplayerLobbyProps)
             <RoomLayout>
               {/* Map info */}
               <RoomMapPanel>
-                <RoomMapBig src={`/images/maps/${currentRoom.mapId}.png`} alt="" />
+                <RoomMapBig src={mapThumbnailById(currentRoom.mapId)} alt="" />
                 <RoomMapDetails>
                   <RoomMapBadge $color={mapMeta.color}>{mapMeta.label}</RoomMapBadge>
                   <RoomMapTitle>

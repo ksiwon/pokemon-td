@@ -10,7 +10,7 @@ import {
   storyProgressService,
   ChapterProgress,
 } from '../../services/StoryProgressService';
-import { MAPS } from '../../data/maps';
+import { MAPS, mapThumbnailById } from '../../data/maps';
 import { Emoji } from '../shared/Emoji';
 import { media, lMedia } from '../../utils/responsive.utils';
 import { StoryOpening } from './StoryOpening';
@@ -300,7 +300,7 @@ export const StorySelector: React.FC<StorySelectorProps> = ({ onStart }) => {
                 <CardThumb
                   style={{
                     backgroundImage: unlocked
-                      ? `url(/images/maps/${ch.mapId}.png)`
+                      ? `url(${mapThumbnailById(ch.mapId)})`
                       : 'none',
                   }}
                   $unlocked={unlocked}
