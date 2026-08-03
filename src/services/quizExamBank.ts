@@ -12,7 +12,8 @@
 //   - Serebii: /pokemonchampions/statusconditions · /updatedattacks · /updatedabilities · /training
 //   - 포켓몬 위키(ko): 얼음(상태이상) · 마비 · 잠듦 · 속이기 · Pokémon Champions 문서의 'Champions' 절
 //
-// ⚠ 사양이 갈리는 문항은 반드시 기준 타이틀을 문두에 명시한다.
+// ⚠ 사양이 갈리는 문항은 반드시 기준 타이틀을 문말에 괄호로 명시한다.
+//   형식: '… 확률은? (포켓몬 챔피언스 기준)' / '… 확률은? (9세대 스칼렛·바이올렛 기준)'
 //   Pokémon Champions(2026-04-08 발매)에서 9세대(SV) 대비 바뀐 항목이 있어,
 //   기준을 안 밝히면 정답이 둘이 된다.
 //   확인된 변경점(양쪽 소스 일치):
@@ -72,15 +73,15 @@ export const EXAM_BANK: BankQ[] = [
       { ko: 'Z기술 → 다이맥스 → 메가진화 → 테라스탈', en: 'Z-Move → Dynamax → Mega → Terastal' }], correct: 0 },
   { q: { ko: '3~5세대에서 한 능력치에 투자 가능한 노력치 상한은?', en: 'What was the per-stat EV cap in Gen 3-5?' },
     opts: [{ ko: '255', en: '255' }, { ko: '252', en: '252' }, { ko: '510', en: '510' }, { ko: '256', en: '256' }], correct: 0 },
-  { q: { ko: '포켓몬 챔피언스에서 "속이기"에 생긴 변경점은?', en: 'What changed about Fake Out in Pokémon Champions?' },
+  { q: { ko: '"속이기"에 생긴 변경점은? (포켓몬 챔피언스 기준)', en: 'What changed about Fake Out? (Pokémon Champions)' },
     opts: [
       { ko: '등장 첫 턴이 아니면 기술 선택 자체가 불가능해졌다', en: 'It can no longer even be selected unless it is the user\'s first turn out' },
       { ko: '우선도가 +3에서 +1로 하향됐다', en: 'Its priority dropped from +3 to +1' },
       { ko: '풀죽음 확률이 100%에서 50%로 하향됐다', en: 'Its flinch chance dropped from 100% to 50%' },
       { ko: '위력이 40에서 30으로 하향됐다', en: 'Its base power dropped from 40 to 30' }], correct: 0 },
-  { q: { ko: '포켓몬 챔피언스는 기술 PP를 전반적으로 상향했다. 기존 PP 10이던 기술은 대부분 얼마가 됐나?', en: 'Pokémon Champions raised move PP across the board. Most moves that had 10 PP now have how much?' },
+  { q: { ko: '기술 PP가 전반적으로 상향됐다. 기존 PP 10이던 기술은 대부분 얼마가 됐나? (포켓몬 챔피언스 기준)', en: 'Move PP was raised across the board. Most moves that had 10 PP now have how much? (Pokémon Champions)' },
     opts: [{ ko: '12', en: '12' }, { ko: '15', en: '15' }, { ko: '16', en: '16' }, { ko: '20', en: '20' }], correct: 0 },
-  { q: { ko: '포켓몬 챔피언스에서 포켓몬의 능력치·기술·특성을 바꾸는 방법은?', en: 'In Pokémon Champions, how do you change a Pokémon\'s stats, moves and Ability?' },
+  { q: { ko: '포켓몬의 능력치·기술·특성을 바꾸는 방법은? (포켓몬 챔피언스 기준)', en: 'How do you change a Pokémon\'s stats, moves and Ability? (Pokémon Champions)' },
     opts: [
       { ko: '랭크배틀로 얻은 VP(빅토리 포인트)를 소모해 트레이닝한다', en: 'Spend Victory Points (VP) earned from Ranked Battles on training' },
       { ko: '야생 포켓몬을 쓰러뜨려 노력치를 쌓는다', en: 'Defeat wild Pokémon to accumulate EVs' },
@@ -150,21 +151,21 @@ export const EXAM_BANK: BankQ[] = [
     opts: [{ ko: '물리 공격', en: 'Physical Attack' }, { ko: '특수공격', en: 'Special Attack' }, { ko: '방어', en: 'Defense' }, { ko: '스피드', en: 'Speed' }], correct: 0 },
   { q: { ko: '"맹독" 상태의 데미지는 매 턴 어떻게 변하는가?', en: 'How does Badly Poisoned (Toxic) damage change each turn?' },
     opts: [{ ko: '1/16씩 누적 증가(1/16, 2/16, 3/16…)', en: 'Increases by 1/16 each turn (1/16, 2/16, 3/16…)' }, { ko: '매 턴 1/8로 고정', en: 'Fixed at 1/8 each turn' }, { ko: '매 턴 두 배로 증가', en: 'Doubles each turn' }, { ko: '매 턴 1/16으로 고정', en: 'Fixed at 1/16 each turn' }], correct: 0 },
-  { q: { ko: '9세대(스칼렛·바이올렛) 기준, "마비" 상태에서 행동하지 못할 확률은?', en: 'In Gen 9 (Scarlet/Violet), what is the chance a paralyzed Pokémon cannot move?' },
+  { q: { ko: '"마비" 상태에서 행동하지 못할 확률은? (9세대 스칼렛·바이올렛 기준)', en: 'What is the chance a paralyzed Pokémon cannot move? (Gen 9 Scarlet/Violet)' },
     opts: [{ ko: '25%', en: '25%' }, { ko: '50%', en: '50%' }, { ko: '12.5%', en: '12.5%' }, { ko: '33%', en: '33%' }], correct: 0 },
-  { q: { ko: '포켓몬 챔피언스 기준, "마비" 상태에서 행동하지 못할 확률은?', en: 'In Pokémon Champions, what is the chance a paralyzed Pokémon cannot move?' },
+  { q: { ko: '"마비" 상태에서 행동하지 못할 확률은? (포켓몬 챔피언스 기준)', en: 'What is the chance a paralyzed Pokémon cannot move? (Pokémon Champions)' },
     opts: [{ ko: '12.5%', en: '12.5%' }, { ko: '25%', en: '25%' }, { ko: '50%', en: '50%' }, { ko: '33%', en: '33%' }], correct: 0 },
-  { q: { ko: '9세대(스칼렛·바이올렛) 기준, "얼음(빙결)" 상태가 매 턴 자연 해동될 확률은?', en: 'In Gen 9 (Scarlet/Violet), what is the chance a frozen Pokémon thaws each turn?' },
+  { q: { ko: '"얼음(빙결)" 상태가 매 턴 자연 해동될 확률은? (9세대 스칼렛·바이올렛 기준)', en: 'What is the chance a frozen Pokémon thaws each turn? (Gen 9 Scarlet/Violet)' },
     opts: [{ ko: '20%', en: '20%' }, { ko: '25%', en: '25%' }, { ko: '10%', en: '10%' }, { ko: '50%', en: '50%' }], correct: 0 },
-  { q: { ko: '포켓몬 챔피언스 기준, "얼음(빙결)" 상태가 매 턴 해동될 확률은?', en: 'In Pokémon Champions, what is the chance a frozen Pokémon thaws each turn?' },
+  { q: { ko: '"얼음(빙결)" 상태가 매 턴 해동될 확률은? (포켓몬 챔피언스 기준)', en: 'What is the chance a frozen Pokémon thaws each turn? (Pokémon Champions)' },
     opts: [{ ko: '25%', en: '25%' }, { ko: '20%', en: '20%' }, { ko: '33%', en: '33%' }, { ko: '50%', en: '50%' }], correct: 0 },
-  { q: { ko: '포켓몬 챔피언스에서 "얼음(빙결)" 상태의 지속 상한은?', en: 'In Pokémon Champions, how long can Freeze last at most?' },
+  { q: { ko: '"얼음(빙결)" 상태의 지속 상한은? (포켓몬 챔피언스 기준)', en: 'How long can Freeze last at most? (Pokémon Champions)' },
     opts: [
       { ko: '3턴째에 반드시 해동된다', en: 'The Pokémon always thaws on the third turn' },
       { ko: '5턴째에 반드시 해동된다', en: 'It always thaws on the fifth turn' },
       { ko: '해동될 때까지 상한이 없다', en: 'There is no cap — it lasts until it thaws' },
       { ko: '2턴째에 반드시 해동된다', en: 'It always thaws on the second turn' }], correct: 0 },
-  { q: { ko: '포켓몬 챔피언스의 "잠듦" 사양으로 옳은 것은?', en: 'Which describes Sleep correctly in Pokémon Champions?' },
+  { q: { ko: '"잠듦" 사양으로 옳은 것은? (포켓몬 챔피언스 기준)', en: 'Which describes Sleep correctly? (Pokémon Champions)' },
     opts: [
       { ko: '2턴째에 33.3%로 깨어나고, 3턴째에는 반드시 깨어난다', en: '33.3% chance to wake on turn 2; always wakes on turn 3' },
       { ko: '9세대와 같이 2~4턴 지속된다', en: 'Lasts 2-4 turns, same as Gen 9' },
