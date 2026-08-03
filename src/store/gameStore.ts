@@ -2,7 +2,7 @@
 import { create } from 'zustand';
 import {
   GameState, GamePokemon, Enemy, Projectile, DamageNumber,
-  Difficulty, Item, GameMove, Synergy, ClerkOrScoutPrompt
+  Difficulty, Item, GameMove, Synergy, ClerkOrScoutPrompt, Position
 } from '../types/game';
 import {
   EVOLUTION_CHAINS, FUSION_DATA,
@@ -12,7 +12,8 @@ import {
 import { pokeAPI } from '../api/pokeapi';
 import { saveService } from '../services/SaveService';
 import { calculateActiveSynergies } from '../utils/synergyManager';
-import { getMapById, getFacilityTiles, getBuildableTiles } from '../data/maps';
+import { getMapById, getBuildableTiles } from '../data/maps';
+import { facilityTilesOfMap, isWorkLocked } from '../utils/facility.utils';
 import { rng } from '../utils/rng';
 import { BALANCE_OVERRIDES } from '../game/balanceOverrides';
 import { ACHIEVEMENTS } from '../data/achievements';
@@ -65,6 +66,15 @@ interface GameStore extends GameState {
   setManageTowerId: (id: string | null) => void;
   addClerkOrScoutPrompt: (prompt: ClerkOrScoutPrompt) => void;
   resolveClerkOrScoutPrompt: (towerId: string, withdraw: boolean) => { success: boolean; message?: string };
+  /**
+   * 회수를 고른 뒤 플레이어가 직접 칸을 찍기를 기다리는 타워 id 목록.
+   * 숍·콘테스트가 같은 웨이브에 동시에 마일스톤을 찍을 수 있어 큐로 둔다(선두부터 한 마리씩 배치).
+   */
+  pendingWorkWithdrawIds: string[];
+  /** 회수 시작(마일스톤 모달 / 최고 등급 시설 모달 공용) — 배치 모드로 넘긴다. */
+  beginWorkWithdraw: (towerId: string) => { success: boolean; message?: string };
+  /** 큐 선두 타워의 회수 확정. position 지정 시 그 칸으로, 생략 시 임의의 빈 칸으로(폴백). */
+  completeWorkWithdraw: (position?: Position) => void;
   healAllTowers: () => void;
   addXpToTower: (towerId: string, xp: number) => void;
   evolvePokemon: (towerId: string, item?: string, targetId?: number) => Promise<boolean>;
@@ -103,6 +113,7 @@ export const useGameStore = create<GameStore>((set, get) => ({
   heldItemInventory: [],
   manageTowerId: null,
   clerkOrScoutPromptQueue: [],
+  pendingWorkWithdrawIds: [],
   currentMap: 'beginner',
   difficulty: 'medium',
   gameSpeed: saveService.load().settings.gameSpeed || 1,
@@ -167,14 +178,9 @@ export const useGameStore = create<GameStore>((set, get) => ({
     const tower = get().towers.find(t => t.id === id);
     if (!tower) return false;
 
-    // 알바 타일(프렌들리숍 ∪ 콘테스트 홀)에 갇혀있을 때에는 판매 불가
-    const currentMap = get().currentMap;
-    const fac = getFacilityTiles(getMapById(currentMap));
-    const workTiles = [...fac.shopTiles, ...fac.contestTiles];
-    const tx = Math.floor(tower.position.x / 64);
-    const ty = Math.floor(tower.position.y / 64);
-    const isOnWork = workTiles.some(s => s.x === tx && s.y === ty);
-    if (isOnWork) return false;
+    // 알바 타일(프렌들리숍 ∪ 콘테스트 홀)에 갇혀있을 때에는 판매 불가.
+    // 단 최고 등급(15웨이브)을 채웠으면 잠금이 풀려 판매도 가능하다.
+    if (isWorkLocked(tower, get().currentMap)) return false;
 
     // [SELL-FIX] 판매가 = max(레벨가치, 구매가의 절반). 기존엔 level*20만 써서
     //   갓 산 고레어(예: 250G 전설)를 20G(92% 손실)에 팔게 됐음. sellValue(구매가×0.5)를 하한으로.
@@ -299,6 +305,7 @@ export const useGameStore = create<GameStore>((set, get) => ({
       heldItemInventory: [],
       manageTowerId: null,
       clerkOrScoutPromptQueue: [],
+      pendingWorkWithdrawIds: [],
     });
   },
 
@@ -842,8 +849,7 @@ export const useGameStore = create<GameStore>((set, get) => ({
   })),
 
   resolveClerkOrScoutPrompt: (towerId, withdraw) => {
-    const { towers, currentMap, updateTower } = get();
-    const tower = towers.find(t => t.id === towerId);
+    const tower = get().towers.find(t => t.id === towerId);
     if (!tower) {
       set(state => ({
         clerkOrScoutPromptQueue: state.clerkOrScoutPromptQueue.filter(q => q.towerId !== towerId)
@@ -852,14 +858,9 @@ export const useGameStore = create<GameStore>((set, get) => ({
     }
 
     if (withdraw) {
-      const emptyPos = findEmptyBuildableTile(currentMap, towers);
-      if (!emptyPos) {
-        return { success: false, message: 'work.errNoTile' };
-      }
-      updateTower(towerId, {
-        position: emptyPos,
-        shopWavesHeld: 0
-      });
+      // 놓을 곳이 하나도 없으면 회수를 확정하지 않는다(모달 유지 → "계속 근무"로 넘어갈 수 있게).
+      const started = get().beginWorkWithdraw(towerId);
+      if (!started.success) return started;
     }
 
     set(state => ({
@@ -867,6 +868,42 @@ export const useGameStore = create<GameStore>((set, get) => ({
     }));
 
     return { success: true };
+  },
+
+  // 회수 시작 — 예전엔 임의의 빈 칸으로 순간이동시켰지만, 이제 배치 모드로 넘겨 플레이어가 칸을 찍는다.
+  beginWorkWithdraw: (towerId) => {
+    const { towers, currentMap } = get();
+    if (!towers.some(t => t.id === towerId)) return { success: false, message: 'work.errNotFound' };
+    if (!findEmptyBuildableTile(currentMap, towers)) return { success: false, message: 'work.errNoTile' };
+
+    set(state => ({
+      pendingWorkWithdrawIds: state.pendingWorkWithdrawIds.includes(towerId)
+        ? state.pendingWorkWithdrawIds
+        : [...state.pendingWorkWithdrawIds, towerId],
+      manageTowerId: state.manageTowerId === towerId ? null : state.manageTowerId,
+    }));
+    return { success: true };
+  },
+
+  // 회수 배치 확정(큐 선두). position이 있으면 그 칸으로, 없으면(웨이브 시작 등 폴백) 임의의 빈 칸으로.
+  completeWorkWithdraw: (position) => {
+    const { pendingWorkWithdrawIds, towers, currentMap, updateTower } = get();
+    const towerId = pendingWorkWithdrawIds[0];
+    if (!towerId) return;
+
+    const pop = () => set(state => ({
+      pendingWorkWithdrawIds: state.pendingWorkWithdrawIds.filter(id => id !== towerId),
+    }));
+
+    const tower = towers.find(t => t.id === towerId);
+    if (!tower) { pop(); return; }
+
+    // 폴백 경로에서 빈 칸이 사라졌다면 근무 상태 그대로 둔다(다음 마일스톤에 다시 물어봄).
+    const target = position ?? findEmptyBuildableTile(currentMap, towers);
+    if (!target) { pop(); return; }
+
+    updateTower(towerId, { position: target, shopWavesHeld: 0 });
+    pop();
   },
 }));
 
@@ -877,7 +914,7 @@ function findEmptyBuildableTile(
   const map = getMapById(mapId);
   if (!map) return null;
 
-  const facility = getFacilityTiles(map);
+  const facility = facilityTilesOfMap(mapId);
   const workTiles = [...facility.shopTiles, ...facility.contestTiles];
 
   // 자유배치 규칙(길·입출구 keepout 제외)으로 빈 칸을 찾는다.

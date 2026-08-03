@@ -92,11 +92,19 @@
   },
   "work": {
     "milestoneTitle": "근무 마일스톤 달성!",
-    "milestoneDesc": "{name} 포켓몬이 {facility}에서 {waves}웨이브 동안 열심히 일했습니다! 이제 포켓몬을 알바에서 회수하시겠습니까, 아니면 계속해서 다음 레벨로 가시겠습니까?",
-    "btnWithdraw": "회수하기 (빈 칸으로 이동)",
+    "milestoneDesc": "{name} 포켓몬이 {facility}에서 {waves}웨이브 동안 열심히 일했습니다! (현재 Lv.{tier})",
+    "milestoneNext": "계속 근무하면 {n}웨이브 뒤에 Lv.{nextTier}로 올라갑니다.",
+    "milestoneFinal": "최고 등급입니다. 이제부터는 웨이브 사이에 언제든 직접 옮기거나 팔 수 있어요.",
+    "milestoneResetWarn": "⚠ 회수하면 누적 근무 {waves}웨이브가 0으로 초기화됩니다. 다시 올리려면 처음부터 근무해야 해요.",
+    "btnWithdraw": "회수하기 (근무 누적 초기화)",
     "btnContinue": "계속 근무하기",
     "facilityShop": "프렌들리숍",
     "facilityContest": "콘테스트 홀",
+    "freeWithdrawNote": "최고 등급 — 언제든 회수할 수 있습니다.",
+    "lockedUntilFree": "자유 회수까지 {n}웨이브 (5·10웨이브 마일스톤에서도 회수 가능)",
+    "withdrawBetweenWaves": "회수는 웨이브 사이에만 가능합니다.",
+    "placeHint": "{name}을(를) 놓을 빈 칸을 클릭하세요.",
+    "placeOnEmpty": "회수 배치는 빈 칸에만 가능합니다(교환 불가).",
     "errNotFound": "포켓몬을 찾을 수 없습니다.",
     "errNoTile": "배치할 수 있는 빈 타일이 없습니다. 자리를 비운 뒤 해제해 주세요."
   },
@@ -147,12 +155,11 @@
     "contestTileL1": "포켓몬을 콘테스트에 내보내면 상점에 고레어가 더 잘 나와요",
     "contestTileL2": "누적 5 / 10 / 15웨이브 → 확률 조금씩↑",
     "contestTileL3": "※ 출전 포켓몬은 공격·경험치를 받지 않아요",
-    "alertCannotMoveSwap": "근무 중인 포켓몬은 이동하거나 교환할 수 없습니다.",
-    "alertCannotMove": "근무 중인 포켓몬은 이동할 수 없습니다.",
-    "alertCannotSelect": "근무 중인 포켓몬은 선택하여 이동할 수 없습니다.",
+    "alertCannotMoveSwap": "근무 중인 포켓몬은 이동하거나 교환할 수 없습니다. (누적 15웨이브부터 자유)",
+    "alertCannotMove": "근무 중인 포켓몬은 이동할 수 없습니다. (누적 15웨이브부터 자유)",
     "alertSellDuringWave": "웨이브 진행 중에는 판매할 수 없습니다.",
-    "alertCannotSell": "알바 또는 콘테스트 중인 포켓몬은 판매할 수 없습니다.",
-    "alertCannotFuse": "근무 중인 포켓몬은 융합할 수 없습니다."
+    "alertCannotSell": "알바 또는 콘테스트 중인 포켓몬은 판매할 수 없습니다. (누적 15웨이브부터 자유)",
+    "alertCannotFuse": "근무 중인 포켓몬은 융합할 수 없습니다. (누적 15웨이브부터 자유)"
   },
   "heldItems": {
     "sitrus-berry": {

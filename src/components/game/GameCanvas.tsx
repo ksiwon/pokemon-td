@@ -16,7 +16,10 @@ import styled, { keyframes } from "styled-components";
 import { useTranslation } from "../../i18n";
 import { useGameStore } from "../../store/gameStore";
 import { GameManager } from "../../game/GameManager";
-import { getMapById, activeTeraTiles, getFacilityTiles } from "../../data/maps";
+import { getMapById, activeTeraTiles } from "../../data/maps";
+import {
+  activeFacilityTiles, isWorkLocked, isWorking, movePatch, WORK_FREE_WITHDRAW_WAVES,
+} from "../../utils/facility.utils";
 import { GamePokemon } from "../../types/game";
 import { lMedia, isMobileOrTablet, isTouchDevice } from "../../utils/responsive.utils";
 import { buyableHeldItems, shopTier, wavesToNextTier, getHeldItem } from "../../data/heldItems";
@@ -483,6 +486,8 @@ export const GameCanvas: React.FC = () => {
   const [selectedTowerForReposition, setSelectedTowerForReposition] = useState<GamePokemon | null>(null);
   const [touchStartPos, setTouchStartPos] = useState<{ x: number; y: number } | null>(null);
   const [mapBgImage, setMapBgImage] = useState<HTMLImageElement | null>(null);
+  // 알바 회수 배치 대기열 — 선두 한 마리씩 플레이어가 칸을 찍는다.
+  const pendingWorkWithdrawId = useGameStore(s => s.pendingWorkWithdrawIds[0] ?? null);
   const manageTowerId = useGameStore(s => s.manageTowerId);
   const setManageTowerId = useGameStore(s => s.setManageTowerId);
   const money = useGameStore(s => s.money);
@@ -498,8 +503,8 @@ export const GameCanvas: React.FC = () => {
     () => activeTeraTiles(map, wave, isWaveActive),
     [map, wave, isWaveActive]
   );
-  // 시설(프렌들리숍·콘테스트 홀) = 길에서 가장 먼 칸 자동 계산
-  const facility = React.useMemo(() => getFacilityTiles(map), [map]);
+  // 시설(프렌들리숍·콘테스트 홀) = 길에서 가장 먼 칸 자동 계산. 멀티플레이는 빈 목록(알바 없음).
+  const facility = React.useMemo(() => activeFacilityTiles(map), [map]);
 
   // ── i18n 헬퍼 ──────────────────────────────────────────────────────────────
   const typeLabel = (ty?: string) => (ty ? t(`types.${ty}`) : '');
@@ -587,8 +592,29 @@ export const GameCanvas: React.FC = () => {
 
   useEffect(() => {
     if (!isWaveActive && towers.length > 0) setRepositionMode(true);
-    else if (isWaveActive) { setRepositionMode(false); setSelectedTowerForReposition(null); }
+    else if (isWaveActive) {
+      // 회수 배치를 마치지 않은 채 웨이브를 시작하면 임의의 빈 칸으로 폴백 배치(갇힘 방지).
+      // completeWorkWithdraw()는 어떤 경로로도 큐 선두를 제거하므로 루프는 반드시 끝난다.
+      let guard = 0;
+      while (useGameStore.getState().pendingWorkWithdrawIds.length > 0 && guard++ < 8) {
+        useGameStore.getState().completeWorkWithdraw();
+      }
+      setRepositionMode(false); setSelectedTowerForReposition(null);
+    }
   }, [isWaveActive, towers.length]);
+
+  // [회수 배치] 회수를 고르면 곧바로 배치 모드로 넘겨 원하는 칸을 찍게 한다.
+  useEffect(() => {
+    if (!pendingWorkWithdrawId) return;
+    const tw = useGameStore.getState().towers.find(t => t.id === pendingWorkWithdrawId);
+    if (!tw) return;
+    setRepositionMode(true);
+    setSelectedTowerForReposition(tw);
+    const img = new window.Image();
+    img.src = tw.sprite; img.crossOrigin = "Anonymous";
+    img.onload = () => setPlacementImage(img);
+    showToast(t('work.placeHint', { name: tw.displayName }), 'info');
+  }, [pendingWorkWithdrawId]);
 
   const handleTouchStart = (e: any) => {
     if (!isTouchDevice()) return;
@@ -729,39 +755,47 @@ export const GameCanvas: React.FC = () => {
     const snappedY = Math.floor(pos.y / TILE_SIZE) * TILE_SIZE + TILE_SIZE / 2;
 
     if (repositionMode && !pokemonToPlace) {
-      const isOnWork = (tw: GamePokemon) => {
-        const tx = Math.floor(tw.position.x / TILE_SIZE), ty = Math.floor(tw.position.y / TILE_SIZE);
-        const workTiles = [...facility.shopTiles, ...facility.contestTiles];
-        return workTiles.some(s => s.x === tx && s.y === ty);
-      };
+      // 근무 잠금 — 근무 중이라도 최고 등급(15웨이브)이면 자유롭게 옮길 수 있다.
+      const isLocked = (tw: GamePokemon) => isWorkLocked(tw, currentMap);
+      const updateTower = useGameStore.getState().updateTower;
 
       if (selectedTowerForReposition) {
         const A = selectedTowerForReposition;
+        const isWithdrawing = pendingWorkWithdrawId === A.id;
         // 클릭 칸에 다른 타워(B)가 있으면 A·B 위치 교환
         const B = towers.find(t => t.id !== A.id && Math.floor(t.position.x / TILE_SIZE) === Math.floor(snappedX / TILE_SIZE) && Math.floor(t.position.y / TILE_SIZE) === Math.floor(snappedY / TILE_SIZE));
         if (B) {
-          if (isOnWork(A) || isOnWork(B)) {
+          // 회수 배치 중에는 교환 불가 — 근무 타일을 비우는 게 목적이므로 빈 칸만 허용
+          if (isWithdrawing) { showToast(t('work.placeOnEmpty')); return; }
+          if (isLocked(A) || isLocked(B)) {
             showToast(t('facility.alertCannotMoveSwap'));
             return;
           }
-          const updateTower = useGameStore.getState().updateTower;
-          updateTower(A.id, { position: { x: B.position.x, y: B.position.y } });
-          updateTower(B.id, { position: { x: A.position.x, y: A.position.y } });
+          updateTower(A.id, movePatch(A, currentMap, { x: B.position.x, y: B.position.y }));
+          updateTower(B.id, movePatch(B, currentMap, { x: A.position.x, y: A.position.y }));
           setSelectedTowerForReposition(null);
           return;
         }
         if (!isValidPlacement(snappedX, snappedY, A.id)) { showToast(t('alerts.cannotPlaceHere')); return; }
-        if (isOnWork(A)) {
+        if (!isWithdrawing && isLocked(A)) {
           showToast(t('facility.alertCannotMove'));
           return;
         }
-        useGameStore.getState().updateTower(A.id, { position: { x: snappedX, y: snappedY } });
+        if (isWithdrawing) {
+          // 회수 확정 — 누적 근무 초기화까지 store가 처리
+          useGameStore.getState().completeWorkWithdraw({ x: snappedX, y: snappedY });
+        } else {
+          updateTower(A.id, movePatch(A, currentMap, { x: snappedX, y: snappedY }));
+        }
         setSelectedTowerForReposition(null);
       } else {
         const clicked = towers.find(t => Math.abs(t.position.x - pos.x) < 32 && Math.abs(t.position.y - pos.y) < 32);
         if (clicked) {
-          if (isOnWork(clicked)) {
-            showToast(t('facility.alertCannotSelect'));
+          // 근무 중인 포켓몬은 집어 올리는 대신 시설 모달을 연다.
+          // (최고 등급이라 잠금이 풀렸어도, 실수로 끌어내 누적을 날리는 사고를 막고
+          //  모달 안의 '회수하기' 버튼으로만 명시적으로 빼게 한다)
+          if (isWorking(clicked, currentMap)) {
+            setManageTowerId(clicked.id);
             return;
           }
           setSelectedTowerForReposition(clicked);
@@ -1196,6 +1230,27 @@ export const GameCanvas: React.FC = () => {
                 <span style={{ marginLeft: 8, color: '#f0b840' }}><Emoji glyph="💰" size={13} /> {money}{t('common.money')}</span>
               </ShopSub>
 
+              {/* 근무 회수 — 최고 등급(15웨이브)부터는 웨이브 사이에 언제든 뺄 수 있다 */}
+              {(isClerk || isScout) && (
+                waves >= WORK_FREE_WITHDRAW_WAVES
+                  ? (
+                    <WithdrawRow>
+                      <span>{t('work.freeWithdrawNote')}</span>
+                      <WithdrawBtn
+                        disabled={isWaveActive}
+                        onClick={() => {
+                          if (isWaveActive) { showToast(t('work.withdrawBetweenWaves')); return; }
+                          const res = useGameStore.getState().beginWorkWithdraw(tower.id);
+                          if (!res.success && res.message) showToast(t(res.message));
+                        }}
+                      >
+                        <Emoji glyph="🎒" size={13} /> {t('work.btnWithdraw')}
+                      </WithdrawBtn>
+                    </WithdrawRow>
+                  )
+                  : <ShopLockNote>{t('work.lockedUntilFree', { n: WORK_FREE_WITHDRAW_WAVES - waves })}</ShopLockNote>
+              )}
+
               {/* 콘테스트 홀 상태 */}
               {isScout && (
                 tier === 0
@@ -1392,6 +1447,22 @@ const ShopGhostBtn = styled.button`
 const ShopLockNote = styled.div`
   font-size: 12px; color: #ffb0b0; background: rgba(192,57,43,0.12);
   border: 1px solid rgba(192,57,43,0.4); border-radius: 8px; padding: 8px 10px; margin-bottom: 10px;
+`;
+// 근무 회수(최고 등급 해금 후) 행
+const WithdrawRow = styled.div`
+  display: flex; align-items: center; justify-content: space-between; gap: 10px;
+  font-size: 11.5px; color: #cde6c0; line-height: 1.45;
+  background: rgba(46,204,113,0.10); border: 1px solid rgba(46,204,113,0.35);
+  border-radius: 8px; padding: 8px 10px; margin-bottom: 10px;
+`;
+const WithdrawBtn = styled.button<{ disabled?: boolean }>`
+  flex-shrink: 0;
+  border: 1px solid rgba(46,204,113,0.55); background: rgba(46,204,113,0.18); color: #eafff0;
+  border-radius: 8px; padding: 7px 10px; font-size: 11px; font-weight: bold; white-space: nowrap;
+  cursor: ${p => p.disabled ? 'not-allowed' : 'pointer'};
+  opacity: ${p => p.disabled ? 0.45 : 1};
+  display: flex; align-items: center; gap: 5px;
+  @media (hover: hover) { &:hover { filter: ${p => p.disabled ? 'none' : 'brightness(1.15)'}; } }
 `;
 
 const StageWrapper = styled.div`

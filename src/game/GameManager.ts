@@ -27,7 +27,10 @@ function singleDamageRandom(): number {
   return on ? damageRandomFactor(rng()) : 1;
 }
 import { databaseService } from '../services/DatabaseService';
-import { getMapById, getFacilityTiles } from '../data/maps';
+import { getMapById } from '../data/maps';
+import {
+  facilityTilesOfMap, isWorking, WORK_FREE_WITHDRAW_WAVES,
+} from '../utils/facility.utils';
 import { pokeAPI } from '../api/pokeapi';
 import { multiplayerService } from '../services/MultiplayerService';
 import { achievementService } from '../services/AchievementService';
@@ -58,11 +61,9 @@ export class GameManager {
   private nextId(): number { return ++this._nextId; }
 
   // 알바 칸(프렌들리숍 ∪ 콘테스트 홀) 점유 여부 — 공격·경험치 차단에 사용.
+  // 멀티플레이에는 알바 시스템이 없으므로 isWorking()이 항상 false를 돌려준다.
   private isOnWorkTile(tw: GamePokemon, currentMap: string): boolean {
-    const fac = getFacilityTiles(getMapById(currentMap));
-    const tiles = [...fac.shopTiles, ...fac.contestTiles];
-    const tx = Math.floor(tw.position.x / 64), ty = Math.floor(tw.position.y / 64);
-    return tiles.some(s => s.x === tx && s.y === ty);
+    return isWorking(tw, currentMap);
   }
 
   // [먹다남은음식] 초당 회복을 위한 누적(타워별)
@@ -820,13 +821,16 @@ export class GameManager {
       healAllTowers();
 
       // [알바] 프렌들리숍·콘테스트 홀에 올라간 타워의 누적 근무 웨이브 +1 → 상점 등급/레어도 부스트 해금
+      //   (멀티플레이는 알바 시스템 자체가 없어 isOnWorkTile이 항상 false)
       for (const tw of towers) {
         if (this.isOnWorkTile(tw, currentMap)) {
           const nextWaves = (tw.shopWavesHeld ?? 0) + 1;
           useGameStore.getState().updateTower(tw.id, { shopWavesHeld: nextWaves });
 
-          if (!isMultiplayer && nextWaves > 0 && nextWaves % 5 === 0) {
-            const fac = getFacilityTiles(getMapById(currentMap));
+          // 회수 프롬프트는 5·10·15웨이브에서만. 15(최고 등급)부터는 잠금이 풀려
+          // 웨이브 사이에 언제든 직접 뺄 수 있으므로 더 물어볼 필요가 없다.
+          if (nextWaves % 5 === 0 && nextWaves <= WORK_FREE_WITHDRAW_WAVES) {
+            const fac = facilityTilesOfMap(currentMap);
             const tx = Math.floor(tw.position.x / 64);
             const ty = Math.floor(tw.position.y / 64);
             const isClerk = fac.shopTiles.some(s => s.x === tx && s.y === ty);

@@ -39,7 +39,7 @@ import { HallOfFame } from "../modals/HallOfFame";
 import { Rankings } from "../modals/Rankings";
 import { Settings } from "../modals/Settings";
 import { useGameStore } from "../../store/gameStore";
-import { getMapById, getFacilityTiles } from "../../data/maps";
+import { facilityTilesOfMap } from "../../utils/facility.utils";
 import { shopTier } from "../../data/heldItems";
 import { WaveSystem } from "../../game/WaveSystem";
 import { multiplayerService } from "../../services/MultiplayerService";
@@ -216,7 +216,7 @@ export const GameLayout: React.FC<GameLayoutProps> = ({ onLeaveGame }) => {
   const pulsePokemon = towers.length === 0 && !isWaveActive;
 
   // 시설(프렌들리숍·콘테스트 홀) 등급 — 해당 타일에 올라간 알바 포켓몬의 근무 누적 웨이브 기준
-  const facility = getFacilityTiles(getMapById(currentMap));
+  const facility = facilityTilesOfMap(currentMap);
   const facilityOccupant = (tiles: { x: number; y: number }[]) => {
     const tw = tiles.length
       ? towers.find(t => tiles.some(s => s.x === Math.floor(t.position.x / 64) && s.y === Math.floor(t.position.y / 64)))
@@ -833,7 +833,8 @@ export const GameLayout: React.FC<GameLayoutProps> = ({ onLeaveGame }) => {
             <SynergyTracker embedded />
           </SynergyArea>
           <HudSep />
-          {/* 시설 등급(프렌들리숍·콘테스트 홀) */}
+          {/* 시설 등급(프렌들리숍·콘테스트 홀) — 멀티플레이엔 알바 시스템이 없어 숨긴다 */}
+          {!isMultiplayer && (
           <FacilityBox>
             <FacilityRow>
               <FacilityName><Store size={13} /> {t('facility.shop')}</FacilityName>
@@ -856,6 +857,7 @@ export const GameLayout: React.FC<GameLayoutProps> = ({ onLeaveGame }) => {
               )}
             </FacilityRow>
           </FacilityBox>
+          )}
           <HudArea>
             <HudGrid>
               <HudTile>
