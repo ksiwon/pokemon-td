@@ -23,9 +23,19 @@
 ```bash
 cd assets-src/maps
 for f in *.png; do n="${f%.png}"
+  [ "$n" = "battle_field" ] && continue          # 아레나 배경은 규격이 다르다(아래 참조)
   ffmpeg -y -i "$f" -vf scale=1920:-2 -c:v libwebp -quality 82 -compression_level 6 "../../public/images/maps/$n.webp"
   ffmpeg -y -i "$f" -vf scale=480:-2  -c:v libwebp -quality 76 -compression_level 6 "../../public/images/maps/thumbs/$n.webp"
 done
+```
+
+`battle_field`는 TFT 배틀 아레나 보드(528px) 배경 전용이라 규격이 다르다.
+원본이 1110×1110뿐이라 1920으로 뽑으면 **업스케일**만 되고 용량이 2.5배(55KB→141KB)로 뛴다.
+썸네일도 쓰이지 않으므로 만들지 않는다.
+
+```bash
+ffmpeg -y -i battle_field.png -vf scale=1056:-2 -c:v libwebp -quality 82 -compression_level 6 \
+  ../../public/images/maps/battle_field.webp
 ```
 
 ```bash

@@ -33,16 +33,16 @@ export const activeFacilityTiles = (map?: MapData): FacilityTiles =>
 export const facilityTilesOfMap = (mapId: string): FacilityTiles =>
   activeFacilityTiles(getMapById(mapId));
 
-/** 근무 타일(숍 ∪ 콘테스트) 전체 */
-export const workTilesOf = (mapId: string): Tile[] => {
+/** 근무 타일(숍 ∪ 콘테스트) 전체 — 내부 헬퍼 */
+const workTilesOf = (mapId: string): Tile[] => {
   const f = facilityTilesOfMap(mapId);
   return [...f.shopTiles, ...f.contestTiles];
 };
 
 type WorkTower = { position: { x: number; y: number }; shopWavesHeld?: number };
 
-/** 픽셀 좌표가 근무 타일 위인가 */
-export const isWorkTileAt = (mapId: string, pos: { x: number; y: number }): boolean => {
+/** 픽셀 좌표가 근무 타일 위인가 — 내부 헬퍼(외부는 isWorking/isWorkLocked/movePatch를 쓴다) */
+const isWorkTileAt = (mapId: string, pos: { x: number; y: number }): boolean => {
   const tx = Math.floor(pos.x / TILE), ty = Math.floor(pos.y / TILE);
   return workTilesOf(mapId).some(s => s.x === tx && s.y === ty);
 };
