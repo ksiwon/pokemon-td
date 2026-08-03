@@ -8,7 +8,7 @@ import { pokeAPI, PokemonData } from '../../api/pokeapi';
 import { useGameStore } from '../../store/gameStore';
 import { GameMove, Gender } from '../../types/game';
 import { Rarity, RARITY_COLORS } from '../../data/evolution';
-import { getMapById, getFacilityTiles } from '../../data/maps';
+import { facilityTilesOfMap } from '../../utils/facility.utils';
 import { rarityBoostFromWaves } from '../../data/heldItems';
 import {
   pickUsableMove, toEquippedMove, pickRandomAbility,
@@ -135,7 +135,7 @@ export const PokemonPicker: React.FC<{ onClose: () => void; storyHeroPool?: numb
         // ── 일반 모드: 기존 랜덤 가중치 방식 ─────────────────────────────────
         // 콘테스트 홀에 포켓몬을 내보냈으면 근무 누적 웨이브만큼 고레어 등장 확률을 끌어올린다.
         const st = useGameStore.getState();
-        const contestTiles = getFacilityTiles(getMapById(st.currentMap)).contestTiles;
+        const contestTiles = facilityTilesOfMap(st.currentMap).contestTiles;
         const scout = st.towers.find(t =>
           contestTiles.some(s => s.x === Math.floor(t.position.x / 64) && s.y === Math.floor(t.position.y / 64)));
         const boost = scout ? rarityBoostFromWaves(scout.shopWavesHeld ?? 0) : 0;

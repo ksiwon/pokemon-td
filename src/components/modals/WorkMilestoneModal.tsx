@@ -9,6 +9,8 @@ import {
 import { Emoji } from '../shared/Emoji';
 import { showToast } from '../shared/Toast';
 import { media } from '../../utils/responsive.utils';
+import { shopTier, wavesToNextTier } from '../../data/heldItems';
+import { WORK_FREE_WITHDRAW_WAVES } from '../../utils/facility.utils';
 
 export const WorkMilestoneModal: React.FC = () => {
   const { t } = useTranslation();
@@ -30,6 +32,11 @@ export const WorkMilestoneModal: React.FC = () => {
     ? t('work.facilityShop')
     : t('work.facilityContest');
 
+  const waves = currentPrompt.waves;
+  const tier = shopTier(waves);
+  // 15웨이브(최고 등급)부터는 잠금이 풀려 웨이브 사이에 언제든 뺄 수 있다 → 마지막 안내
+  const isFinal = waves >= WORK_FREE_WITHDRAW_WAVES;
+
   return (
     <ModalOverlay $zIndex={2000}>
       <ModalBox $size="sm" $accent={MODAL_ACCENT.gold} $animate="slideUp">
@@ -43,9 +50,16 @@ export const WorkMilestoneModal: React.FC = () => {
             {t('work.milestoneDesc', {
               name: currentPrompt.pokemonName,
               facility: facilityName,
-              waves: currentPrompt.waves,
+              waves,
+              tier,
             })}
           </Desc>
+          <Desc>
+            {isFinal
+              ? t('work.milestoneFinal')
+              : t('work.milestoneNext', { n: wavesToNextTier(waves), nextTier: tier + 1 })}
+          </Desc>
+          <WarnBox>{t('work.milestoneResetWarn', { waves })}</WarnBox>
         </ModalScrollBody>
         <ModalFooter>
           <ActionBtn onClick={() => handleChoice(true)} $primary>
@@ -59,6 +73,20 @@ export const WorkMilestoneModal: React.FC = () => {
     </ModalOverlay>
   );
 };
+
+const WarnBox = styled.div`
+  margin-top: 10px;
+  padding: 8px 10px;
+  border: 1px solid rgba(243, 156, 18, 0.45);
+  border-radius: 8px;
+  background: rgba(243, 156, 18, 0.12);
+  color: #f6c66b;
+  font-size: 12.5px;
+  line-height: 1.55;
+  ${media.mobile} {
+    font-size: 11.5px;
+  }
+`;
 
 const Desc = styled.p`
   margin: 0;

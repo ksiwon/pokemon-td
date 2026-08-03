@@ -19,6 +19,12 @@
 - **알바(Part-time) 칸 2종**: 포켓몬을 올려두면 근무 웨이브 누적으로 시설이 등급업 (공격·경험치는 중단)
   - **프렌들리숍(🏪)**: 지닌도구 상점 해금 (Lv1~3)
   - **콘테스트 홀(🎀)**: 포켓몬 상점의 고레어도 등장 확률 상승
+  - **회수 규칙**: 근무 중엔 이동·판매·합체가 잠긴다. 푸는 방법은 두 가지 —
+    **5·10·15웨이브 마일스톤 모달**에서 회수를 고르거나, **누적 15웨이브(최고 등급)** 이후
+    시설 모달의 *회수하기* 버튼으로 언제든(웨이브 사이) 빼는 것. 회수를 고르면 배치 모드로
+    넘어가 원하는 빈 칸을 직접 찍는다. **근무 타일을 벗어나면 누적 웨이브는 0으로 초기화**된다
+    (빼서 싸우고 다시 꽂는 무손실 운용 방지)
+  - ⚠️ 알바는 **싱글/스토리 전용**이다. 멀티플레이(TFT식 PvP)에는 시설 타일 자체가 없다
 - **지닌도구 시스템**: 일회성 열매/딜 증가/피흡 등 12종 지닌도구를 인벤토리로 관리하고 웨이브 사이 자유 장착·교체·회수
 - **완벽한 포켓몬 구현**: PokeAPI 기반 실제 종족값, 타입 상성(18종), 특성(5종), 기술 구현
 - **레어도 시스템**: 종족값 총합 기준 6단계 (Bronze / Silver / Gold / Diamond / Master / Legend)
@@ -229,10 +235,29 @@ src/
 └── utils/
     ├── abilities.ts         # 특성 효과 계산 (크리티컬, 흡혈, AOE, 속도, 탱크)
     ├── cardCatalog.ts       # 미니 포켓 도감/덱 공용 정렬·필터·검색 로직
+    ├── facility.utils.ts    # 알바(숍·콘테스트) 규칙 단일 출처 (모드 판별·잠금·이동 시 누적 초기화)
     ├── responsive.utils.ts  # 반응형 유틸리티
     ├── synergyManager.ts    # 시너지 계산 (타입/세대/특수 23종) + 스탯 버프 적용
     └── typeEffectiveness.ts # 18종 타입 상성 + STAB + 데미지 계산
 ```
+
+### 정적 에셋 (`public/` · `assets-src/`)
+
+```
+public/images/
+├── favicon-64.png            # 파비콘 (WebP 파비콘은 일부 Safari 미표시 → PNG 유지)
+├── pokemon-aegis.webp        # 로고 400px
+└── maps/
+    ├── *.webp                # 맵 배경 1920px — 게임 캔버스·스토리 오프닝용
+    └── thumbs/*.webp         # 맵 썸네일 480px — 맵 선택·스토리 챕터·멀티 로비 카드용
+
+assets-src/                   # 원본 PNG 보관 (public 밖 = 배포 제외). 재인코딩 방법은 assets-src/README.md
+```
+
+> ⚠️ 화면에서 `` `/images/maps/${id}.png` `` 처럼 경로를 직접 조립하지 말 것.
+> `maps.ts`의 `mapThumbnailById()` / `MapData.backgroundImage`를 쓴다.
+> 예전에 문자열 조립 3곳이 확장자 전환에서 누락돼 이미지가 조용히 깨진 적이 있다
+> (Netlify SPA 폴백 때문에 404가 아니라 `index.html`이 200으로 온다).
 
 ---
 
@@ -305,7 +330,11 @@ npm run build   # tsc 타입 검사 후 vite 빌드 → dist/
 > 프론트 배포 후 몇 분 지나 규칙을 올리세요. (한산한 시간대 권장)
 
 ### 1. 프론트엔드 — Netlify
-`netlify.toml`에 SPA 리다이렉트와 팝업 로그인용 COOP 헤더가 포함되어 있습니다.
+`netlify.toml`에 SPA 리다이렉트, 팝업 로그인용 COOP 헤더, **캐시 정책**이 포함되어 있습니다.
+- `/assets/*` — 해시 파일명이라 `immutable` 1년
+- `/images/*`, `/sounds/*` — 30일 + `stale-while-revalidate`
+  > ⚠️ 이미지·사운드는 파일명이 고정입니다. 교체할 땐 **파일명을 바꾸거나** Netlify 캐시를
+  > 비워야 유저에게 반영됩니다.
 - **Git 연동(자동 배포)**: Netlify가 자체 빌드하므로 `VITE_FIREBASE_*` 변수를
   **Site configuration → Environment variables**에 등록해야 합니다(미등록 시 로그인 깨짐).
   Build command `npm run build`, Publish directory `dist`.

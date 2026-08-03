@@ -8,7 +8,7 @@ import {
 import { lMedia } from '../../utils/responsive.utils';
 import { useTranslation } from '../../i18n';
 import { useGameStore } from '../../store/gameStore';
-import { getMapById, getFacilityTiles } from '../../data/maps';
+import { isWorkLocked } from '../../utils/facility.utils';
 import { Gender } from '../../types/game';
 import { FUSION_DATA } from '../../data/evolution';
 import { Emoji } from '../shared/Emoji';
@@ -45,13 +45,8 @@ export const PokemonManager: React.FC<{ onClose: () => void }> = ({ onClose }) =
   const [fusionMode, setFusionMode] = useState(false);
   const [selectedBase, setSelectedBase] = useState<string | null>(null);
 
-  const checkIsOnWork = (tower: any) => {
-    const fac = getFacilityTiles(getMapById(currentMap));
-    const workTiles = [...fac.shopTiles, ...fac.contestTiles];
-    const tx = Math.floor(tower.position.x / 64);
-    const ty = Math.floor(tower.position.y / 64);
-    return workTiles.some(s => s.x === tx && s.y === ty);
-  };
+  // 근무 중 잠금 — 최고 등급(15웨이브)을 채웠으면 판매·합체 모두 풀린다.
+  const checkIsOnWork = (tower: any) => isWorkLocked(tower, currentMap);
 
   const handleSell = (towerId: string, towerDisplayName: string, level: number) => {
     if (isWaveActive) { showToast(t('facility.alertSellDuringWave')); return; }
