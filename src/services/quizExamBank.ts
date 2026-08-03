@@ -3,12 +3,27 @@
 //
 // 출제 방향(커뮤니티의 포켓몬 수능·배틀 모의고사·고인물능력시험 스타일 종합):
 //   단순 도감/타입 암기가 아니라 '실전 배틀 메타 지식'을 묻는다.
-//   ① 기술 우선도  ② 세대별 사양 변경  ③ 노력치·개체값·성격 계산
+//   ① 기술 우선도  ② 세대·타이틀별 사양 변경  ③ 노력치·개체값·성격 계산
 //   ④ 특성 상호작용  ⑤ 지닌 도구 배율  ⑥ 날씨·필드  ⑦ 상태이상 수치
 //   ⑧ 4배 약점·스텔스록  ⑨ 스피드 종족값 라인  ⑩ 데미지 계산식
 //
-// ★ 전 문항 9세대(SV) 기준. 수치는 Bulbapedia 교차검증 완료.
-//   애니/성우 등 검증 불가 트리비아는 배제.
+// ★ 수치 출처: Bulbapedia(9세대) + Serebii Pokémon Champions 전용 페이지 + 포켓몬 위키(ko) 교차검증.
+//   두 소스가 일치하는 값만 채택한다. 애니/성우 등 검증 불가 트리비아는 배제.
+//   - Serebii: /pokemonchampions/statusconditions · /updatedattacks · /updatedabilities · /training
+//   - 포켓몬 위키(ko): 얼음(상태이상) · 마비 · 잠듦 · 속이기 · Pokémon Champions 문서의 'Champions' 절
+//
+// ⚠ 사양이 갈리는 문항은 반드시 기준 타이틀을 문두에 명시한다.
+//   Pokémon Champions(2026-04-08 발매)에서 9세대(SV) 대비 바뀐 항목이 있어,
+//   기준을 안 밝히면 정답이 둘이 된다.
+//   확인된 변경점(양쪽 소스 일치):
+//     · 마비 행동불가 25% → 12.5% (스피드 -50%는 동일)
+//     · 얼음 해동 20% → 25% + 3턴째 확정 해동
+//     · 잠듦 2~4턴 → 2턴째 33.3% 기상, 3턴째 확정 기상
+//     · 속이기: 등장 첫 턴이 아니면 '선택' 자체가 불가(우선도 +3·위력 40은 그대로)
+//     · 기술 PP 일괄 상향(5→8, 10→12, 15→16) — 개별 예외 있음(예: 부리캐논 15→8)
+//     · 특성 변경은 Unseen Fist 1건뿐 — 이 은행의 특성 문항(테크니션·매직가드 등)은 영향 없음
+//   변경 없음이 확인된 항목: 급소율 1/24·1.5배, 자속 1.5배·테라 동타입 2.0배, 지닌도구 배율,
+//   날씨·필드, 랭크 배율, 종족값, 타입 상성.
 
 import { QuizQuestion } from '../types/quiz';
 
@@ -36,7 +51,7 @@ export const EXAM_BANK: BankQ[] = [
   { q: { ko: '다음 중 우선도가 +4인 기술은?', en: 'Which move has priority +4?' },
     opts: [{ ko: '방어', en: 'Protect' }, { ko: '속이기', en: 'Fake Out' }, { ko: '전광석화', en: 'Quick Attack' }, { ko: '도우미', en: 'Helping Hand' }], correct: 0 },
 
-  // ─── ② 세대별 사양 변경 (8문항) ────────────────────────────────────────────
+  // ─── ② 세대·타이틀별 사양 변경 (11문항) ───────────────────────────────────
   { q: { ko: '기술의 물리/특수가 "기술 개별"로 분리된 세대는?', en: 'Which generation introduced the physical/special split?' },
     opts: [{ ko: '4세대', en: 'Gen 4' }, { ko: '3세대', en: 'Gen 3' }, { ko: '5세대', en: 'Gen 5' }, { ko: '2세대', en: 'Gen 2' }], correct: 0 },
   { q: { ko: '급소 데미지 배율이 2배에서 1.5배로 하향된 세대는?', en: 'In which generation did the critical hit multiplier drop from 2× to 1.5×?' },
@@ -57,6 +72,20 @@ export const EXAM_BANK: BankQ[] = [
       { ko: 'Z기술 → 다이맥스 → 메가진화 → 테라스탈', en: 'Z-Move → Dynamax → Mega → Terastal' }], correct: 0 },
   { q: { ko: '3~5세대에서 한 능력치에 투자 가능한 노력치 상한은?', en: 'What was the per-stat EV cap in Gen 3-5?' },
     opts: [{ ko: '255', en: '255' }, { ko: '252', en: '252' }, { ko: '510', en: '510' }, { ko: '256', en: '256' }], correct: 0 },
+  { q: { ko: '포켓몬 챔피언스에서 "속이기"에 생긴 변경점은?', en: 'What changed about Fake Out in Pokémon Champions?' },
+    opts: [
+      { ko: '등장 첫 턴이 아니면 기술 선택 자체가 불가능해졌다', en: 'It can no longer even be selected unless it is the user\'s first turn out' },
+      { ko: '우선도가 +3에서 +1로 하향됐다', en: 'Its priority dropped from +3 to +1' },
+      { ko: '풀죽음 확률이 100%에서 50%로 하향됐다', en: 'Its flinch chance dropped from 100% to 50%' },
+      { ko: '위력이 40에서 30으로 하향됐다', en: 'Its base power dropped from 40 to 30' }], correct: 0 },
+  { q: { ko: '포켓몬 챔피언스는 기술 PP를 전반적으로 상향했다. 기존 PP 10이던 기술은 대부분 얼마가 됐나?', en: 'Pokémon Champions raised move PP across the board. Most moves that had 10 PP now have how much?' },
+    opts: [{ ko: '12', en: '12' }, { ko: '15', en: '15' }, { ko: '16', en: '16' }, { ko: '20', en: '20' }], correct: 0 },
+  { q: { ko: '포켓몬 챔피언스에서 포켓몬의 능력치·기술·특성을 바꾸는 방법은?', en: 'In Pokémon Champions, how do you change a Pokémon\'s stats, moves and Ability?' },
+    opts: [
+      { ko: '랭크배틀로 얻은 VP(빅토리 포인트)를 소모해 트레이닝한다', en: 'Spend Victory Points (VP) earned from Ranked Battles on training' },
+      { ko: '야생 포켓몬을 쓰러뜨려 노력치를 쌓는다', en: 'Defeat wild Pokémon to accumulate EVs' },
+      { ko: '레벨업 시 자동으로 분배된다', en: 'They are distributed automatically on level-up' },
+      { ko: '대전 상대에게서 빼앗아 온다', en: 'You take them from your battle opponents' }], correct: 0 },
 
   // ─── ③ 노력치·개체값·성격 (6문항) ──────────────────────────────────────────
   { q: { ko: '6세대 이후 한 능력치에 투자 가능한 노력치 상한은?', en: 'What is the per-stat EV cap from Gen 6 onward?' },
@@ -116,15 +145,31 @@ export const EXAM_BANK: BankQ[] = [
   { q: { ko: '"쾌청(맑음)" 날씨에서 물 타입 기술의 위력 배율은?', en: 'In harsh sunlight, what is the multiplier on Water-type moves?' },
     opts: [{ ko: '0.5배', en: '0.5×' }, { ko: '1.5배', en: '1.5×' }, { ko: '1.0배(변화 없음)', en: '1.0× (unchanged)' }, { ko: '0배(무효)', en: '0× (immune)' }], correct: 0 },
 
-  // ─── ⑦ 상태이상 수치 (4문항) ───────────────────────────────────────────────
+  // ─── ⑦ 상태이상 수치 (8문항) — SV/챔피언스 사양이 갈리므로 기준 명시 필수 ──
   { q: { ko: '"화상" 상태가 반감시키는 능력치는?', en: 'Which stat does the Burn status halve?' },
     opts: [{ ko: '물리 공격', en: 'Physical Attack' }, { ko: '특수공격', en: 'Special Attack' }, { ko: '방어', en: 'Defense' }, { ko: '스피드', en: 'Speed' }], correct: 0 },
   { q: { ko: '"맹독" 상태의 데미지는 매 턴 어떻게 변하는가?', en: 'How does Badly Poisoned (Toxic) damage change each turn?' },
     opts: [{ ko: '1/16씩 누적 증가(1/16, 2/16, 3/16…)', en: 'Increases by 1/16 each turn (1/16, 2/16, 3/16…)' }, { ko: '매 턴 1/8로 고정', en: 'Fixed at 1/8 each turn' }, { ko: '매 턴 두 배로 증가', en: 'Doubles each turn' }, { ko: '매 턴 1/16으로 고정', en: 'Fixed at 1/16 each turn' }], correct: 0 },
-  { q: { ko: '"마비" 상태에서 행동하지 못할 확률은?', en: 'What is the chance a paralyzed Pokémon cannot move?' },
+  { q: { ko: '9세대(스칼렛·바이올렛) 기준, "마비" 상태에서 행동하지 못할 확률은?', en: 'In Gen 9 (Scarlet/Violet), what is the chance a paralyzed Pokémon cannot move?' },
     opts: [{ ko: '25%', en: '25%' }, { ko: '50%', en: '50%' }, { ko: '12.5%', en: '12.5%' }, { ko: '33%', en: '33%' }], correct: 0 },
-  { q: { ko: '"얼음(빙결)" 상태가 매 턴 자연 해동될 확률은?', en: 'What is the chance a frozen Pokémon thaws each turn?' },
+  { q: { ko: '포켓몬 챔피언스 기준, "마비" 상태에서 행동하지 못할 확률은?', en: 'In Pokémon Champions, what is the chance a paralyzed Pokémon cannot move?' },
+    opts: [{ ko: '12.5%', en: '12.5%' }, { ko: '25%', en: '25%' }, { ko: '50%', en: '50%' }, { ko: '33%', en: '33%' }], correct: 0 },
+  { q: { ko: '9세대(스칼렛·바이올렛) 기준, "얼음(빙결)" 상태가 매 턴 자연 해동될 확률은?', en: 'In Gen 9 (Scarlet/Violet), what is the chance a frozen Pokémon thaws each turn?' },
     opts: [{ ko: '20%', en: '20%' }, { ko: '25%', en: '25%' }, { ko: '10%', en: '10%' }, { ko: '50%', en: '50%' }], correct: 0 },
+  { q: { ko: '포켓몬 챔피언스 기준, "얼음(빙결)" 상태가 매 턴 해동될 확률은?', en: 'In Pokémon Champions, what is the chance a frozen Pokémon thaws each turn?' },
+    opts: [{ ko: '25%', en: '25%' }, { ko: '20%', en: '20%' }, { ko: '33%', en: '33%' }, { ko: '50%', en: '50%' }], correct: 0 },
+  { q: { ko: '포켓몬 챔피언스에서 "얼음(빙결)" 상태의 지속 상한은?', en: 'In Pokémon Champions, how long can Freeze last at most?' },
+    opts: [
+      { ko: '3턴째에 반드시 해동된다', en: 'The Pokémon always thaws on the third turn' },
+      { ko: '5턴째에 반드시 해동된다', en: 'It always thaws on the fifth turn' },
+      { ko: '해동될 때까지 상한이 없다', en: 'There is no cap — it lasts until it thaws' },
+      { ko: '2턴째에 반드시 해동된다', en: 'It always thaws on the second turn' }], correct: 0 },
+  { q: { ko: '포켓몬 챔피언스의 "잠듦" 사양으로 옳은 것은?', en: 'Which describes Sleep correctly in Pokémon Champions?' },
+    opts: [
+      { ko: '2턴째에 33.3%로 깨어나고, 3턴째에는 반드시 깨어난다', en: '33.3% chance to wake on turn 2; always wakes on turn 3' },
+      { ko: '9세대와 같이 2~4턴 지속된다', en: 'Lasts 2-4 turns, same as Gen 9' },
+      { ko: '항상 2턴으로 고정이다', en: 'Always lasts exactly 2 turns' },
+      { ko: '1턴째부터 50%로 깨어난다', en: '50% chance to wake starting on turn 1' }], correct: 0 },
 
   // ─── ⑧ 4배 약점 · 스텔스록 (5문항) ─────────────────────────────────────────
   { q: { ko: '한카리아스(드래곤·땅)의 4배 약점 타입은?', en: 'What type hits Garchomp (Dragon/Ground) for 4× damage?' },
