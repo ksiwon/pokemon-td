@@ -340,6 +340,16 @@ npm run build   # tsc 타입 검사 후 vite 빌드 → dist/
   Build command `npm run build`, Publish directory `dist`.
 - **수동 배포**: 로컬 `dist/`를 업로드 — `npx netlify deploy --dir=dist --prod`
 
+> **배포 순간 탭을 열어둔 유저**: Netlify는 새 스냅샷으로 통째 교체하므로 이전 배포의 청크
+> (`assets/MapSelector-<해시>.js`)가 사라집니다. 그 탭이 지연 로드를 시도하면
+> `Failed to fetch dynamically imported module`로 실패합니다(SPA 폴백 탓에 404가 아니라
+> `index.html`이 200으로 와서 모듈 파싱이 깨지는 것). 실제로 2026-08-03 배포 67분 뒤 발생.
+> `src/utils/chunkReload.ts`가 이 경우 **자동으로 1회 새로고침**해 조용히 최신 버전으로
+> 복귀시킵니다(`App.tsx`의 `lazyRoute` + `main.tsx`의 `vite:preloadError` 리스너).
+> 단 이 장치는 **탭에 이미 로드된 번들**에서 도는 것이라, 어떤 배포든 그 시점의 구버전 탭까지
+> 구하지는 못합니다 — 한산한 시간대 배포를 병행하는 편이 좋습니다.
+> 회귀 테스트: `sim/app/chunkReload.sim.ts`
+
 ### 2. 백엔드 보안 규칙 — Firebase
 ```bash
 firebase login
