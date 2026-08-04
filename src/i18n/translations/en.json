@@ -1102,7 +1102,9 @@
       "battleStats": "Battle Stats",
       "height": "Height",
       "weight": "Weight",
-      "beforeSynergy": "before synergy"
+      "beforeSynergy": "before synergy",
+      "mergeNext": "Next star: {n}/{of}",
+      "mergeMax": "★ Max level"
     },
     "common": {
       "back": "Back"
@@ -1163,6 +1165,8 @@
       "resultTitle": "Results",
       "newCount": "New {n}",
       "starUpCount": "Star-ups {n}",
+      "mergeCount": "Merging {n}",
+      "mergeProgress": "Merge {n}/{of}",
       "refundCount": "Refund {n} coins",
       "confirm": "OK",
       "plusCoins": "+{n} coins"

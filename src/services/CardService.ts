@@ -15,9 +15,9 @@ export const CARD_STORAGE_KEY = 'pokemon-td-cards-v1';
 const STORAGE_KEY = CARD_STORAGE_KEY;
 const CURRENT_VERSION = 1;
 
-const MAX_STARS = 5;
+export const MAX_STARS = 5;
 /** 별을 1단계 올리는 데 필요한 잉여 중복 수(원본 1 + 중복 2 = 3장 합성, TFT식). */
-const MERGE_COPIES = 2;
+export const MERGE_COPIES = 2;
 /** 일반팩 천장: 이만큼 Gold+ 없이 까면 다음 팩에 Gold+ 1장 보장. */
 const NORMAL_PACK_PITY = 20;
 /** 팩 1개당 카드 장수. */
@@ -198,14 +198,14 @@ export class CardService {
     if (!entry) {
       entry = { pokemonId, stars: 1, copies: 0, obtainedAt: now, isNew: true };
       col[pokemonId] = entry;
-      return { pokemonId, rarity, isNew: true, starUp: false, stars: 1, refundCoins: 0 };
+      return { pokemonId, rarity, isNew: true, starUp: false, stars: 1, copies: 0, refundCoins: 0 };
     }
 
     // 중복
     if (entry.stars >= MAX_STARS) {
       const refund = RARITY_REFUND[rarity];
       this.state.wallet.coins += refund;
-      return { pokemonId, rarity, isNew: false, starUp: false, stars: entry.stars, refundCoins: refund };
+      return { pokemonId, rarity, isNew: false, starUp: false, stars: entry.stars, copies: 0, refundCoins: refund };
     }
 
     entry.copies += 1;
@@ -222,7 +222,7 @@ export class CardService {
       entry.copies = 0;
       this.state.wallet.coins += refundCoins;
     }
-    return { pokemonId, rarity, isNew: false, starUp, stars: entry.stars, refundCoins };
+    return { pokemonId, rarity, isNew: false, starUp, stars: entry.stars, copies: entry.copies, refundCoins };
   }
 
   /** 도감 열람 시 NEW 뱃지 해제. */

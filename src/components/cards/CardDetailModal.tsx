@@ -9,11 +9,14 @@ import { buildBattleCard } from '../../services/CardBattleService';
 import { Rarity, RARITY_COLORS } from '../../data/evolution';
 import { getTypeColor } from '../../utils/typeEffectiveness';
 import { useTranslation } from '../../i18n';
+import { MAX_STARS, MERGE_COPIES } from '../../services/CardService';
 import { CardView } from './CardView';
 
 interface Props {
   pokemonId: number;
   stars: number;
+  /** 다음 별까지 모아둔 잉여 중복 수. 없으면 진행도 줄을 숨긴다. */
+  copies?: number;
   rarity?: Rarity;
   onClose: () => void;
 }
@@ -31,7 +34,7 @@ const STAT_ROWS: Array<{ key: keyof PokemonData['stats']; label: string }> = [
 const statBarColor = (v: number): string =>
   v >= 120 ? '#22c55e' : v >= 90 ? '#84cc16' : v >= 60 ? '#eab308' : v >= 40 ? '#f97316' : '#ef4444';
 
-export const CardDetailModal = ({ pokemonId, stars, rarity, onClose }: Props) => {
+export const CardDetailModal = ({ pokemonId, stars, copies = 0, rarity, onClose }: Props) => {
   const { t } = useTranslation();
   const [data, setData] = useState<PokemonData | null>(null);
   const [failed, setFailed] = useState(false);
@@ -77,6 +80,19 @@ export const CardDetailModal = ({ pokemonId, stars, rarity, onClose }: Props) =>
             <Left>
               <CardView pokemonId={pokemonId} stars={stars} rarity={rarity} size={190} />
               {rarity && <RarityTag $c={rColor}>{t(`cards.rarity.${rarity}`)}</RarityTag>}
+
+              {/* 합성 진행도 — 중복을 몇 장 더 모아야 별이 오르는지.
+                  이게 없으면 중복이 쌓여도 화면상 아무 변화가 없어 합성이 안 되는 줄 안다. */}
+              {stars >= MAX_STARS ? (
+                <MergeNote>{t('cards.detail.mergeMax')}</MergeNote>
+              ) : (
+                <MergeBox>
+                  <MergeLbl>{t('cards.detail.mergeNext', { n: copies, of: MERGE_COPIES })}</MergeLbl>
+                  <MergePips>
+                    {Array.from({ length: MERGE_COPIES }, (_, i) => <Pip key={i} $on={i < copies} />)}
+                  </MergePips>
+                </MergeBox>
+              )}
             </Left>
 
             {/* 우: 상세 */}
@@ -182,6 +198,17 @@ const RarityTag = styled.div<{ $c: string }>`
   font-size: 12px; font-weight: 800; letter-spacing: 0.05em; color: ${p => p.$c};
   border: 1px solid ${p => p.$c}66; background: ${p => p.$c}18; padding: 3px 12px; border-radius: 20px;
 `;
+const MergeBox = styled.div`
+  display: flex; flex-direction: column; align-items: center; gap: 5px; margin-top: 2px;
+`;
+const MergeLbl = styled.div`font-size: 11px; font-weight: 700; color: rgba(255,255,255,0.5); letter-spacing: 0.02em;`;
+const MergePips = styled.div`display: flex; gap: 4px;`;
+const Pip = styled.span<{ $on: boolean }>`
+  width: 18px; height: 5px; border-radius: 3px;
+  background: ${p => (p.$on ? '#c084fc' : 'rgba(255,255,255,0.12)')};
+  box-shadow: ${p => (p.$on ? '0 0 6px #c084fc88' : 'none')};
+`;
+const MergeNote = styled.div`font-size: 11px; font-weight: 700; color: #fbbf24; letter-spacing: 0.02em; margin-top: 2px;`;
 const Right = styled.div`flex: 1; min-width: 0; width: 100%;`;
 const DexNo = styled.div`font-size: 12px; font-weight: 700; color: rgba(255,255,255,0.4); letter-spacing: 0.08em;`;
 const Name = styled.h2`font-size: 24px; font-weight: 900; color: #f8fafc; margin: 2px 0 3px; letter-spacing: -0.02em;`;

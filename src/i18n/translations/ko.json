@@ -1102,7 +1102,9 @@
       "battleStats": "전투 스탯",
       "height": "키",
       "weight": "몸무게",
-      "beforeSynergy": "시너지 적용 전"
+      "beforeSynergy": "시너지 적용 전",
+      "mergeNext": "다음 별까지 {n}/{of}",
+      "mergeMax": "★ 최대 단계"
     },
     "common": {
       "back": "뒤로"
@@ -1163,6 +1165,8 @@
       "resultTitle": "개봉 결과",
       "newCount": "신규 {n}",
       "starUpCount": "별 상승 {n}",
+      "mergeCount": "합성 진행 {n}",
+      "mergeProgress": "합성 {n}/{of}",
       "refundCount": "환급 {n} 코인",
       "confirm": "확인",
       "plusCoins": "+{n} 코인"
