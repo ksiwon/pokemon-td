@@ -6,6 +6,17 @@ import './index.css'
 import { I18nProvider } from './i18n'
 import { BrowserRouter } from 'react-router-dom'
 import { initSentry, captureError } from './utils/sentry'
+import { reloadForNewDeploy } from './utils/chunkReload'
+
+// [STALE-CHUNK] 새 배포로 사라진 청크를 요청했을 때(= 배포 중 열어둔 탭) 조용히 최신 버전으로 다시 들어온다.
+//   Vite가 모든 동적 import를 __vitePreload로 감싸므로, 이 이벤트 하나로 라우트 청크뿐 아니라
+//   서비스 계층의 import(GameManager·WaveSystem·AIPlayer 등)까지 전부 걸린다.
+//   App.tsx의 lazyRoute가 라우트는 먼저 처리하지만(로딩 화면 유지), 그 밖은 여기가 마지막 그물.
+//   preventDefault()는 "처리했으니 그대로 throw하지 말라"는 Vite와의 약속 — 자세한 사정은 chunkReload.ts.
+window.addEventListener('vite:preloadError', (e) => {
+  console.warn('[vite:preloadError] 청크 로드 실패 — 새 배포로 판단하고 새로고침 시도')
+  if (reloadForNewDeploy()) e.preventDefault()
+})
 
 // Sentry 에러 모니터링(프로덕션 + DSN 설정 시에만, 동적 로드).
 // 전역 onerror/unhandledrejection은 Sentry 자체 핸들러가 수집하므로

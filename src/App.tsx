@@ -10,7 +10,7 @@
 //   - 모달 닫힘 시 finalizeGame 호출하면 레이팅 업데이트 + finished 표기
 //   - 5분 후 cleanupExpiredRooms가 자동으로 방 삭제
 
-import { useState, useEffect, useCallback, useRef, lazy, Suspense } from "react";
+import { useState, useEffect, useCallback, useRef, lazy, Suspense, type ComponentType } from "react";
 import styled, { keyframes } from "styled-components";
 import { Routes, Route, useNavigate, useLocation, Navigate } from 'react-router-dom';
 import { authService } from "./services/AuthService";
@@ -21,6 +21,7 @@ import { saveService } from "./services/SaveService";
 import { pokeAPI } from './api/pokeapi';
 import { getMapById } from './data/maps';
 import { useTranslation } from './i18n';
+import { onChunkLoadError } from './utils/chunkReload';
 
 /** 멀티 퇴장 정리를 기다려 주는 상한(ms). 넘으면 정리는 백그라운드에 맡기고 화면부터 뺀다. */
 const LEAVE_ROOM_NAV_TIMEOUT = 2000;
@@ -35,12 +36,23 @@ import { ToastHost } from "./components/shared/Toast";
 // [PERF] 라우트 레벨 코드 스플리팅 — 초기 로드는 로그인/메뉴만.
 //   무거운 서브트리(게임 UI, 카드, 퀴즈 은행, 스토리 대사, 멀티 로비)는 진입 시 로드.
 //   (서비스 싱글톤들은 main 청크에 남음 — SaveService/GameManager가 정적 참조하기 때문)
-const MultiplayerLobby = lazy(() => import("./components/multiplayer/MultiplayerLobby").then(m => ({ default: m.MultiplayerLobby })));
-const MapSelector = lazy(() => import("./components/ui/MapSelector").then(m => ({ default: m.MapSelector })));
-const GameLayout = lazy(() => import("./components/game/GameLayout").then(m => ({ default: m.GameLayout })));
-const StorySelector = lazy(() => import('./components/story/StorySelector').then(m => ({ default: m.StorySelector })));
-const CardLabView = lazy(() => import("./components/cards/CardLabView").then(m => ({ default: m.CardLabView })));
-const QuizView = lazy(() => import("./components/quiz/QuizView").then(m => ({ default: m.QuizView })));
+
+/**
+ * [STALE-CHUNK] lazy()에 "새 배포면 새로고침" 처리를 씌운 버전.
+ * 배포 중 탭을 열어둔 유저는 사라진 청크를 요청하게 되는데(→ chunkReload.ts 주석),
+ * 그때 에러 화면 대신 조용히 최신 버전으로 다시 들어오게 한다.
+ * 새로고침이 시작되면 영원히 pending인 Promise를 돌려줘 Suspense 로딩 화면을 유지한다
+ * — 여기서 throw하면 리로드가 실행되기 전 찰나에 에러 화면이 번쩍인다.
+ */
+const lazyRoute = <T extends ComponentType<any>>(load: () => Promise<{ default: T }>) =>
+  lazy<T>(() => load().catch((err) => onChunkLoadError<{ default: T }>(err)));
+
+const MultiplayerLobby = lazyRoute(() => import("./components/multiplayer/MultiplayerLobby").then(m => ({ default: m.MultiplayerLobby })));
+const MapSelector = lazyRoute(() => import("./components/ui/MapSelector").then(m => ({ default: m.MapSelector })));
+const GameLayout = lazyRoute(() => import("./components/game/GameLayout").then(m => ({ default: m.GameLayout })));
+const StorySelector = lazyRoute(() => import('./components/story/StorySelector').then(m => ({ default: m.StorySelector })));
+const CardLabView = lazyRoute(() => import("./components/cards/CardLabView").then(m => ({ default: m.CardLabView })));
+const QuizView = lazyRoute(() => import("./components/quiz/QuizView").then(m => ({ default: m.QuizView })));
 
 const fadeIn = keyframes`from { opacity: 0; } to { opacity: 1; }`;
 
