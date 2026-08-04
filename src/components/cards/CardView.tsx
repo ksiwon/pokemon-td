@@ -7,6 +7,7 @@ import styled, { css, keyframes } from 'styled-components';
 import { pokeAPI } from '../../api/pokeapi';
 import { Rarity, RARITY_COLORS } from '../../data/evolution';
 import { getTypeColor } from '../../utils/typeEffectiveness';
+import { MAX_STARS } from '../../services/CardService';
 
 const ARTWORK = (id: number) =>
   `https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/other/official-artwork/${id}.png`;
@@ -17,6 +18,8 @@ const isHolo = (r: Rarity) => ['Gold', 'Diamond', 'Master', 'Legend'].includes(r
 interface Props {
   pokemonId: number;
   stars?: number;
+  /** 다음 별까지 모아둔 잉여 중복 수. 별 뒤에 점으로 표시(0이면 숨김). */
+  copies?: number;
   /** 모르면 내부에서 조회. */
   rarity?: Rarity;
   size?: number;          // 카드 폭(px). 높이는 1.4배.
@@ -30,7 +33,7 @@ interface Props {
 }
 
 export const CardView = ({
-  pokemonId, stars = 1, rarity: rarityProp, size = 150,
+  pokemonId, stars = 1, copies = 0, rarity: rarityProp, size = 150,
   isNew = false, interactive = true, locked = false, onClick, className,
 }: Props) => {
   const [name, setName] = useState('');
@@ -108,6 +111,9 @@ export const CardView = ({
             </TypePips>
             <Stars>
               {Array.from({ length: stars }).map((_, i) => <Star key={i}>★</Star>)}
+              {/* 다음 별까지 쌓인 중복. 도감에서 '모이는 중'이 보여야 합성이 멈춘 줄 알지 않는다. */}
+              {copies > 0 && stars < MAX_STARS &&
+                Array.from({ length: copies }).map((_, i) => <MergeDot key={`m${i}`} />)}
             </Stars>
           </>
         )}
@@ -188,7 +194,11 @@ const Pip = styled.span<{ $c: string }>`
   background: ${p => p.$c}; border: 1px solid rgba(255,255,255,0.4);
 `;
 
-const Stars = styled.div`display: flex; gap: 1px; margin-top: 3px; height: 13px;`;
+const Stars = styled.div`display: flex; align-items: center; gap: 1px; margin-top: 3px; height: 13px;`;
+const MergeDot = styled.span`
+  width: 4px; height: 4px; border-radius: 50%; background: #c084fc;
+  box-shadow: 0 0 4px #c084fcaa; margin-left: 2px; flex: none;
+`;
 const Star = styled.span`font-size: 11px; color: #ffd54a; text-shadow: 0 0 4px rgba(255,213,74,0.8);`;
 
 const LockMark = styled.div`

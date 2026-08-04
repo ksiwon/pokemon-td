@@ -4,6 +4,7 @@
 import { useState, useCallback } from 'react';
 import styled, { keyframes, css } from 'styled-components';
 import { PullResult, PackType } from '../../types/cards';
+import { MERGE_COPIES } from '../../services/CardService';
 import { Rarity } from '../../data/evolution';
 import { useTranslation } from '../../i18n';
 import { CardView } from './CardView';
@@ -61,6 +62,7 @@ export const PackOpening = ({ packType, filterType, results, onClose }: Props) =
 
   const newCount = results.filter(r => r.isNew).length;
   const starUps = results.filter(r => r.starUp).length;
+  const merging = results.filter(r => !r.isNew && !r.starUp && r.copies > 0).length;
   const refund = results.reduce((s, r) => s + r.refundCoins, 0);
 
   return (
@@ -104,6 +106,13 @@ export const PackOpening = ({ packType, filterType, results, onClose }: Props) =
             <RevealTags>
               {results[idx].isNew && <Tag $bg="#ef4444">NEW</Tag>}
               {results[idx].starUp && <Tag $bg="#f59e0b">★ UP → {results[idx].stars}</Tag>}
+              {/* 별이 오르지 않은 중복 — 표시가 없으면 '아무 일도 안 일어남'으로 보여
+                  합성이 고장난 줄 안다. 몇 장 더 모으면 되는지까지 알려준다. */}
+              {!results[idx].isNew && !results[idx].starUp && results[idx].copies > 0 && (
+                <Tag $bg="#7c3aed">
+                  {t('cards.pack.mergeProgress', { n: results[idx].copies, of: MERGE_COPIES })}
+                </Tag>
+              )}
               {results[idx].refundCoins > 0 && <Tag $bg="#64748b">{t('cards.pack.plusCoins', { n: results[idx].refundCoins })}</Tag>}
             </RevealTags>
           )}
@@ -119,6 +128,7 @@ export const PackOpening = ({ packType, filterType, results, onClose }: Props) =
           <SumStats>
             {newCount > 0 && <SumStat $c="#fca5a5">{t('cards.pack.newCount', { n: newCount })}</SumStat>}
             {starUps > 0 && <SumStat $c="#fbbf24">{t('cards.pack.starUpCount', { n: starUps })}</SumStat>}
+            {merging > 0 && <SumStat $c="#c4b5fd">{t('cards.pack.mergeCount', { n: merging })}</SumStat>}
             {refund > 0 && <SumStat $c="#94a3b8">{t('cards.pack.refundCount', { n: refund })}</SumStat>}
           </SumStats>
           <Grid>

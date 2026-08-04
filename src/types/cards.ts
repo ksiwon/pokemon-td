@@ -52,6 +52,12 @@ export interface PullResult {
   starUp: boolean;
   /** 적용 후 별 단계. */
   stars: number;
+  /**
+   * 적용 후 남은 잉여 중복 수(0 = 방금 별로 소모됨 또는 최대 별).
+   * 별이 오르지 않은 중복도 "쌓이고 있다"를 화면에 보여주기 위해 필요하다 —
+   * 이게 없으면 2장째 중복이 아무 표시 없이 지나가 합성이 고장난 것처럼 보인다.
+   */
+  copies: number;
   /** 중복이라 분해 환급된 코인(있으면). */
   refundCoins: number;
 }

@@ -342,6 +342,7 @@ export const CardLabView = () => {
                       key={c.pokemonId}
                       pokemonId={c.pokemonId}
                       stars={c.stars}
+                      copies={c.copies}
                       rarity={rarityMap[c.pokemonId]}
                       isNew={c.isNew}
                       size={108}
@@ -409,6 +410,7 @@ export const CardLabView = () => {
         <CardDetailModal
           pokemonId={detailId}
           stars={detailEntry.stars}
+          copies={detailEntry.copies}
           rarity={rarityMap[detailId]}
           onClose={() => setDetailId(null)}
         />
