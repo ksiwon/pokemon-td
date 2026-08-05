@@ -386,6 +386,7 @@
     "cost": "{cost}원"
   },
   "synergy": {
+    "specialDesc": "({count}) 스탯 {mult}배",
     "title": "현재 시너지",
     "empty": "적용 중인 포켓몬이 없습니다.",
     "level": "(Lv.{level})",
@@ -1050,6 +1051,8 @@
     "liveSync": "실시간 동기화 중"
   },
   "storyUI": {
+    "unlockFirst": "게임을 시작하면 해금됩니다.",
+    "unlockAfter": "챕터 {n}을 클리어하면 해금됩니다.",
     "clearGrade": "클리어 등급",
     "highestWave": "최고 웨이브",
     "appearPokemon": "등장 포켓몬 (상점 우선)",

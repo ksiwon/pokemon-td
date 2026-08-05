@@ -6,7 +6,7 @@ import styled from "styled-components";
 import { media, lMedia, isMobileOrTablet } from "../../utils/responsive.utils";
 import { useTranslation } from "../../i18n";
 import { useGameStore } from "../../store/gameStore";
-import { SPECIAL_SYNERGY_DEFS, getSpecialSynergyName } from "../../utils/synergyManager";
+import { SPECIAL_SYNERGY_DEFS, getSpecialSynergyName, getSynergyDescription } from "../../utils/synergyManager";
 import { Emoji } from "../shared/Emoji";
 
 const TYPE_ICON_API_BASE = "https://www.serebii.net/pokedex-bw/type/";
@@ -85,7 +85,7 @@ export const SynergyTracker: React.FC<Props> = ({ embedded = false }) => {
               )}
               <SynInfo>
                 <SynName>{si.name} ({syn.count})</SynName>
-                <SynDesc>{syn.description}</SynDesc>
+                <SynDesc>{getSynergyDescription(syn, t)}</SynDesc>
               </SynInfo>
             </SynItem>
           );
@@ -123,7 +123,7 @@ export const SynergyTracker: React.FC<Props> = ({ embedded = false }) => {
                 )}
                 <SynInfo>
                   <SynName>{si.name} ({syn.count})</SynName>
-                  <SynDesc>{syn.description}</SynDesc>
+                  <SynDesc>{getSynergyDescription(syn, t)}</SynDesc>
                 </SynInfo>
               </SynItem>
             );

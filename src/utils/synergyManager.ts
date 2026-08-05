@@ -363,6 +363,31 @@ export const SPECIAL_SYNERGY_DEFS: SpecialSynergyDef[] = [
 ];
 
 /**
+ * 시너지 설명을 현재 언어로 만든다.
+ * `Synergy.description`은 한국어로 조립된 문자열이라 그대로 표시하면 안 된다
+ * (게임 로직이 쓰는 값이라 필드 자체는 남겨둔다).
+ * 키가 없으면 조립된 원문으로 폴백한다.
+ */
+export const getSynergyDescription = (
+  syn: { id: string; level: number; count: number; description: string },
+  t: (key: string, params?: Record<string, string | number>) => string,
+): string => {
+  const kind = syn.id.split(':')[0];
+  if (kind === 'type' || kind === 'gen') {
+    const units = syn.level === 3 ? 6 : syn.level === 2 ? 4 : 2;
+    const key = `synergy.${kind}Desc${units}`;
+    const out = t(key);
+    return out === key ? syn.description : out;
+  }
+  if (kind === 'special') {
+    const mult = getSpecialSynergyMultiplier(syn.count).toFixed(1);
+    const out = t('synergy.specialDesc', { count: syn.count, mult });
+    return out === 'synergy.specialDesc' ? syn.description : out;
+  }
+  return syn.description;
+};
+
+/**
  * 특수 시너지 표시 이름. 번역 키(`synergyData.<key>.name`)가 있으면 그것을 쓰고,
  * 없으면 정의의 원본 이름으로 폴백한다 — maps·HallOfFame이 쓰는 방식과 동일하다.
  * `SpecialSynergyDef.name`은 한국어 고정이라 영어 모드에서 그대로 노출되면 안 된다.

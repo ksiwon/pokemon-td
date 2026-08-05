@@ -386,6 +386,7 @@
     "cost": "{cost}G"
   },
   "synergy": {
+    "specialDesc": "({count}) Stats {mult}x",
     "title": "Current Synergies",
     "empty": "No active synergies.",
     "level": "(Lv.{level})",
@@ -1050,6 +1051,8 @@
     "liveSync": "Live sync"
   },
   "storyUI": {
+    "unlockFirst": "Unlocked when you start the game.",
+    "unlockAfter": "Unlocked by clearing Chapter {n}.",
     "clearGrade": "Clear Grade",
     "highestWave": "Highest Wave",
     "appearPokemon": "Available Pokémon (shop priority)",
