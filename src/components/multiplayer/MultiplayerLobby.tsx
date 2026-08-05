@@ -6,7 +6,7 @@ import { useState, useEffect, useRef, Fragment } from 'react';
 import styled, { keyframes } from 'styled-components';
 import { Emoji } from '../shared/Emoji';
 import { media, lMedia } from '../../utils/responsive.utils';
-import { multiplayerService } from '../../services/MultiplayerService';
+import { multiplayerService, MP_ERROR } from '../../services/MultiplayerService';
 import { Room, AIDifficulty } from '../../types/multiplayer';
 import { MAPS, mapThumbnailById } from '../../data/maps';
 import { authService } from '../../services/AuthService';
@@ -124,7 +124,7 @@ export const MultiplayerLobby = ({ onBack, onStartGame }: MultiplayerLobbyProps)
       const roomId = await multiplayerService.createRoom(selectedMap, selectedMapData.name);
       const room = await multiplayerService.rejoinRoom(roomId);
       setCurrentRoom(room.room); setView('room');
-    } catch (err: any) { showToast(err.message); }
+    } catch (err: any) { showToast(errText(err)); }
   };
 
   const handleJoinRoom = async (roomId: string) => {
@@ -132,7 +132,7 @@ export const MultiplayerLobby = ({ onBack, onStartGame }: MultiplayerLobbyProps)
       await multiplayerService.joinRoom(roomId);
       const room = await multiplayerService.rejoinRoom(roomId);
       setCurrentRoom(room.room); setView('room');
-    } catch (err: any) { showToast(err.message); }
+    } catch (err: any) { showToast(errText(err)); }
   };
 
   const handleLeaveRoomConfirmed = async () => {
@@ -146,7 +146,7 @@ export const MultiplayerLobby = ({ onBack, onStartGame }: MultiplayerLobbyProps)
   const handleAddAI = async (difficulty: AIDifficulty) => {
     if (currentRoom) {
       try { await multiplayerService.addAI(currentRoom.id, difficulty); }
-      catch (err: any) { showToast(err.message); }
+      catch (err: any) { showToast(errText(err)); }
     }
   };
 
@@ -157,7 +157,7 @@ export const MultiplayerLobby = ({ onBack, onStartGame }: MultiplayerLobbyProps)
   const handleStartGame = async () => {
     if (currentRoom) {
       try { await multiplayerService.startGame(currentRoom.id); }
-      catch (err: any) { showToast(err.message); }
+      catch (err: any) { showToast(errText(err)); }
     }
   };
 
@@ -167,7 +167,7 @@ export const MultiplayerLobby = ({ onBack, onStartGame }: MultiplayerLobbyProps)
     try {
       await multiplayerService.kickPlayer(currentRoom.id, kickConfirm.player.userId);
     } catch (err: any) {
-      showToast(err.message);
+      showToast(errText(err));
     }
   };
 
@@ -192,12 +192,24 @@ export const MultiplayerLobby = ({ onBack, onStartGame }: MultiplayerLobbyProps)
     t(`mapData.${map.id}.name`) !== `mapData.${map.id}.name`
       ? t(`mapData.${map.id}.name`) : map.name;
 
+  // 방 이름은 RTDB에 "○○의 방"으로 저장돼 있다(구버전 클라이언트가 만든 방 포함).
+  // 저장값을 그대로 쓰지 않고 hostName으로 매번 다시 만들어 현재 언어로 보여준다.
+  const roomLabel = (room: { name: string; hostName?: string }) =>
+    room.hostName ? t('lobby.roomOf', { name: room.hostName }) : room.name;
+
+  // 서비스가 던진 오류 코드를 문구로 바꾼다. 모르는 코드면 원본 메시지를 그대로 보여준다.
+  const errText = (err: any): string => {
+    const code = String(err?.message ?? '');
+    if (code === MP_ERROR.ROOM_LIMIT) return t('lobby.errRoomLimit');
+    return code;
+  };
+
   if (isCheckingRejoin) {
     return <Root><LoadingScreen>{t('lobby.checkingRejoin')}</LoadingScreen></Root>;
   }
 
   if (rejoinableRoom) {
-    return <RejoinPrompt roomName={rejoinableRoom.name} onRejoin={handleRejoin} onAbandon={handleAbandon} />;
+    return <RejoinPrompt roomName={roomLabel(rejoinableRoom)} onRejoin={handleRejoin} onAbandon={handleAbandon} />;
   }
 
   // ── Room list view ──────────────────────────────────────────────────────────
@@ -236,7 +248,7 @@ export const MultiplayerLobby = ({ onBack, onStartGame }: MultiplayerLobbyProps)
                   <RoomMapCell>
                     <RoomMapThumb src={mapThumbnailById(room.mapId)} alt="" />
                     <RoomMapInfo>
-                      <RoomName>{room.name}</RoomName>
+                      <RoomName>{roomLabel(room)}</RoomName>
                       <RoomMapName>{mapLabel(room)}</RoomMapName>
                     </RoomMapInfo>
                   </RoomMapCell>

@@ -971,10 +971,12 @@ export class GameManager {
       if (megaData) {
         itemChoices.push({
           id: `mega_stone_${megaData.item}`,
-          name: `${randomPokemon.displayName}의 메가스톤`,
+          // 다른 보상 아이템과 같이 번역 키를 담는다 — 포켓몬 이름은 파라미터로 넘긴다.
+          name: 'waveEnd.megaStoneName',
           type: 'mega-stone' as any,
           cost: 0,
-          effect: `${randomPokemon.displayName}을 메가진화시킵니다`,
+          effect: 'waveEnd.megaStoneEffect',
+          i18nParams: { name: randomPokemon.displayName },
           targetPokemonId: randomPokemon.pokemonId,
         } as any);
       }
@@ -987,10 +989,11 @@ export class GameManager {
       if (gigaData) {
         itemChoices.push({
           id: `max_mushroom_${randomPokemon.pokemonId}`,
-          name: `${randomPokemon.displayName}의 다이버섯`,
+          name: 'waveEnd.maxMushroomName',
           type: 'max-mushroom' as any,
           cost: 0,
-          effect: `${randomPokemon.displayName}을 거다이맥스시킵니다`,
+          effect: 'waveEnd.maxMushroomEffect',
+          i18nParams: { name: randomPokemon.displayName },
           targetPokemonId: randomPokemon.pokemonId,
         } as any);
       }

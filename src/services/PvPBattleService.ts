@@ -344,7 +344,9 @@ class PvPBattleService {
         log.push({
           turn, attackerId: u.battleId, targetId: u.battleId, action: 'attack',
           damage: dot, isCrit: false, isMiss: false, isFainted: u.currentHp <= 0,
-          moveName: se.type === 'burn' ? '화상' : '독', timestamp: turn,
+          // 로그는 각 클라이언트가 자기 언어로 렌더해야 하므로 토큰만 남긴다
+          // (표시 시 BattleLogPanel처럼 t()로 푼다). 현재 이 로그는 렌더되지 않는다.
+          moveName: se.type, timestamp: turn,
         });
       }
       se.turnsLeft -= 1;

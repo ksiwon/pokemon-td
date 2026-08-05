@@ -362,6 +362,22 @@ export const SPECIAL_SYNERGY_DEFS: SpecialSynergyDef[] = [
   },
 ];
 
+/**
+ * 특수 시너지 표시 이름. 번역 키(`synergyData.<key>.name`)가 있으면 그것을 쓰고,
+ * 없으면 정의의 원본 이름으로 폴백한다 — maps·HallOfFame이 쓰는 방식과 동일하다.
+ * `SpecialSynergyDef.name`은 한국어 고정이라 영어 모드에서 그대로 노출되면 안 된다.
+ */
+export const getSpecialSynergyName = (
+  id: string,
+  t: (key: string) => string,
+  fallback?: string,
+): string => {
+  const key = `synergyData.${id.replace('special:', '')}.name`;
+  const translated = t(key);
+  if (translated !== key) return translated;
+  return fallback ?? SPECIAL_SYNERGY_DEFS.find(d => d.id === id)?.name ?? id;
+};
+
 // Reverse map: pokemonId → list of synergy IDs (for fast lookup)
 const POKEMON_TO_SPECIAL_SYNERGIES = new Map<number, string[]>();
 for (const def of SPECIAL_SYNERGY_DEFS) {

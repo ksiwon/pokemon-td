@@ -195,7 +195,8 @@ class SaveService {
 
         // [A5] Vite ESM 환경에서 require는 동작 불보장 → dynamic import로 전환
         import('../store/gameStore')
-          .then(m => m.useGameStore.getState().showAchievementToast(achievement!.name, pointsPerCompletion, true))
+          .then(m => m.useGameStore.getState()
+            .showAchievementToast(achievement!.id, achievement!.name, pointsPerCompletion, true))
           .catch(() => {});
 
         // [카드모드] 업적 최초 달성 시 티어별 별조각 지급

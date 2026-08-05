@@ -59,6 +59,14 @@ const CLEANUP_INTERVAL = 10 * 60 * 1000;           // 10분 간격
 // [FREE-2] 무료 플랜 동시 연결 100개 보호: 방 8명 * 12방 = 96연결 + 여유 4
 const MAX_ACTIVE_ROOMS = 12;
 
+/**
+ * 사용자에게 보여줄 오류의 코드. 서비스 계층은 언어를 모르므로 문장 대신 이 코드를 던지고,
+ * UI에서 `lobby.err*` 키로 번역한다. 코드에 대응하는 키가 없으면 err.message가 그대로 노출된다.
+ */
+export const MP_ERROR = {
+  ROOM_LIMIT: 'MP_ROOM_LIMIT',
+} as const;
+
 // [V6-FIX] 클라이언트가 업로드 가능한 필드 — money/lives 복원
 //   배틀 보상 및 탈락 처리는 여전히 서버 트랜잭션이 수행하지만,
 //   일반 구매/판매는 클라이언트가 로컬에서 즉시 반영하고 Firebase에 푸시.
@@ -326,6 +334,10 @@ class MultiplayerService {
   }
 
   // ─── 방 CRUD ────────────────────────────────────────────────────
+  /**
+   * 방 생성. 실패 시 `MP_ERROR`의 코드를 담아 던진다 — UI가 그 코드로 번역 문구를 고른다.
+   * (예전엔 한국어 문장을 그대로 던져 showToast에 노출됐다.)
+   */
   async createRoom(mapId: string, mapName: string): Promise<string> {
     const user = authService.getCurrentUser();
     if (!user) throw new Error('Not authenticated');
@@ -342,7 +354,8 @@ class MultiplayerService {
       const activeRooms = Object.values(existingRoomsSnap.val() as Record<string, any>)
         .filter((r: any) => r.status === 'waiting' || r.status === 'playing' || r.status === 'starting');
       if (activeRooms.length >= MAX_ACTIVE_ROOMS) {
-        throw new Error('서버가 혼잡합니다. 잠시 후 다시 시도하거나 기존 방에 참가해주세요. (최대 동시 방 수 초과)');
+        // 서비스 계층은 언어를 모른다 → 코드만 던지고 문구는 UI에서 t()로 만든다.
+        throw new Error(MP_ERROR.ROOM_LIMIT);
       }
     }
     const newRoomRef = push(ref(rtdb, 'rooms'));

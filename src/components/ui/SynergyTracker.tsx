@@ -6,7 +6,7 @@ import styled from "styled-components";
 import { media, lMedia, isMobileOrTablet } from "../../utils/responsive.utils";
 import { useTranslation } from "../../i18n";
 import { useGameStore } from "../../store/gameStore";
-import { SPECIAL_SYNERGY_DEFS } from "../../utils/synergyManager";
+import { SPECIAL_SYNERGY_DEFS, getSpecialSynergyName } from "../../utils/synergyManager";
 import { Emoji } from "../shared/Emoji";
 
 const TYPE_ICON_API_BASE = "https://www.serebii.net/pokedex-bw/type/";
@@ -24,7 +24,7 @@ const getSynergyStyle = (
   }
   if (type === "special") {
     const def = SPECIAL_SYNERGY_DEFS.find(d => d.id === id);
-    return { icon: def?.icon ?? "⭐", imageUrl: null, name: def?.name ?? id };
+    return { icon: def?.icon ?? "⭐", imageUrl: null, name: getSpecialSynergyName(id, t, def?.name) };
   }
   return { icon: "?", imageUrl: null, name: id };
 };

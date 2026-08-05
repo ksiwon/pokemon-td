@@ -127,7 +127,9 @@ class AuthService {
    * 멀티플레이/랭킹/전당 등 서버 기능은 비활성화된다.
    */
   enterOfflineMode(nickname?: string): void {
-    const name = nickname?.trim() || this.currentUser?.displayName || '플레이어';
+    // 표시명 기본값은 호출부(LoginScreen)가 t('login.defaultOfflineName')로 넘긴다.
+    // 여기 'Player'는 그마저 없을 때의 최후 폴백이라 언어 중립으로 둔다.
+    const name = nickname?.trim() || this.currentUser?.displayName || 'Player';
     // 기존 오프라인 uid가 있으면 재사용(로컬 진행 데이터 일관성), 없으면 새로 생성
     const uid =
       this._isOffline && this.currentUser?.uid

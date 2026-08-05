@@ -83,15 +83,10 @@ export const WaveEndPicker: React.FC = () => {
     resumeSingleOnly();
   };
 
-  const getItemName = (item: Item) => {
-    if (item.type === 'mega-stone' || item.type === 'max-mushroom') return item.name;
-    return t(item.name);
-  };
-
-  const getItemEffect = (item: Item) => {
-    if (item.type === 'mega-stone' || item.type === 'max-mushroom') return item.effect;
-    return t(item.effect);
-  };
+  // 모든 보상 아이템의 name/effect는 번역 키다. 메가스톤·다이버섯은 포켓몬 이름을
+  // i18nParams로 함께 받는다(예전엔 완성된 한국어 문장을 그대로 들고 있었다).
+  const getItemName = (item: Item) => t(item.name, (item as any).i18nParams);
+  const getItemEffect = (item: Item) => t(item.effect, (item as any).i18nParams);
 
   if (selectedItem) {
     return (

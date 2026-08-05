@@ -7,7 +7,7 @@ import styled, { keyframes } from 'styled-components';
 import { ArrowLeft, Check, X, Flame, RotateCcw, Volume2, ChevronUp, ChevronDown } from 'lucide-react';
 import { media } from '../../utils/responsive.utils';
 import { useTranslation } from '../../i18n';
-import { QuizKind, QuizMode, QuizQuestion } from '../../types/quiz';
+import { QuizKind, QuizMode, QuizQuestion, KO_ONLY_QUIZ_KINDS } from '../../types/quiz';
 import { createQuizSession, createExamSession, normalizeAnswer } from '../../services/QuizEngine';
 import { quizService, ExamMilestoneReward } from '../../services/QuizService';
 import { databaseService } from '../../services/DatabaseService';
@@ -29,7 +29,7 @@ const examGrade = (c: number, total: number): number => {
 };
 
 export const QuizPlay = ({ mode, roundSize = 30, onExit }: QuizPlayProps) => {
-  const { t } = useTranslation();
+  const { t, language } = useTranslation();
   const isExam = mode === 'exam';
   const ROUND = roundSize; // 전 모드 공통 문항 수(10/30/50)
 
@@ -57,6 +57,14 @@ export const QuizPlay = ({ mode, roundSize = 30, onExit }: QuizPlayProps) => {
     }
     return sessionRef.current.next({ t });
   };
+
+  // 라운드 도중 언어를 바꾸면 한국어 전용 종목(초성)은 더 이상 성립하지 않는다
+  // (영문 이름은 초성으로 변환되지 않아 정답이 그대로 노출된다) → 허브로 되돌린다.
+  useEffect(() => {
+    if (!isExam && language !== 'ko' && KO_ONLY_QUIZ_KINDS.includes(mode as QuizKind)) {
+      onExit();
+    }
+  }, [language, isExam, mode, onExit]);
 
   /** 정답/오답 확정 — 점수·연속·페이즈 갱신(주관식·객관식 공용). */
   const commitAnswer = (correct: boolean) => {

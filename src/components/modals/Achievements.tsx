@@ -9,6 +9,7 @@ import {
   AchievementCategory,
   AchievementWithCategory,
   TIER_META,
+  resolveAchievementText,
 } from '../../data/achievements';
 import { databaseService } from '../../services/DatabaseService';
 import { saveService } from '../../services/SaveService';
@@ -17,14 +18,7 @@ import { Achievement, AchievementTier, TIER_POINTS } from '../../types/game';
 import { useTranslation } from '../../i18n';
 import { ModalOverlay, ModalBox, MODAL_ACCENT } from '../shared/modal.styles';
 
-// ─── 번역 헬퍼 (업적은 다국어화하지 않고 한국어로 고정하여 translation missing 방지) ───────────────
-function getAchName(ach: AchievementWithCategory): string {
-  return ach.name;
-}
-
-function getAchDesc(ach: AchievementWithCategory): string {
-  return ach.description;
-}
+// 문구는 achievements.ts의 정의를 통해서만 해석한다 — 세이브에는 한국어 이름이 굳어 있다.
 
 type TabKey = 'all' | AchievementCategory;
 
@@ -157,9 +151,11 @@ export const AchievementsPanel: React.FC<{ onClose: () => void }> = ({ onClose }
               {(Object.keys(ACHIEVEMENT_CATEGORIES) as AchievementCategory[]).map(cat => {
                 const { done, total } = categoryStats(cat);
                 const { label, icon } = ACHIEVEMENT_CATEGORIES[cat];
+                const catKey = `achData.category.${cat}`;
+                const catLabel = t(catKey) !== catKey ? t(catKey) : label;
                 return (
                   <CatTab key={cat} $active={activeTab === cat} onClick={() => setActiveTab(cat)}>
-                    {icon} {label} <TabBadge>{done}/{total}</TabBadge>
+                    {icon} {catLabel} <TabBadge>{done}/{total}</TabBadge>
                   </CatTab>
                 );
               })}
@@ -204,7 +200,7 @@ export const AchievementsPanel: React.FC<{ onClose: () => void }> = ({ onClose }
                               <CardBody>
                                 <CardNameRow>
                                   <CardName $unlocked={isUnlocked} $color={meta.color}>
-                                    {ach.hidden && !isUnlocked ? '???' : getAchName(ach)}
+                                    {ach.hidden && !isUnlocked ? '???' : resolveAchievementText(ach, t, 'name')}
                                   </CardName>
                                   {isUnlocked && completions > 1 && (
                                     <CompletionBadge $color={meta.color}>×{completions}</CompletionBadge>
@@ -214,7 +210,7 @@ export const AchievementsPanel: React.FC<{ onClose: () => void }> = ({ onClose }
                                 <CardDesc>
                                   {ach.hidden && !isUnlocked
                                     ? t('achievementsPanel.hiddenDesc')
-                                    : getAchDesc(ach)}
+                                    : resolveAchievementText(ach, t, 'desc')}
                                 </CardDesc>
                                 <CardBottom>
                                   {!isUnlocked ? (

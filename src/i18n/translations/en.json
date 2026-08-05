@@ -301,6 +301,9 @@
     "queue": "In queue: {count}"
   },
   "waveEnd": {
+    "megaStoneEffect": "Mega Evolve {name}",
+    "maxMushroomName": "{name}'s Max Mushroom",
+    "maxMushroomEffect": "Gigantamax {name}",
     "targetTitle": "Use {name}",
     "targetCandy": "Select a Pokémon to level up",
     "targetHeal": "Select a Pokémon to heal",
@@ -723,6 +726,8 @@
     "dataNotice": "Your top 10 records per map (by clear time) are kept permanently. Records ranked 11th or lower that are older than 60 days may be automatically removed."
   },
   "lobby": {
+    "roomOf": "{name}'s Room",
+    "errRoomLimit": "The server is busy. Please try again shortly or join an existing room. (Too many active rooms)",
     "checkingRejoin": "Checking for active session...",
     "title": "Multiplayer Lobby",
     "back": "Back",
@@ -1004,6 +1009,7 @@
     "notEnoughMoneyPicker": "Not enough gold!"
   },
   "login": {
+    "defaultOfflineName": "Player",
     "title": "Pokemon X Tower Defense X TFT",
     "google": "Login with Google",
     "loggingIn": "Logging in...",
@@ -1364,6 +1370,369 @@
       "6": "Graaah— steel does not break.",
       "7": "Freeze where you stand, in the blizzard.",
       "8": "You dare defy the deep-sea dragon?"
+    }
+  },
+  "synergyData": {
+    "baby": { "name": "Baby Pokémon" },
+    "yoonga": { "name": "Yoonganom's Party" },
+    "nunparty": { "name": "Nunparty's Party" },
+    "sejun": { "name": "Park Sejun's Party" },
+    "etusha": { "name": "Etusha's Party" },
+    "legendary_birds": { "name": "Legendary Birds" },
+    "legendary_dogs": { "name": "Legendary Beasts" },
+    "baruki": { "name": "Tyrogue Kids" },
+    "fossil": { "name": "Fossil Pokémon" },
+    "legendary_jellyfish": { "name": "Lake Guardians" },
+    "three_monkeys": { "name": "Elemental Monkeys" },
+    "lati": { "name": "Latias & Latios" },
+    "swords_of_justice": { "name": "Swords of Justice" },
+    "forces_of_nature": { "name": "Forces of Nature" },
+    "ash_no_crown": { "name": "Ash's Kalos Team" },
+    "ash_alola_champion": { "name": "Ash's Alola League Team" },
+    "ash_world_champion": { "name": "Ash's World Champion Team" },
+    "volcanion_magearna": { "name": "Volcanion & Magearna" },
+    "tapu": { "name": "Island Guardians" },
+    "ultra_beast": { "name": "Ultra Beasts" },
+    "regi": { "name": "Regi Series" },
+    "accelgor_escavalier": { "name": "Dondozo & Tatsugiri" },
+    "four_treasures": { "name": "Treasures of Ruin" },
+    "loyal_three": { "name": "The Loyal Three & Pecharunt" }
+  },
+  "achData": {
+    "category": {
+      "wave": "Progress",
+      "combat": "Combat",
+      "economy": "Economy",
+      "collect": "Collection",
+      "growth": "Growth",
+      "synergy": "Synergy",
+      "challenge": "Challenge",
+      "story": "Story",
+      "multi": "Multiplayer"
+    },
+    "synType": {
+      "name2": "{type} Duo",
+      "desc2": "Place 2 {type}-type Pokémon",
+      "name4": "{type} Quartet",
+      "desc4": "Place 4 {type}-type Pokémon",
+      "name6": "{type} Legion",
+      "desc6": "Reach full synergy with 6 {type}-type Pokémon"
+    },
+    "synGen": {
+      "name2": "{gen} Combo",
+      "desc2": "Place 2 Gen {n} Pokémon",
+      "name4": "{gen} Party",
+      "desc4": "Place 4 Gen {n} Pokémon",
+      "name6": "{gen} All-Stars",
+      "desc6": "Reach full synergy with 6 Gen {n} Pokémon"
+    },
+    "synSpecial": {
+      "desc": "Activate the {name} synergy (place 2 or more at once)"
+    },
+    "genLabel": {
+      "1": "Gen 1 (Kanto)",
+      "2": "Gen 2 (Johto)",
+      "3": "Gen 3 (Hoenn)",
+      "4": "Gen 4 (Sinnoh)",
+      "5": "Gen 5 (Unova)",
+      "6": "Gen 6 (Kalos)",
+      "7": "Gen 7 (Alola)",
+      "8": "Gen 8 (Galar)",
+      "9": "Gen 9 (Paldea)"
+    },
+    "item": {
+      "wave3": {
+        "name": "Survivor",
+        "desc": "Reach wave 3"
+      },
+      "wave5": {
+        "name": "First Steps",
+        "desc": "Reach wave 5"
+      },
+      "wave10": {
+        "name": "Out of the Nest",
+        "desc": "Reach wave 10"
+      },
+      "wave20": {
+        "name": "Intermediate",
+        "desc": "Reach wave 20"
+      },
+      "wave30": {
+        "name": "Advanced",
+        "desc": "Reach wave 30"
+      },
+      "wave40": {
+        "name": "Veteran",
+        "desc": "Reach wave 40"
+      },
+      "wave50": {
+        "name": "Master",
+        "desc": "Clear wave 50!"
+      },
+      "kill50": {
+        "name": "Rookie Hunter",
+        "desc": "Defeat 50 enemies"
+      },
+      "kill100": {
+        "name": "Hunter",
+        "desc": "Defeat 100 enemies"
+      },
+      "kill300": {
+        "name": "Veteran Hunter",
+        "desc": "Defeat 300 enemies"
+      },
+      "kill500": {
+        "name": "Slayer",
+        "desc": "Defeat 500 enemies"
+      },
+      "kill1000": {
+        "name": "God of War",
+        "desc": "Defeat 1,000 enemies"
+      },
+      "boss1": {
+        "name": "The Hunt Begins",
+        "desc": "Defeat 1 boss"
+      },
+      "boss5": {
+        "name": "Boss Hunter",
+        "desc": "Defeat 5 bosses"
+      },
+      "boss15": {
+        "name": "Boss Killer",
+        "desc": "Defeat 15 bosses"
+      },
+      "boss30": {
+        "name": "Boss Slayer",
+        "desc": "Defeat 30 bosses"
+      },
+      "crit_kill": {
+        "name": "Critical Finish",
+        "desc": "Defeat a boss with a critical hit"
+      },
+      "combo10": {
+        "name": "Combo God",
+        "desc": "Reach a 10-hit combo within a wave"
+      },
+      "combo20": {
+        "name": "Killing Spree",
+        "desc": "Reach a 20-hit combo within a wave"
+      },
+      "money5k": {
+        "name": "Penny Pincher",
+        "desc": "Earn 5,000 G total in a single game"
+      },
+      "money20k": {
+        "name": "Rich",
+        "desc": "Earn 20,000 G total in a single game"
+      },
+      "money50k": {
+        "name": "Tycoon",
+        "desc": "Earn 50,000 G total in a single game"
+      },
+      "sell5": {
+        "name": "First Trade",
+        "desc": "Sell 5 Pokémon"
+      },
+      "sell20": {
+        "name": "Master Trader",
+        "desc": "Sell 20 Pokémon"
+      },
+      "sell50": {
+        "name": "Pokémon Broker",
+        "desc": "Sell 50 Pokémon"
+      },
+      "thrifty": {
+        "name": "Thrifty",
+        "desc": "Clear wave 5 with less than 100 G"
+      },
+      "allstarters": {
+        "name": "Starter Trio",
+        "desc": "Collect Bulbasaur, Charmander and Squirtle"
+      },
+      "legendary": {
+        "name": "Legendary Trainer",
+        "desc": "Collect a Legendary Pokémon"
+      },
+      "all_types": {
+        "name": "Type Collector",
+        "desc": "Have owned all 18 types"
+      },
+      "evolve1": {
+        "name": "First Evolution",
+        "desc": "Evolve 1 Pokémon"
+      },
+      "evolve5": {
+        "name": "Evolution Novice",
+        "desc": "Evolve 5 Pokémon"
+      },
+      "evolve20": {
+        "name": "Evolution Maniac",
+        "desc": "Evolve 20 Pokémon"
+      },
+      "evolve50": {
+        "name": "Evolution Master",
+        "desc": "Evolve 50 Pokémon"
+      },
+      "mega1": {
+        "name": "Mega Evolution!",
+        "desc": "Mega Evolve once"
+      },
+      "mega5": {
+        "name": "Mega Power",
+        "desc": "Mega Evolve 5 times"
+      },
+      "gigamax1": {
+        "name": "Gigantamax!",
+        "desc": "Gigantamax once"
+      },
+      "fusion1": {
+        "name": "Mythic Fusion",
+        "desc": "Fuse Pokémon once"
+      },
+      "level50": {
+        "name": "Level 50",
+        "desc": "Raise a Pokémon to level 50"
+      },
+      "level100": {
+        "name": "Level MAX!",
+        "desc": "Raise a Pokémon to level 100"
+      },
+      "max_team": {
+        "name": "Ultimate Squad",
+        "desc": "Get all 6 Pokémon to level 50+"
+      },
+      "synergy_any": {
+        "name": "Synergy Novice",
+        "desc": "Activate at least 1 synergy"
+      },
+      "synergy_multi3": {
+        "name": "Combo Strategist",
+        "desc": "Activate 3 synergies at once"
+      },
+      "synergy_multi5": {
+        "name": "Synergy Master",
+        "desc": "Activate 5 synergies at once"
+      },
+      "synergy_lv3": {
+        "name": "Max Synergy",
+        "desc": "Take one synergy to max level (6 Pokémon)"
+      },
+      "perfect": {
+        "name": "Perfect Defense",
+        "desc": "Clear wave 10 without losing a life"
+      },
+      "perfect30": {
+        "name": "Iron Wall",
+        "desc": "Clear wave 30 without losing a life"
+      },
+      "perfect50": {
+        "name": "Flawless Line",
+        "desc": "Clear wave 50 with all 50 lives intact"
+      },
+      "nofaint10": {
+        "name": "Unbreakable",
+        "desc": "Clear wave 10 without a Pokémon fainting"
+      },
+      "nolosses": {
+        "name": "Undefeated Legend",
+        "desc": "Reach wave 30 without a Pokémon fainting"
+      },
+      "speedrun": {
+        "name": "Speedrunner",
+        "desc": "Clear wave 20 within 30 minutes"
+      },
+      "speed50": {
+        "name": "Wave 50 Speedrun",
+        "desc": "Clear wave 50 within 60 minutes"
+      },
+      "hard_clear": {
+        "name": "Challenger",
+        "desc": "Clear wave 30 on Hard"
+      },
+      "expert_clear": {
+        "name": "Expert",
+        "desc": "Clear wave 30 on Expert"
+      },
+      "all_maps": {
+        "name": "Explorer",
+        "desc": "Reach wave 20 or higher on every map"
+      },
+      "no_item": {
+        "name": "Bare-Handed",
+        "desc": "Clear wave 20 without using any item"
+      },
+      "solo_type": {
+        "name": "Mono-Type Strategy",
+        "desc": "Reach wave 20 using only one type"
+      },
+      "legendary_trio": {
+        "name": "A Legend Begins",
+        "desc": "Place all 3 Gen 1 legendary birds at once"
+      },
+      "multi_first_win": {
+        "name": "First Win",
+        "desc": "Win your first multiplayer match"
+      },
+      "multi_5wins": {
+        "name": "Contender",
+        "desc": "Win 5 multiplayer matches"
+      },
+      "multi_20wins": {
+        "name": "Dominator",
+        "desc": "Win 20 multiplayer matches"
+      },
+      "multi_50wins": {
+        "name": "Champion",
+        "desc": "Win 50 multiplayer matches"
+      },
+      "rating1000": {
+        "name": "Silver Rank",
+        "desc": "Reach 1000 rating"
+      },
+      "rating1200": {
+        "name": "Gold Rank",
+        "desc": "Reach 1200 rating"
+      },
+      "rating1500": {
+        "name": "Diamond Rank",
+        "desc": "Reach 1500 rating"
+      },
+      "rating1800": {
+        "name": "Legend Rank",
+        "desc": "Reach 1800 rating"
+      },
+      "story_ch1": {
+        "name": "Violet City Reclaimed",
+        "desc": "Clear Chapter 1 \"Woke Up as a Kricketot\" (Flying type)"
+      },
+      "story_ch2": {
+        "name": "Azalea Town Reclaimed",
+        "desc": "Clear Chapter 2 \"The Bug Town, and a Feather\" (Bug type)"
+      },
+      "story_ch3": {
+        "name": "Goldenrod City Reclaimed",
+        "desc": "Clear Chapter 3 \"Rollout, and a Crasher\" (Normal type)"
+      },
+      "story_ch4": {
+        "name": "Ecruteak City Reclaimed",
+        "desc": "Clear Chapter 4 \"Light from the Tower\" (Ghost type)"
+      },
+      "story_ch5": {
+        "name": "Cianwood City Reclaimed",
+        "desc": "Clear Chapter 5 \"Enter: One Shot of Ink\" (Fighting type)"
+      },
+      "story_ch6": {
+        "name": "Olivine City Reclaimed",
+        "desc": "Clear Chapter 6 \"Seven Lights Gather\" (Steel type)"
+      },
+      "story_ch7": {
+        "name": "Mahogany Town Reclaimed",
+        "desc": "Clear Chapter 7 — defeat the wild Piloswine, Fang of the Blizzard (Ice type)"
+      },
+      "story_ch8": {
+        "name": "Johto Liberated — Blackthorn City Reclaimed",
+        "desc": "Clear the final chapter — defeat the wild Kingdra, Dragon of the Deep (Dragon type)"
+      }
     }
   }
 }

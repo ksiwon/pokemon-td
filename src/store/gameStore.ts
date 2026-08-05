@@ -87,12 +87,15 @@ interface GameStore extends GameState {
 
   // [리뉴얼] 업적 토스트 — AP 포인트 + 최초 달성 여부 포함
   achievementToast: {
+    /** 업적 id — 표시 문구는 이걸로 정의를 찾아 현재 언어로 푼다. */
+    id: string;
+    /** 세이브에 굳은 한국어 이름. 정의를 못 찾을 때만 쓰는 폴백. */
     name: string;
     earnedAP: number;
     isFirstTime: boolean;
     timestamp: number;
   } | null;
-  showAchievementToast: (name: string, earnedAP?: number, isFirstTime?: boolean) => void;
+  showAchievementToast: (id: string, name: string, earnedAP?: number, isFirstTime?: boolean) => void;
 }
 
 export const useGameStore = create<GameStore>((set, get) => ({
@@ -345,9 +348,10 @@ export const useGameStore = create<GameStore>((set, get) => ({
   setWaveEndItemPick: (items) => set({ waveEndItemPick: items }),
 
   // ─── [리뉴얼] 업적 토스트 ────────────────────────────────────────
-  showAchievementToast: (name, earnedAP = 3, isFirstTime = false) => {
+  showAchievementToast: (id, name, earnedAP = 3, isFirstTime = false) => {
     set({
       achievementToast: {
+        id,
         name,
         earnedAP,
         isFirstTime,
