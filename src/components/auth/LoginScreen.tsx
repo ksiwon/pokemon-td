@@ -54,7 +54,8 @@ export const LoginScreen = () => {
   // [FREE-TIER] 오프라인(로컬 전용) 진입 — Firebase 호출 없음
   const handleOfflinePlay = () => {
     const name = guestMode ? nickname.trim() : '';
-    authService.enterOfflineMode(name || undefined);
+    // 기본 닉네임은 UI 언어를 따른다 — AuthService는 언어를 모르므로 여기서 넘긴다.
+    authService.enterOfflineMode(name || t('login.defaultOfflineName'));
     // App의 onAuthStateChange 리스너가 '/'로 이동시킴
   };
 

@@ -7,7 +7,7 @@ import { useNavigate } from 'react-router-dom';
 import { Ghost, Volume2, Search, Shapes, Swords, Hash, ScrollText, GraduationCap, Flame, Trophy, ChevronRight, Type, Languages, Combine } from 'lucide-react';
 import { media } from '../../utils/responsive.utils';
 import { useTranslation } from '../../i18n';
-import { QuizKind, QuizMode, QUIZ_KINDS } from '../../types/quiz';
+import { QuizKind, QuizMode, availableQuizKinds } from '../../types/quiz';
 import { quizService } from '../../services/QuizService';
 import { databaseService } from '../../services/DatabaseService';
 import { authService } from '../../services/AuthService';
@@ -29,7 +29,7 @@ const ICONS: Record<QuizKind, JSX.Element> = {
 const ROUND_SIZES = [10, 30, 50];
 
 export const QuizView = () => {
-  const { t } = useTranslation();
+  const { t, language } = useTranslation();
   const navigate = useNavigate();
   const [play, setPlay] = useState<QuizMode | null>(null);
   const [roundSize, setRoundSize] = useState(30);
@@ -37,6 +37,7 @@ export const QuizView = () => {
   const [examRank, setExamRank] = useState<number | null>(null);
 
   const state = useMemo(() => quizService.getState(), [rev]);
+  const kinds = useMemo(() => availableQuizKinds(language), [language]);
 
   useEffect(() => {
     let alive = true;
@@ -86,7 +87,7 @@ export const QuizView = () => {
 
         <SectionLabel>{t('quiz.hub.pickQuiz')}</SectionLabel>
         <Grid>
-          {QUIZ_KINDS.map(kind => (
+          {kinds.map(kind => (
             <QuizCard key={kind} onClick={() => setPlay(kind)}>
               <IconTile>{ICONS[kind]}</IconTile>
               <CardInfo>

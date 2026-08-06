@@ -20,6 +20,20 @@ export const QUIZ_KINDS: QuizKind[] = [
   'chosungEasy', 'chosungHard',
 ];
 
+/**
+ * 한국어 전용 종목 — 초성열은 한글 음절에서만 만들어진다(QuizEngine.toChosung).
+ * 다른 언어에선 이름이 그대로 노출돼 정답이 보이므로 출제하지 않는다.
+ */
+export const KO_ONLY_QUIZ_KINDS: QuizKind[] = ['chosungEasy', 'chosungHard'];
+
+/**
+ * 해당 언어에서 출제 가능한 종목.
+ * QUIZ_KINDS 자체는 줄이지 않는다 — QuizService가 이 배열로 Record<QuizKind, number>
+ * 최고점수 레코드를 만들기 때문에, 빼면 저장 스키마가 깨지고 한국어 기록도 사라진다.
+ */
+export const availableQuizKinds = (language: string): QuizKind[] =>
+  language === 'ko' ? QUIZ_KINDS : QUIZ_KINDS.filter(k => !KO_ONLY_QUIZ_KINDS.includes(k));
+
 /** 퀴즈 진행 모드: 개별 종목 또는 수능 모의고사(전 종목 혼합). */
 export type QuizMode = QuizKind | 'exam';
 

@@ -236,6 +236,15 @@ export interface Achievement {
   reward: number;            // 레거시 골드 보상 (0으로 통일, AP 포인트로 대체)
   hidden?: boolean;
 
+  // ── 다국어 ──────────────────────────────────────────────────────────────────
+  // name/description은 한국어 원본이자 폴백이고, 표시는 아래 키를 우선한다.
+  // 세이브에는 name이 그대로 굳어 저장되므로(SaveService.updateAchievement) 표시는
+  // 반드시 id → 정의 → 키 경로로 해석해야 한다. 저장값을 그대로 쓰면 안 된다.
+  nameKey?: string;                   // 이름 번역 키
+  descKey?: string;                   // 설명 번역 키
+  i18nParams?: Record<string, string | number>;  // 그대로 치환할 값
+  i18nRefs?: Record<string, string>;             // 번역 키 → t()로 푼 뒤 치환할 값
+
   // ── 리뉴얼 필드 ─────────────────────────────────────────────────────────────
   tier: AchievementTier;              // 난이도 티어
   pointsPerCompletion: number;        // 달성 1회당 AP 포인트

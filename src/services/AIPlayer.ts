@@ -509,7 +509,8 @@ export class AIPlayer {
 
   private async pickMove(moveNames: string[], pokemonTypes: string[]): Promise<any> {
     const fallback = {
-      name: 'tackle', displayName: '몸통박치기',
+      // AI 유닛 정보는 상대 클라이언트로 미러링되므로 언어 중립적인 값을 쓴다.
+      name: 'tackle', displayName: 'Tackle',
       type: 'normal', power: 40, accuracy: 100,
       damageClass: 'physical', effectChance: null,
     };

@@ -301,6 +301,9 @@
     "queue": "대기 중: {count}개"
   },
   "waveEnd": {
+    "megaStoneEffect": "{name}을 메가진화시킵니다",
+    "maxMushroomName": "{name}의 다이버섯",
+    "maxMushroomEffect": "{name}을 거다이맥스시킵니다",
     "targetTitle": "{name} 사용",
     "targetCandy": "레벨을 올릴 포켓몬을 선택하세요",
     "targetHeal": "체력을 회복할 포켓몬을 선택하세요",
@@ -383,6 +386,7 @@
     "cost": "{cost}원"
   },
   "synergy": {
+    "specialDesc": "({count}) 스탯 {mult}배",
     "title": "현재 시너지",
     "empty": "적용 중인 포켓몬이 없습니다.",
     "level": "(Lv.{level})",
@@ -712,6 +716,7 @@
     "dataNotice": "맵당 클리어 시간 상위 10개 기록은 날짜에 관계없이 영구 보존됩니다. 11위 이하이면서 60일이 지난 기록은 자동으로 삭제될 수 있습니다."
   },
   "login": {
+    "defaultOfflineName": "플레이어",
     "title": "Pokemon X Tower Defense X TFT",
     "google": "Google로 로그인",
     "loggingIn": "로그인 중...",
@@ -754,6 +759,8 @@
     }
   },
   "lobby": {
+    "roomOf": "{name}의 방",
+    "errRoomLimit": "서버가 혼잡합니다. 잠시 후 다시 시도하거나 기존 방에 참가해주세요. (최대 동시 방 수 초과)",
     "title": "멀티플레이어 로비",
     "back": "뒤로 가기",
     "createRoom": "방 만들기",
@@ -1044,6 +1051,8 @@
     "liveSync": "실시간 동기화 중"
   },
   "storyUI": {
+    "unlockFirst": "게임을 시작하면 해금됩니다.",
+    "unlockAfter": "챕터 {n}을 클리어하면 해금됩니다.",
     "clearGrade": "클리어 등급",
     "highestWave": "최고 웨이브",
     "appearPokemon": "등장 포켓몬 (상점 우선)",
@@ -1364,6 +1373,369 @@
       "6": "구오오— 강철은 부서지지 않는다.",
       "7": "눈보라 속에서 그대로 얼어붙어라.",
       "8": "심해의 용을 거스를 셈인가."
+    }
+  },
+  "synergyData": {
+    "baby": { "name": "베이비 포켓몬" },
+    "yoonga": { "name": "윤가놈 파티" },
+    "nunparty": { "name": "눈파티 파티" },
+    "sejun": { "name": "박세준 파티" },
+    "etusha": { "name": "에투샤 파티" },
+    "legendary_birds": { "name": "전설의 새" },
+    "legendary_dogs": { "name": "전설의 개" },
+    "baruki": { "name": "배루키즈" },
+    "fossil": { "name": "화석" },
+    "legendary_jellyfish": { "name": "전설의 해파리" },
+    "three_monkeys": { "name": "3숭이" },
+    "lati": { "name": "라티아스, 라티오스" },
+    "swords_of_justice": { "name": "성검사 4마리" },
+    "forces_of_nature": { "name": "로스 4형제" },
+    "ash_no_crown": { "name": "지우 무관 팀" },
+    "ash_alola_champion": { "name": "지우 리그 우승 팀" },
+    "ash_world_champion": { "name": "지우 월챔 우승 팀" },
+    "volcanion_magearna": { "name": "볼케니온, 마기아나" },
+    "tapu": { "name": "카푸 4형제" },
+    "ultra_beast": { "name": "울트라비스트" },
+    "regi": { "name": "레지 시리즈" },
+    "accelgor_escavalier": { "name": "어써러셔 & 싸리용" },
+    "four_treasures": { "name": "사흉수" },
+    "loyal_three": { "name": "개추 4형제" }
+  },
+  "achData": {
+    "category": {
+      "wave": "진행",
+      "combat": "전투",
+      "economy": "경제",
+      "collect": "수집",
+      "growth": "성장",
+      "synergy": "시너지",
+      "challenge": "도전",
+      "story": "스토리",
+      "multi": "멀티플레이"
+    },
+    "synType": {
+      "name2": "{type} 듀오",
+      "desc2": "{type} 타입 포켓몬 2마리 배치",
+      "name4": "{type} 쿼텟",
+      "desc4": "{type} 타입 포켓몬 4마리 배치",
+      "name6": "{type} 군단",
+      "desc6": "{type} 타입 6마리 풀 시너지 달성"
+    },
+    "synGen": {
+      "name2": "{gen} 콤비",
+      "desc2": "{n}세대 포켓몬 2마리 배치",
+      "name4": "{gen} 파티",
+      "desc4": "{n}세대 포켓몬 4마리 배치",
+      "name6": "{gen} 올스타",
+      "desc6": "{n}세대 포켓몬 6마리 풀 시너지 달성"
+    },
+    "synSpecial": {
+      "desc": "{name} 시너지 발동 (2마리 이상 동시 배치)"
+    },
+    "genLabel": {
+      "1": "1세대(관동)",
+      "2": "2세대(성도)",
+      "3": "3세대(호연)",
+      "4": "4세대(신오)",
+      "5": "5세대(하나)",
+      "6": "6세대(칼로스)",
+      "7": "7세대(알로라)",
+      "8": "8세대(가라르)",
+      "9": "9세대(팔데아)"
+    },
+    "item": {
+      "wave3": {
+        "name": "생존자",
+        "desc": "웨이브 3 도달"
+      },
+      "wave5": {
+        "name": "첫 걸음",
+        "desc": "웨이브 5 도달"
+      },
+      "wave10": {
+        "name": "초보 탈출",
+        "desc": "웨이브 10 도달"
+      },
+      "wave20": {
+        "name": "중급자",
+        "desc": "웨이브 20 도달"
+      },
+      "wave30": {
+        "name": "고급자",
+        "desc": "웨이브 30 도달"
+      },
+      "wave40": {
+        "name": "베테랑",
+        "desc": "웨이브 40 도달"
+      },
+      "wave50": {
+        "name": "마스터",
+        "desc": "웨이브 50 클리어!"
+      },
+      "kill50": {
+        "name": "신참 사냥꾼",
+        "desc": "적 50마리 처치"
+      },
+      "kill100": {
+        "name": "사냥꾼",
+        "desc": "적 100마리 처치"
+      },
+      "kill300": {
+        "name": "베테랑 사냥꾼",
+        "desc": "적 300마리 처치"
+      },
+      "kill500": {
+        "name": "학살자",
+        "desc": "적 500마리 처치"
+      },
+      "kill1000": {
+        "name": "전쟁의 신",
+        "desc": "적 1000마리 처치"
+      },
+      "boss1": {
+        "name": "보스 사냥 시작",
+        "desc": "보스 1마리 처치"
+      },
+      "boss5": {
+        "name": "보스 헌터",
+        "desc": "보스 5마리 처치"
+      },
+      "boss15": {
+        "name": "보스 킬러",
+        "desc": "보스 15마리 처치"
+      },
+      "boss30": {
+        "name": "보스 학살자",
+        "desc": "보스 30마리 처치"
+      },
+      "crit_kill": {
+        "name": "급소 한 방",
+        "desc": "크리티컬로 보스 처치"
+      },
+      "combo10": {
+        "name": "콤보의 신",
+        "desc": "웨이브 중 10콤보 달성"
+      },
+      "combo20": {
+        "name": "연속 학살",
+        "desc": "웨이브 중 20콤보 달성"
+      },
+      "money5k": {
+        "name": "알뜰살뜰",
+        "desc": "한 게임에서 총 5,000원 획득"
+      },
+      "money20k": {
+        "name": "부자",
+        "desc": "한 게임에서 총 20,000원 획득"
+      },
+      "money50k": {
+        "name": "재벌",
+        "desc": "한 게임에서 총 50,000원 획득"
+      },
+      "sell5": {
+        "name": "거래 입문",
+        "desc": "포켓몬 5마리 판매"
+      },
+      "sell20": {
+        "name": "거래의 달인",
+        "desc": "포켓몬 20마리 판매"
+      },
+      "sell50": {
+        "name": "포켓몬 브로커",
+        "desc": "포켓몬 50마리 판매"
+      },
+      "thrifty": {
+        "name": "절약가",
+        "desc": "웨이브 5을 골드 100 미만으로 클리어"
+      },
+      "allstarters": {
+        "name": "스타터 트리오",
+        "desc": "이상해씨, 파이리, 꼬부기 모두 수집"
+      },
+      "legendary": {
+        "name": "전설의 트레이너",
+        "desc": "전설 포켓몬 수집"
+      },
+      "all_types": {
+        "name": "타입 컬렉터",
+        "desc": "18종 타입을 모두 보유한 적 있음"
+      },
+      "evolve1": {
+        "name": "첫 진화",
+        "desc": "포켓몬 1마리 진화"
+      },
+      "evolve5": {
+        "name": "진화 입문",
+        "desc": "포켓몬 5마리 진화"
+      },
+      "evolve20": {
+        "name": "진화 마니아",
+        "desc": "포켓몬 20마리 진화"
+      },
+      "evolve50": {
+        "name": "진화의 달인",
+        "desc": "포켓몬 50마리 진화"
+      },
+      "mega1": {
+        "name": "메가진화!",
+        "desc": "메가진화 1회 달성"
+      },
+      "mega5": {
+        "name": "메가 파워",
+        "desc": "메가진화 5회 달성"
+      },
+      "gigamax1": {
+        "name": "거다이맥스!",
+        "desc": "거다이맥스 1회 달성"
+      },
+      "fusion1": {
+        "name": "신화의 합체",
+        "desc": "포켓몬 합체 1회 달성"
+      },
+      "level50": {
+        "name": "레벨 50",
+        "desc": "포켓몬을 레벨 50으로 성장"
+      },
+      "level100": {
+        "name": "레벨 MAX!",
+        "desc": "포켓몬을 레벨 100으로 성장"
+      },
+      "max_team": {
+        "name": "최강 전대",
+        "desc": "포켓몬 6마리 모두 레벨 50+"
+      },
+      "synergy_any": {
+        "name": "시너지 입문",
+        "desc": "시너지 1가지 이상 활성화"
+      },
+      "synergy_multi3": {
+        "name": "복합 전략가",
+        "desc": "시너지 3가지 동시 활성화"
+      },
+      "synergy_multi5": {
+        "name": "시너지 마스터",
+        "desc": "시너지 5가지 동시 활성화"
+      },
+      "synergy_lv3": {
+        "name": "최대 시너지",
+        "desc": "한 시너지를 최대 레벨(6마리)로 달성"
+      },
+      "perfect": {
+        "name": "완벽한 방어",
+        "desc": "라이프 손실 없이 웨이브 10 클리어"
+      },
+      "perfect30": {
+        "name": "철벽",
+        "desc": "라이프 손실 없이 웨이브 30 클리어"
+      },
+      "perfect50": {
+        "name": "무결점 방어선",
+        "desc": "라이프 50 유지로 웨이브 50 클리어"
+      },
+      "nofaint10": {
+        "name": "불굴의 의지",
+        "desc": "포켓몬 기절 없이 웨이브 10 클리어"
+      },
+      "nolosses": {
+        "name": "불패신화",
+        "desc": "포켓몬 기절 없이 웨이브 30 도달"
+      },
+      "speedrun": {
+        "name": "스피드러너",
+        "desc": "웨이브 20을 30분 안에 클리어"
+      },
+      "speed50": {
+        "name": "50파 스피드런",
+        "desc": "웨이브 50을 60분 안에 클리어"
+      },
+      "hard_clear": {
+        "name": "도전자",
+        "desc": "Hard 난이도 웨이브 30 클리어"
+      },
+      "expert_clear": {
+        "name": "전문가",
+        "desc": "Expert 난이도 웨이브 30 클리어"
+      },
+      "all_maps": {
+        "name": "탐험가",
+        "desc": "모든 맵에서 웨이브 20 이상 도달"
+      },
+      "no_item": {
+        "name": "맨몸 클리어",
+        "desc": "아이템 미사용으로 웨이브 20 클리어"
+      },
+      "solo_type": {
+        "name": "단일 타입 전략",
+        "desc": "같은 타입 포켓몬만으로 웨이브 20 도달"
+      },
+      "legendary_trio": {
+        "name": "전설의 시작",
+        "desc": "1세대 전설 포켓몬 3종 동시 배치"
+      },
+      "multi_first_win": {
+        "name": "첫 승리",
+        "desc": "멀티플레이 첫 승리"
+      },
+      "multi_5wins": {
+        "name": "승부사",
+        "desc": "멀티플레이 5승"
+      },
+      "multi_20wins": {
+        "name": "지배자",
+        "desc": "멀티플레이 20승"
+      },
+      "multi_50wins": {
+        "name": "최강자",
+        "desc": "멀티플레이 50승"
+      },
+      "rating1000": {
+        "name": "실버 등급",
+        "desc": "레이팅 1000 달성"
+      },
+      "rating1200": {
+        "name": "골드 등급",
+        "desc": "레이팅 1200 달성"
+      },
+      "rating1500": {
+        "name": "다이아 등급",
+        "desc": "레이팅 1500 달성"
+      },
+      "rating1800": {
+        "name": "전설 등급",
+        "desc": "레이팅 1800 달성"
+      },
+      "story_ch1": {
+        "name": "도라지시티 탈환",
+        "desc": "스토리 1챕터 \"눈을 떠보니 귀뚤뚜기\" 클리어 (비행 타입)"
+      },
+      "story_ch2": {
+        "name": "고동마을 탈환",
+        "desc": "스토리 2챕터 \"벌레의 마을, 그리고 깃털\" 클리어 (벌레 타입)"
+      },
+      "story_ch3": {
+        "name": "금빛시티 탈환",
+        "desc": "스토리 3챕터 \"구르기, 그리고 난입\" 클리어 (노말 타입)"
+      },
+      "story_ch4": {
+        "name": "인주시티 탈환",
+        "desc": "스토리 4챕터 \"탑에서 새어나오는 빛\" 클리어 (고스트 타입)"
+      },
+      "story_ch5": {
+        "name": "진청시티 탈환",
+        "desc": "스토리 5챕터 \"먹물 한 발의 등장\" 클리어 (격투 타입)"
+      },
+      "story_ch6": {
+        "name": "담청시티 탈환",
+        "desc": "스토리 6챕터 \"일곱 빛이 모이다\" 클리어 (강철 타입)"
+      },
+      "story_ch7": {
+        "name": "황토마을 탈환",
+        "desc": "스토리 7챕터 클리어 — 눈보라의 엄니 야생 메꾸리 격파 (얼음 타입)"
+      },
+      "story_ch8": {
+        "name": "성도 해방 — 검은먹시티 탈환",
+        "desc": "스토리 최종 챕터 클리어 — 심해의 용 야생 킹드라 격파 (드래곤 타입)"
+      }
     }
   }
 }

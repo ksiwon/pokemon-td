@@ -55,6 +55,7 @@ export interface StoryChapter {
   heroPool: number[];
   enemyTypes: string[];
   bossName?: string;
+  bossNameEn?: string;
   bossWave: number;
   unlockCondition: string;
   // ── 콘텐츠 필드 (수정 가능) ──
@@ -80,6 +81,7 @@ export const AEGIS_STORY_CHAPTERS: StoryChapter[] = [
   enemyTypes:     ['flying', 'normal'],
   bossWave:       30,
   bossName:       '체육관을 차지한 우두머리 — 야생 피죤',
+  bossNameEn:     "The Usurper of the Gym — Wild Pidgeotto",
   unlockCondition: '게임을 시작하면 해금됩니다.',
   theme: { primary: '#93c5fd', secondary: '#166534', bg: 'linear-gradient(135deg, #052e16 0%, #14532d 100%)' },
 
@@ -184,6 +186,7 @@ export const AEGIS_STORY_CHAPTERS: StoryChapter[] = [
   enemyTypes:     ['bug', 'poison', 'flying'],
   bossWave:       30,
   bossName:       '체육관을 차지한 우두머리 — 야생 스라크',
+  bossNameEn:     "The Usurper of the Gym — Wild Scyther",
   unlockCondition: '챕터 1을 클리어하면 해금됩니다.',
   theme: { primary: '#a3e635', secondary: '#15803d', bg: 'linear-gradient(135deg, #052e16 0%, #064e3b 100%)' },
 
@@ -270,6 +273,7 @@ export const AEGIS_STORY_CHAPTERS: StoryChapter[] = [
   enemyTypes:     ['normal'],
   bossWave:       30,
   bossName:       '굴러오는 재앙 — 야생 밀탱크',
+  bossNameEn:     "Rolling Disaster — Wild Miltank",
   unlockCondition: '챕터 2를 클리어하면 해금됩니다.',
   theme: { primary: '#fcd34d', secondary: '#0369a1', bg: 'linear-gradient(135deg, #0c4a6e 0%, #075985 100%)' },
 
@@ -371,6 +375,7 @@ export const AEGIS_STORY_CHAPTERS: StoryChapter[] = [
   enemyTypes:     ['ghost', 'poison'],
   bossWave:       30,
   bossName:       '체육관을 삼킨 그림자 — 야생 팬텀',
+  bossNameEn:     "The Shadow That Swallowed the Gym — Wild Gengar",
   unlockCondition: '챕터 3을 클리어하면 해금됩니다.',
   theme: { primary: '#c4b5fd', secondary: '#6d28d9', bg: 'linear-gradient(135deg, #1e1b4b 0%, #312e81 100%)' },
 
@@ -442,6 +447,7 @@ export const AEGIS_STORY_CHAPTERS: StoryChapter[] = [
   enemyTypes:     ['fighting'],
   bossWave:       30,
   bossName:       '주먹과 격류의 폭군 — 야생 강챙이',
+  bossNameEn:     "Tyrant of Fist and Torrent — Wild Poliwrath",
   unlockCondition: '챕터 4를 클리어하면 해금됩니다.',
   theme: { primary: '#f87171', secondary: '#c2410c', bg: 'linear-gradient(135deg, #431407 0%, #7c2d12 100%)' },
 
@@ -531,6 +537,7 @@ export const AEGIS_STORY_CHAPTERS: StoryChapter[] = [
   enemyTypes:     ['steel', 'electric'],
   bossWave:       30,
   bossName:       '녹슨 거구 — 야생 강철톤',
+  bossNameEn:     "The Rusted Colossus — Wild Steelix",
   unlockCondition: '챕터 5를 클리어하면 해금됩니다.',
   theme: { primary: '#94a3b8', secondary: '#4d7c0f', bg: 'linear-gradient(135deg, #1a2e05 0%, #365314 100%)' },
 
@@ -602,6 +609,7 @@ export const AEGIS_STORY_CHAPTERS: StoryChapter[] = [
   enemyTypes:     ['ice', 'ground'],
   bossWave:       30,
   bossName:       '눈보라의 엄니 — 야생 메꾸리',
+  bossNameEn:     "Fang of the Blizzard — Wild Piloswine",
   unlockCondition: '챕터 6을 클리어하면 해금됩니다.',
   theme: { primary: '#7dd3fc', secondary: '#0284c7', bg: 'linear-gradient(135deg, #0c2948 0%, #164e63 100%)' },
 
@@ -685,6 +693,7 @@ export const AEGIS_STORY_CHAPTERS: StoryChapter[] = [
   enemyTypes:     ['dragon', 'water'],
   bossWave:       30,
   bossName:       '심해의 용 — 야생 킹드라',
+  bossNameEn:     "Dragon of the Deep — Wild Kingdra",
   unlockCondition: '챕터 7을 클리어하면 해금됩니다.',
   theme: { primary: '#f59e0b', secondary: '#92400e', bg: 'linear-gradient(135deg, #1c0a00 0%, #431407 50%, #0f0720 100%)' },
 

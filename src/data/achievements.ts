@@ -24,6 +24,10 @@ const mkAch = (
   >
 ): AchievementWithCategory => ({
   ...base,
+  // 번역 키를 명시하지 않은 개별 업적은 id에서 유도한다(`achData.item.<id>.name/desc`).
+  // 73개에 손으로 키를 달면 id와 어긋날 여지가 생기므로 여기서 한 번에 묶는다.
+  nameKey: base.nameKey ?? `achData.item.${base.id}.name`,
+  descKey: base.descKey ?? `achData.item.${base.id}.desc`,
   progress: 0,
   unlocked: false,
   reward: 0,                                   // 골드 보상 폐지 → AP로 대체
@@ -63,6 +67,9 @@ const typeSynergyAchievements: AchievementWithCategory[] = ALL_TYPES.flatMap(t =
     id: `syn_type_${t.key}_2`,
     name: `${t.nameKo} 듀오`,
     description: `${t.nameKo} 타입 포켓몬 2마리 배치`,
+    nameKey: 'achData.synType.name2',
+    descKey: 'achData.synType.desc2',
+    i18nRefs: { type: `types.${t.key}` },
     icon: t.icon,
     category: 'synergy',
     condition: `synergy_type_${t.key}_2`,
@@ -73,6 +80,9 @@ const typeSynergyAchievements: AchievementWithCategory[] = ALL_TYPES.flatMap(t =
     id: `syn_type_${t.key}_4`,
     name: `${t.nameKo} 쿼텟`,
     description: `${t.nameKo} 타입 포켓몬 4마리 배치`,
+    nameKey: 'achData.synType.name4',
+    descKey: 'achData.synType.desc4',
+    i18nRefs: { type: `types.${t.key}` },
     icon: t.icon,
     category: 'synergy',
     condition: `synergy_type_${t.key}_4`,
@@ -83,6 +93,9 @@ const typeSynergyAchievements: AchievementWithCategory[] = ALL_TYPES.flatMap(t =
     id: `syn_type_${t.key}_6`,
     name: `${t.nameKo} 군단`,
     description: `${t.nameKo} 타입 6마리 풀 시너지 달성`,
+    nameKey: 'achData.synType.name6',
+    descKey: 'achData.synType.desc6',
+    i18nRefs: { type: `types.${t.key}` },
     icon: t.icon,
     category: 'synergy',
     condition: `synergy_type_${t.key}_6`,
@@ -106,6 +119,10 @@ const genSynergyAchievements: AchievementWithCategory[] = Array.from({ length: 9
     id: `syn_gen_${gen}_2`,
     name: `${GEN_NAMES[gen]} 콤비`,
     description: `${gen}세대 포켓몬 2마리 배치`,
+    nameKey: 'achData.synGen.name2',
+    descKey: 'achData.synGen.desc2',
+    i18nRefs: { gen: `achData.genLabel.${gen}` },
+    i18nParams: { n: gen },
     icon: GEN_ICONS[gen],
     category: 'synergy',
     condition: `synergy_gen_${gen}_2`,
@@ -116,6 +133,10 @@ const genSynergyAchievements: AchievementWithCategory[] = Array.from({ length: 9
     id: `syn_gen_${gen}_4`,
     name: `${GEN_NAMES[gen]} 파티`,
     description: `${gen}세대 포켓몬 4마리 배치`,
+    nameKey: 'achData.synGen.name4',
+    descKey: 'achData.synGen.desc4',
+    i18nRefs: { gen: `achData.genLabel.${gen}` },
+    i18nParams: { n: gen },
     icon: GEN_ICONS[gen],
     category: 'synergy',
     condition: `synergy_gen_${gen}_4`,
@@ -126,6 +147,10 @@ const genSynergyAchievements: AchievementWithCategory[] = Array.from({ length: 9
     id: `syn_gen_${gen}_6`,
     name: `${GEN_NAMES[gen]} 올스타`,
     description: `${gen}세대 포켓몬 6마리 풀 시너지 달성`,
+    nameKey: 'achData.synGen.name6',
+    descKey: 'achData.synGen.desc6',
+    i18nRefs: { gen: `achData.genLabel.${gen}` },
+    i18nParams: { n: gen },
     icon: GEN_ICONS[gen],
     category: 'synergy',
     condition: `synergy_gen_${gen}_6`,
@@ -147,6 +172,10 @@ const specialSynergyAchievements: AchievementWithCategory[] = SPECIAL_SYNERGY_DE
     id: `syn_special_${key}`,
     name: def.name,
     description: `${def.name} 시너지 발동 (2마리 이상 동시 배치)`,
+    // 이름은 시너지 패널과 같은 출처(synergyData)를 쓴다 — 표기가 갈리면 안 된다.
+    nameKey: `synergyData.${key}.name`,
+    descKey: 'achData.synSpecial.desc',
+    i18nRefs: { name: `synergyData.${key}.name` },
     icon: def.icon,
     category: 'synergy',
     condition: `special_synergy_${key}`,
@@ -268,6 +297,40 @@ export const ACHIEVEMENTS: AchievementWithCategory[] = [
   ...specialSynergyAchievements,
   ...storyAchievements,
 ];
+
+/** id → 업적 정의. 세이브에 굳은 값 대신 항상 여기서 문구를 가져오기 위한 조회용. */
+const ACHIEVEMENTS_BY_ID = new Map(ACHIEVEMENTS.map(a => [a.id, a]));
+export const getAchievementById = (id: string): AchievementWithCategory | undefined =>
+  ACHIEVEMENTS_BY_ID.get(id);
+
+type TFn = (key: string, params?: Record<string, string | number>) => string;
+
+/**
+ * 업적 이름/설명을 현재 언어로 해석한다.
+ *
+ * ⚠ 세이브에는 `{...base}`로 복사된 **한국어 name이 굳어** 저장된다
+ * (SaveService.updateAchievement). 그래서 저장된 객체의 name을 그대로 쓰면
+ * 번역을 해도 한국어가 남는다 — 반드시 이 함수로 키를 통해 풀어야 한다.
+ * 키가 없거나 번역이 비면 원본 한국어로 폴백한다(구버전 세이브 안전망).
+ */
+export const resolveAchievementText = (
+  ach: Pick<Achievement, 'name' | 'description' | 'nameKey' | 'descKey' | 'i18nParams' | 'i18nRefs'>,
+  t: TFn,
+  field: 'name' | 'desc',
+): string => {
+  const key = field === 'name' ? ach.nameKey : ach.descKey;
+  const fallback = field === 'name' ? ach.name : ach.description;
+  if (!key) return fallback;
+
+  const params: Record<string, string | number> = { ...(ach.i18nParams ?? {}) };
+  for (const [name, refKey] of Object.entries(ach.i18nRefs ?? {})) {
+    const resolved = t(refKey);
+    params[name] = resolved === refKey ? fallback : resolved;
+  }
+
+  const out = t(key, params);
+  return out === key ? fallback : out;
+};
 
 // ─── 카테고리 메타데이터 ──────────────────────────────────────────────────────
 export const ACHIEVEMENT_CATEGORIES: Record<AchievementCategory, { label: string; icon: string }> = {

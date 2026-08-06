@@ -102,7 +102,9 @@ export function isAOETarget(target?: string): boolean {
  */
 export async function pickUsableMove(
   poke: PokemonData,
-  fallbackDisplayName = '몸통박치기'
+  // 호출부(PokemonPicker)는 t('picker.fallbackMove')를 넘긴다.
+  // 여기 기본값은 번역을 못 쓰는 경로(시뮬레이터 등)용이라 언어 중립적으로 둔다.
+  fallbackDisplayName = 'Tackle'
 ): Promise<any> {
   const moveNames = poke.moves.slice(0, 10);
   let usableMove: any = null;

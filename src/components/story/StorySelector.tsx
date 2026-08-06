@@ -55,6 +55,7 @@ export const StorySelector: React.FC<StorySelectorProps> = ({ onStart }) => {
   const chTitle = (c: StoryChapter) => (language === 'en' && c.titleEn ? c.titleEn : c.title);
   const chSub = (c: StoryChapter) => (language === 'en' && c.subtitleEn ? c.subtitleEn : c.subtitle);
   const chLoc = (c: StoryChapter) => (language === 'en' && c.locationEn ? c.locationEn : c.location);
+  const chBoss = (c: StoryChapter) => (language === 'en' && c.bossNameEn ? c.bossNameEn : c.bossName);
   const [progress] = useState(() => storyProgressService.getProgress());
   const [selectedIdx, setSelectedIdx] = useState<number | null>(null);
   const [showOpening, setShowOpening] = useState(false);
@@ -123,7 +124,8 @@ export const StorySelector: React.FC<StorySelectorProps> = ({ onStart }) => {
       heroPool: pendingChapter.heroPool,
       enemyTypes: pendingChapter.enemyTypes,
       bossWave: pendingChapter.bossWave,
-      bossName: pendingChapter.bossName,
+      // 게임 화면(BossCutIn)은 언어를 다시 판별하지 않으므로 여기서 현지화해 넘긴다.
+      bossName: chBoss(pendingChapter),
     });
   }, [pendingChapter, onStart]);
 
@@ -202,14 +204,18 @@ export const StorySelector: React.FC<StorySelectorProps> = ({ onStart }) => {
               <SectionLabel>
                 {t('storyUI.bossAppears', { wave: selected.bossWave })}
               </SectionLabel>
-              <BossName>{selected.bossName}</BossName>
+              <BossName>{chBoss(selected)}</BossName>
             </Section>
           )}
 
           <Section>
             <SectionLabel>{t('storyUI.openingPreview')}</SectionLabel>
             <PreviewDialogue>
-              <PreviewSpeaker>{selected.openingDialogue[0].speaker}</PreviewSpeaker>
+              <PreviewSpeaker>
+                {language === 'en' && selected.openingDialogue[0].speakerEn
+                  ? selected.openingDialogue[0].speakerEn
+                  : selected.openingDialogue[0].speaker}
+              </PreviewSpeaker>
               <PreviewText>
                 "{language === 'en' && selected.openingDialogue[0].textEn
                   ? selected.openingDialogue[0].textEn
@@ -329,7 +335,12 @@ export const StorySelector: React.FC<StorySelectorProps> = ({ onStart }) => {
                   ) : unlocked ? (
                     <StarRating stars={0} />
                   ) : (
-                    <LockedText>{ch.unlockCondition}</LockedText>
+                    // unlockCondition은 한국어 원문이라 표시에 쓰지 않는다 — 챕터 번호로 문구를 만든다.
+                    <LockedText>
+                      {ch.chapterNumber <= 1
+                        ? t('storyUI.unlockFirst')
+                        : t('storyUI.unlockAfter', { n: ch.chapterNumber - 1 })}
+                    </LockedText>
                   )}
                 </CardBody>
 

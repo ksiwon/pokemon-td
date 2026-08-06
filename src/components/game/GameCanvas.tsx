@@ -23,6 +23,7 @@ import {
 import { GamePokemon } from "../../types/game";
 import { lMedia, isMobileOrTablet, isTouchDevice } from "../../utils/responsive.utils";
 import { buyableHeldItems, shopTier, wavesToNextTier, getHeldItem } from "../../data/heldItems";
+import { getAchievementById, resolveAchievementText } from "../../data/achievements";
 import { Emoji } from "../shared/Emoji";
 import { showToast } from "../shared/Toast";
 
@@ -442,15 +443,19 @@ const HPBar: React.FC<{
 };
 
 const AchievementToastDisplay: React.FC = () => {
+  const { t } = useTranslation();
   const achievementToast = useGameStore(s => s.achievementToast);
   if (!achievementToast) return null;
   const ap = achievementToast.earnedAP ?? 3;
   const tierColor = ap >= 100 ? '#ff80ff' : ap >= 50 ? '#b9f2ff' : ap >= 25 ? '#FFD700' : ap >= 10 ? '#c0c0c0' : '#cd7f32';
   const isFirst = achievementToast.isFirstTime;
+  // 세이브에 굳은 이름(achievementToast.name)이 아니라 정의를 통해 푼다 — 구버전 세이브는 한국어다.
+  const def = getAchievementById(achievementToast.id);
+  const label = def ? resolveAchievementText(def, t, 'name') : achievementToast.name;
   return (
     <AchievementToastPill key={achievementToast.timestamp} $color={tierColor} $first={isFirst}>
       <Emoji glyph={isFirst ? '🏆' : '✅'} size={14} />{' '}
-      <AchPillName $first={isFirst}>{achievementToast.name}</AchPillName>
+      <AchPillName $first={isFirst}>{label}</AchPillName>
       {isFirst && <AchPillAP $color={tierColor}> +{ap}AP</AchPillAP>}
     </AchievementToastPill>
   );
