@@ -56,8 +56,17 @@ export const SpeedQuizLobby = ({ onEnterRoom, onExit }: Props) => {
   useEffect(() => {
     if (offline) return;
     // 만료 방 정리도 진입 시 1회만(주기 타이머 없음).
-    quizRoomService.withConnection(() => quizRoomService.cleanupExpiredRooms()).finally(refresh);
-  }, [offline, refresh]);
+    // 정리와 첫 조회를 **한 번의 연결**로 묶는다 — 따로 잡으면 그 사이에 소켓을 끊었다
+    // 다시 붙느라(goOffline → goOnline) 핸드셰이크가 한 번 더 든다.
+    setLoading(true);
+    quizRoomService.withConnection(async () => {
+      await quizRoomService.cleanupExpiredRooms();
+      return quizRoomService.listWaitingRooms();
+    })
+      .then(result => { setRooms(result.rooms); setActiveCount(result.activeCount); setError(null); })
+      .catch(() => setError('loadFail'))
+      .finally(() => setLoading(false));
+  }, [offline]);
 
   /** 서비스가 던진 오류 코드를 문구로. 코드가 없으면 일반 실패 문구. */
   const errText = (key: string | null) => {
@@ -72,14 +81,21 @@ export const SpeedQuizLobby = ({ onEnterRoom, onExit }: Props) => {
     return t(`quiz.${map[key] ?? 'speed.errLoad'}`);
   };
 
+  // 방 만들기·입장도 **연결을 잡은 채** 해야 한다. 로비는 조회가 끝나면 소켓을 끊어 두므로
+  // (withConnection), 그대로 set/update를 던지면 RTDB가 쓰기를 로컬 큐에 쌓아 두고
+  // 프로미스를 영영 resolve하지 않는다 — 버튼만 눌리고 아무 일도 안 일어난다.
+  // 성공하면 서비스가 반환 전에 currentRoomId를 세팅하므로 busy 프로브가 반납을 막아,
+  // 방 화면이 마운트될 때까지 연결이 유지된다.
   const create = async () => {
     if (busy) return;
     setBusy(true); setError(null);
     try {
-      onEnterRoom(await quizRoomService.createRoom(rounds, seconds));
+      const id = await quizRoomService.withConnection(() => quizRoomService.createRoom(rounds, seconds));
+      onEnterRoom(id);
     } catch (e) {
       setError((e as Error).message);
       setBusy(false);
+      refresh();
     }
   };
 
@@ -87,7 +103,7 @@ export const SpeedQuizLobby = ({ onEnterRoom, onExit }: Props) => {
     if (busy) return;
     setBusy(true); setError(null);
     try {
-      await quizRoomService.joinRoom(roomId);
+      await quizRoomService.withConnection(() => quizRoomService.joinRoom(roomId));
       onEnterRoom(roomId);
     } catch (e) {
       setError((e as Error).message);

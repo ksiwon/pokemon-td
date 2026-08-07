@@ -49,7 +49,7 @@
         "players": {
           "$uid": {
             ".write": "auth != null && (($uid === auth.uid && (!data.exists() || !newData.exists())) || root.child('quizRooms').child($roomId).child('hostId').val() === auth.uid)",
-            ".validate": "!newData.exists() || (newData.hasChildren(['userId','name']) && newData.child('userId').val() === $uid && newData.child('name').isString() && newData.child('name').val().length <= 40)",
+            ".validate": "!newData.exists() || (newData.hasChildren(['userId','name']) && newData.child('userId').val() === $uid && newData.child('name').isString() && newData.child('name').val().length <= 40 && (data.exists() || (newData.child('score').val() === 0 && newData.child('correct').val() === 0)))",
             "answered": {
               ".write": "auth != null && ($uid === auth.uid || root.child('quizRooms').child($roomId).child('hostId').val() === auth.uid)",
               ".validate": "!newData.exists() || newData.isBoolean()"
@@ -60,9 +60,8 @@
     },
     "quizAnswers": {
       "$roomId": {
-        "//": "제출한 답 본문. 방 노드와 분리한 이유: quizRooms는 참가자 전원이 읽어야 하는데, RTDB의 .read는 상위에서 허용하면 하위에서 취소할 수 없다. 답을 방 안에 두면 남의 답을 콘솔로 읽어 베낄 수 있다.",
         ".read": "auth != null && root.child('quizRooms').child($roomId).child('hostId').val() === auth.uid",
-        ".write": "auth != null && (root.child('quizRooms').child($roomId).child('hostId').val() === auth.uid || !root.child('quizRooms').child($roomId).exists())",
+        ".write": "auth != null && (root.child('quizRooms').child($roomId).child('hostId').val() === auth.uid || (!newData.exists() && !root.child('quizRooms').child($roomId).exists()))",
         "$uid": {
           ".read": "auth != null && $uid === auth.uid",
           ".write": "auth != null && ($uid === auth.uid || root.child('quizRooms').child($roomId).child('hostId').val() === auth.uid)",

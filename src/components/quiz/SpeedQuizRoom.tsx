@@ -87,6 +87,16 @@ export const SpeedQuizRoom = ({ roomId, onExit }: Props) => {
     onExit();
   }, [roomId, onExit]);
 
+  /**
+   * 방이 사라졌거나 아예 연결하지 못한 상태에서의 탈출.
+   * leaveRoom을 쓰면 응답이 오지 않는 remove를 기다리며 버튼이 먹통이 되므로 로컬만 정리한다.
+   * forgetRoom()이 없으면 busy 프로브가 계속 "방에 있음"을 돌려줘 연결이 반납되지 않는다.
+   */
+  const abandon = useCallback(() => {
+    quizRoomService.forgetRoom();
+    onExit();
+  }, [onExit]);
+
   // ─── 호스트: 다음 문제 ──────────────────────────────────────────────────────
   const startRound = useCallback(async (index: number, seconds: number) => {
     if (startedRef.current >= index) return;
@@ -211,18 +221,18 @@ export const SpeedQuizRoom = ({ roomId, onExit }: Props) => {
   if (gone) {
     return (
       <Root>
-        <TopBar><BackBtn onClick={onExit}><ArrowLeft size={16} /> {t('quiz.hub.backHub')}</BackBtn><Title>{t('quiz.speed.title')}</Title><Spacer /></TopBar>
-        <Center><Dim>{t('quiz.speed.roomClosed')}</Dim><PrimaryBtn onClick={onExit}>{t('quiz.result.exit')}</PrimaryBtn></Center>
+        <TopBar><BackBtn onClick={abandon}><ArrowLeft size={16} /> {t('quiz.hub.backHub')}</BackBtn><Title>{t('quiz.speed.title')}</Title><Spacer /></TopBar>
+        <Center><Dim>{t('quiz.speed.roomClosed')}</Dim><PrimaryBtn onClick={abandon}>{t('quiz.result.exit')}</PrimaryBtn></Center>
       </Root>
     );
   }
   if (!room) {
     return (
       <Root>
-        <TopBar><BackBtn onClick={onExit}><ArrowLeft size={16} /> {t('quiz.hub.backHub')}</BackBtn><Title>{t('quiz.speed.title')}</Title><Spacer /></TopBar>
+        <TopBar><BackBtn onClick={abandon}><ArrowLeft size={16} /> {t('quiz.hub.backHub')}</BackBtn><Title>{t('quiz.speed.title')}</Title><Spacer /></TopBar>
         <Center>
           <Dim>{stalled ? t('quiz.speed.serverBusy') : t('quiz.play.loading')}</Dim>
-          {stalled && <PrimaryBtn onClick={onExit}>{t('quiz.result.exit')}</PrimaryBtn>}
+          {stalled && <PrimaryBtn onClick={abandon}>{t('quiz.result.exit')}</PrimaryBtn>}
         </Center>
       </Root>
     );

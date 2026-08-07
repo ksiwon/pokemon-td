@@ -238,6 +238,17 @@ class QuizRoomService {
     }
   }
 
+  /**
+   * **네트워크 없이** 방 소속만 지운다. 방이 사라졌거나(roomClosed) 아예 연결하지 못했을 때
+   * (serverBusy) 쓴다 — 그 상황에서 leaveRoom을 부르면 응답이 오지 않는 remove를 기다리며
+   * 화면이 멈춘다. 이걸 빠뜨리면 currentRoomId가 남아 busy 프로브가 계속 true를 돌려주고,
+   * **연결 슬롯이 탭을 닫을 때까지 반납되지 않는다.**
+   */
+  forgetRoom(): void {
+    this.disarmDisconnectCleanup();
+    this.currentRoomId = null;
+  }
+
   /** 방 상태 구독. 반환값은 구독 해제 함수. */
   subscribeRoom(roomId: string, cb: (room: QuizRoom | null) => void): () => void {
     const roomRef = ref(rtdb, `quizRooms/${roomId}`);
