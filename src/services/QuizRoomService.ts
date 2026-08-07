@@ -52,7 +52,17 @@ export const QUIZ_ROOM_ERROR = {
   ROOM_GONE: 'QR_ROOM_GONE',
   ALREADY_STARTED: 'QR_ALREADY_STARTED',
   WRONG_PASS: 'QR_WRONG_PASS',
+  TIMEOUT: 'QR_TIMEOUT',
 } as const;
+
+/**
+ * RTDB 응답을 기다리는 상한. **연결이 거절되면 SDK는 실패를 알려 주지 않는다** —
+ * 쓰기를 로컬 큐에 쌓고 재연결을 기다리므로 프로미스가 영영 settle되지 않는다.
+ * (동시 연결 한도 초과, App Check 토큰 거부 등. 후자는 reCAPTCHA를 막는 확장·사내망에서 실제로 난다.)
+ * 상한이 없으면 화면은 "로딩 중"이나 "비활성 버튼"으로 굳고 사용자는 아무 안내도 못 받는다.
+ * 방 화면의 첫 스냅샷 대기와 로비의 방 만들기·입장이 **같은 값**을 쓴다.
+ */
+export const QUIZ_RTDB_TIMEOUT_MS = 12_000;
 
 /**
  * 방 비밀번호 해시. 방 id를 소금으로 섞어 같은 비밀번호라도 방마다 값이 다르게 만든다.

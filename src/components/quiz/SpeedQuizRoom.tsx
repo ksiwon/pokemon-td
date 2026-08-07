@@ -15,7 +15,7 @@ import { ArrowLeft, Check, X, Crown, Users, Volume2, Play } from 'lucide-react';
 import { media } from '../../utils/responsive.utils';
 import { useTranslation, translateIn } from '../../i18n';
 import { createSpeedSession, normalizeAnswer } from '../../services/QuizEngine';
-import { quizRoomService, speedPoints, normalizeKinds } from '../../services/QuizRoomService';
+import { quizRoomService, speedPoints, normalizeKinds, QUIZ_RTDB_TIMEOUT_MS } from '../../services/QuizRoomService';
 import { quizService } from '../../services/QuizService';
 import { databaseService } from '../../services/DatabaseService';
 import { authService } from '../../services/AuthService';
@@ -68,7 +68,7 @@ export const SpeedQuizRoom = ({ roomId, onExit }: Props) => {
     });
     // 동시 연결 한도(무료 100개)를 넘으면 서버가 연결을 거절하고, 구독 콜백이 **한 번도**
     // 오지 않는다 → 예전엔 "문제 준비 중..."에서 영원히 멈췄다. 원인을 알려 주고 빠져나갈 길을 준다.
-    const timeout = setTimeout(() => setStalled(true), 12000);
+    const timeout = setTimeout(() => setStalled(true), QUIZ_RTDB_TIMEOUT_MS);
     return () => { clearTimeout(timeout); off(); quizRoomService.release(); };
   }, [roomId]);
 

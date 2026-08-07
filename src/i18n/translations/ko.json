@@ -1349,6 +1349,7 @@
       "langPick": "먼저 방 언어를 고르세요. 언어에 따라 낼 수 있는 종목이 달라집니다.",
       "passLabel": "비밀번호 (선택)",
       "passPlaceholder": "비우면 공개 방",
+      "passJoinPlaceholder": "비밀번호 입력",
       "passPrompt": "{name}님의 방은 비밀번호가 필요해요",
       "passEnter": "입장",
       "lockedRoom": "비밀번호 방",
