@@ -1309,8 +1309,7 @@
       "typeOdd": { "name": "타입 오드원", "desc": "4마리 중 타입 조합이 혼자 다른 하나" },
       "special": { "name": "전설 · 환상", "desc": "전설/환상/패러독스/UB 분류하기" },
       "similarName": { "name": "헷갈리는 이름", "desc": "비슷한 이름 4개 중 진짜 고르기" },
-      "signature": { "name": "전용기술", "desc": "그 기술을 배우는 유일한 포켓몬" },
-      "chosung": { "name": "초성", "desc": "초성만 보고 이름 맞히기" }
+      "signature": { "name": "전용기술", "desc": "그 기술을 배우는 유일한 포켓몬" }
     },
     "exam": {
       "name": "수능 모의고사",

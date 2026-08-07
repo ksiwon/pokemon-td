@@ -300,7 +300,7 @@ export const SpeedQuizLobby = ({ onEnterRoom, onExit }: Props) => {
                       {t('quiz.hub.qCount', { n: r.rounds })} · {t('quiz.speed.secondsValue', { n: r.seconds })}
                     </RoomMeta>
                     <RoomKinds>
-                      {/* '전 종목'은 그 방 언어 기준이다 — 영어 방은 5종목이 전부다. */}
+                      {/* '전 종목'은 그 방 언어 기준이다 — 영어 방은 초성 2종이 빠져 7종목이 전부다. */}
                       {r.kinds.length === speedKindsForLang(r.lang).length
                         ? t('quiz.speed.kindsAll')
                         : r.kinds.map(k => t(`quiz.types.${k}.name`)).join(' · ')}

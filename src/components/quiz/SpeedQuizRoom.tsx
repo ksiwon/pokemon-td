@@ -7,7 +7,8 @@
 // 언어는 **방 단위**로 하나다(config.lang, 만들 때 호스트가 고름). 호스트는 자기 UI 언어가
 // 아니라 방 언어로 문제를 만든다 — 도감설명·힌트·초성열은 원문이라 번역할 수 없고,
 // 방마다 언어가 정해져 있어야 참가자가 목록에서 무엇을 보게 될지 알 수 있다.
-// 짧은 지문(prompt)만 payload.kind로 보내 각자 화면에서 자기 언어로 렌더링한다.
+// 지문은 문장이 아니라 `payload.kind`(+타입 슬러그 같은 키 재료)만 보내 각자 화면에서
+// 자기 언어로 조립한다 — speedPrompt()/speedPlaceholder() 참조.
 
 import { useCallback, useEffect, useRef, useState } from 'react';
 import styled, { keyframes } from 'styled-components';

@@ -1309,8 +1309,7 @@
       "typeOdd": { "name": "Type Odd One Out", "desc": "Spot the different type combo of 4" },
       "special": { "name": "Legendary & Mythical", "desc": "Legendary / Mythical / Paradox / UB" },
       "similarName": { "name": "Confusing Names", "desc": "Pick the real name out of 4 look-alikes" },
-      "signature": { "name": "Signature Move", "desc": "The only Pokémon that learns it" },
-      "chosung": { "name": "Initials", "desc": "Guess from Korean initials" }
+      "signature": { "name": "Signature Move", "desc": "The only Pokémon that learns it" }
     },
     "exam": {
       "name": "Mock Exam",
