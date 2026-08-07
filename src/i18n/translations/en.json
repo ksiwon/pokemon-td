@@ -1349,6 +1349,7 @@
       "langPick": "Pick the room language first — available quiz types depend on it.",
       "passLabel": "Password (optional)",
       "passPlaceholder": "Leave empty for an open room",
+      "passJoinPlaceholder": "Enter password",
       "passPrompt": "{name}'s room needs a password",
       "passEnter": "Join",
       "lockedRoom": "Password-protected",

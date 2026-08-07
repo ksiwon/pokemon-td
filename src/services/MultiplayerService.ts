@@ -35,7 +35,7 @@ import {
 } from 'firebase/database';
 import {
   rtdb, serverNow, getServerTimeOffset, registerPresence,
-  initRtdbListeners, releaseRtdbConnection,
+  initRtdbListeners, releaseRtdbConnection, awaitRtdbConnected,
 } from '../config/firebase';
 import { TD_MAX_ACTIVE_ROOMS } from '../config/rtdbBudget';
 import {
@@ -152,6 +152,11 @@ class MultiplayerService {
   async withRtdb<T>(fn: () => Promise<T>): Promise<T> {
     this.acquireRtdb();
     try {
+      // 연결을 **기다린 뒤에** 작업을 던진다. acquireRtdb()의 goOnline()은 요청일 뿐이라,
+      // 곧바로 실행하면 아직 오프라인이다. set/update는 큐에 쌓여 나중에 반영되니 티가 안 나지만
+      // runTransaction은 빈 로컬 캐시를 보고 null로 즉시 중단한다 —
+      // 방 입장이 항상 "Room not found"로 실패하던 원인이 이것이었다.
+      await awaitRtdbConnected();
       return await fn();
     } finally {
       this.releaseRtdb();

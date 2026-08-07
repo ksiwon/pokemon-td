@@ -184,6 +184,34 @@ export function isRtdbReleased(): boolean {
   return _rtdbIntentionallyOffline;
 }
 
+/**
+ * 소켓이 실제로 열릴 때까지 기다린다(상한 있음).
+ *
+ * goOnline()은 '연결해 달라'는 요청일 뿐 즉시 연결되지 않는다. 그 사이에 던진 작업은
+ * **로컬 캐시만 보고 처리된다**. set/update는 큐에 쌓였다가 연결 후 반영되므로 티가 안 나지만,
+ * runTransaction은 캐시에 값이 없으면 콜백에 null을 넘기고 **서버에 물어보지도 않은 채 중단**된다.
+ * 로비가 조회 후 연결을 반납하게 되면서, 방 입장이 늘 "Room not found"로 실패하던 원인이 이것이다.
+ *
+ * 시간 안에 못 붙으면 false를 주고 그대로 진행한다 — 오프라인 큐잉으로 성공하는 작업까지
+ * 막을 이유는 없고, 실패 통보는 호출부의 타임아웃이 담당한다.
+ */
+export function awaitRtdbConnected(timeoutMs = 8000): Promise<boolean> {
+  if (_rtdbConnected) return Promise.resolve(true);
+  return new Promise(resolve => {
+    let settled = false;
+    const cb: ConnectedCallback = isConnected => { if (isConnected) finish(true); };
+    const timer = setTimeout(() => finish(false), timeoutMs);
+    function finish(ok: boolean): void {
+      if (settled) return;
+      settled = true;
+      clearTimeout(timer);
+      connectedListeners.delete(cb);
+      resolve(ok);
+    }
+    connectedListeners.add(cb);
+  });
+}
+
 /** RTDB 연결 상태 구독. 반환값은 구독 해제 함수. */
 export function onRtdbConnected(cb: ConnectedCallback): () => void {
   connectedListeners.add(cb);

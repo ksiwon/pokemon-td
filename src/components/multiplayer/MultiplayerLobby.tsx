@@ -211,6 +211,14 @@ export const MultiplayerLobby = ({ onBack, onStartGame }: MultiplayerLobbyProps)
     t(`mapData.${map.id}.name`) !== `mapData.${map.id}.name`
       ? t(`mapData.${map.id}.name`) : map.name;
 
+  // 방 목록의 맵 이름은 **방 id가 아니라 방이 쓰는 맵 id**로 찾아야 한다.
+  //   mapLabel(room)을 그대로 부르면 `mapData.<방id>.name`을 조회해 늘 빗나가고,
+  //   폴백이 room.name이라 맵 칸에 방 이름이 한 번 더 찍혔다(어느 맵인지 알 수 없었음).
+  const roomMapLabel = (room: Room) => {
+    const map = MAPS.find(m => m.id === room.mapId);
+    return map ? mapLabel(map) : room.mapId;
+  };
+
   // 방 이름은 RTDB에 "○○의 방"으로 저장돼 있다(구버전 클라이언트가 만든 방 포함).
   // 저장값을 그대로 쓰지 않고 hostName으로 매번 다시 만들어 현재 언어로 보여준다.
   const roomLabel = (room: { name: string; hostName?: string }) =>
@@ -277,7 +285,7 @@ export const MultiplayerLobby = ({ onBack, onStartGame }: MultiplayerLobbyProps)
                     <RoomMapThumb src={mapThumbnailById(room.mapId)} alt="" />
                     <RoomMapInfo>
                       <RoomName>{roomLabel(room)}</RoomName>
-                      <RoomMapName>{mapLabel(room)}</RoomMapName>
+                      <RoomMapName>{roomMapLabel(room)}</RoomMapName>
                     </RoomMapInfo>
                   </RoomMapCell>
                   <RoomCell>{room.hostName}</RoomCell>

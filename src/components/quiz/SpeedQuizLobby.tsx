@@ -8,7 +8,7 @@ import styled from 'styled-components';
 import { ArrowLeft, RefreshCw, Plus, Users, Timer, ListOrdered, Languages, Shapes, Lock } from 'lucide-react';
 import { media } from '../../utils/responsive.utils';
 import { useTranslation, translateIn } from '../../i18n';
-import { quizRoomService, QUIZ_ROOM_ERROR } from '../../services/QuizRoomService';
+import { quizRoomService, QUIZ_ROOM_ERROR, QUIZ_RTDB_TIMEOUT_MS } from '../../services/QuizRoomService';
 import { QUIZ_MAX_PLAYERS_PER_ROOM, QUIZ_MAX_ACTIVE_ROOMS } from '../../config/rtdbBudget';
 import { QuizRoomSummary, QuizRoomLang } from '../../types/quizRoom';
 import { SpeedQuizKind, speedKindsForLang } from '../../types/quiz';
@@ -16,6 +16,22 @@ import { authService } from '../../services/AuthService';
 
 const ROUND_OPTIONS = [10, 20, 30];
 const SECOND_OPTIONS = [10, 15, 20, 30];
+
+/**
+ * 연결이 거절되면 RTDB 쓰기는 **거부되는 대신 로컬 큐에 쌓인다** — 프로미스가 settle되지 않아
+ * catch가 돌지 않고, busy가 true로 남아 버튼이 비활성인 채 굳는다(안내도 타임아웃도 없음).
+ * 그래서 실패를 만들어 준다. 잃는 것은 없다: 느려서 타임아웃이 났다면 방은 서버에 생겼을 수
+ * 있지만, 목록을 새로고침하면 그 방이 보이고 그대로 들어가면 된다.
+ */
+function withTimeout<T>(work: Promise<T>): Promise<T> {
+  return new Promise<T>((resolve, reject) => {
+    const timer = setTimeout(() => reject(new Error(QUIZ_ROOM_ERROR.TIMEOUT)), QUIZ_RTDB_TIMEOUT_MS);
+    work.then(
+      v => { clearTimeout(timer); resolve(v); },
+      e => { clearTimeout(timer); reject(e); },
+    );
+  });
+}
 
 interface Props {
   onEnterRoom: (roomId: string) => void;
@@ -64,7 +80,9 @@ export const SpeedQuizLobby = ({ onEnterRoom, onExit }: Props) => {
   /** 활성 방이 상한이면 새 방을 만들 수 없다 — 버튼을 눌러 보고 실패하는 대신 미리 알린다. */
   const roomsFull = activeCount >= QUIZ_MAX_ACTIVE_ROOMS;
 
-  const refresh = useCallback(async () => {
+  // keepError: 방 만들기·입장이 실패한 직후에도 목록은 새로 받아야 하는데, 그때 에러를 지우면
+  //   방금 띄운 "비밀번호가 맞지 않아요" 같은 안내가 곧바로 사라져 사용자는 아무것도 못 본다.
+  const refresh = useCallback(async (keepError = false) => {
     if (offline) { setLoading(false); return; }
     setLoading(true);
     try {
@@ -74,7 +92,7 @@ export const SpeedQuizLobby = ({ onEnterRoom, onExit }: Props) => {
       const result = await quizRoomService.withConnection(() => quizRoomService.listWaitingRooms());
       setRooms(result.rooms);
       setActiveCount(result.activeCount);
-      setError(null);
+      if (!keepError) setError(null);
     } catch {
       setError('loadFail');
     } finally {
@@ -106,6 +124,8 @@ export const SpeedQuizLobby = ({ onEnterRoom, onExit }: Props) => {
       [QUIZ_ROOM_ERROR.ROOM_GONE]: 'speed.errRoomGone',
       [QUIZ_ROOM_ERROR.ALREADY_STARTED]: 'speed.errStarted',
       [QUIZ_ROOM_ERROR.WRONG_PASS]: 'speed.errWrongPass',
+      // 방 화면의 "첫 스냅샷이 안 옴"과 같은 원인(연결 거절)이라 같은 문구를 쓴다.
+      [QUIZ_ROOM_ERROR.TIMEOUT]: 'speed.serverBusy',
       loadFail: 'speed.errLoad',
     };
     return t(`quiz.${map[key] ?? 'speed.errLoad'}`);
@@ -120,13 +140,13 @@ export const SpeedQuizLobby = ({ onEnterRoom, onExit }: Props) => {
     if (busy || !roomLang) return;
     setBusy(true); setError(null);
     try {
-      const id = await quizRoomService.withConnection(
-        () => quizRoomService.createRoom(rounds, seconds, roomLang, kinds, pass.trim() || undefined));
+      const id = await withTimeout(quizRoomService.withConnection(
+        () => quizRoomService.createRoom(rounds, seconds, roomLang, kinds, pass.trim() || undefined)));
       onEnterRoom(id);
     } catch (e) {
       setError((e as Error).message);
       setBusy(false);
-      refresh();
+      refresh(true);
     }
   };
 
@@ -141,13 +161,13 @@ export const SpeedQuizLobby = ({ onEnterRoom, onExit }: Props) => {
     if (busy) return;
     setBusy(true); setError(null);
     try {
-      await quizRoomService.withConnection(() => quizRoomService.joinRoom(roomId, roomPass));
+      await withTimeout(quizRoomService.withConnection(() => quizRoomService.joinRoom(roomId, roomPass)));
       onEnterRoom(roomId);
     } catch (e) {
       setError((e as Error).message);
       setBusy(false);
       setPassPrompt(null);
-      refresh();
+      refresh(true);
     }
   };
 
@@ -156,7 +176,7 @@ export const SpeedQuizLobby = ({ onEnterRoom, onExit }: Props) => {
       <TopBar>
         <BackBtn onClick={onExit}><ArrowLeft size={16} /> {t('quiz.hub.backHub')}</BackBtn>
         <Title>{t('quiz.speed.title')}</Title>
-        <IconBtn onClick={refresh} disabled={loading || offline} title={t('quiz.speed.refresh')}>
+        <IconBtn onClick={() => refresh()} disabled={loading || offline} title={t('quiz.speed.refresh')}>
           <RefreshCw size={16} />
         </IconBtn>
       </TopBar>
@@ -247,7 +267,7 @@ export const SpeedQuizLobby = ({ onEnterRoom, onExit }: Props) => {
                     value={joinPass}
                     onChange={e => setJoinPass(e.target.value.slice(0, 20))}
                     onKeyDown={e => { if (e.key === 'Enter') join(passPrompt.id, joinPass); }}
-                    placeholder={t('quiz.speed.passPlaceholder')}
+                    placeholder={t('quiz.speed.passJoinPlaceholder')}
                     autoComplete="off"
                     autoFocus
                   />
