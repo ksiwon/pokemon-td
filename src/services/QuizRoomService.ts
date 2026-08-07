@@ -21,14 +21,26 @@ import {
 import { rtdb, serverNow } from '../config/firebase';
 import { QUIZ_MAX_ACTIVE_ROOMS, QUIZ_MAX_PLAYERS_PER_ROOM } from '../config/rtdbBudget';
 import {
-  QuizRoom, QuizRoomSummary, QuizRoomPhase, QuizRoundResult, QuizAnswer,
+  QuizRoom, QuizRoomSummary, QuizRoomPhase, QuizRoundResult, QuizAnswer, QuizRoomLang,
 } from '../types/quizRoom';
-import { SpeedRoundPayload, SpeedRevealPayload } from '../types/quiz';
+import { SpeedRoundPayload, SpeedRevealPayload, SpeedQuizKind, SPEED_QUIZ_KINDS } from '../types/quiz';
 import { authService } from './AuthService';
 import { multiplayerService } from './MultiplayerService';
 
 /** 방 만료(고아 정리 기준). 룰의 3600000과 반드시 같아야 한다. */
 const ROOM_EXPIRY_MS = 60 * 60 * 1000;
+
+/**
+ * 방 설정의 종목 목록을 안전한 배열로 되돌린다.
+ * RTDB는 배열을 인덱스 키 객체(`{0:'cry',1:'zoom'}`)로 저장하고, 값이 비면 **키 자체가
+ * 사라진다.** 그대로 쓰면 `.map`이 없어 터지거나 빈 풀로 출제가 멈추므로 여기서 정규화한다.
+ * 구버전 방(필드 없음)은 전 종목으로 본다.
+ */
+export function normalizeKinds(raw: unknown): SpeedQuizKind[] {
+  const list = Array.isArray(raw) ? raw : Object.values((raw ?? {}) as Record<string, unknown>);
+  const valid = list.filter((k): k is SpeedQuizKind => SPEED_QUIZ_KINDS.includes(k as SpeedQuizKind));
+  return valid.length ? valid : [...SPEED_QUIZ_KINDS];
+}
 
 /** UI가 번역해서 보여줄 오류 코드(서비스는 언어를 모른다). */
 export const QUIZ_ROOM_ERROR = {
@@ -107,6 +119,9 @@ class QuizRoomService {
           playerCount,
           rounds: r.config?.rounds ?? 0,
           seconds: r.config?.seconds ?? 0,
+          // 언어 표기가 없는 구버전 방은 한국어로 본다(이 기능 이전 방은 전부 한국어였다).
+          lang: (r.config?.lang === 'en' ? 'en' : 'ko') as QuizRoomLang,
+          kinds: normalizeKinds(r.config?.kinds),
           createdAt: r.createdAt,
           full: playerCount >= QUIZ_MAX_PLAYERS_PER_ROOM,
         };
@@ -141,7 +156,9 @@ class QuizRoomService {
   }
 
   // ─── 방 생성 / 입장 / 퇴장 ──────────────────────────────────────────────────
-  async createRoom(rounds: number, seconds: number): Promise<string> {
+  async createRoom(
+    rounds: number, seconds: number, lang: QuizRoomLang, kinds: SpeedQuizKind[],
+  ): Promise<string> {
     const user = authService.getCurrentUser();
     if (!user) throw new Error(QUIZ_ROOM_ERROR.ROOM_GONE);
 
@@ -161,7 +178,9 @@ class QuizRoomService {
       createdAt: serverNow(),
       status: 'waiting',
       phase: 'lobby',
-      config: { rounds, seconds },
+      // 종목은 정규화해서 저장한다 — 빈 배열이 올라가면 RTDB가 필드를 통째로 지워
+      // 다음 문제 생성에서 풀이 비고, 호스트가 1.5초마다 재시도하며 게임이 시작되지 않는다.
+      config: { rounds, seconds, lang, kinds: normalizeKinds(kinds) },
       memberIds: { [user.uid]: true },
       players: {
         [user.uid]: { userId: user.uid, name, score: 0, correct: 0, joinedAt: serverNow() },

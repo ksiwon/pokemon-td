@@ -1344,6 +1344,13 @@
       "roomClosed": "This room has closed.",
       "full": "FULL",
       "roomsBusy": "All {n} rooms are in use right now. Join one when a seat opens, or refresh shortly.",
+      "kindsLabel": "Quiz types",
+      "kindsAll": "All types",
+      "langNotice": "This will be a {lang} room — Pokedex entries and hints appear in that language.",
+      "lang": {
+        "ko": "한국어",
+        "en": "English"
+      },
       "roomsBusyBtn": "All rooms in use",
       "serverBusy": "The server is busy and we couldn't connect to the room. Please try again shortly.",
       "errRoomLimit": "All rooms are in use right now. Try again shortly or join an open room.",

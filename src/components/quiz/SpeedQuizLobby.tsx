@@ -5,12 +5,13 @@
 
 import { useCallback, useEffect, useState } from 'react';
 import styled from 'styled-components';
-import { ArrowLeft, RefreshCw, Plus, Users, Timer, ListOrdered } from 'lucide-react';
+import { ArrowLeft, RefreshCw, Plus, Users, Timer, ListOrdered, Languages, Shapes } from 'lucide-react';
 import { media } from '../../utils/responsive.utils';
 import { useTranslation } from '../../i18n';
 import { quizRoomService, QUIZ_ROOM_ERROR } from '../../services/QuizRoomService';
 import { QUIZ_MAX_PLAYERS_PER_ROOM, QUIZ_MAX_ACTIVE_ROOMS } from '../../config/rtdbBudget';
-import { QuizRoomSummary } from '../../types/quizRoom';
+import { QuizRoomSummary, QuizRoomLang } from '../../types/quizRoom';
+import { SpeedQuizKind, SPEED_QUIZ_KINDS } from '../../types/quiz';
 import { authService } from '../../services/AuthService';
 
 const ROUND_OPTIONS = [10, 20, 30];
@@ -22,7 +23,7 @@ interface Props {
 }
 
 export const SpeedQuizLobby = ({ onEnterRoom, onExit }: Props) => {
-  const { t } = useTranslation();
+  const { t, language } = useTranslation();
   const [rooms, setRooms] = useState<QuizRoomSummary[]>([]);
   const [activeCount, setActiveCount] = useState(0);
   const [loading, setLoading] = useState(true);
@@ -30,6 +31,17 @@ export const SpeedQuizLobby = ({ onEnterRoom, onExit }: Props) => {
   const [error, setError] = useState<string | null>(null);
   const [rounds, setRounds] = useState(20);
   const [seconds, setSeconds] = useState(15);
+  const [kinds, setKinds] = useState<SpeedQuizKind[]>([...SPEED_QUIZ_KINDS]);
+
+  /** 방 언어는 고르는 게 아니라 **내 UI 언어가 그대로 기록**된다(지문이 그 언어로 나가므로). */
+  const myLang: QuizRoomLang = language === 'en' ? 'en' : 'ko';
+
+  /** 종목 토글. 마지막 하나는 끌 수 없다 — 전부 끄면 출제할 게 없어 게임이 시작되지 않는다. */
+  const toggleKind = (k: SpeedQuizKind) => {
+    setKinds(prev => (prev.includes(k)
+      ? (prev.length > 1 ? prev.filter(x => x !== k) : prev)
+      : [...prev, k]));
+  };
 
   const offline = authService.isOfflineMode() || !authService.getCurrentUser();
   /** 활성 방이 상한이면 새 방을 만들 수 없다 — 버튼을 눌러 보고 실패하는 대신 미리 알린다. */
@@ -90,7 +102,8 @@ export const SpeedQuizLobby = ({ onEnterRoom, onExit }: Props) => {
     if (busy) return;
     setBusy(true); setError(null);
     try {
-      const id = await quizRoomService.withConnection(() => quizRoomService.createRoom(rounds, seconds));
+      const id = await quizRoomService.withConnection(
+        () => quizRoomService.createRoom(rounds, seconds, myLang, kinds));
       onEnterRoom(id);
     } catch (e) {
       setError((e as Error).message);
@@ -149,6 +162,22 @@ export const SpeedQuizLobby = ({ onEnterRoom, onExit }: Props) => {
                   ))}
                 </Segmented>
               </OptRow>
+              {/* 종목은 5개고 이름이 길어(“Random Hints” 등) Segmented 한 줄에 절대 안 들어간다
+                  — 가장 큰 폰에서도 넘친다. 라벨을 위로 빼고 칩을 줄바꿈시킨다. */}
+              <KindBlock>
+                <OptLabel><Shapes size={13} /> {t('quiz.speed.kindsLabel')}</OptLabel>
+                <KindGrid>
+                  {SPEED_QUIZ_KINDS.map(k => (
+                    <KindChip key={k} $active={kinds.includes(k)} onClick={() => toggleKind(k)}>
+                      {t(`quiz.types.${k}.name`)}
+                    </KindChip>
+                  ))}
+                </KindGrid>
+              </KindBlock>
+              {/* 지문이 호스트 언어로 나가므로, 어떤 언어 방을 여는지 만들기 전에 알려 준다. */}
+              <LangNote>
+                <Languages size={13} /> {t('quiz.speed.langNotice', { lang: t(`quiz.speed.lang.${myLang}`) })}
+              </LangNote>
               <PrimaryBtn onClick={create} disabled={busy || roomsFull}>
                 {roomsFull ? t('quiz.speed.roomsBusyBtn') : t('quiz.speed.createBtn')}
               </PrimaryBtn>
@@ -171,10 +200,19 @@ export const SpeedQuizLobby = ({ onEnterRoom, onExit }: Props) => {
               rooms.map(r => (
                 <RoomRow key={r.id} onClick={() => join(r.id)} disabled={busy || r.full} $full={r.full}>
                   <RoomMain>
-                    <RoomHost>{t('quiz.speed.hostRoom', { name: r.hostName })}</RoomHost>
+                    <RoomHost>
+                      {/* 내 언어와 다른 방은 지문을 못 읽을 수 있다 — 들어가기 전에 보이게 한다. */}
+                      <LangTag $other={r.lang !== myLang}>{t(`quiz.speed.lang.${r.lang}`)}</LangTag>
+                      <RoomHostName>{t('quiz.speed.hostRoom', { name: r.hostName })}</RoomHostName>
+                    </RoomHost>
                     <RoomMeta>
                       {t('quiz.hub.qCount', { n: r.rounds })} · {t('quiz.speed.secondsValue', { n: r.seconds })}
                     </RoomMeta>
+                    <RoomKinds>
+                      {r.kinds.length === SPEED_QUIZ_KINDS.length
+                        ? t('quiz.speed.kindsAll')
+                        : r.kinds.map(k => t(`quiz.types.${k}.name`)).join(' · ')}
+                    </RoomKinds>
                   </RoomMain>
                   {r.full && <FullTag>{t('quiz.speed.full')}</FullTag>}
                   <RoomCount $full={r.full}><Users size={13} /> {r.playerCount} / {QUIZ_MAX_PLAYERS_PER_ROOM}</RoomCount>
@@ -207,9 +245,12 @@ const BackBtn = styled.button`
   padding: 7px 13px; border-radius: 9px; cursor: pointer; font-size: 13.5px; white-space: nowrap;
   &:hover { background: ${SURFACE_HI}; color: #fff; }
 `;
+// 실시간 구독을 걷어낸 뒤로 목록을 갱신하는 **유일한** 수단이라 터치로 확실히 눌려야 한다.
+// 모바일에서 오히려 키우는 이유: 손가락 기준 권장 40px 이상(데스크톱은 커서라 34px로 충분).
 const IconBtn = styled.button`
   flex: 0 0 auto; display: flex; align-items: center; justify-content: center;
   width: 34px; height: 34px; border-radius: 9px; cursor: pointer;
+  ${media.mobile} { width: 40px; height: 40px; }
   background: transparent; border: 1px solid ${BORDER}; color: rgba(255,255,255,0.65);
   &:hover:not(:disabled) { background: ${SURFACE_HI}; color: #fff; }
   &:disabled { opacity: 0.4; cursor: default; }
@@ -234,6 +275,17 @@ const SegBtn = styled.button<{ $active: boolean }>`
   color: ${p => p.$active ? '#062430' : 'rgba(255,255,255,0.55)'};
   &:hover { color: ${p => p.$active ? '#062430' : '#fff'}; }
 `;
+const KindBlock = styled.div`display: flex; flex-direction: column; gap: 8px;`;
+const KindGrid = styled.div`display: flex; flex-wrap: wrap; gap: 6px;`;
+const KindChip = styled.button<{ $active: boolean }>`
+  flex: 0 1 auto; padding: 8px 12px; border-radius: 9px; cursor: pointer;
+  font-size: 12.5px; font-weight: 700; white-space: nowrap;
+  background: ${p => p.$active ? 'rgba(34,211,238,0.14)' : 'rgba(0,0,0,0.25)'};
+  border: 1px solid ${p => p.$active ? 'rgba(34,211,238,0.45)' : BORDER};
+  color: ${p => p.$active ? ACCENT : 'rgba(255,255,255,0.45)'};
+  &:hover { color: ${p => p.$active ? ACCENT : '#fff'}; }
+`;
+
 const PrimaryBtn = styled.button`
   padding: 13px; border-radius: 11px; border: none; cursor: pointer;
   background: ${ACCENT}; color: #04222b; font-size: 15px; font-weight: 800;
@@ -263,8 +315,28 @@ const BusyBox = styled.div`
   background: rgba(251,191,36,0.1); border: 1px solid rgba(251,191,36,0.28);
 `;
 const RoomMain = styled.div`flex: 1; min-width: 0;`;
-const RoomHost = styled.div`font-size: 14.5px; font-weight: 800; margin-bottom: 2px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;`;
+const RoomHost = styled.div`display: flex; align-items: center; gap: 6px; margin-bottom: 2px; min-width: 0;`;
+const RoomHostName = styled.span`
+  flex: 1; min-width: 0; font-size: 14.5px; font-weight: 800;
+  overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+`;
+const LangTag = styled.span<{ $other: boolean }>`
+  flex: 0 0 auto; font-size: 10px; font-weight: 800; letter-spacing: 0.04em;
+  padding: 2px 6px; border-radius: 5px; white-space: nowrap;
+  /* 내 언어와 다르면 눈에 띄게 — 들어가서야 한글/영문 지문을 마주하지 않도록. */
+  color: ${p => p.$other ? '#fbbf24' : 'rgba(255,255,255,0.55)'};
+  background: ${p => p.$other ? 'rgba(251,191,36,0.14)' : 'rgba(255,255,255,0.07)'};
+  border: 1px solid ${p => p.$other ? 'rgba(251,191,36,0.3)' : 'transparent'};
+`;
 const RoomMeta = styled.div`font-size: 11.5px; color: rgba(255,255,255,0.42);`;
+const RoomKinds = styled.div`
+  margin-top: 3px; font-size: 11px; color: rgba(34,211,238,0.75);
+  overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+`;
+const LangNote = styled.div`
+  display: flex; align-items: center; gap: 6px;
+  font-size: 11.5px; color: rgba(255,255,255,0.45); line-height: 1.5; word-break: keep-all;
+`;
 const RoomCount = styled.div<{ $full?: boolean }>`
   flex: 0 0 auto; display: flex; align-items: center; gap: 5px;
   font-size: 13px; font-weight: 800; font-variant-numeric: tabular-nums;

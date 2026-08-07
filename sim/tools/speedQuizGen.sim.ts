@@ -8,7 +8,8 @@
 
 import { describe, it, expect } from 'vitest';
 import { createSpeedSession, normalizeAnswer } from '../../src/services/QuizEngine';
-import { SPEED_QUIZ_KINDS } from '../../src/types/quiz';
+import { normalizeKinds } from '../../src/services/QuizRoomService';
+import { SPEED_QUIZ_KINDS, SpeedQuizKind } from '../../src/types/quiz';
 
 // QuizEngine은 이미지 프리로드에 브라우저 전역 Image를 쓴다. Node에는 없으므로 최소 대체물.
 // (프리로드는 UX 장치라 여기선 성공했다고 치고 넘어가면 된다 — 출제 로직만 검증한다.)
@@ -70,4 +71,28 @@ describe('속도전 출제기', () => {
       expect(seen.size, `${ROUNDS}문제에서 나온 종목 수`).toBeGreaterThanOrEqual(3);
     });
   }
+
+  it('방이 고른 종목만 출제한다', { timeout: 180_000 }, async () => {
+    const picked: SpeedQuizKind[] = ['cry', 'zoom'];
+    const session = createSpeedSession();
+    for (let i = 0; i < 16; i++) {
+      const round = await session.next({ t, lang: 'ko' }, picked);
+      expect(picked, `${i}번 문제가 고르지 않은 종목으로 나옴`).toContain(round.payload.kind);
+    }
+  });
+
+  it('종목이 비었거나 이상하면 전 종목으로 되돌린다', async () => {
+    // RTDB는 빈 배열을 저장하지 않아 필드가 통째로 사라진다. 그대로 두면 출제 풀이 비어
+    // 호스트가 1.5초마다 재시도하며 게임이 영영 시작되지 않는다.
+    expect(normalizeKinds(undefined)).toEqual([...SPEED_QUIZ_KINDS]);
+    expect(normalizeKinds([])).toEqual([...SPEED_QUIZ_KINDS]);
+    expect(normalizeKinds(['nope', 'cry'])).toEqual(['cry']);
+    // RTDB는 배열을 인덱스 키 객체로 돌려줄 수 있다.
+    expect(normalizeKinds({ 0: 'zoom', 1: 'hint' })).toEqual(['zoom', 'hint']);
+  });
+
+  it('빈 종목 목록으로도 출제가 멈추지 않는다', { timeout: 60_000 }, async () => {
+    const round = await createSpeedSession().next({ t, lang: 'ko' }, []);
+    expect(SPEED_QUIZ_KINDS).toContain(round.payload.kind);
+  });
 });

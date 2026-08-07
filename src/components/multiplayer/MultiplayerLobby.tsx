@@ -583,7 +583,9 @@ const RefreshBtn = styled.button`
   display:flex; align-items:center; justify-content:center; flex:0 0 auto;
   &:hover:not(:disabled) { background:rgba(255,255,255,0.1); }
   &:disabled { opacity:0.4; cursor:default; }
-  ${media.mobile} { width:32px; height:32px; }
+  /* 실시간 구독을 걷어낸 뒤로 방 목록을 갱신하는 유일한 수단이라 손가락으로 확실히
+     눌려야 한다 — 모바일에서 줄이지 않고 오히려 키운다(권장 터치 영역 40px 이상). */
+  ${media.mobile} { width:40px; height:40px; }
 `;
 
 const CreateRoomBtn = styled.button`

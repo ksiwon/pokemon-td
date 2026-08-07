@@ -3,7 +3,16 @@
 // TD 멀티(rooms/gameStates/towerDetails)와 경로·스키마를 완전히 분리 — 서로의 정리 로직에
 // 얽히지 않게 하고, 방 데이터가 작아 구독 1개로 끝난다([FREE-TIER] RTDB 다운로드 절약).
 
-import { SpeedRoundPayload, SpeedRevealPayload } from './quiz';
+import { SpeedRoundPayload, SpeedRevealPayload, SpeedQuizKind } from './quiz';
+
+/**
+ * 방의 언어. 호스트의 UI 언어를 그대로 기록한다(고르는 값이 아니다).
+ *
+ * 왜 필요한가: 문제는 호스트 한 명이 만들어 방송하는데, 도감설명·힌트 지문은 원문이라
+ * **호스트 언어 그대로** 나간다. 정답 공개 이름도 마찬가지다. 방 목록에 언어 구분이 없으면
+ * 영어 유저가 한국어 방에 들어가 한글 지문을 마주하게 된다 — 막지는 않고 미리 알려 준다.
+ */
+export type QuizRoomLang = 'ko' | 'en';
 
 export type QuizRoomStatus = 'waiting' | 'playing' | 'finished';
 /** lobby=대기실 · question=문제 푸는 중 · reveal=정답 공개 중 · done=최종 결과 */
@@ -61,6 +70,13 @@ export interface QuizRoom {
     rounds: number;
     /** 문항당 제한 시간(초). */
     seconds: number;
+    /** 방 언어(호스트 UI 언어). 구버전 방에는 없을 수 있어 optional. */
+    lang?: QuizRoomLang;
+    /**
+     * 출제할 종목. 호스트가 방을 만들 때 고른다. 비었거나 없으면 전 종목.
+     * RTDB는 배열을 인덱스 키 객체로 저장하므로 읽을 때 정규화가 필요하다(QuizRoomService).
+     */
+    kinds?: SpeedQuizKind[];
   };
   memberIds: Record<string, boolean>;
   players: Record<string, QuizRoomPlayer>;
@@ -82,6 +98,10 @@ export interface QuizRoomSummary {
   rounds: number;
   seconds: number;
   createdAt: number;
+  /** 방 언어. 목록에서 KO/EN 배지로 보여 준다. */
+  lang: QuizRoomLang;
+  /** 출제 종목(정규화 완료 — 항상 1개 이상). */
+  kinds: SpeedQuizKind[];
   /** 정원이 찼는지. 목록에서 숨기지 않고 '가득 참'으로 표시해 붐빈다는 사실을 알린다. */
   full: boolean;
 }

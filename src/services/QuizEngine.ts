@@ -749,8 +749,13 @@ function speedAccept(id: number, mon: PokemonData): string[] {
  * 호스트 언어 문장을 그대로 뿌리면 언어가 다른 참가자에게 남의 말로 보인다.
  * (도감설명 본문·힌트 문장만은 원문 특성상 호스트 언어로 나간다.)
  */
-async function genSpeedRound(ctx: QuizCtx, used?: Set<number>): Promise<SpeedRound> {
-  const kind: SpeedQuizKind = pickOne(SPEED_QUIZ_KINDS);
+async function genSpeedRound(
+  ctx: QuizCtx, used?: Set<number>, allowed?: SpeedQuizKind[],
+): Promise<SpeedRound> {
+  // 방이 고른 종목만 출제한다. 빈 배열/미지정(구버전 방)은 전 종목으로 취급 —
+  // 여기서 빈 배열을 그대로 쓰면 pickOne이 undefined를 돌려주고 게임이 멈춘다.
+  const pool = allowed?.length ? allowed : SPEED_QUIZ_KINDS;
+  const kind: SpeedQuizKind = pickOne(pool);
   let id = pickMainId(used);
   let mon = await pokeAPI.getPokemon(id);
 
@@ -782,12 +787,16 @@ async function genSpeedRound(ctx: QuizCtx, used?: Set<number>): Promise<SpeedRou
   };
 }
 
-/** 속도 퀴즈 세션(호스트가 소유). 한 게임 안에서 같은 포켓몬이 두 번 나오지 않게 used 공유. */
+/**
+ * 속도 퀴즈 세션(호스트가 소유). 한 게임 안에서 같은 포켓몬이 두 번 나오지 않게 used 공유.
+ * 종목은 세션이 아니라 `next()`에 넘긴다 — 방 화면은 방 데이터(config.kinds)가 도착하기
+ * 전에 세션을 만들기 때문에, 생성 시점에 종목을 고정하면 항상 전 종목이 된다.
+ */
 export function createSpeedSession() {
   const used = new Set<number>();
   return {
-    next(ctx: QuizCtx): Promise<SpeedRound> {
-      return genSpeedRound(ctx, used);
+    next(ctx: QuizCtx, kinds?: SpeedQuizKind[]): Promise<SpeedRound> {
+      return genSpeedRound(ctx, used, kinds);
     },
   };
 }

@@ -447,11 +447,14 @@ const SeasonNote = styled.div`
 `;
 
 // ─── 퀴즈 탭 하위 보드(싱글/멀티/주간) ────────────────────────────────────────
+// 이 두 줄(하위탭·보드선택)은 ModalBody 바깥, 즉 **스크롤되지 않는 고정 헤더**다.
+// 폰 가로(높이 ~390px)에서는 90vh 안에서 목록이 보일 자리를 그만큼 잡아먹으므로
+// phoneSm에서 높이를 줄인다 — 안 그러면 주간 탭에서 순위가 3줄밖에 안 보인다.
 const SubTabRow = styled.div`
   display: flex; gap: 5px; padding: 0 24px; margin-bottom: 10px;
   ${media.tablet} { padding: 0 18px; }
   ${media.mobile} { padding: 0 14px; margin-bottom: 8px; }
-  ${lMedia.phoneSm} { padding: 0 12px; }
+  ${lMedia.phoneSm} { padding: 0 12px; margin-bottom: 6px; }
 `;
 
 const SubTab = styled.button<{ $active: boolean }>`
@@ -462,13 +465,14 @@ const SubTab = styled.button<{ $active: boolean }>`
   color: ${p => p.$active ? '#4fc3f7' : 'rgba(255,255,255,0.55)'};
   &:hover { color: ${p => p.$active ? '#4fc3f7' : '#fff'}; }
   ${media.mobile} { font-size: 12px; padding: 6px 8px; }
+  ${lMedia.phoneSm} { font-size: 11.5px; padding: 4px 8px; }
 `;
 
 const BoardPickRow = styled.div`
   padding: 0 24px; margin-bottom: 10px;
   ${media.tablet} { padding: 0 18px; }
   ${media.mobile} { padding: 0 14px; margin-bottom: 8px; }
-  ${lMedia.phoneSm} { padding: 0 12px; }
+  ${lMedia.phoneSm} { padding: 0 12px; margin-bottom: 6px; }
 `;
 
 const BoardSelect = styled.select`
@@ -479,6 +483,7 @@ const BoardSelect = styled.select`
   /* 네이티브 드롭다운은 OS 배경을 쓰므로 옵션 색을 명시하지 않으면 흰 배경에 흰 글씨가 된다. */
   & option { background: #16202b; color: #e7edf3; }
   ${media.mobile} { font-size: 12.5px; padding: 8px 10px; }
+  ${lMedia.phoneSm} { font-size: 12px; padding: 5px 10px; }
 `;
 
 // [FREE-TIER] 무료 쿼터 소진으로 최신 데이터를 못 받는 상태를 '빈 목록'과 구분해 알린다.

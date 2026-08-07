@@ -12,14 +12,14 @@ import { ArrowLeft, Check, X, Crown, Users, Volume2, Play } from 'lucide-react';
 import { media } from '../../utils/responsive.utils';
 import { useTranslation } from '../../i18n';
 import { createSpeedSession, normalizeAnswer } from '../../services/QuizEngine';
-import { quizRoomService, speedPoints } from '../../services/QuizRoomService';
+import { quizRoomService, speedPoints, normalizeKinds } from '../../services/QuizRoomService';
 import { quizService } from '../../services/QuizService';
 import { databaseService } from '../../services/DatabaseService';
 import { authService } from '../../services/AuthService';
 import { serverNow } from '../../config/firebase';
 import { QUIZ_MAX_PLAYERS_PER_ROOM } from '../../config/rtdbBudget';
 import { QuizRoom, QuizRoundResult, QuizAnswer } from '../../types/quizRoom';
-import { SpeedRevealPayload } from '../../types/quiz';
+import { SpeedRevealPayload, SPEED_QUIZ_KINDS } from '../../types/quiz';
 
 /** 정답 공개를 보여 주는 시간(ms). 너무 짧으면 누가 몇 점 받았는지 못 읽는다. */
 const REVEAL_MS = 3500;
@@ -102,7 +102,7 @@ export const SpeedQuizRoom = ({ roomId, onExit }: Props) => {
     if (startedRef.current >= index) return;
     startedRef.current = index;
     try {
-      const r = await sessionRef.current.next({ t, lang: language });
+      const r = await sessionRef.current.next({ t, lang: language }, kindsRef.current);
       acceptRef.current = r.accept;
       revealRef.current = r.reveal;
       await quizRoomService.pushRound(roomId, index, r.payload, seconds, playerIdsRef.current);
@@ -121,6 +121,10 @@ export const SpeedQuizRoom = ({ roomId, onExit }: Props) => {
   // 제출 플래그를 비울 대상. startRound가 매 라운드 새로 만들어지지 않도록 ref로 전달한다.
   const playerIdsRef = useRef<string[]>([]);
   playerIdsRef.current = room ? Object.keys(room.players ?? {}) : [];
+  // 방이 고른 출제 종목. startRound 생성 시점엔 방 데이터가 아직 없으므로 ref로 넘긴다.
+  const roomKinds = normalizeKinds(room?.config?.kinds);
+  const kindsRef = useRef(roomKinds);
+  kindsRef.current = roomKinds;
 
   const beginGame = useCallback(async () => {
     if (!room) return;
@@ -266,6 +270,12 @@ export const SpeedQuizRoom = ({ roomId, onExit }: Props) => {
             <PanelDesc>
               {t('quiz.hub.qCount', { n: room.config.rounds })} · {t('quiz.speed.secondsValue', { n: room.config.seconds })}
             </PanelDesc>
+            <PanelTags>
+              <Tag>{t(`quiz.speed.lang.${room.config.lang === 'en' ? 'en' : 'ko'}`)}</Tag>
+              {roomKinds.length === SPEED_QUIZ_KINDS.length
+                ? <Tag>{t('quiz.speed.kindsAll')}</Tag>
+                : roomKinds.map(k => <Tag key={k}>{t(`quiz.types.${k}.name`)}</Tag>)}
+            </PanelTags>
             <Hint>{t('quiz.speed.scoreHint')}</Hint>
             {isHost ? (
               <PrimaryBtn onClick={beginGame} disabled={players.length < 2}>
@@ -428,6 +438,11 @@ const Panel = styled.div`
 `;
 const PanelTitle = styled.div`font-size: 17px; font-weight: 800;`;
 const PanelDesc = styled.div`font-size: 12.5px; color: rgba(255,255,255,0.5);`;
+const PanelTags = styled.div`display: flex; flex-wrap: wrap; justify-content: center; gap: 5px;`;
+const Tag = styled.span`
+  font-size: 11px; font-weight: 700; padding: 3px 8px; border-radius: 6px;
+  color: rgba(34,211,238,0.85); background: rgba(34,211,238,0.1); border: 1px solid rgba(34,211,238,0.22);
+`;
 const Hint = styled.div`font-size: 11.5px; color: rgba(255,255,255,0.4); text-align: center; line-height: 1.5; word-break: keep-all;`;
 const Prompt = styled.h2`
   font-size: 19px; font-weight: 800; text-align: center; margin: 0; line-height: 1.4; word-break: keep-all;
