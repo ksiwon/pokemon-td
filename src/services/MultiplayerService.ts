@@ -444,11 +444,33 @@ class MultiplayerService {
     if (!user) throw new Error('Not authenticated');
     const roomRef = ref(rtdb, `rooms/${roomId}`);
 
-    // 트랜잭션으로 동시 참가 레이스 방지
-    // [SEC] 실패/멱등 경로는 `return undefined`로 트랜잭션을 '중단'한다(기존엔 room을 그대로 반환 → 무의미한 쓰기).
-    //   보안 룰이 비멤버의 대기방 쓰기를 "가입(=결과 데이터에 본인 memberIds 포함)"으로만 제한하므로,
-    //   변경 없는 되쓰기는 permission_denied가 되어 아래 joinError 메시지를 덮어써 버린다.
-    //   중단하면 쓰기 자체가 발생하지 않아 원래 에러 메시지가 그대로 전달되고 RTDB 쓰기 쿼터도 아낀다.
+    // 트랜잭션 콜백은 **로컬 캐시 값으로 먼저** 실행된다. 그리고 아래 null 분기처럼
+    // `return undefined`로 중단하면 서버에 물어보는 단계까지 가지 못한다.
+    // 로비가 방을 구독하지 않게 된 뒤로는 이 경로의 캐시가 늘 비어 있어서, 입장이 항상
+    // room=null → "Room not found"로 끝났다(연결은 멀쩡한데도).
+    // 그래서 트랜잭션 동안만 구독을 걸어 서버 값이 캐시에 들어오도록 보장한다.
+    // get()만으로는 부족하다 — 리스너 없이 받은 값은 SDK가 보관하지 않는다.
+    const stopSync = onValue(roomRef, () => {});
+    try {
+      await get(roomRef);   // 서버 값이 도착할 때까지 기다린다
+      await this.runJoinTransaction(roomId, roomRef, user);
+    } finally {
+      stopSync();
+    }
+  }
+
+  /**
+   * 실제 참가 트랜잭션. 동시 참가 레이스를 막는다.
+   * [SEC] 실패/멱등 경로는 `return undefined`로 '중단'한다(기존엔 room을 그대로 반환 → 무의미한 쓰기).
+   *   보안 룰이 비멤버의 대기방 쓰기를 "가입(=결과 데이터에 본인 memberIds 포함)"으로만 제한하므로,
+   *   변경 없는 되쓰기는 permission_denied가 되어 joinError 메시지를 덮어써 버린다.
+   *   중단하면 쓰기 자체가 발생하지 않아 원래 에러 메시지가 그대로 전달되고 RTDB 쓰기 쿼터도 아낀다.
+   */
+  private async runJoinTransaction(
+    roomId: string,
+    roomRef: ReturnType<typeof ref>,
+    user: NonNullable<ReturnType<typeof authService.getCurrentUser>>,
+  ): Promise<void> {
     let joinError: Error | null = null;
     await runTransaction(roomRef, (room: Room | null) => {
       if (!room) { joinError = new Error('Room not found'); return; }
