@@ -23,7 +23,10 @@ const LS_STAT_CACHE_KEY = 'pokeapi_stat_cache_v2';
 // v3: 가중치 리스트를 '최종진화 레어도' 기준으로 재산정(라벨=드랍확률 일치). 구버전 own-stat 리스트 무효화.
 const LS_WEIGHTED_LIST_KEY = 'pokeapi_weighted_list_v3';
 
-const getCurrentLanguage = (): 'ko' | 'en' => {
+/** 현지화 언어. 캐시 키가 이미 언어별이라 호출자가 다른 언어를 지정해도 안전하다. */
+export type LangCode = 'ko' | 'en';
+
+const getCurrentLanguage = (): LangCode => {
   const lang = localStorage.getItem('language');
   return lang === 'en' ? 'en' : 'ko';
 };
@@ -179,8 +182,8 @@ class PokeAPIService {
   }
 
   // ─── 전체 포켓몬 데이터 조회 (게임 배치용) ───────────────────────
-  async getPokemon(id: number): Promise<PokemonData> {
-    const lang = getCurrentLanguage();
+  async getPokemon(id: number, langOverride?: LangCode): Promise<PokemonData> {
+    const lang = langOverride ?? getCurrentLanguage();
     const cacheKey = `${lang}:${id}`;
     if (this.pokemonCache.has(cacheKey)) return this.pokemonCache.get(cacheKey)!;
 
@@ -289,8 +292,8 @@ class PokeAPIService {
     return pokemon;
   }
 
-  async getMove(name: string): Promise<MoveData> {
-    const lang = getCurrentLanguage();
+  async getMove(name: string, langOverride?: LangCode): Promise<MoveData> {
+    const lang = langOverride ?? getCurrentLanguage();
     const moveCacheKey = `${lang}:${name}`;
     if (this.moveCache.has(moveCacheKey)) return this.moveCache.get(moveCacheKey)!;
     const res = await axios.get(`${API_BASE}/move/${name}`);
@@ -328,8 +331,8 @@ class PokeAPIService {
   private abilityNameCache = new Map<string, { name: string; displayName: string }>();
   private itemNameCache = new Map<string, { name: string; displayName: string }>();
 
-  async getAbilityName(idOrName: number | string): Promise<{ name: string; displayName: string }> {
-    const lang = getCurrentLanguage();
+  async getAbilityName(idOrName: number | string, langOverride?: LangCode): Promise<{ name: string; displayName: string }> {
+    const lang = langOverride ?? getCurrentLanguage();
     const key = `${lang}:${idOrName}`;
     if (this.abilityNameCache.has(key)) return this.abilityNameCache.get(key)!;
     const res = await axios.get(`${API_BASE}/ability/${idOrName}`);
@@ -342,8 +345,8 @@ class PokeAPIService {
     return entry;
   }
 
-  async getItemName(idOrName: number | string): Promise<{ name: string; displayName: string }> {
-    const lang = getCurrentLanguage();
+  async getItemName(idOrName: number | string, langOverride?: LangCode): Promise<{ name: string; displayName: string }> {
+    const lang = langOverride ?? getCurrentLanguage();
     const key = `${lang}:${idOrName}`;
     if (this.itemNameCache.has(key)) return this.itemNameCache.get(key)!;
     const res = await axios.get(`${API_BASE}/item/${idOrName}`);

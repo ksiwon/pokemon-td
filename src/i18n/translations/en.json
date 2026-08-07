@@ -1309,7 +1309,8 @@
       "typeOdd": { "name": "Type Odd One Out", "desc": "Spot the different type combo of 4" },
       "special": { "name": "Legendary & Mythical", "desc": "Legendary / Mythical / Paradox / UB" },
       "similarName": { "name": "Confusing Names", "desc": "Pick the real name out of 4 look-alikes" },
-      "signature": { "name": "Signature Move", "desc": "The only Pokémon that learns it" }
+      "signature": { "name": "Signature Move", "desc": "The only Pokémon that learns it" },
+      "chosung": { "name": "Initials", "desc": "Guess from Korean initials" }
     },
     "exam": {
       "name": "Mock Exam",
@@ -1344,9 +1345,17 @@
       "roomClosed": "This room has closed.",
       "full": "FULL",
       "roomsBusy": "All {n} rooms are in use right now. Join one when a seat opens, or refresh shortly.",
+      "langLabel": "Room language",
+      "langPick": "Pick the room language first — available quiz types depend on it.",
+      "passLabel": "Password (optional)",
+      "passPlaceholder": "Leave empty for an open room",
+      "passPrompt": "{name}'s room needs a password",
+      "passEnter": "Join",
+      "lockedRoom": "Password-protected",
+      "errWrongPass": "That password doesn't match.",
       "kindsLabel": "Quiz types",
       "kindsAll": "All types",
-      "langNotice": "This will be a {lang} room — Pokedex entries and hints appear in that language.",
+      "langNotice": "Questions are generated in the language you pick. Dex entries and hints are not translated.",
       "lang": {
         "ko": "한국어",
         "en": "English"

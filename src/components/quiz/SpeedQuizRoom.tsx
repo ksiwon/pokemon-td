@@ -3,14 +3,17 @@
 //
 // 진행 주체는 **호스트 한 명**이다. 호스트만 문제를 만들고(QuizEngine) 정답을 들고 있으며,
 // 채점 결과만 방에 방송한다. 참가자 화면은 방 데이터를 그대로 렌더링하는 얇은 뷰다.
-// 지문은 payload.kind만 받아 **각자 자기 언어로** 렌더링한다 — 호스트 언어 문장을 그대로
-// 뿌리면 언어가 다른 참가자에게 남의 말로 보이기 때문(도감설명·힌트 본문만 예외).
+//
+// 언어는 **방 단위**로 하나다(config.lang, 만들 때 호스트가 고름). 호스트는 자기 UI 언어가
+// 아니라 방 언어로 문제를 만든다 — 도감설명·힌트·초성열은 원문이라 번역할 수 없고,
+// 방마다 언어가 정해져 있어야 참가자가 목록에서 무엇을 보게 될지 알 수 있다.
+// 짧은 지문(prompt)만 payload.kind로 보내 각자 화면에서 자기 언어로 렌더링한다.
 
 import { useCallback, useEffect, useRef, useState } from 'react';
 import styled, { keyframes } from 'styled-components';
 import { ArrowLeft, Check, X, Crown, Users, Volume2, Play } from 'lucide-react';
 import { media } from '../../utils/responsive.utils';
-import { useTranslation } from '../../i18n';
+import { useTranslation, translateIn } from '../../i18n';
 import { createSpeedSession, normalizeAnswer } from '../../services/QuizEngine';
 import { quizRoomService, speedPoints, normalizeKinds } from '../../services/QuizRoomService';
 import { quizService } from '../../services/QuizService';
@@ -18,8 +21,8 @@ import { databaseService } from '../../services/DatabaseService';
 import { authService } from '../../services/AuthService';
 import { serverNow } from '../../config/firebase';
 import { QUIZ_MAX_PLAYERS_PER_ROOM } from '../../config/rtdbBudget';
-import { QuizRoom, QuizRoundResult, QuizAnswer } from '../../types/quizRoom';
-import { SpeedRevealPayload, SPEED_QUIZ_KINDS } from '../../types/quiz';
+import { QuizRoom, QuizRoundResult, QuizAnswer, QuizRoomLang } from '../../types/quizRoom';
+import { SpeedRevealPayload, speedKindsForLang } from '../../types/quiz';
 
 /** 정답 공개를 보여 주는 시간(ms). 너무 짧으면 누가 몇 점 받았는지 못 읽는다. */
 const REVEAL_MS = 3500;
@@ -30,7 +33,7 @@ interface Props {
 }
 
 export const SpeedQuizRoom = ({ roomId, onExit }: Props) => {
-  const { t, language } = useTranslation();
+  const { t } = useTranslation();
   const [room, setRoom] = useState<QuizRoom | null>(null);
   /** 호스트만 구독하는 답안 본문(채점용). 참가자에겐 룰이 읽기를 막는다. */
   const [answers, setAnswers] = useState<Record<string, QuizAnswer>>({});
@@ -102,7 +105,11 @@ export const SpeedQuizRoom = ({ roomId, onExit }: Props) => {
     if (startedRef.current >= index) return;
     startedRef.current = index;
     try {
-      const r = await sessionRef.current.next({ t, lang: language }, kindsRef.current);
+      // ⚠️ UI 언어(t/language)가 아니라 **방 언어**로 만든다. 한국어 UI 호스트가 영어 방을
+      //    열 수 있으므로, 여기서 t를 그대로 쓰면 참가자에게 남의 언어 지문이 나간다.
+      const rl = roomLangRef.current;
+      const r = await sessionRef.current.next(
+        { t: (k, v) => translateIn(rl, k, v), lang: rl }, kindsRef.current);
       acceptRef.current = r.accept;
       revealRef.current = r.reveal;
       await quizRoomService.pushRound(roomId, index, r.payload, seconds, playerIdsRef.current);
@@ -113,7 +120,7 @@ export const SpeedQuizRoom = ({ roomId, onExit }: Props) => {
       startedRef.current = index - 1;
       setTimeout(() => startRoundRef.current?.(index, seconds), 1500);
     }
-  }, [roomId, t, language]);
+  }, [roomId]);
 
   // 재시도에서 최신 startRound를 부르기 위한 참조(자기 자신을 deps에 넣을 수 없어서).
   const startRoundRef = useRef(startRound);
@@ -121,10 +128,13 @@ export const SpeedQuizRoom = ({ roomId, onExit }: Props) => {
   // 제출 플래그를 비울 대상. startRound가 매 라운드 새로 만들어지지 않도록 ref로 전달한다.
   const playerIdsRef = useRef<string[]>([]);
   playerIdsRef.current = room ? Object.keys(room.players ?? {}) : [];
-  // 방이 고른 출제 종목. startRound 생성 시점엔 방 데이터가 아직 없으므로 ref로 넘긴다.
-  const roomKinds = normalizeKinds(room?.config?.kinds);
+  // 방 언어·출제 종목. startRound 생성 시점엔 방 데이터가 아직 없으므로 ref로 넘긴다.
+  const roomLang: QuizRoomLang = room?.config?.lang === 'en' ? 'en' : 'ko';
+  const roomKinds = normalizeKinds(room?.config?.kinds, roomLang);
   const kindsRef = useRef(roomKinds);
   kindsRef.current = roomKinds;
+  const roomLangRef = useRef(roomLang);
+  roomLangRef.current = roomLang;
 
   const beginGame = useCallback(async () => {
     if (!room) return;
@@ -271,8 +281,8 @@ export const SpeedQuizRoom = ({ roomId, onExit }: Props) => {
               {t('quiz.hub.qCount', { n: room.config.rounds })} · {t('quiz.speed.secondsValue', { n: room.config.seconds })}
             </PanelDesc>
             <PanelTags>
-              <Tag>{t(`quiz.speed.lang.${room.config.lang === 'en' ? 'en' : 'ko'}`)}</Tag>
-              {roomKinds.length === SPEED_QUIZ_KINDS.length
+              <Tag>{t(`quiz.speed.lang.${roomLang}`)}</Tag>
+              {roomKinds.length === speedKindsForLang(roomLang).length
                 ? <Tag>{t('quiz.speed.kindsAll')}</Tag>
                 : roomKinds.map(k => <Tag key={k}>{t(`quiz.types.${k}.name`)}</Tag>)}
             </PanelTags>
@@ -290,7 +300,13 @@ export const SpeedQuizRoom = ({ roomId, onExit }: Props) => {
         {/* ── 문제 / 정답 공개 ── */}
         {!finished && room.status === 'playing' && round && (
           <>
-            <Prompt>{t(`quiz.play.${round.payload.kind}Prompt`)}</Prompt>
+            <Prompt>
+              {round.payload.kind === 'chosung'
+                ? t('quiz.play.chosungEasyPrompt', { cat: t(`quiz.chosung.cat.${round.payload.chosungCat ?? 'pokemon'}`) })
+                : t(`quiz.play.${round.payload.kind}Prompt`)}
+            </Prompt>
+
+            {round.payload.bigText && <BigText>{round.payload.bigText}</BigText>}
 
             {round.payload.text && <FlavorText>“{round.payload.text}”</FlavorText>}
 
@@ -447,6 +463,12 @@ const Hint = styled.div`font-size: 11.5px; color: rgba(255,255,255,0.4); text-al
 const Prompt = styled.h2`
   font-size: 19px; font-weight: 800; text-align: center; margin: 0; line-height: 1.4; word-break: keep-all;
   ${media.mobile} { font-size: 16px; }
+`;
+const BigText = styled.div`
+  font-size: 40px; font-weight: 900; text-align: center; letter-spacing: 0.12em;
+  color: ${ACCENT}; padding: 18px 12px; border-radius: 14px;
+  background: ${SURFACE}; border: 1px solid ${BORDER}; word-break: break-all;
+  ${media.mobile} { font-size: 30px; padding: 14px 10px; }
 `;
 const FlavorText = styled.div`
   font-size: 15px; line-height: 1.6; text-align: center; word-break: keep-all;

@@ -126,6 +126,37 @@ await expect('호스트가 사라지면 참가자가 강제 종료', true,
 await expect('참가자가 방 노드를 통째로 삭제', false, () => remove(ref(p2Db, `quizRooms/${R}`)));
 await expect('호스트가 방 삭제', true, () => remove(ref(hostDb, `quizRooms/${R}`)));
 
+console.log('\n─── 비밀번호 방 ───');
+// 방 노드에는 hasPass 플래그만 두고, 해시는 읽기가 막힌 quizRoomSecrets에 둔다.
+// 규칙은 클라이언트가 읽을 수 없는 데이터도 참조할 수 있으므로, 입장권 검증이 서버에서 끝난다.
+const PR = 'passroom';
+const RIGHT = 'hash-of-correct-password';
+const WRONG = 'hash-of-wrong-password';
+const passRoom = { ...room(), id: PR, config: { rounds: 10, seconds: 15, hasPass: true } };
+await expect('호스트가 비밀번호 방 생성', true, () => set(ref(hostDb, `quizRooms/${PR}`), passRoom));
+await expect('해시 설정 전에는 아무도 입장 불가(잠긴 채 시작)', false,
+  () => set(ref(p2Db, `quizRooms/${PR}/players/${P2}`), player(P2, 'P2')));
+await expect('호스트가 비밀번호 해시 등록', true,
+  () => set(ref(hostDb, `quizRoomSecrets/${PR}/hash`), RIGHT));
+await expect('참가자가 방 해시를 훔쳐봄', false, () => get(ref(p2Db, `quizRoomSecrets/${PR}/hash`)));
+await expect('참가자가 입장권 전체를 훔쳐봄', false, () => get(ref(p2Db, `quizRoomSecrets/${PR}/joins`)));
+await expect('틀린 비밀번호로 입장권 발급', false,
+  () => set(ref(p2Db, `quizRoomSecrets/${PR}/joins/${P2}`), WRONG));
+await expect('입장권 없이 방 입장', false,
+  () => set(ref(p2Db, `quizRooms/${PR}/players/${P2}`), player(P2, 'P2')));
+await expect('맞는 비밀번호로 입장권 발급', true,
+  () => set(ref(p2Db, `quizRoomSecrets/${PR}/joins/${P2}`), RIGHT));
+await expect('입장권으로 방 입장', true,
+  () => set(ref(p2Db, `quizRooms/${PR}/players/${P2}`), player(P2, 'P2')));
+await expect('남의 입장권을 대신 발급', false,
+  () => set(ref(p3Db, `quizRoomSecrets/${PR}/joins/${P2}`), RIGHT));
+await expect('비밀번호 모르는 제3자는 여전히 입장 불가', false,
+  () => set(ref(p3Db, `quizRooms/${PR}/players/${P3}`), player(P3, 'P3')));
+await expect('비밀번호 방에서도 자기 자리 삭제는 가능', true,
+  () => remove(ref(p2Db, `quizRooms/${PR}/players/${P2}`)));
+await expect('호스트가 비밀번호 방 정리', true, () => remove(ref(hostDb, `quizRooms/${PR}`)));
+await expect('방이 사라지면 고아 비밀 노드 삭제', true, () => remove(ref(p2Db, `quizRoomSecrets/${PR}`)));
+
 const OLD = 'oldroom';
 await expect('만료된 방 준비(호스트가 생성)', true,
   () => set(ref(hostDb, `quizRooms/${OLD}`), { ...room(Date.now() - 2 * 3600 * 1000), id: OLD }));

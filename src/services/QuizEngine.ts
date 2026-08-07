@@ -2,10 +2,10 @@
 // 퀴즈 문제 생성기. PokeAPI(getPokemon)로 현지화 이름·타입·스탯을 얻고,
 // 공식아트 URL은 도감번호로 결정적 생성(추가 요청 0). 오답 보기 생성·셔플 포함.
 
-import { pokeAPI, PokemonData } from '../api/pokeapi';
+import { pokeAPI, PokemonData, LangCode } from '../api/pokeapi';
 import {
   QuizKind, QuizQuestion, QuizOption,
-  SpeedQuizKind, SPEED_QUIZ_KINDS, SpeedRound,
+  SpeedQuizKind, speedKindsForLang, SpeedRound,
 } from '../types/quiz';
 import { EXAM_BANK, bankToQuestion } from './quizExamBank';
 import POKEDEX_TYPE_INDEX from '../data/pokedexTypeIndex.json';
@@ -172,24 +172,24 @@ const CHOSUNG_ITEM_SLUGS = [
 ];
 
 /** 카테고리별 랜덤 항목의 현지화 이름 조회. 초성 자격 미달·404 시 재시도, 실패하면 포켓몬으로 폴백. */
-async function fetchChosungEntry(cat: ChosungCat, used?: Set<number>): Promise<{ name: string; en: string; imageUrl?: string }> {
+async function fetchChosungEntry(cat: ChosungCat, used?: Set<number>, lang?: LangCode): Promise<{ name: string; en: string; imageUrl?: string }> {
   for (let tries = 0; tries < 8; tries++) {
     try {
       if (cat === 'pokemon') {
         const id = pickMainId(used);
-        const m = await pokeAPI.getPokemon(id);
+        const m = await pokeAPI.getPokemon(id, lang);
         if (isChosungCandidate(m.displayName)) return { name: m.displayName, en: m.name, imageUrl: artUrl(id) };
       } else if (cat === 'move') {
         const id = 1 + Math.floor(Math.random() * 900);
-        const mv = await pokeAPI.getMove(String(id));
+        const mv = await pokeAPI.getMove(String(id), lang);
         if (isChosungCandidate(mv.displayName)) return { name: mv.displayName, en: mv.name };
       } else if (cat === 'ability') {
         const id = 1 + Math.floor(Math.random() * 300);
-        const ab = await pokeAPI.getAbilityName(id);
+        const ab = await pokeAPI.getAbilityName(id, lang);
         if (isChosungCandidate(ab.displayName)) return { name: ab.displayName, en: ab.name };
       } else {
         const slug = CHOSUNG_ITEM_SLUGS[Math.floor(Math.random() * CHOSUNG_ITEM_SLUGS.length)];
-        const it = await pokeAPI.getItemName(slug);
+        const it = await pokeAPI.getItemName(slug, lang);
         if (isChosungCandidate(it.displayName)) return { name: it.displayName, en: it.name };
       }
     } catch {
@@ -198,7 +198,7 @@ async function fetchChosungEntry(cat: ChosungCat, used?: Set<number>): Promise<{
   }
   // 폴백: 포켓몬 이름은 전부 한글 2음절+ 이므로 항상 성공.
   const id = pickMainId(used);
-  const m = await pokeAPI.getPokemon(id);
+  const m = await pokeAPI.getPokemon(id, lang);
   return { name: m.displayName, en: m.name, imageUrl: artUrl(id) };
 }
 
@@ -752,18 +752,25 @@ function speedAccept(id: number, mon: PokemonData): string[] {
 async function genSpeedRound(
   ctx: QuizCtx, used?: Set<number>, allowed?: SpeedQuizKind[],
 ): Promise<SpeedRound> {
-  // 방이 고른 종목만 출제한다. 빈 배열/미지정(구버전 방)은 전 종목으로 취급 —
+  // 방이 고른 종목만 출제한다. 빈 배열/미지정(구버전 방)은 그 언어의 전 종목으로 취급 —
   // 여기서 빈 배열을 그대로 쓰면 pickOne이 undefined를 돌려주고 게임이 멈춘다.
-  const pool = allowed?.length ? allowed : SPEED_QUIZ_KINDS;
+  const pool = allowed?.length ? allowed : speedKindsForLang(ctx.lang);
   const kind: SpeedQuizKind = pickOne(pool);
-  let id = pickMainId(used);
-  let mon = await pokeAPI.getPokemon(id);
 
-  // 도감설명 종목은 현재 언어 도감설명이 있는 개체만(9세대는 한글 미제공) 재추첨.
+  // ⚠️ 데이터도 **방 언어**로 받아야 한다. pokeAPI는 기본적으로 localStorage의 UI 언어를
+  //    보므로, 한국어 UI 호스트가 영어 방을 열면 지문만 영어고 이름은 한국어로 나온다.
+  const lang: LangCode = ctx.lang === 'en' ? 'en' : 'ko';
+
+  if (kind === 'chosung') return genSpeedChosung(ctx, lang, used);
+
+  let id = pickMainId(used);
+  let mon = await pokeAPI.getPokemon(id, lang);
+
+  // 도감설명 종목은 방 언어 도감설명이 있는 개체만(9세대는 한글 미제공) 재추첨.
   if (kind === 'flavor') {
     for (let tries = 0; tries < 8 && (!mon.flavorText || !mon.flavorLocalized); tries++) {
       id = pickMainId(used);
-      mon = await pokeAPI.getPokemon(id);
+      mon = await pokeAPI.getPokemon(id, lang);
     }
   }
 
@@ -784,6 +791,29 @@ async function genSpeedRound(
     payload,
     reveal: { title: mon.displayName, subtitle: dexLabel(id), imageUrl: artUrl(id) },
     accept: speedAccept(id, mon),
+  };
+}
+
+/**
+ * 속도전 초성 문제(한국어 방 전용).
+ * 솔로 초성과 같은 소재(포켓몬/기술/특성/도구)를 쓰되, 정답 후보는 한글 이름과 영문 slug
+ * 둘 다 받는다 — 초성만 보고 영문으로 답하는 사람을 굳이 틀리게 할 이유가 없다.
+ */
+async function genSpeedChosung(
+  ctx: QuizCtx, lang: LangCode, used?: Set<number>,
+): Promise<SpeedRound> {
+  const cat = pickChosungCat();
+  const entry = await fetchChosungEntry(cat, used, lang);
+  await preloadImages(entry.imageUrl ? [entry.imageUrl] : []);
+  const catLabel = ctx.t(`quiz.chosung.cat.${cat}`);
+  return {
+    payload: { kind: 'chosung', bigText: toChosung(entry.name), chosungCat: cat },
+    reveal: {
+      title: entry.name,
+      subtitle: entry.en && entry.en !== entry.name ? `${catLabel} · ${entry.en}` : catLabel,
+      imageUrl: entry.imageUrl,
+    },
+    accept: Array.from(new Set([entry.name, entry.en].filter(Boolean))),
   };
 }
 

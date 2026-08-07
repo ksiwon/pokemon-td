@@ -6,11 +6,12 @@
 import { SpeedRoundPayload, SpeedRevealPayload, SpeedQuizKind } from './quiz';
 
 /**
- * 방의 언어. 호스트의 UI 언어를 그대로 기록한다(고르는 값이 아니다).
+ * 방의 언어. 방을 만들 때 **호스트가 직접 고른다**(UI 언어와 달라도 된다).
  *
- * 왜 필요한가: 문제는 호스트 한 명이 만들어 방송하는데, 도감설명·힌트 지문은 원문이라
- * **호스트 언어 그대로** 나간다. 정답 공개 이름도 마찬가지다. 방 목록에 언어 구분이 없으면
- * 영어 유저가 한국어 방에 들어가 한글 지문을 마주하게 된다 — 막지는 않고 미리 알려 준다.
+ * 왜 방 단위인가: 문제는 호스트 한 명이 만들어 전원에게 방송한다. 도감설명·힌트·초성열과
+ * 정답 공개 이름은 원문이라 만들어진 언어 그대로 나간다 — 방마다 언어가 하나로 정해져야
+ * 참가자가 무엇을 보게 될지 목록에서 알 수 있다. 출제 데이터도 이 언어로 받는다
+ * (QuizEngine이 pokeAPI에 언어를 넘긴다). 종목도 언어에 따라 달라진다(초성은 한국어 전용).
  */
 export type QuizRoomLang = 'ko' | 'en';
 
@@ -73,10 +74,16 @@ export interface QuizRoom {
     /** 방 언어(호스트 UI 언어). 구버전 방에는 없을 수 있어 optional. */
     lang?: QuizRoomLang;
     /**
-     * 출제할 종목. 호스트가 방을 만들 때 고른다. 비었거나 없으면 전 종목.
+     * 출제할 종목. 호스트가 방을 만들 때 고른다. 비었거나 없으면 그 언어의 전 종목.
      * RTDB는 배열을 인덱스 키 객체로 저장하므로 읽을 때 정규화가 필요하다(QuizRoomService).
      */
     kinds?: SpeedQuizKind[];
+    /**
+     * 비밀번호가 걸린 방인지. **비밀번호 자체는 여기 두지 않는다** —
+     * 방 노드는 전원이 읽을 수 있어서 넣는 순간 콘솔에서 보인다.
+     * 해시는 읽기가 막힌 quizRoomSecrets에 있고, 대조는 보안 규칙이 한다.
+     */
+    hasPass?: boolean;
   };
   memberIds: Record<string, boolean>;
   players: Record<string, QuizRoomPlayer>;
@@ -102,6 +109,8 @@ export interface QuizRoomSummary {
   lang: QuizRoomLang;
   /** 출제 종목(정규화 완료 — 항상 1개 이상). */
   kinds: SpeedQuizKind[];
+  /** 비밀번호가 걸린 방인지. 목록에서 자물쇠로 표시하고 입장 시 입력을 받는다. */
+  hasPass: boolean;
   /** 정원이 찼는지. 목록에서 숨기지 않고 '가득 참'으로 표시해 붐빈다는 사실을 알린다. */
   full: boolean;
 }

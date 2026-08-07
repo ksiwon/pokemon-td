@@ -1309,7 +1309,8 @@
       "typeOdd": { "name": "타입 오드원", "desc": "4마리 중 타입 조합이 혼자 다른 하나" },
       "special": { "name": "전설 · 환상", "desc": "전설/환상/패러독스/UB 분류하기" },
       "similarName": { "name": "헷갈리는 이름", "desc": "비슷한 이름 4개 중 진짜 고르기" },
-      "signature": { "name": "전용기술", "desc": "그 기술을 배우는 유일한 포켓몬" }
+      "signature": { "name": "전용기술", "desc": "그 기술을 배우는 유일한 포켓몬" },
+      "chosung": { "name": "초성", "desc": "초성만 보고 이름 맞히기" }
     },
     "exam": {
       "name": "수능 모의고사",
@@ -1344,9 +1345,17 @@
       "roomClosed": "방이 닫혔어요.",
       "full": "가득 참",
       "roomsBusy": "지금 방 {n}개가 전부 사용 중이에요. 기존 방에 자리가 나면 들어가거나, 잠시 뒤 새로고침해 주세요.",
+      "langLabel": "방 언어",
+      "langPick": "먼저 방 언어를 고르세요. 언어에 따라 낼 수 있는 종목이 달라집니다.",
+      "passLabel": "비밀번호 (선택)",
+      "passPlaceholder": "비우면 공개 방",
+      "passPrompt": "{name}님의 방은 비밀번호가 필요해요",
+      "passEnter": "입장",
+      "lockedRoom": "비밀번호 방",
+      "errWrongPass": "비밀번호가 맞지 않아요.",
       "kindsLabel": "출제 종목",
       "kindsAll": "전 종목",
-      "langNotice": "{lang} 방으로 만들어져요 — 도감설명·힌트 지문이 이 언어로 나갑니다.",
+      "langNotice": "고른 언어로 문제가 나갑니다. 도감설명·힌트·초성은 번역되지 않아요.",
       "lang": {
         "ko": "한국어",
         "en": "English"

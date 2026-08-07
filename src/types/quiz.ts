@@ -59,8 +59,17 @@ export const availableBoardKeys = (language: string): QuizBoardKey[] =>
  * 속도 퀴즈 출제 종목 — 전부 '포켓몬 이름'이 정답인 주관식.
  * 객관식을 섞지 않는 이유: 보기 4개를 찍어도 0.3초에 눌리므로 속도 경쟁이 운으로 흐른다.
  */
-export type SpeedQuizKind = 'silhouette' | 'cry' | 'zoom' | 'flavor' | 'hint';
-export const SPEED_QUIZ_KINDS: SpeedQuizKind[] = ['silhouette', 'cry', 'zoom', 'flavor', 'hint'];
+export type SpeedQuizKind = 'silhouette' | 'cry' | 'zoom' | 'flavor' | 'hint' | 'chosung';
+export const SPEED_QUIZ_KINDS: SpeedQuizKind[] =
+  ['silhouette', 'cry', 'zoom', 'flavor', 'hint', 'chosung'];
+
+/**
+ * 방 언어에서 고를 수 있는 종목.
+ * 초성은 한글 음절에서만 만들어진다 — 영어 방에서 출제하면 초성열 자리에 이름이 그대로
+ * 나와 정답이 보인다(솔로 퀴즈의 KO_ONLY_QUIZ_KINDS와 같은 이유).
+ */
+export const speedKindsForLang = (lang: string): SpeedQuizKind[] =>
+  lang === 'ko' ? SPEED_QUIZ_KINDS : SPEED_QUIZ_KINDS.filter(k => k !== 'chosung');
 
 /**
  * RTDB로 전원에게 뿌리는 문제 페이로드.
@@ -77,6 +86,10 @@ export interface SpeedRoundPayload {
   text?: string;
   /** 힌트 줄(호스트 언어). hint 전용. */
   hintLines?: string[];
+  /** 크게 강조할 텍스트(초성열). chosung 전용. */
+  bigText?: string;
+  /** 초성 문제의 갈래(pokemon/move/ability/item). 각 클라이언트가 키로 번역한다. */
+  chosungCat?: string;
 }
 
 /** 정답 공개 시점에 호스트가 추가로 뿌리는 정보. */

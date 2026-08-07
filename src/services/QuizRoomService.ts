@@ -23,7 +23,7 @@ import { QUIZ_MAX_ACTIVE_ROOMS, QUIZ_MAX_PLAYERS_PER_ROOM } from '../config/rtdb
 import {
   QuizRoom, QuizRoomSummary, QuizRoomPhase, QuizRoundResult, QuizAnswer, QuizRoomLang,
 } from '../types/quizRoom';
-import { SpeedRoundPayload, SpeedRevealPayload, SpeedQuizKind, SPEED_QUIZ_KINDS } from '../types/quiz';
+import { SpeedRoundPayload, SpeedRevealPayload, SpeedQuizKind, speedKindsForLang } from '../types/quiz';
 import { authService } from './AuthService';
 import { multiplayerService } from './MultiplayerService';
 
@@ -36,10 +36,13 @@ const ROOM_EXPIRY_MS = 60 * 60 * 1000;
  * 사라진다.** 그대로 쓰면 `.map`이 없어 터지거나 빈 풀로 출제가 멈추므로 여기서 정규화한다.
  * 구버전 방(필드 없음)은 전 종목으로 본다.
  */
-export function normalizeKinds(raw: unknown): SpeedQuizKind[] {
+export function normalizeKinds(raw: unknown, lang?: string): SpeedQuizKind[] {
+  // 방 언어에서 불가능한 종목은 저장돼 있어도 걸러 낸다 — 영어 방에 초성이 섞이면
+  // 초성열 자리에 영문 이름이 그대로 나와 정답이 보인다.
+  const allowed = speedKindsForLang(lang ?? 'ko');
   const list = Array.isArray(raw) ? raw : Object.values((raw ?? {}) as Record<string, unknown>);
-  const valid = list.filter((k): k is SpeedQuizKind => SPEED_QUIZ_KINDS.includes(k as SpeedQuizKind));
-  return valid.length ? valid : [...SPEED_QUIZ_KINDS];
+  const valid = list.filter((k): k is SpeedQuizKind => allowed.includes(k as SpeedQuizKind));
+  return valid.length ? valid : [...allowed];
 }
 
 /** UI가 번역해서 보여줄 오류 코드(서비스는 언어를 모른다). */
@@ -48,7 +51,24 @@ export const QUIZ_ROOM_ERROR = {
   ROOM_FULL: 'QR_ROOM_FULL',
   ROOM_GONE: 'QR_ROOM_GONE',
   ALREADY_STARTED: 'QR_ALREADY_STARTED',
+  WRONG_PASS: 'QR_WRONG_PASS',
 } as const;
+
+/**
+ * 방 비밀번호 해시. 방 id를 소금으로 섞어 같은 비밀번호라도 방마다 값이 다르게 만든다.
+ *
+ * 왜 해시를 서버에 두고 클라이언트가 비교하지 않는가: quizRooms는 참가자 전원이 읽어야
+ * 해서, 방 안에 무엇을 넣든 콘솔에서 보인다. 그래서 해시는 **읽기가 막힌**
+ * `quizRoomSecrets/{roomId}/hash`에 두고, 입장할 때 내가 계산한 해시를
+ * `joins/{uid}`에 써 본다. 보안 규칙은 클라이언트가 읽을 수 없는 데이터도 참조할 수 있으므로
+ * `.validate`가 둘을 대조한다 — 값을 넘겨받지 않고도 서버가 판정한다.
+ * joins도 읽기가 막혀 있어(상위 .read가 호스트 전용) 남의 티켓을 베낄 수 없다.
+ */
+export async function hashRoomPass(roomId: string, pass: string): Promise<string> {
+  const data = new TextEncoder().encode(`${roomId}:${pass}`);
+  const buf = await crypto.subtle.digest('SHA-256', data);
+  return Array.from(new Uint8Array(buf)).map(b => b.toString(16).padStart(2, '0')).join('');
+}
 
 /**
  * 속도 점수 = 남은 시간 비례(0~100) + 순위 보너스(1등 50 · 2등 30 · 3등 15).
@@ -113,15 +133,17 @@ class QuizRoomService {
       .filter(r => r.status === 'waiting')
       .map(r => {
         const playerCount = Object.keys(r.players ?? {}).length;
+        // 언어 표기가 없는 구버전 방은 한국어로 본다(이 기능 이전 방은 전부 한국어였다).
+        const lang: QuizRoomLang = r.config?.lang === 'en' ? 'en' : 'ko';
         return {
           id: r.id,
           hostName: r.hostName,
           playerCount,
           rounds: r.config?.rounds ?? 0,
           seconds: r.config?.seconds ?? 0,
-          // 언어 표기가 없는 구버전 방은 한국어로 본다(이 기능 이전 방은 전부 한국어였다).
-          lang: (r.config?.lang === 'en' ? 'en' : 'ko') as QuizRoomLang,
-          kinds: normalizeKinds(r.config?.kinds),
+          lang,
+          kinds: normalizeKinds(r.config?.kinds, lang),
+          hasPass: r.config?.hasPass === true,
           createdAt: r.createdAt,
           full: playerCount >= QUIZ_MAX_PLAYERS_PER_ROOM,
         };
@@ -146,8 +168,9 @@ class QuizRoomService {
           .filter(([, r]) => !r?.createdAt || now - r.createdAt > ROOM_EXPIRY_MS)
           .flatMap(([id]) => [
             remove(ref(rtdb, `quizRooms/${id}`)).catch(() => {}),
-            // 방이 사라진 뒤엔 누구나 지울 수 있게 룰이 열려 있다(고아 답안 회수).
+            // 방이 사라진 뒤엔 누구나 지울 수 있게 룰이 열려 있다(고아 답안·비밀 회수).
             remove(ref(rtdb, `quizAnswers/${id}`)).catch(() => {}),
+            remove(ref(rtdb, `quizRoomSecrets/${id}`)).catch(() => {}),
           ])
       );
     } catch {
@@ -158,6 +181,7 @@ class QuizRoomService {
   // ─── 방 생성 / 입장 / 퇴장 ──────────────────────────────────────────────────
   async createRoom(
     rounds: number, seconds: number, lang: QuizRoomLang, kinds: SpeedQuizKind[],
+    pass?: string,
   ): Promise<string> {
     const user = authService.getCurrentUser();
     if (!user) throw new Error(QUIZ_ROOM_ERROR.ROOM_GONE);
@@ -180,19 +204,24 @@ class QuizRoomService {
       phase: 'lobby',
       // 종목은 정규화해서 저장한다 — 빈 배열이 올라가면 RTDB가 필드를 통째로 지워
       // 다음 문제 생성에서 풀이 비고, 호스트가 1.5초마다 재시도하며 게임이 시작되지 않는다.
-      config: { rounds, seconds, lang, kinds: normalizeKinds(kinds) },
+      config: { rounds, seconds, lang, kinds: normalizeKinds(kinds, lang), hasPass: !!pass },
       memberIds: { [user.uid]: true },
       players: {
         [user.uid]: { userId: user.uid, name, score: 0, correct: 0, joinedAt: serverNow() },
       },
     };
     await set(newRef, room);
+    // 방을 먼저 만들어야 한다 — 비밀 노드의 쓰기 규칙이 quizRooms의 hostId를 본다.
+    // 해시가 없는 동안은 joins의 validate가 통과할 수 없어 아무도 못 들어온다(잠긴 상태로 시작).
+    if (pass) {
+      await set(ref(rtdb, `quizRoomSecrets/${roomId}/hash`), await hashRoomPass(roomId, pass));
+    }
     this.currentRoomId = roomId;
     this.armDisconnectCleanup(roomId, user.uid);
     return roomId;
   }
 
-  async joinRoom(roomId: string): Promise<void> {
+  async joinRoom(roomId: string, pass?: string): Promise<void> {
     const user = authService.getCurrentUser();
     if (!user) throw new Error(QUIZ_ROOM_ERROR.ROOM_GONE);
 
@@ -203,6 +232,17 @@ class QuizRoomService {
     const count = Object.keys(room.players ?? {}).length;
     if (count >= QUIZ_MAX_PLAYERS_PER_ROOM && !room.players?.[user.uid]) {
       throw new Error(QUIZ_ROOM_ERROR.ROOM_FULL);
+    }
+
+    // 비밀번호 방이면 먼저 입장권을 끊는다. 규칙이 내가 쓴 해시를 (내가 읽을 수 없는)
+    // 방 해시와 대조하므로, 틀리면 여기서 permission_denied로 막힌다.
+    if (room.config?.hasPass) {
+      const ticket = await hashRoomPass(roomId, pass ?? '');
+      try {
+        await set(ref(rtdb, `quizRoomSecrets/${roomId}/joins/${user.uid}`), ticket);
+      } catch {
+        throw new Error(QUIZ_ROOM_ERROR.WRONG_PASS);
+      }
     }
 
     const name = user.displayName || 'Player';
@@ -250,7 +290,9 @@ class QuizRoomService {
       if (!snap.exists() || Object.keys(snap.val() ?? {}).length === 0) {
         // 방 노드 삭제는 호스트만 가능 — 실패하면 1시간 뒤 만료 정리가 치운다.
         await remove(ref(rtdb, `quizRooms/${roomId}`)).catch(() => {});
+        // 방 노드가 사라진 뒤라야 이 둘의 고아 삭제 규칙이 열린다(순서를 지킬 것).
         await remove(ref(rtdb, `quizAnswers/${roomId}`)).catch(() => {});
+        await remove(ref(rtdb, `quizRoomSecrets/${roomId}`)).catch(() => {});
       }
     } catch {
       // 이미 지워진 방 — 무시

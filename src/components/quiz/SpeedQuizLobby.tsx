@@ -5,13 +5,13 @@
 
 import { useCallback, useEffect, useState } from 'react';
 import styled from 'styled-components';
-import { ArrowLeft, RefreshCw, Plus, Users, Timer, ListOrdered, Languages, Shapes } from 'lucide-react';
+import { ArrowLeft, RefreshCw, Plus, Users, Timer, ListOrdered, Languages, Shapes, Lock } from 'lucide-react';
 import { media } from '../../utils/responsive.utils';
-import { useTranslation } from '../../i18n';
+import { useTranslation, translateIn } from '../../i18n';
 import { quizRoomService, QUIZ_ROOM_ERROR } from '../../services/QuizRoomService';
 import { QUIZ_MAX_PLAYERS_PER_ROOM, QUIZ_MAX_ACTIVE_ROOMS } from '../../config/rtdbBudget';
 import { QuizRoomSummary, QuizRoomLang } from '../../types/quizRoom';
-import { SpeedQuizKind, SPEED_QUIZ_KINDS } from '../../types/quiz';
+import { SpeedQuizKind, speedKindsForLang } from '../../types/quiz';
 import { authService } from '../../services/AuthService';
 
 const ROUND_OPTIONS = [10, 20, 30];
@@ -31,10 +31,27 @@ export const SpeedQuizLobby = ({ onEnterRoom, onExit }: Props) => {
   const [error, setError] = useState<string | null>(null);
   const [rounds, setRounds] = useState(20);
   const [seconds, setSeconds] = useState(15);
-  const [kinds, setKinds] = useState<SpeedQuizKind[]>([...SPEED_QUIZ_KINDS]);
+  const [pass, setPass] = useState('');
+  /** 입장하려는 비밀번호 방 — 값이 있으면 비밀번호 입력 팝오버가 뜬다. */
+  const [passPrompt, setPassPrompt] = useState<QuizRoomSummary | null>(null);
+  const [joinPass, setJoinPass] = useState('');
 
-  /** 방 언어는 고르는 게 아니라 **내 UI 언어가 그대로 기록**된다(지문이 그 언어로 나가므로). */
+  /** 내 UI 언어. 방 언어의 **기본값**일 뿐, 호스트가 바꿀 수 있다. */
   const myLang: QuizRoomLang = language === 'en' ? 'en' : 'ko';
+  /**
+   * 방 언어는 만들기 1단계에서 **직접 고른다**. 고르기 전(null)에는 나머지 설정을 보여 주지
+   * 않는다 — 종목 목록이 언어에 따라 달라지므로(초성은 한국어 전용) 언어가 먼저 정해져야 한다.
+   */
+  const [roomLang, setRoomLang] = useState<QuizRoomLang | null>(null);
+  const kindOptions = speedKindsForLang(roomLang ?? myLang);
+  const [kinds, setKinds] = useState<SpeedQuizKind[]>(() => speedKindsForLang(myLang));
+
+  /** 언어를 바꾸면 종목도 그 언어에서 가능한 것만 남긴다(영어로 바꾸면 초성이 빠진다). */
+  const pickLang = (l: QuizRoomLang) => {
+    setRoomLang(l);
+    setKinds(speedKindsForLang(l));
+    setError(null);
+  };
 
   /** 종목 토글. 마지막 하나는 끌 수 없다 — 전부 끄면 출제할 게 없어 게임이 시작되지 않는다. */
   const toggleKind = (k: SpeedQuizKind) => {
@@ -88,6 +105,7 @@ export const SpeedQuizLobby = ({ onEnterRoom, onExit }: Props) => {
       [QUIZ_ROOM_ERROR.ROOM_FULL]: 'speed.errRoomFull',
       [QUIZ_ROOM_ERROR.ROOM_GONE]: 'speed.errRoomGone',
       [QUIZ_ROOM_ERROR.ALREADY_STARTED]: 'speed.errStarted',
+      [QUIZ_ROOM_ERROR.WRONG_PASS]: 'speed.errWrongPass',
       loadFail: 'speed.errLoad',
     };
     return t(`quiz.${map[key] ?? 'speed.errLoad'}`);
@@ -99,11 +117,11 @@ export const SpeedQuizLobby = ({ onEnterRoom, onExit }: Props) => {
   // 성공하면 서비스가 반환 전에 currentRoomId를 세팅하므로 busy 프로브가 반납을 막아,
   // 방 화면이 마운트될 때까지 연결이 유지된다.
   const create = async () => {
-    if (busy) return;
+    if (busy || !roomLang) return;
     setBusy(true); setError(null);
     try {
       const id = await quizRoomService.withConnection(
-        () => quizRoomService.createRoom(rounds, seconds, myLang, kinds));
+        () => quizRoomService.createRoom(rounds, seconds, roomLang, kinds, pass.trim() || undefined));
       onEnterRoom(id);
     } catch (e) {
       setError((e as Error).message);
@@ -112,15 +130,23 @@ export const SpeedQuizLobby = ({ onEnterRoom, onExit }: Props) => {
     }
   };
 
-  const join = async (roomId: string) => {
+  /** 비밀번호 방은 바로 들어가지 않고 입력을 먼저 받는다. */
+  const tryJoin = (room: QuizRoomSummary) => {
+    if (busy) return;
+    if (room.hasPass) { setPassPrompt(room); setJoinPass(''); setError(null); return; }
+    join(room.id);
+  };
+
+  const join = async (roomId: string, roomPass?: string) => {
     if (busy) return;
     setBusy(true); setError(null);
     try {
-      await quizRoomService.withConnection(() => quizRoomService.joinRoom(roomId));
+      await quizRoomService.withConnection(() => quizRoomService.joinRoom(roomId, roomPass));
       onEnterRoom(roomId);
     } catch (e) {
       setError((e as Error).message);
       setBusy(false);
+      setPassPrompt(null);
       refresh();
     }
   };
@@ -142,52 +168,96 @@ export const SpeedQuizLobby = ({ onEnterRoom, onExit }: Props) => {
           <>
             <Card>
               <CardTitle><Plus size={16} /> {t('quiz.speed.createTitle')}</CardTitle>
-              <OptRow>
-                <OptLabel><ListOrdered size={13} /> {t('quiz.hub.roundSize')}</OptLabel>
-                <Segmented>
-                  {ROUND_OPTIONS.map(n => (
-                    <SegBtn key={n} $active={rounds === n} onClick={() => setRounds(n)}>
-                      {t('quiz.hub.qCount', { n })}
-                    </SegBtn>
-                  ))}
-                </Segmented>
-              </OptRow>
-              <OptRow>
-                <OptLabel><Timer size={13} /> {t('quiz.speed.secondsLabel')}</OptLabel>
-                <Segmented>
-                  {SECOND_OPTIONS.map(n => (
-                    <SegBtn key={n} $active={seconds === n} onClick={() => setSeconds(n)}>
-                      {t('quiz.speed.secondsValue', { n })}
-                    </SegBtn>
-                  ))}
-                </Segmented>
-              </OptRow>
-              {/* 종목은 5개고 이름이 길어(“Random Hints” 등) Segmented 한 줄에 절대 안 들어간다
-                  — 가장 큰 폰에서도 넘친다. 라벨을 위로 빼고 칩을 줄바꿈시킨다. */}
-              <KindBlock>
-                <OptLabel><Shapes size={13} /> {t('quiz.speed.kindsLabel')}</OptLabel>
+
+              {/* 1단계 — 방 언어. 종목 목록이 언어에 따라 달라지므로(초성은 한국어 전용)
+                  언어를 정하기 전에는 나머지를 보여 주지 않는다. */}
+              <StepBlock>
+                <StepLabel><StepNo>1</StepNo><Languages size={13} /> {t('quiz.speed.langLabel')}</StepLabel>
                 <KindGrid>
-                  {SPEED_QUIZ_KINDS.map(k => (
-                    <KindChip key={k} $active={kinds.includes(k)} onClick={() => toggleKind(k)}>
-                      {t(`quiz.types.${k}.name`)}
-                    </KindChip>
+                  {(['ko', 'en'] as QuizRoomLang[]).map(l => (
+                    <LangBtn key={l} $active={roomLang === l} onClick={() => pickLang(l)}>
+                      {t(`quiz.speed.lang.${l}`)}
+                    </LangBtn>
                   ))}
                 </KindGrid>
-              </KindBlock>
-              {/* 지문이 호스트 언어로 나가므로, 어떤 언어 방을 여는지 만들기 전에 알려 준다. */}
-              <LangNote>
-                <Languages size={13} /> {t('quiz.speed.langNotice', { lang: t(`quiz.speed.lang.${myLang}`) })}
-              </LangNote>
-              <PrimaryBtn onClick={create} disabled={busy || roomsFull}>
-                {roomsFull ? t('quiz.speed.roomsBusyBtn') : t('quiz.speed.createBtn')}
-              </PrimaryBtn>
-              {roomsFull && (
-                <BusyBox>
-                  {t('quiz.speed.roomsBusy', { n: QUIZ_MAX_ACTIVE_ROOMS })}
-                </BusyBox>
+                <LangNote>{roomLang ? t('quiz.speed.langNotice') : t('quiz.speed.langPick')}</LangNote>
+              </StepBlock>
+
+              {roomLang && (
+                <>
+                  {/* 2단계 — 종목. 라벨·미리보기는 **방 언어로** 보여 준다.
+                      참가자가 실제로 볼 문구를 호스트가 그대로 확인할 수 있어야 한다. */}
+                  <StepBlock>
+                    <StepLabel><StepNo>2</StepNo><Shapes size={13} /> {translateIn(roomLang, 'quiz.speed.kindsLabel')}</StepLabel>
+                    <KindGrid>
+                      {kindOptions.map(k => (
+                        <KindChip key={k} $active={kinds.includes(k)} onClick={() => toggleKind(k)}>
+                          {translateIn(roomLang, `quiz.types.${k}.name`)}
+                        </KindChip>
+                      ))}
+                    </KindGrid>
+                  </StepBlock>
+
+                  <OptRow>
+                    <OptLabel><ListOrdered size={13} /> {t('quiz.hub.roundSize')}</OptLabel>
+                    <Segmented>
+                      {ROUND_OPTIONS.map(n => (
+                        <SegBtn key={n} $active={rounds === n} onClick={() => setRounds(n)}>
+                          {t('quiz.hub.qCount', { n })}
+                        </SegBtn>
+                      ))}
+                    </Segmented>
+                  </OptRow>
+                  <OptRow>
+                    <OptLabel><Timer size={13} /> {t('quiz.speed.secondsLabel')}</OptLabel>
+                    <Segmented>
+                      {SECOND_OPTIONS.map(n => (
+                        <SegBtn key={n} $active={seconds === n} onClick={() => setSeconds(n)}>
+                          {t('quiz.speed.secondsValue', { n })}
+                        </SegBtn>
+                      ))}
+                    </Segmented>
+                  </OptRow>
+
+                  {/* 비밀번호는 선택 사항. 비우면 누구나 들어올 수 있는 공개 방. */}
+                  <StepBlock>
+                    <StepLabel><Lock size={13} /> {t('quiz.speed.passLabel')}</StepLabel>
+                    <TextField
+                      value={pass}
+                      onChange={e => setPass(e.target.value.slice(0, 20))}
+                      placeholder={t('quiz.speed.passPlaceholder')}
+                      autoComplete="off"
+                    />
+                  </StepBlock>
+
+                  <PrimaryBtn onClick={create} disabled={busy || roomsFull}>
+                    {roomsFull ? t('quiz.speed.roomsBusyBtn') : t('quiz.speed.createBtn')}
+                  </PrimaryBtn>
+                  {roomsFull && <BusyBox>{t('quiz.speed.roomsBusy', { n: QUIZ_MAX_ACTIVE_ROOMS })}</BusyBox>}
+                </>
               )}
               <Hint>{t('quiz.speed.scoreHint')}</Hint>
             </Card>
+
+            {passPrompt && (
+              <PassBox>
+                <PassTitle><Lock size={14} /> {t('quiz.speed.passPrompt', { name: passPrompt.hostName })}</PassTitle>
+                <PassRow>
+                  <TextField
+                    value={joinPass}
+                    onChange={e => setJoinPass(e.target.value.slice(0, 20))}
+                    onKeyDown={e => { if (e.key === 'Enter') join(passPrompt.id, joinPass); }}
+                    placeholder={t('quiz.speed.passPlaceholder')}
+                    autoComplete="off"
+                    autoFocus
+                  />
+                  <PassBtn onClick={() => join(passPrompt.id, joinPass)} disabled={busy}>
+                    {t('quiz.speed.passEnter')}
+                  </PassBtn>
+                  <GhostBtn onClick={() => setPassPrompt(null)}>{t('common.cancel')}</GhostBtn>
+                </PassRow>
+              </PassBox>
+            )}
 
             {error && <ErrBox>{errText(error)}</ErrBox>}
 
@@ -198,18 +268,20 @@ export const SpeedQuizLobby = ({ onEnterRoom, onExit }: Props) => {
               <Dim>{t('quiz.speed.noRooms')}</Dim>
             ) : (
               rooms.map(r => (
-                <RoomRow key={r.id} onClick={() => join(r.id)} disabled={busy || r.full} $full={r.full}>
+                <RoomRow key={r.id} onClick={() => tryJoin(r)} disabled={busy || r.full} $full={r.full}>
                   <RoomMain>
                     <RoomHost>
                       {/* 내 언어와 다른 방은 지문을 못 읽을 수 있다 — 들어가기 전에 보이게 한다. */}
                       <LangTag $other={r.lang !== myLang}>{t(`quiz.speed.lang.${r.lang}`)}</LangTag>
+                      {r.hasPass && <LockTag title={t('quiz.speed.lockedRoom')}><Lock size={11} /></LockTag>}
                       <RoomHostName>{t('quiz.speed.hostRoom', { name: r.hostName })}</RoomHostName>
                     </RoomHost>
                     <RoomMeta>
                       {t('quiz.hub.qCount', { n: r.rounds })} · {t('quiz.speed.secondsValue', { n: r.seconds })}
                     </RoomMeta>
                     <RoomKinds>
-                      {r.kinds.length === SPEED_QUIZ_KINDS.length
+                      {/* '전 종목'은 그 방 언어 기준이다 — 영어 방은 5종목이 전부다. */}
+                      {r.kinds.length === speedKindsForLang(r.lang).length
                         ? t('quiz.speed.kindsAll')
                         : r.kinds.map(k => t(`quiz.types.${k}.name`)).join(' · ')}
                     </RoomKinds>
@@ -275,7 +347,53 @@ const SegBtn = styled.button<{ $active: boolean }>`
   color: ${p => p.$active ? '#062430' : 'rgba(255,255,255,0.55)'};
   &:hover { color: ${p => p.$active ? '#062430' : '#fff'}; }
 `;
-const KindBlock = styled.div`display: flex; flex-direction: column; gap: 8px;`;
+const StepBlock = styled.div`display: flex; flex-direction: column; gap: 8px;`;
+const StepLabel = styled.div`
+  display: flex; align-items: center; gap: 6px;
+  font-size: 12.5px; font-weight: 700; color: rgba(255,255,255,0.55);
+`;
+const StepNo = styled.span`
+  flex: 0 0 auto; width: 17px; height: 17px; border-radius: 50%;
+  display: flex; align-items: center; justify-content: center;
+  font-size: 10.5px; font-weight: 800; color: #062430; background: ${ACCENT};
+`;
+const LangBtn = styled.button<{ $active: boolean }>`
+  flex: 1 1 120px; padding: 11px 14px; border-radius: 10px; cursor: pointer;
+  font-size: 14px; font-weight: 800;
+  background: ${p => p.$active ? 'rgba(34,211,238,0.16)' : 'rgba(0,0,0,0.25)'};
+  border: 1px solid ${p => p.$active ? 'rgba(34,211,238,0.5)' : BORDER};
+  color: ${p => p.$active ? ACCENT : 'rgba(255,255,255,0.5)'};
+  &:hover { color: ${p => p.$active ? ACCENT : '#fff'}; }
+`;
+const TextField = styled.input`
+  flex: 1; min-width: 0; padding: 10px 12px; border-radius: 9px;
+  font-size: 13.5px; font-weight: 600; color: #e7edf3; outline: none;
+  background: rgba(0,0,0,0.25); border: 1px solid ${BORDER};
+  &::placeholder { color: rgba(255,255,255,0.28); font-weight: 500; }
+  &:focus { border-color: rgba(34,211,238,0.45); }
+`;
+const LockTag = styled.span`
+  flex: 0 0 auto; display: flex; align-items: center;
+  color: rgba(251,191,36,0.9);
+`;
+const PassBox = styled.div`
+  display: flex; flex-direction: column; gap: 9px; padding: 13px;
+  border-radius: 12px; background: rgba(34,211,238,0.06); border: 1px solid rgba(34,211,238,0.25);
+`;
+const PassTitle = styled.div`display: flex; align-items: center; gap: 6px; font-size: 13px; font-weight: 700;`;
+const PassRow = styled.div`display: flex; flex-wrap: wrap; gap: 7px;`;
+const PassBtn = styled.button`
+  flex: 0 0 auto; padding: 0 16px; border-radius: 9px; border: none; cursor: pointer;
+  background: ${ACCENT}; color: #04222b; font-size: 13.5px; font-weight: 800;
+  &:disabled { opacity: 0.45; cursor: not-allowed; }
+`;
+const GhostBtn = styled.button`
+  flex: 0 0 auto; padding: 0 14px; border-radius: 9px; cursor: pointer;
+  background: transparent; border: 1px solid ${BORDER}; color: rgba(255,255,255,0.6);
+  font-size: 13px; font-weight: 700;
+  &:hover { color: #fff; }
+`;
+
 const KindGrid = styled.div`display: flex; flex-wrap: wrap; gap: 6px;`;
 const KindChip = styled.button<{ $active: boolean }>`
   flex: 0 1 auto; padding: 8px 12px; border-radius: 9px; cursor: pointer;
