@@ -150,6 +150,36 @@ service cloud.firestore {
       allow delete: if request.auth != null && request.auth.uid == userId;
     }
 
+    // seasons/{seasonId}/quizRankings/{uid} — 퀴즈 주간 랭킹(종목별).
+    // 종목마다 문서를 나누지 않고 scores 맵 하나에 모은다(문서 수 = 유저 수).
+    // [SEC] 맵 키 개수 상한으로 무한 필드 주입 차단. 값 개별 검증은 룰로 불가하므로
+    //       종목 수(15) + 모의고사 + 속도전 = 17에 여유를 둔 24로 캡.
+    match /seasons/{seasonId}/quizRankings/{userId} {
+      allow get: if request.auth != null;
+      allow list: if request.auth != null && listCapped();
+      allow create, update: if request.auth != null
+                   && request.auth.uid == userId
+                   && request.resource.data.userId == request.auth.uid
+                   && request.resource.data.scores is map
+                   && request.resource.data.scores.size() <= 24;
+      allow delete: if request.auth != null && request.auth.uid == userId;
+    }
+
+    // ─── 퀴즈 속도전(멀티) 통산 랭킹 ──────────────────────
+    // [SEC] wins <= games 로 "판 수보다 많은 승수" 위조를 막고, 상한으로 폭주 차단.
+    match /quizSpeedRankings/{userId} {
+      allow get: if request.auth != null;
+      allow list: if request.auth != null && listCapped();
+      allow write: if request.auth != null
+                   && request.auth.uid == userId
+                   && request.resource.data.userId == request.auth.uid
+                   && request.resource.data.wins is number
+                   && request.resource.data.games is number
+                   && request.resource.data.wins >= 0
+                   && request.resource.data.wins <= request.resource.data.games
+                   && request.resource.data.games <= 100000;
+    }
+
     // ─── 포켓몬 퀴즈 랭킹 (수능 모의고사 최고점, 최대 50점) ──
     // [SEC] examBest 상한(50)으로 위조 차단. 문항 수 10/30/50 선택 가능.
     match /quizRankings/{userId} {

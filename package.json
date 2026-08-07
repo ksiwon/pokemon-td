@@ -7,6 +7,7 @@
     "dev": "vite",
     "build": "tsc && vite build",
     "preview": "vite preview",
+    "quiz:data": "node scripts/genQuizData.mjs",
     "sim": "vitest run --config vitest.sim.config.ts --exclude \"sim/report/**\" && npm run sim:report",
     "sim:prefetch": "cross-env SIM_HTTP=record vitest run --config vitest.sim.config.ts sim/tools/prefetch.sim.ts",
     "sim:pvp": "vitest run --config vitest.sim.config.ts sim/pvp/pvpMatrix.sim.ts",

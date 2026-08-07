@@ -2,8 +2,9 @@
 // 퀴즈 로컬 영속(최고점수·통계). localStorage 단독, TD/카드 세이브와 분리.
 // [FREE-TIER] Firestore 리더보드는 P2. 지금은 완전 오프라인 동작.
 
-import { QuizKind, QuizSaveState, QUIZ_KINDS } from '../types/quiz';
+import { QuizKind, QuizBoardKey, QuizSaveState, QUIZ_KINDS } from '../types/quiz';
 import { cardService } from './CardService';
+import { seasonId } from '../utils/season';
 
 /** 퀴즈 저장 키. 백업/복원(DatabaseService)이 같은 키를 참조하므로 단일 출처. */
 export const QUIZ_STORAGE_KEY = 'pokemon-td-quiz-v1';
@@ -108,6 +109,55 @@ class QuizService {
       starShards: earned.reduce((s, m) => s + m.starShards, 0),
     });
     return earned;
+  }
+
+  // ─── 주간 랭킹(보드별) ─────────────────────────────────────────────────────
+  /** 이번 주 기록이 아니면 비운다. 주차 경계(월요일 00:00 KST)를 넘으면 로컬도 리셋. */
+  private ensureCurrentSeason(): void {
+    const now = seasonId();
+    if (this.state.weeklySeason !== now) {
+      this.state.weeklySeason = now;
+      this.state.weeklyBest = {};
+      this.persist();
+    }
+  }
+
+  /** 이번 주 해당 보드의 내 최고 기록(로컬 기준). */
+  getWeeklyBest(key: QuizBoardKey): number {
+    this.ensureCurrentSeason();
+    return this.state.weeklyBest?.[key] ?? 0;
+  }
+
+  /**
+   * 이번 주 기록 갱신 시도. **반환값이 true일 때만** 서버에 올린다.
+   * [FREE-TIER] 한 판마다 Firestore에 쓰면 write가 판 수만큼 늘어난다.
+   * 주간 최고를 로컬에서 들고 있다가 경신될 때만 1 write.
+   */
+  recordWeekly(key: QuizBoardKey, score: number): boolean {
+    this.ensureCurrentSeason();
+    const prev = this.state.weeklyBest?.[key] ?? 0;
+    if (score <= prev) return false;
+    this.state.weeklyBest = { ...(this.state.weeklyBest ?? {}), [key]: score };
+    this.persist();
+    return true;
+  }
+
+  // ─── 속도 퀴즈(멀티) 통산 전적 ──────────────────────────────────────────────
+  getSpeedStats(): { wins: number; games: number; bestScore: number } {
+    return this.state.speed ?? { wins: 0, games: 0, bestScore: 0 };
+  }
+
+  /** 속도 퀴즈 한 판 종료 정산. 반환: 서버 랭킹을 갱신할 값(호출부가 그대로 업로드). */
+  recordSpeedGame(score: number, won: boolean): { wins: number; games: number; bestScore: number } {
+    const cur = this.getSpeedStats();
+    const next = {
+      wins: cur.wins + (won ? 1 : 0),
+      games: cur.games + 1,
+      bestScore: Math.max(cur.bestScore, score),
+    };
+    this.state.speed = next;
+    this.persist();
+    return next;
   }
 
   /** 라운드 종료 정산. 최고점수/최고연속/총라운드 갱신 후 저장.
