@@ -1309,8 +1309,7 @@
       "typeOdd": { "name": "Type Odd One Out", "desc": "Spot the different type combo of 4" },
       "special": { "name": "Legendary & Mythical", "desc": "Legendary / Mythical / Paradox / UB" },
       "similarName": { "name": "Confusing Names", "desc": "Pick the real name out of 4 look-alikes" },
-      "signature": { "name": "Signature Move", "desc": "The only Pokémon that learns it" },
-      "chosung": { "name": "Initials", "desc": "Guess from Korean initials" }
+      "signature": { "name": "Signature Move", "desc": "The only Pokémon that learns it" }
     },
     "exam": {
       "name": "Mock Exam",
@@ -1325,7 +1324,7 @@
       "createBtn": "Create room and wait",
       "secondsLabel": "Time limit",
       "secondsValue": "{n}s",
-      "scoreHint": "Score = time left (up to 100) + order bonus (1st 50 · 2nd 30 · 3rd 15). Answers are Pokémon names — Korean and English both count.",
+      "scoreHint": "Score = time left (up to 100) + order bonus (1st 50 · 2nd 30 · 3rd 15). Answers count in Korean or English; spacing and punctuation are ignored.",
       "roomList": "Open rooms",
       "noRooms": "No open rooms right now. Create one and others can join you.",
       "hostRoom": "{name}'s room",
@@ -1356,6 +1355,8 @@
       "errWrongPass": "That password doesn't match.",
       "kindsLabel": "Quiz types",
       "kindsAll": "All types",
+      "typePrompt": "What typing is this Pokémon? (e.g. Fire/Flying)",
+      "typeInputPlaceholder": "Type the typing",
       "langNotice": "Questions are generated in the language you pick. Dex entries and hints are not translated.",
       "lang": {
         "ko": "한국어",

@@ -36,12 +36,24 @@ const ROOM_EXPIRY_MS = 60 * 60 * 1000;
  * 사라진다.** 그대로 쓰면 `.map`이 없어 터지거나 빈 풀로 출제가 멈추므로 여기서 정규화한다.
  * 구버전 방(필드 없음)은 전 종목으로 본다.
  */
+/**
+ * 구버전 종목 키 → 현행 키. 배포 시점에 살아 있던 방이 옛 키를 들고 있으면
+ * 전부 걸러져 '전 종목'으로 되돌아가므로, 뜻이 같은 종목으로 옮겨 준다.
+ * (`chosung` 하나였던 것이 쉬움/어려움 둘로 갈렸다.)
+ */
+const LEGACY_SPEED_KINDS: Record<string, SpeedQuizKind[]> = {
+  chosung: ['chosungEasy', 'chosungHard'],
+};
+
 export function normalizeKinds(raw: unknown, lang?: string): SpeedQuizKind[] {
   // 방 언어에서 불가능한 종목은 저장돼 있어도 걸러 낸다 — 영어 방에 초성이 섞이면
   // 초성열 자리에 영문 이름이 그대로 나와 정답이 보인다.
   const allowed = speedKindsForLang(lang ?? 'ko');
   const list = Array.isArray(raw) ? raw : Object.values((raw ?? {}) as Record<string, unknown>);
-  const valid = list.filter((k): k is SpeedQuizKind => allowed.includes(k as SpeedQuizKind));
+  const expanded = list.flatMap(k => LEGACY_SPEED_KINDS[k as string] ?? [k]);
+  const valid = Array.from(new Set(
+    expanded.filter((k): k is SpeedQuizKind => allowed.includes(k as SpeedQuizKind)),
+  ));
   return valid.length ? valid : [...allowed];
 }
 

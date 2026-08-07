@@ -18,6 +18,7 @@
     "sim:2p:rtdb": "vitest run --config vitest.sim.config.ts sim/multi2/rtdbSemantics.sim.ts",
     "sim:2p:lobby": "vitest run --config vitest.sim.config.ts sim/multi2/lobby.sim.ts",
     "sim:2p:wire": "vitest run --config vitest.sim.config.ts sim/multi2/wireFidelity.sim.ts",
+    "sim:2p:quiz": "vitest run --config vitest.sim.config.ts sim/multi2/quizSpeed.sim.ts",
     "sim:parity": "vitest run --config vitest.sim.config.ts sim/parity/mechanics.sim.ts",
     "sim:determinism": "vitest run --config vitest.sim.config.ts sim/parity/determinism.sim.ts",
     "sim:fairness": "vitest run --config vitest.sim.config.ts sim/pvp/fairness.sim.ts",

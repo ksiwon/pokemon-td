@@ -7,6 +7,7 @@ import {
   QuizKind, QuizQuestion, QuizOption,
   SpeedQuizKind, speedKindsForLang, SpeedRound,
 } from '../types/quiz';
+import { translateIn } from '../i18n';
 import { EXAM_BANK, bankToQuestion } from './quizExamBank';
 import POKEDEX_TYPE_INDEX from '../data/pokedexTypeIndex.json';
 import POKEDEX_SPECIAL_INDEX from '../data/pokedexSpecialIndex.json';
@@ -743,6 +744,27 @@ function speedAccept(id: number, mon: PokemonData): string[] {
 }
 
 /**
+ * 타입 조합의 인정 정답 — **한/영 타입명 × 순서 무관**.
+ * 정규화(normalizeAnswer)가 `/`·공백을 지우므로 '불꽃/비행'과 '불꽃 비행'은 같은 문자열이
+ * 된다. 순서만 별도로 넣어 주면 '비행/불꽃'도 받는다.
+ * 한 언어만 인정하면 방에 섞여 있는 반대 언어 유저가 구조적으로 못 맞힌다(speedAccept와 동일 이유).
+ */
+function typeComboAccept(types: string[]): string[] {
+  const out: string[] = [];
+  for (const lg of ['ko', 'en'] as const) {
+    const names = types.map(ty => translateIn(lg, `types.${ty}`));
+    out.push(names.join('/'));
+    if (names.length === 2) out.push([names[1], names[0]].join('/'));
+  }
+  return Array.from(new Set(out));
+}
+
+/** 그 타이핑에 정확히 일치하는 포켓몬 전체의 한/영 이름. typeHard의 인정 정답. */
+function typingPoolAccept(pool: DexTypeEntry[]): string[] {
+  return Array.from(new Set(pool.flatMap(e => [e.ko, e.en]).filter(Boolean)));
+}
+
+/**
  * 속도 퀴즈 한 문제 생성(호스트 전용).
  * payload = 전원에게 방송할 것 / reveal·accept = 공개 전까지 호스트만 보관.
  * 지문(prompt)은 payload.kind만 보내고 **각 클라이언트가 자기 언어로 렌더**한다 —
@@ -761,7 +783,10 @@ async function genSpeedRound(
   //    보므로, 한국어 UI 호스트가 영어 방을 열면 지문만 영어고 이름은 한국어로 나온다.
   const lang: LangCode = ctx.lang === 'en' ? 'en' : 'ko';
 
-  if (kind === 'chosung') return genSpeedChosung(ctx, lang, used);
+  if (kind === 'chosungEasy' || kind === 'chosungHard') {
+    return genSpeedChosung(ctx, lang, used, kind === 'chosungEasy');
+  }
+  if (kind === 'typeHard') return genSpeedTypeHard(ctx);
 
   let id = pickMainId(used);
   let mon = await pokeAPI.getPokemon(id, lang);
@@ -782,15 +807,56 @@ async function genSpeedRound(
     payload.zoom = { x: 38 + Math.floor(Math.random() * 25), y: 38 + Math.floor(Math.random() * 25) };
   } else if (kind === 'flavor') {
     payload.text = maskName(mon.flavorText || ctx.t('quiz.play.flavorFallback'), mon);
+  } else if (kind === 'type') {
+    payload.imageUrl = artUrl(id);
   } else {
     payload.hintLines = shuffle(buildHintPool(ctx, mon, id)).slice(0, 3);
   }
 
   await preloadImages([artUrl(id)]);
+
+  // 타입(쉬움)만 정답이 이름이 아니라 **타입 조합**이다 — 공개 화면도 조합을 앞에 세운다.
+  if (kind === 'type') {
+    const types = (mon.types.length ? mon.types : ['normal']).slice(0, 2);
+    return {
+      payload,
+      reveal: {
+        title: types.map(ty => ctx.t(`types.${ty}`)).join(' / '),
+        subtitle: mon.displayName,
+        imageUrl: artUrl(id),
+      },
+      accept: typeComboAccept(types),
+    };
+  }
+
   return {
     payload,
     reveal: { title: mon.displayName, subtitle: dexLabel(id), imageUrl: artUrl(id) },
     accept: speedAccept(id, mon),
+  };
+}
+
+/**
+ * 속도전 타입(어려움) — 제시한 타이핑에 **정확히** 일치하는 포켓몬 이름 입력.
+ * 솔로판은 술어(validateText)로 채점하지만 속도전 채점 경로는 accept 목록 대조만 하므로,
+ * 그 타이핑의 풀 전체를 인정 정답으로 넘긴다. accept는 호스트만 들고 있어 방송되지 않는다.
+ * 번들 인덱스만 쓰므로 PokeAPI 요청이 없다.
+ */
+function genSpeedTypeHard(ctx: QuizCtx): SpeedRound {
+  const useDual = Math.random() < 0.5 && DUAL_TYPINGS.length > 0;
+  const list = (useDual || MONO_TYPINGS.length === 0) ? DUAL_TYPINGS : MONO_TYPINGS;
+  const typing = list[Math.floor(Math.random() * list.length)];
+  const example = typing.pool[Math.floor(Math.random() * typing.pool.length)];
+  const label = typing.types.map(ty => ctx.t(`types.${ty}`)).join(' / ');
+
+  return {
+    payload: { kind: 'typeHard', typeSlugs: typing.types.slice() },
+    reveal: {
+      title: label,
+      subtitle: ctx.t('quiz.play.typeHardRevealSub', { name: dexName(example, ctx.lang) }),
+      imageUrl: artUrl(example.id),
+    },
+    accept: typingPoolAccept(typing.pool),
   };
 }
 
@@ -800,14 +866,18 @@ async function genSpeedRound(
  * 둘 다 받는다 — 초성만 보고 영문으로 답하는 사람을 굳이 틀리게 할 이유가 없다.
  */
 async function genSpeedChosung(
-  ctx: QuizCtx, lang: LangCode, used?: Set<number>,
+  ctx: QuizCtx, lang: LangCode, used: Set<number> | undefined, easy: boolean,
 ): Promise<SpeedRound> {
   const cat = pickChosungCat();
   const entry = await fetchChosungEntry(cat, used, lang);
   await preloadImages(entry.imageUrl ? [entry.imageUrl] : []);
   const catLabel = ctx.t(`quiz.chosung.cat.${cat}`);
   return {
-    payload: { kind: 'chosung', bigText: toChosung(entry.name), chosungCat: cat },
+    // 어려움은 갈래(chosungCat)를 **아예 안 보낸다** — 페이로드는 전원이 읽으므로
+    // 화면에 안 그리는 것만으로는 숨겨지지 않는다.
+    payload: easy
+      ? { kind: 'chosungEasy', bigText: toChosung(entry.name), chosungCat: cat }
+      : { kind: 'chosungHard', bigText: toChosung(entry.name) },
     reveal: {
       title: entry.name,
       subtitle: entry.en && entry.en !== entry.name ? `${catLabel} · ${entry.en}` : catLabel,

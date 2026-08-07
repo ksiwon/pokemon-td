@@ -17,6 +17,9 @@ export interface ClientModules {
   clientId: string;
   user: SimUser;
   multiplayerService: any;
+  /** 퀴즈 속도전 방 서비스(실코드). 호스트만 채점하는 구조라 2클라이언트가 반드시 필요하다. */
+  quizRoomService: any;
+  speedPoints: (msTaken: number, limitMs: number, order: number) => number;
   authService: any;
   useGameStore: any;
   pvpBattleService: any;
@@ -64,7 +67,7 @@ export async function spawnClient(
     const net = await import('./rtdb');
     net.registerClient(clientId, opts);
 
-    const [msMod, authMod, storeMod, pvpMod, towerMod, arenaMod, abilMod] = await Promise.all([
+    const [msMod, authMod, storeMod, pvpMod, towerMod, arenaMod, abilMod, quizMod] = await Promise.all([
       import('../../src/services/MultiplayerService'),
       import('../support/mocks/AuthService'),
       import('../../src/store/gameStore'),
@@ -72,12 +75,15 @@ export async function spawnClient(
       import('../../src/game/towerFactory'),
       import('../pvp/arenaRunner'),
       import('../../src/utils/abilities'),
+      import('../../src/services/QuizRoomService'),
     ]);
 
     return {
       clientId,
       user,
       multiplayerService: (msMod as any).multiplayerService,
+      quizRoomService: (quizMod as any).quizRoomService,
+      speedPoints: (quizMod as any).speedPoints,
       authService: (authMod as any).authService,
       useGameStore: (storeMod as any).useGameStore,
       pvpBattleService: (pvpMod as any).pvpBattleService,

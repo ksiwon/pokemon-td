@@ -33,6 +33,7 @@ npm run sim:report     # 5) sim/reports/current/balance-compare.md 에 전후 �
 | `sim:2p:rtdb` | 가짜 RTDB가 실제 RTDB 규칙을 지키는지 (상위 결론의 전제) | — |
 | `sim:2p:lobby` | 방 생성/참가/시작/퇴장 수명주기 | — |
 | `sim:2p:wire` | 보드가 Firebase를 왕복할 때 무엇이 사라지는가 | `multi-2p-wire.md` |
+| `sim:2p:quiz` | **퀴즈 속도전 2인** — 정답·답안이 방에 새지 않는가, 채점 결과만 방송되는가 | — |
 | `sim:report` | 위 지표들을 baseline과 전후 비교 | `balance-compare.md` |
 
 환경변수로 규모 조절: `SIM_SEEDS`(싱글 시드 수), `SIM_MAPS`, `SIM_PERSONAS`,
@@ -81,6 +82,7 @@ sim/
 - 보상: `src/services/battleRewards.ts` — MultiplayerService도 이걸 씀
 - 매칭/bye: `PvPBattleService.generateMatchups` 그대로
 - 방·페이즈·트랜잭션: `MultiplayerService` **전체** (sim/multi2 한정 — 아래 참조)
+- 퀴즈 속도전 방: `QuizRoomService` **전체** (sim/multi2/quizSpeed.sim.ts — 위와 같은 인메모리 RTDB)
 
 ### 결정론
 
@@ -105,6 +107,12 @@ sim/
   ⚠ 컴포넌트의 멀티 흐름을 고치면 여기도 같이 고쳐야 한다(arenaRunner ↔ TFTBattleArena와 동일 계약).
 - `sim/multi2/match.ts` — 시나리오 러너 + 불변식 11종(라운드 단조성, 결과 유일성,
   양측 로컬 결과 일치, 아레나 입력 동일성, 보상 중복/누락, 보상 정산 완결, 고아 노드 등).
+- `sim/multi2/quizSpeed.sim.ts` — **퀴즈 속도전**도 같은 하네스를 쓴다. TD와 목적이 다르다:
+  여기서 보는 건 밸런스가 아니라 **"안 보여야 하는 것이 안 보이는가"** 다. 정답(accept)과
+  정답 공개(reveal)가 문제 진행 중 방에 실리지 않는지, 제출한 답 본문이 방이 아니라
+  `quizAnswers/{roomId}`로 가는지 — 한 클라이언트 안에서는 검증할 수 없는 성질이라 2인이 필요하다.
+  ⚠ 가상 시계라 **호출 → 시계 진행 → await** 순서를 지켜야 한다(`run()` 헬퍼). `await 호출()`을
+  먼저 하면 타이머가 안 돌아 프로미스가 영영 settle되지 않는다.
 
 ⚠ **보드 생성 전 `setRngSource(mulberry32(...))` 를 반드시 건다.** `mapAbilityToGameEffect`는
 매핑 목록에 없는 특성에 rng로 효과를 하나 뽑는데(crit/lifesteal/speed/tank), 기본 난수원이

@@ -56,20 +56,35 @@ export const availableBoardKeys = (language: string): QuizBoardKey[] =>
 
 // ─── 속도 퀴즈(실시간 멀티) ───────────────────────────────────────────────────
 /**
- * 속도 퀴즈 출제 종목 — 전부 '포켓몬 이름'이 정답인 주관식.
+ * 속도 퀴즈 출제 종목 — 전부 **주관식**(입력창). 솔로 종목 이름을 그대로 쓴다.
  * 객관식을 섞지 않는 이유: 보기 4개를 찍어도 0.3초에 눌리므로 속도 경쟁이 운으로 흐른다.
+ *
+ * 정답의 성격은 둘로 갈린다.
+ * - 포켓몬/기술/특성/도구 **이름**을 맞히는 것: silhouette·cry·zoom·flavor·hint·chosung*
+ * - **타입**이 걸린 것: `type`은 타입 조합을 입력하고, `typeHard`는 그 타이핑에 정확히
+ *   맞는 포켓몬 이름을 입력한다. 둘 다 정답이 여러 개라 호스트가 후보 목록(accept)을
+ *   통째로 들고 채점한다 — 목록은 방송되지 않으므로 크기가 커도 무방하다.
  */
-export type SpeedQuizKind = 'silhouette' | 'cry' | 'zoom' | 'flavor' | 'hint' | 'chosung';
-export const SPEED_QUIZ_KINDS: SpeedQuizKind[] =
-  ['silhouette', 'cry', 'zoom', 'flavor', 'hint', 'chosung'];
+export type SpeedQuizKind =
+  | 'silhouette' | 'cry' | 'zoom' | 'flavor' | 'hint'
+  | 'type' | 'typeHard'
+  | 'chosungEasy' | 'chosungHard';
+export const SPEED_QUIZ_KINDS: SpeedQuizKind[] = [
+  'silhouette', 'cry', 'zoom', 'flavor', 'hint',
+  'type', 'typeHard',
+  'chosungEasy', 'chosungHard',
+];
 
 /**
- * 방 언어에서 고를 수 있는 종목.
  * 초성은 한글 음절에서만 만들어진다 — 영어 방에서 출제하면 초성열 자리에 이름이 그대로
  * 나와 정답이 보인다(솔로 퀴즈의 KO_ONLY_QUIZ_KINDS와 같은 이유).
+ * 타입 종목은 타입명이 양쪽 언어로 다 번역돼 있어 영어 방에서도 그대로 낼 수 있다.
  */
+const KO_ONLY_SPEED_KINDS: SpeedQuizKind[] = ['chosungEasy', 'chosungHard'];
+
+/** 방 언어에서 고를 수 있는 종목. */
 export const speedKindsForLang = (lang: string): SpeedQuizKind[] =>
-  lang === 'ko' ? SPEED_QUIZ_KINDS : SPEED_QUIZ_KINDS.filter(k => k !== 'chosung');
+  lang === 'ko' ? SPEED_QUIZ_KINDS : SPEED_QUIZ_KINDS.filter(k => !KO_ONLY_SPEED_KINDS.includes(k));
 
 /**
  * RTDB로 전원에게 뿌리는 문제 페이로드.
@@ -86,10 +101,16 @@ export interface SpeedRoundPayload {
   text?: string;
   /** 힌트 줄(호스트 언어). hint 전용. */
   hintLines?: string[];
-  /** 크게 강조할 텍스트(초성열). chosung 전용. */
+  /** 크게 강조할 텍스트(초성열). chosung* 전용. */
   bigText?: string;
   /** 초성 문제의 갈래(pokemon/move/ability/item). 각 클라이언트가 키로 번역한다. */
   chosungCat?: string;
+  /**
+   * 제시 타이핑의 타입 슬러그(예: ['ghost','fire']). typeHard 전용.
+   * 라벨이 아니라 슬러그를 보내는 이유는 다른 지문과 같다 — 각 클라이언트가
+   * `types.<slug>` 키로 **자기 언어로** 렌더해야 하기 때문이다.
+   */
+  typeSlugs?: string[];
 }
 
 /** 정답 공개 시점에 호스트가 추가로 뿌리는 정보. */
