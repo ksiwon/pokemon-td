@@ -30,6 +30,60 @@
         ".write": "auth != null && (root.child('rooms').child($roomId).child('memberIds').child(auth.uid).exists() || (!newData.exists() && !root.child('rooms').child($roomId).exists()))"
       }
     },
+    "quizRooms": {
+      ".read": "auth != null",
+      ".indexOn": ["status", "createdAt"],
+      "$roomId": {
+        ".read": "auth != null",
+        ".write": "auth != null && ((!data.exists() && newData.child('hostId').val() === auth.uid) || data.child('hostId').val() === auth.uid || (data.child('createdAt').val() < (now - 3600000) && !newData.exists()))",
+        ".validate": "!newData.exists() || newData.hasChildren(['id','hostId','createdAt','status'])",
+        "status": {
+          ".write": "auth != null && (root.child('quizRooms').child($roomId).child('hostId').val() === auth.uid || !root.child('quizRooms').child($roomId).child('players').child(root.child('quizRooms').child($roomId).child('hostId').val()).exists())",
+          ".validate": "newData.isString() && newData.val().length <= 16"
+        },
+        "memberIds": {
+          "$uid": {
+            ".write": "auth != null && ($uid === auth.uid || root.child('quizRooms').child($roomId).child('hostId').val() === auth.uid)"
+          }
+        },
+        "players": {
+          "$uid": {
+            ".write": "auth != null && (($uid === auth.uid && (!data.exists() || !newData.exists()) && (root.child('quizRooms').child($roomId).child('config').child('hasPass').val() !== true || !newData.exists() || root.child('quizRoomSecrets').child($roomId).child('joins').child(auth.uid).exists())) || root.child('quizRooms').child($roomId).child('hostId').val() === auth.uid)",
+            ".validate": "!newData.exists() || (newData.hasChildren(['userId','name']) && newData.child('userId').val() === $uid && newData.child('name').isString() && newData.child('name').val().length <= 40 && (data.exists() || (newData.child('score').val() === 0 && newData.child('correct').val() === 0)))",
+            "answered": {
+              ".write": "auth != null && ($uid === auth.uid || root.child('quizRooms').child($roomId).child('hostId').val() === auth.uid)",
+              ".validate": "!newData.exists() || newData.isBoolean()"
+            }
+          }
+        }
+      }
+    },
+    "quizRoomSecrets": {
+      "$roomId": {
+        ".read": "auth != null && root.child('quizRooms').child($roomId).child('hostId').val() === auth.uid",
+        ".write": "auth != null && (root.child('quizRooms').child($roomId).child('hostId').val() === auth.uid || (!newData.exists() && !root.child('quizRooms').child($roomId).exists()))",
+        "hash": {
+          ".validate": "newData.isString() && newData.val().length <= 64"
+        },
+        "joins": {
+          "$uid": {
+            ".write": "auth != null && $uid === auth.uid",
+            ".validate": "newData.val() === root.child('quizRoomSecrets').child($roomId).child('hash').val()"
+          }
+        }
+      }
+    },
+    "quizAnswers": {
+      "$roomId": {
+        ".read": "auth != null && root.child('quizRooms').child($roomId).child('hostId').val() === auth.uid",
+        ".write": "auth != null && (root.child('quizRooms').child($roomId).child('hostId').val() === auth.uid || (!newData.exists() && !root.child('quizRooms').child($roomId).exists()))",
+        "$uid": {
+          ".read": "auth != null && $uid === auth.uid",
+          ".write": "auth != null && ($uid === auth.uid || root.child('quizRooms').child($roomId).child('hostId').val() === auth.uid)",
+          ".validate": "!newData.exists() || (newData.hasChildren(['text','at']) && newData.child('at').val() === now && newData.child('text').isString() && newData.child('text').val().length <= 60)"
+        }
+      }
+    },
     "presence": {
       "$roomId": {
         ".read": "auth != null",

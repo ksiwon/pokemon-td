@@ -55,7 +55,7 @@ export const QuizPlay = ({ mode, roundSize = 30, onExit }: QuizPlayProps) => {
     if (!sessionRef.current) {
       sessionRef.current = isExam ? createExamSession() : createQuizSession(mode as QuizKind);
     }
-    return sessionRef.current.next({ t });
+    return sessionRef.current.next({ t, lang: language });
   };
 
   // 라운드 도중 언어를 바꾸면 한국어 전용 종목(초성)은 더 이상 성립하지 않는다
@@ -142,6 +142,11 @@ export const QuizPlay = ({ mode, roundSize = 30, onExit }: QuizPlayProps) => {
         databaseService.updateQuizRanking(quizService.getExamBest()).catch(() => {});
       } else {
         setNewBest(quizService.recordRound(mode, score, maxStreak));
+      }
+      // 주간 랭킹 — [FREE-TIER] 이번 주 최고를 경신했을 때만 1 write.
+      const boardKey = isExam ? 'exam' : (mode as QuizKind);
+      if (quizService.recordWeekly(boardKey, score)) {
+        databaseService.updateQuizWeekly(boardKey, score).catch(() => {});
       }
       setPhase('result');
       return; // 결과 화면 — 재생(reset) 시 navBusyRef 해제
@@ -271,6 +276,14 @@ export const QuizPlay = ({ mode, roundSize = 30, onExit }: QuizPlayProps) => {
           <Prompt>{q.prompt}</Prompt>
 
           {q.bigText && <BigText>{q.bigText}</BigText>}
+
+          {q.hintLines && q.hintLines.length > 0 && (
+            <HintList>
+              {q.hintLines.map((line, i) => (
+                <HintRow key={i}><HintNo>{i + 1}</HintNo><HintText>{line}</HintText></HintRow>
+              ))}
+            </HintList>
+          )}
 
           {q.duel ? (
             <DuelView duel={q.duel} phase={phase} onSelect={onSelect} t={t} />
@@ -486,6 +499,24 @@ const BigText = styled.div`
   text-shadow: 0 2px 18px rgba(34,211,238,0.25);
   ${media.mobile} { font-size: 38px; letter-spacing: 0.14em; padding: 14px 8px; }
 `;
+// ─── 랜덤 힌트 목록 ────────────────────────────────────────────────────────────
+const HintList = styled.div`display: flex; flex-direction: column; gap: 8px;`;
+const HintRow = styled.div`
+  display: flex; align-items: flex-start; gap: 10px; padding: 13px 15px; border-radius: 12px;
+  background: ${SURFACE}; border: 1px solid ${BORDER};
+  ${media.mobile} { padding: 11px 12px; gap: 8px; }
+`;
+const HintNo = styled.div`
+  flex: 0 0 auto; width: 21px; height: 21px; border-radius: 50%; margin-top: 1px;
+  display: flex; align-items: center; justify-content: center;
+  font-size: 11.5px; font-weight: 800; color: #062430; background: ${ACCENT};
+`;
+const HintText = styled.div`
+  flex: 1; min-width: 0; font-size: 14.5px; font-weight: 600; line-height: 1.5; color: #e2e8f0;
+  word-break: keep-all;
+  ${media.mobile} { font-size: 13.5px; }
+`;
+
 // ─── 종족값 대결 스타일 ────────────────────────────────────────────────────────
 const DuelWrap = styled.div`
   position: relative; display: flex; gap: 10px; align-items: stretch;

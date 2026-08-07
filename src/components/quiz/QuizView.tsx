@@ -4,7 +4,7 @@
 import { useEffect, useMemo, useState } from 'react';
 import styled from 'styled-components';
 import { useNavigate } from 'react-router-dom';
-import { Ghost, Volume2, Search, Shapes, Swords, Hash, ScrollText, GraduationCap, Flame, Trophy, ChevronRight, Type, Languages, Combine } from 'lucide-react';
+import { Ghost, Volume2, Search, Shapes, Swords, Hash, ScrollText, GraduationCap, Flame, Trophy, ChevronRight, Type, Languages, Combine, Lightbulb, Shuffle, Sparkles, SpellCheck, Zap } from 'lucide-react';
 import { media } from '../../utils/responsive.utils';
 import { useTranslation } from '../../i18n';
 import { QuizKind, QuizMode, availableQuizKinds } from '../../types/quiz';
@@ -12,6 +12,8 @@ import { quizService } from '../../services/QuizService';
 import { databaseService } from '../../services/DatabaseService';
 import { authService } from '../../services/AuthService';
 import { QuizPlay } from './QuizPlay';
+import { SpeedQuizLobby } from './SpeedQuizLobby';
+import { SpeedQuizRoom } from './SpeedQuizRoom';
 
 const ICONS: Record<QuizKind, JSX.Element> = {
   silhouette: <Ghost size={20} />,
@@ -24,6 +26,11 @@ const ICONS: Record<QuizKind, JSX.Element> = {
   flavor: <ScrollText size={20} />,
   chosungEasy: <Type size={20} />,
   chosungHard: <Languages size={20} />,
+  hint: <Lightbulb size={20} />,
+  typeOdd: <Shuffle size={20} />,
+  special: <Sparkles size={20} />,
+  similarName: <SpellCheck size={20} />,
+  signature: <Zap size={20} />,
 };
 
 const ROUND_SIZES = [10, 30, 50];
@@ -35,19 +42,34 @@ export const QuizView = () => {
   const [roundSize, setRoundSize] = useState(30);
   const [rev, setRev] = useState(0);
   const [examRank, setExamRank] = useState<number | null>(null);
+  /** 속도전 화면 전환 — null=허브, 'lobby'=방 목록, 그 외=입장한 방 id. */
+  const [speedView, setSpeedView] = useState<string | null>(null);
+  const [speedRank, setSpeedRank] = useState<number | null>(null);
 
   const state = useMemo(() => quizService.getState(), [rev]);
+  const speedStats = useMemo(() => quizService.getSpeedStats(), [rev]);
   const kinds = useMemo(() => availableQuizKinds(language), [language]);
 
+  // [FREE-TIER] 허브에서 읽는 순위는 모의고사·속도전 2건뿐(각 최대 2 read, 10분 캐시).
+  //   종목별 주간 순위는 15종목 × 2 read라 여기서 미리 읽지 않고 랭킹 모달에서만 조회한다.
   useEffect(() => {
     let alive = true;
-    if (authService.isOfflineMode() || !authService.getCurrentUser()) { setExamRank(null); return; }
+    if (authService.isOfflineMode() || !authService.getCurrentUser()) {
+      setExamRank(null); setSpeedRank(null); return;
+    }
     databaseService.getMyQuizRank().then(r => { if (alive) setExamRank(r); }).catch(() => {});
+    databaseService.getMyQuizSpeedRank().then(r => { if (alive) setSpeedRank(r); }).catch(() => {});
     return () => { alive = false; };
   }, [rev]);
 
   if (play) {
     return <QuizPlay mode={play} roundSize={roundSize} onExit={() => { setPlay(null); setRev(r => r + 1); }} />;
+  }
+  if (speedView === 'lobby') {
+    return <SpeedQuizLobby onEnterRoom={id => setSpeedView(id)} onExit={() => setSpeedView(null)} />;
+  }
+  if (speedView) {
+    return <SpeedQuizRoom roomId={speedView} onExit={() => { setSpeedView(null); setRev(r => r + 1); }} />;
   }
 
   return (
@@ -84,6 +106,20 @@ export const QuizView = () => {
           </ExamMeta>
           <Chevron><ChevronRight size={18} /></Chevron>
         </ExamCard>
+
+        {/* 속도전(실시간 멀티) */}
+        <SpeedCard onClick={() => setSpeedView('lobby')}>
+          <SpeedIcon><Zap size={26} /></SpeedIcon>
+          <ExamInfo>
+            <ExamName>{t('quiz.speed.name')}</ExamName>
+            <ExamDesc>{t('quiz.speed.desc')}</ExamDesc>
+          </ExamInfo>
+          <ExamMeta>
+            <MetaChip><Trophy size={12} /> {t('quiz.speed.winCount', { n: speedStats.wins })}</MetaChip>
+            {speedRank !== null && <MetaChip>{t('quiz.hub.myRank', { rank: speedRank })}</MetaChip>}
+          </ExamMeta>
+          <Chevron><ChevronRight size={18} /></Chevron>
+        </SpeedCard>
 
         <SectionLabel>{t('quiz.hub.pickQuiz')}</SectionLabel>
         <Grid>
@@ -160,6 +196,11 @@ const ExamIcon = styled.div`
   background: rgba(245,196,81,0.12); color: ${GOLD};
   ${media.mobile} { width: 44px; height: 44px; }
 `;
+const SpeedCard = styled(ExamCard)`
+  border-color: rgba(34,211,238,0.28);
+  &:hover { border-color: rgba(34,211,238,0.5); }
+`;
+const SpeedIcon = styled(ExamIcon)`background: rgba(34,211,238,0.12); color: ${ACCENT};`;
 const ExamInfo = styled.div`flex: 1; min-width: 0;`;
 const ExamName = styled.div`font-size: 18px; font-weight: 800; margin-bottom: 3px; ${media.mobile} { font-size: 16px; }`;
 const ExamDesc = styled.div`font-size: 12.5px; color: rgba(255,255,255,0.5); line-height: 1.4;`;

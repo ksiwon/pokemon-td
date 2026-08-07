@@ -13,11 +13,17 @@ export type QuizKind =
   | 'dexNumber'    // 도감번호
   | 'flavor'       // 도감설명
   | 'chosungEasy'  // 초성(유형 표시)
-  | 'chosungHard'; // 초성(유형 숨김)
+  | 'chosungHard'  // 초성(유형 숨김)
+  | 'hint'         // 랜덤 힌트: 힌트 3개 보고 이름
+  | 'typeOdd'      // 타입 오드원아웃: 4마리 중 타입 조합이 혼자 다른 하나
+  | 'special'      // 전설/환상/패러독스/울트라비스트 분류
+  | 'similarName'  // 헷갈리는 이름: 유사한 이름 4개 중 고르기
+  | 'signature';   // 전용기술: 그 기술을 배우는 유일한 포켓몬
 
 export const QUIZ_KINDS: QuizKind[] = [
   'silhouette', 'cry', 'zoom', 'type', 'typeHard', 'bstDuel', 'dexNumber', 'flavor',
   'chosungEasy', 'chosungHard',
+  'hint', 'typeOdd', 'special', 'similarName', 'signature',
 ];
 
 /**
@@ -37,6 +43,70 @@ export const availableQuizKinds = (language: string): QuizKind[] =>
 /** 퀴즈 진행 모드: 개별 종목 또는 수능 모의고사(전 종목 혼합). */
 export type QuizMode = QuizKind | 'exam';
 
+// ─── 랭킹 보드 ────────────────────────────────────────────────────────────────
+/** 주간 랭킹 보드 키 — 종목 15개 + 모의고사 + 속도 퀴즈. 시즌 문서 `scores` 맵의 키. */
+export type QuizBoardKey = QuizKind | 'exam' | 'speed';
+export const QUIZ_BOARD_KEYS: QuizBoardKey[] = [...QUIZ_KINDS, 'exam', 'speed'];
+
+/** 해당 언어에서 주간 랭킹을 보여줄 보드(초성은 한국어에서만 출제되므로 동일 규칙). */
+export const availableBoardKeys = (language: string): QuizBoardKey[] =>
+  language === 'ko'
+    ? QUIZ_BOARD_KEYS
+    : QUIZ_BOARD_KEYS.filter(k => !KO_ONLY_QUIZ_KINDS.includes(k as QuizKind));
+
+// ─── 속도 퀴즈(실시간 멀티) ───────────────────────────────────────────────────
+/**
+ * 속도 퀴즈 출제 종목 — 전부 '포켓몬 이름'이 정답인 주관식.
+ * 객관식을 섞지 않는 이유: 보기 4개를 찍어도 0.3초에 눌리므로 속도 경쟁이 운으로 흐른다.
+ */
+export type SpeedQuizKind = 'silhouette' | 'cry' | 'zoom' | 'flavor' | 'hint' | 'chosung';
+export const SPEED_QUIZ_KINDS: SpeedQuizKind[] =
+  ['silhouette', 'cry', 'zoom', 'flavor', 'hint', 'chosung'];
+
+/**
+ * 방 언어에서 고를 수 있는 종목.
+ * 초성은 한글 음절에서만 만들어진다 — 영어 방에서 출제하면 초성열 자리에 이름이 그대로
+ * 나와 정답이 보인다(솔로 퀴즈의 KO_ONLY_QUIZ_KINDS와 같은 이유).
+ */
+export const speedKindsForLang = (lang: string): SpeedQuizKind[] =>
+  lang === 'ko' ? SPEED_QUIZ_KINDS : SPEED_QUIZ_KINDS.filter(k => k !== 'chosung');
+
+/**
+ * RTDB로 전원에게 뿌리는 문제 페이로드.
+ * **정답(accept)과 정답 공개 정보(reveal)는 절대 포함하지 않는다** — 방 데이터는 모든 참가자가
+ * 읽을 수 있어서, 여기에 정답을 넣으면 콘솔에서 그대로 보인다. 채점은 호스트만 한다.
+ */
+export interface SpeedRoundPayload {
+  kind: SpeedQuizKind;
+  imageUrl?: string;
+  audioUrl?: string;
+  silhouette?: boolean;
+  zoom?: { x: number; y: number };
+  /** 도감설명 지문(이름 마스킹 완료, 호스트 언어). flavor 전용. */
+  text?: string;
+  /** 힌트 줄(호스트 언어). hint 전용. */
+  hintLines?: string[];
+  /** 크게 강조할 텍스트(초성열). chosung 전용. */
+  bigText?: string;
+  /** 초성 문제의 갈래(pokemon/move/ability/item). 각 클라이언트가 키로 번역한다. */
+  chosungCat?: string;
+}
+
+/** 정답 공개 시점에 호스트가 추가로 뿌리는 정보. */
+export interface SpeedRevealPayload {
+  title: string;
+  subtitle?: string;
+  imageUrl?: string;
+}
+
+/** 호스트가 만든 한 문제 — payload는 방송용, accept/reveal은 공개 전까지 호스트만 보관. */
+export interface SpeedRound {
+  payload: SpeedRoundPayload;
+  reveal: SpeedRevealPayload;
+  /** 인정 정답(한글명·영문명·영문 slug). 브로드캐스트 금지. */
+  accept: string[];
+}
+
 /** 보기 1개. 텍스트(라벨) 또는 이미지 버튼(종족값 대결). */
 export interface QuizOption {
   label?: string;
@@ -50,6 +120,8 @@ export interface QuizQuestion {
   prompt: string;
   /** 지문 아래 크게 강조 표시할 텍스트(초성 퀴즈의 초성열 등). 없으면 미표시. */
   bigText?: string;
+  /** 힌트 줄 목록(랜덤 힌트 퀴즈). 있으면 지문 아래 카드 리스트로 렌더. */
+  hintLines?: string[];
   /** 주관식 입력창 placeholder 커스텀(초성 카테고리별). 없으면 기본값 사용. */
   inputPlaceholder?: string;
   /** 대표 미디어. 이미지(실루엣/확대) 또는 오디오(울음소리). 종족값 대결은 없음. */
@@ -92,4 +164,13 @@ export interface QuizSaveState {
   bestStreak: number;
   /** 수령한 모의고사 마일스톤(점수 threshold 목록). 1회성 보상 중복 방지. */
   claimedExamMilestones?: number[];
+  /** 주간 랭킹용 — 이 기록이 속한 시즌(ISO 주차). 주가 바뀌면 weeklyBest를 통째로 비운다. */
+  weeklySeason?: string;
+  /**
+   * 이번 주 보드별 최고 기록. 서버에 이미 올린 값이기도 해서, 이보다 낮은 점수는
+   * Firestore 쓰기를 아예 건너뛴다([FREE-TIER] 불필요한 write 차단).
+   */
+  weeklyBest?: Partial<Record<QuizBoardKey, number>>;
+  /** 속도 퀴즈(멀티) 통산 전적. 랭킹은 1등 횟수(wins) 기준. */
+  speed?: { wins: number; games: number; bestScore: number };
 }

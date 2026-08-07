@@ -699,7 +699,10 @@
     "colWins": "Wins",
     "winsSuffix": "{n}W",
     "quotaNotice": "Server usage limit reached, so live rankings aren't available. Showing the last cached results; this recovers automatically in a few minutes.",
-    "seasonNote": "🗓 This week's season · resets in {n}d · weekly reset"
+    "seasonNote": "🗓 This week's season · resets in {n}d · weekly reset",
+    "quizSingle": "Solo",
+    "quizMulti": "Multi",
+    "quizWeekly": "Weekly"
   },
   "hallOfFame": {
     "title": " Hall of Fame",
@@ -765,6 +768,7 @@
     "kickConfirmNo": "Cancel",
     "kicked": "You have been kicked by the host.",
     "emptyHintCreate": "Try creating a room yourself",
+    "refresh": "Refresh room list",
     "playersCount": "{cur} / {max} players",
     "emptySlot": "— Waiting —"
   },
@@ -1300,14 +1304,91 @@
       "typeHard": { "name": "Type (Hard)", "desc": "Name a Pokémon matching the type exactly" },
       "dexNumber": { "name": "Dex Number", "desc": "Guess the National Dex no." },
       "chosungEasy": { "name": "Initials (Easy)", "desc": "Category shown · guess from Korean initials" },
-      "chosungHard": { "name": "Initials (Hard)", "desc": "No category · guess from initials only" }
+      "chosungHard": { "name": "Initials (Hard)", "desc": "No category · guess from initials only" },
+      "hint": { "name": "Random Hints", "desc": "Name it from 3 hints only" },
+      "typeOdd": { "name": "Type Odd One Out", "desc": "Spot the different type combo of 4" },
+      "special": { "name": "Legendary & Mythical", "desc": "Legendary / Mythical / Paradox / UB" },
+      "similarName": { "name": "Confusing Names", "desc": "Pick the real name out of 4 look-alikes" },
+      "signature": { "name": "Signature Move", "desc": "The only Pokémon that learns it" },
+      "chosung": { "name": "Initials", "desc": "Guess from Korean initials" }
     },
     "exam": {
       "name": "Mock Exam",
       "desc": "Expert-level mixed questions · graded"
     },
+    "speed": {
+      "name": "Speed Race (Multi)",
+      "desc": "Everyone answers at once — faster means more points",
+      "title": "Quiz Speed Race",
+      "winCount": "{n} wins",
+      "createTitle": "Create a room",
+      "createBtn": "Create room and wait",
+      "secondsLabel": "Time limit",
+      "secondsValue": "{n}s",
+      "scoreHint": "Score = time left (up to 100) + order bonus (1st 50 · 2nd 30 · 3rd 15). Answers are Pokémon names — Korean and English both count.",
+      "roomList": "Open rooms",
+      "noRooms": "No open rooms right now. Create one and others can join you.",
+      "hostRoom": "{name}'s room",
+      "refresh": "Refresh",
+      "loginRequired": "Speed Race is played live against other people, so it needs you to be signed in. Solo quizzes and the mock exam work offline.",
+      "waitingRoom": "Waiting room",
+      "waitingTitle": "Waiting for players",
+      "waitHost": "Waiting for {name} to start...",
+      "startBtn": "Start",
+      "needPlayers": "Needs at least 2 players",
+      "hostTag": "HOST",
+      "leave": "Leave",
+      "answered": "Answer submitted — waiting for the result",
+      "gotIt": "Correct! #{order} · +{n} pts",
+      "finalTitle": "Final results",
+      "winner": "{name} wins!",
+      "roomClosed": "This room has closed.",
+      "full": "FULL",
+      "roomsBusy": "All {n} rooms are in use right now. Join one when a seat opens, or refresh shortly.",
+      "langLabel": "Room language",
+      "langPick": "Pick the room language first — available quiz types depend on it.",
+      "passLabel": "Password (optional)",
+      "passPlaceholder": "Leave empty for an open room",
+      "passPrompt": "{name}'s room needs a password",
+      "passEnter": "Join",
+      "lockedRoom": "Password-protected",
+      "errWrongPass": "That password doesn't match.",
+      "kindsLabel": "Quiz types",
+      "kindsAll": "All types",
+      "langNotice": "Questions are generated in the language you pick. Dex entries and hints are not translated.",
+      "lang": {
+        "ko": "한국어",
+        "en": "English"
+      },
+      "roomsBusyBtn": "All rooms in use",
+      "serverBusy": "The server is busy and we couldn't connect to the room. Please try again shortly.",
+      "errRoomLimit": "All rooms are in use right now. Try again shortly or join an open room.",
+      "errRoomFull": "That room is full.",
+      "errRoomGone": "That room no longer exists.",
+      "errStarted": "That room has already started.",
+      "errLoad": "Couldn't load the room list. Please try again shortly."
+    },
     "chosung": {
       "cat": { "pokemon": "Pokémon", "move": "Move", "ability": "Ability", "item": "Item" }
+    },
+    "hint": {
+      "type": "Its type is {types}",
+      "gen": "A Generation {n} Pokémon",
+      "bst": "Base stat total is {n}",
+      "topStat": "Its highest stat is {stat} {n}",
+      "size": "Height {h}m · Weight {w}kg",
+      "genus": "Classified as the「{genus}」",
+      "ability": "One of its abilities is「{name}」",
+      "flavor": "Dex entry: {text}"
+    },
+    "special": {
+      "cat": {
+        "legendary": "Legendary Pokémon",
+        "mythical": "Mythical Pokémon",
+        "paradox": "Paradox Pokémon",
+        "ultraBeast": "Ultra Beast",
+        "normal": "Ordinary Pokémon"
+      }
     },
     "bst": {
       "stat": { "hp": "HP", "attack": "Attack", "defense": "Defense", "specialAttack": "Sp. Atk", "specialDefense": "Sp. Def", "speed": "Speed" }
@@ -1343,7 +1424,15 @@
       "bstDuelStatPrompt": "Which has higher {stat}? · Is the right one higher than the left?",
       "duelMore": "Higher",
       "duelLess": "Lower",
-      "duelReveal": "{ln} {lv}  vs  {rn} {rv}"
+      "duelReveal": "{ln} {lv}  vs  {rn} {rv}",
+      "hintPrompt": "Three hints — which Pokémon is it?",
+      "typeOddPrompt": "Which Pokémon has a different type combo?",
+      "typeOddRevealSub": "Alone as {odd} · the other three are {common}",
+      "specialPrompt": "How is「{name}」classified?",
+      "similarNamePrompt": "What is this Pokémon actually called?",
+      "signaturePrompt": "Which Pokémon learns「{move}」?",
+      "signatureRevealSub": "Signature move「{move}」",
+      "flavorPrompt": "Which Pokémon does this entry describe?"
     },
     "result": {
       "title": "Results",

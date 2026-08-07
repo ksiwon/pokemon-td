@@ -23,7 +23,7 @@
 // ── FREE-TIER 최적화 ──
 // [FREE-1] constructor에서 startAutoCleanup() 제거 — 모든 유저가 앱 로드 시
 //          RTDB를 읽던 문제 해결. 멀티플레이어 진입 시에만 호출.
-// [FREE-2] MAX_ACTIVE_ROOMS(12) 제한 — 동시 연결 96개 이하 유지 (여유 4개)
+// [FREE-2] MAX_ACTIVE_ROOMS 제한 — 동시 연결 한도 보호. 값은 config/rtdbBudget.ts가 단독 관리
 // [FREE-3] initRtdbListeners() 지연 초기화 — 싱글플레이어는 RTDB 연결 0개
 // [BUG-C3] finalizeGame: 마지막 생존자(우승자)에게 placement:1 설정 — ELO 계산 오류 수정
 //   - AIPlayer가 fbSet을 직접 호출하던 것을 일원화
@@ -37,6 +37,7 @@ import {
   rtdb, serverNow, getServerTimeOffset, registerPresence,
   initRtdbListeners, releaseRtdbConnection,
 } from '../config/firebase';
+import { TD_MAX_ACTIVE_ROOMS } from '../config/rtdbBudget';
 import {
   Room, RoomPlayer, PlayerGameState, AIDifficulty, TowerDetail,
   GamePhase, MultiplayerGameState, RoundMatchup, PvPBattleResult,
@@ -56,8 +57,10 @@ const ROOM_EXPIRY_TIME = 3 * 60 * 60 * 1000;       // 3시간
 const FINISHED_GAME_TTL = 5 * 60 * 1000;           // [V5] 종료된 게임 정리까지 5분 대기
 const CLEANUP_INTERVAL = 10 * 60 * 1000;           // 10분 간격
 
-// [FREE-2] 무료 플랜 동시 연결 100개 보호: 방 8명 * 12방 = 96연결 + 여유 4
-const MAX_ACTIVE_ROOMS = 12;
+// [FREE-2] 무료 플랜 동시 연결 100개 보호. 예산은 rtdbBudget에서 단독 관리한다 —
+//   퀴즈 속도전이 같은 100개를 나눠 쓰므로 여기서 독자적으로 정하면 합계가 한도를 넘는다.
+//   (12방 → 4방으로 축소 = 32연결. 남은 몫 64연결이 퀴즈 속도전 8방 × 8명)
+const MAX_ACTIVE_ROOMS = TD_MAX_ACTIVE_ROOMS;
 
 /**
  * 사용자에게 보여줄 오류의 코드. 서비스 계층은 언어를 모르므로 문장 대신 이 코드를 던지고,
@@ -120,6 +123,52 @@ class MultiplayerService {
   }
 
   /**
+   * [FREE-TIER] TD 멀티가 아닌 기능(퀴즈 속도전 등)이 RTDB 연결 슬롯을 빌릴 때.
+   * firebase.ts 주석대로 "언제 반납할지"는 이 서비스가 단독으로 판단해야 하므로,
+   * 다른 서비스가 releaseRtdbConnection()을 직접 부르지 않고 이 참조 카운트에 합류한다.
+   * (두 곳에서 각자 세면 한쪽이 살아 있는데 소켓을 끊어 버린다.)
+   * TD 전용 정리 타이머(startAutoCleanup)는 켜지 않는다 — 퀴즈 유저가 TD 방 목록을 읽을 이유가 없다.
+   */
+  acquireRtdb(): void {
+    this._multiplayerRefs++;
+    initRtdbListeners();
+  }
+
+  /** acquireRtdb()와 짝. 마지막 참조가 빠지고 방에도 없으면 슬롯을 반납한다. */
+  releaseRtdb(): void {
+    if (this._multiplayerRefs > 0) this._multiplayerRefs--;
+    this.maybeReleaseConnection();
+  }
+
+  /**
+   * RTDB가 필요한 **한 번의 작업**만 연결을 잡고 끝나면 반납한다.
+   * 로비(방 목록 조회·방 만들기·입장)처럼 "화면에 머무는 내내"가 아니라 "그 순간만" 필요한
+   * 경우에 쓴다 — 무료 플랜의 동시 연결 100개는 **실제로 게임 중인 사람**에게 남겨야 한다.
+   *
+   * 방에 들어가는 작업(createRoom/joinRoom)에 써도 안전하다: 그 함수들이 반환 전에
+   * currentRoomId를 세팅하므로 아래 busy 검사가 반납을 막는다. 만약 여기서 끊겨 버리면
+   * onDisconnect 훅이 서버에서 발동해 **방금 들어간 자기 자리가 즉시 삭제된다.**
+   */
+  async withRtdb<T>(fn: () => Promise<T>): Promise<T> {
+    this.acquireRtdb();
+    try {
+      return await fn();
+    } finally {
+      this.releaseRtdb();
+    }
+  }
+
+  /**
+   * "지금 연결을 끊으면 안 된다"고 말할 수 있는 외부 판정자.
+   * TD 방 여부는 이 서비스가 알지만 퀴즈 속도전 방은 모른다. 반납 판단은 한 곳에서만
+   * 해야 하므로(firebase.ts 주석) 다른 서비스가 자기 상태를 여기에 등록한다.
+   */
+  private rtdbBusyProbes: Array<() => boolean> = [];
+  registerRtdbBusyProbe(probe: () => boolean): void {
+    this.rtdbBusyProbes.push(probe);
+  }
+
+  /**
    * 참조가 0이고 방에도 속해 있지 않을 때만 실제로 연결을 반납한다.
    * 방에 남아 있는데 끊으면 presence/게임 상태 동기화가 죽으므로, 방을 나가는
    * 시점(clearCurrentRoom)에 한 번 더 시도한다. releaseRtdbConnection은 멱등.
@@ -127,6 +176,8 @@ class MultiplayerService {
   private maybeReleaseConnection(): void {
     if (this._multiplayerRefs > 0) return;
     if (this.getCurrentRoomId()) return;
+    // 퀴즈 속도전 방 등 다른 기능이 방에 들어가 있으면 끊지 않는다.
+    if (this.rtdbBusyProbes.some(p => { try { return p(); } catch { return false; } })) return;
     this.stopAutoCleanup();
     releaseRtdbConnection();
   }
@@ -342,7 +393,7 @@ class MultiplayerService {
     const user = authService.getCurrentUser();
     if (!user) throw new Error('Not authenticated');
 
-    // [FREE-2] 활성 방 수가 MAX_ACTIVE_ROOMS(12) 이상이면 생성 거부
+    // [FREE-2] 활성 방 수가 MAX_ACTIVE_ROOMS 이상이면 생성 거부
     // 동시 연결 100개 한도 보호: 12방 * 8명 = 96연결
     // [FREE-TIER] 전체 트리 대신 만료 전(3시간 이내) 방만 서버측 쿼리로 수신
     const existingRoomsSnap = await get(query(
@@ -1428,24 +1479,44 @@ class MultiplayerService {
   }
 
   // ─── 구독 메서드들 ─────────────────────────────────────────────
-  // [FREE-TIER] 로비 목록은 status==='waiting' 방만 서버측 쿼리로 구독.
-  //   playing/finished 방의 게임 중 변경사항이 로비 대기자 전원에게
-  //   전파되던 다운로드 낭비 제거. (rooms .indexOn 전제)
+  /**
+   * 대기 중인 방 목록 **1회 조회**. status==='waiting' 방만 서버측 쿼리로 가져온다
+   * (playing/finished 방의 변경이 로비로 흘러오던 다운로드 낭비 제거. `rooms .indexOn` 전제)
+   *
+   * [FREE-TIER] 예전엔 `onValue` 실시간 구독이었다. 그러면 **방 목록만 구경하는 사람도**
+   * 화면에 머무는 내내 동시 연결 슬롯을 하나씩 물고 있어서, 무료 100개가 정작 게임 중인
+   * 사람에게 안 돌아갔다. 목록은 갱신이 몇 초 늦어도 무해하므로 단발 조회 + 수동 새로고침으로 바꿨다.
+   */
+  async fetchWaitingRooms(): Promise<Room[]> {
+    const waitingQuery = query(ref(rtdb, 'rooms'), orderByChild('status'), equalTo('waiting'));
+    const snapshot = await get(waitingQuery);
+    if (!snapshot.exists()) return [];
+    const rooms: Room[] = [];
+    const now = Date.now();
+    snapshot.forEach((child) => {
+      const room = child.val() as Room;
+      if (now - room.createdAt <= ROOM_EXPIRY_TIME) rooms.push(room);
+    });
+    return rooms;
+  }
+
+  /**
+   * 대기 방 목록 실시간 구독.
+   * **앱 로비는 더 이상 쓰지 않는다**(fetchWaitingRooms 단발 조회로 대체 — 위 주석 참고).
+   * 2인 프로토콜 하네스(`sim/multi2/`)가 "로비에 앉아 있는 클라이언트"를 재현하는 데 쓰므로 남겨 둔다.
+   */
   onRoomsUpdate(callback: (rooms: Room[]) => void): () => void {
     const waitingQuery = query(ref(rtdb, 'rooms'), orderByChild('status'), equalTo('waiting'));
-    const unsubscribe = onValue(waitingQuery, (snapshot) => {
+    return onValue(waitingQuery, (snapshot) => {
       if (!snapshot.exists()) { callback([]); return; }
       const rooms: Room[] = [];
       const now = Date.now();
       snapshot.forEach((child) => {
         const room = child.val() as Room;
-        if (now - room.createdAt <= ROOM_EXPIRY_TIME) {
-          rooms.push(room);
-        }
+        if (now - room.createdAt <= ROOM_EXPIRY_TIME) rooms.push(room);
       });
       callback(rooms);
     });
-    return unsubscribe;
   }
 
   onRoomUpdate(roomId: string, callback: (room: Room | null) => void): () => void {

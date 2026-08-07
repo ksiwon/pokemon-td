@@ -37,6 +37,9 @@ export const MultiplayerLobby = ({ onBack, onStartGame }: MultiplayerLobbyProps)
   const [currentRoom, setCurrentRoom] = useState<Room | null>(null);
   const [isCheckingRejoin, setIsCheckingRejoin] = useState(true);
   const [rejoinableRoom, setRejoinableRoom] = useState<Room | null>(null);
+  /** 방 목록 단발 조회 트리거(새로고침 버튼·입장 실패 시 증가). */
+  const [roomsRefreshTick, setRoomsRefreshTick] = useState(0);
+  const [roomsLoading, setRoomsLoading] = useState(false);
   const [leaveConfirmOpen, setLeaveConfirmOpen] = useState(false);
   const [kickConfirm, setKickConfirm] = useState<{ open: boolean; player: import('../../types/multiplayer').RoomPlayer | null }>({ open: false, player: null });
   const startingRef = useRef(false);
@@ -59,15 +62,16 @@ export const MultiplayerLobby = ({ onBack, onStartGame }: MultiplayerLobbyProps)
   useEffect(() => {
     // [FREE-TIER] 오프라인 모드면 RTDB 연결/구독을 시작하지 않음
     if (authService.isOfflineMode()) { setIsCheckingRejoin(false); return; }
-    // [FREE-3] 멀티플레이어 로비 진입 시 RTDB lazy 초기화 + 방 정리 시작
-    // 싱글플레이어 유저는 RTDB에 연결되지 않아 무료 플랜 100연결 한도를 보존함
-    multiplayerService.initForMultiplayer();
 
+    // [FREE-TIER] 재접속 확인은 '그 순간만' 연결하면 된다 → withRtdb로 잡았다 반납.
+    //   방 목록만 구경하는 사람이 동시 연결 슬롯을 물고 있지 않게 하는 게 핵심.
     const checkRejoin = async () => {
       const savedRoomId = multiplayerService.getCurrentRoomId();
       if (savedRoomId) {
         try {
-          const { room, canRejoin } = await multiplayerService.rejoinRoom(savedRoomId);
+          const { room, canRejoin } = await multiplayerService.withRtdb(
+            () => multiplayerService.rejoinRoom(savedRoomId)
+          );
           if (canRejoin && room) setRejoinableRoom(room);
           else multiplayerService.clearCurrentRoom();
         } catch { multiplayerService.clearCurrentRoom(); }
@@ -75,18 +79,27 @@ export const MultiplayerLobby = ({ onBack, onStartGame }: MultiplayerLobbyProps)
       setIsCheckingRejoin(false);
     };
     checkRejoin();
-
-    // [FREE-TIER] 로비를 떠나면 RTDB 동시 연결 슬롯을 반납한다.
-    //   (방에 들어가 있으면 게임 화면이 참조를 잡고 있으므로 실제로 끊기지 않음)
-    return () => { multiplayerService.teardownMultiplayer(); };
   }, []);
 
+  // [FREE-TIER] 방 목록은 실시간 구독이 아니라 **단발 조회**다(새로고침 버튼으로 갱신).
+  //   예전엔 onValue 구독이라 목록만 보는 사람도 연결을 계속 물고 있었다.
   useEffect(() => {
-    if (!isCheckingRejoin && !rejoinableRoom) {
-      const unsubscribe = multiplayerService.onRoomsUpdate(setRooms);
-      return unsubscribe;
-    }
-  }, [isCheckingRejoin, rejoinableRoom]);
+    if (authService.isOfflineMode() || isCheckingRejoin || rejoinableRoom || view !== 'list') return;
+    let alive = true;
+    setRoomsLoading(true);
+    multiplayerService.withRtdb(() => multiplayerService.fetchWaitingRooms())
+      .then(r => { if (alive) setRooms(r); })
+      .catch(() => { if (alive) setRooms([]); })
+      .finally(() => { if (alive) setRoomsLoading(false); });
+    return () => { alive = false; };
+  }, [isCheckingRejoin, rejoinableRoom, view, roomsRefreshTick]);
+
+  // 방 안에 있는 동안에만 연결을 유지한다 — 여기가 '실제 플레이어'다.
+  useEffect(() => {
+    if (authService.isOfflineMode() || view !== 'room') return;
+    multiplayerService.initForMultiplayer();
+    return () => { multiplayerService.teardownMultiplayer(); };
+  }, [view]);
 
   useEffect(() => {
     const roomId = multiplayerService.getCurrentRoomId();
@@ -117,22 +130,28 @@ export const MultiplayerLobby = ({ onBack, onStartGame }: MultiplayerLobbyProps)
     }
   }, [view, onStartGame]);
 
+  // 방을 만들거나 들어가는 순간엔 연결이 필요하다. withRtdb로 잡되, 성공하면 currentRoomId가
+  // 세팅돼 있어 반납이 무시되므로(=방에 들어간 사람) 연결이 그대로 방 화면으로 이어진다.
   const handleCreateRoom = async () => {
     try {
       const selectedMapData = MAPS.find(m => m.id === selectedMap);
       if (!selectedMapData) throw new Error('Invalid map');
-      const roomId = await multiplayerService.createRoom(selectedMap, selectedMapData.name);
-      const room = await multiplayerService.rejoinRoom(roomId);
+      const room = await multiplayerService.withRtdb(async () => {
+        const roomId = await multiplayerService.createRoom(selectedMap, selectedMapData.name);
+        return multiplayerService.rejoinRoom(roomId);
+      });
       setCurrentRoom(room.room); setView('room');
-    } catch (err: any) { showToast(errText(err)); }
+    } catch (err: any) { showToast(errText(err)); setRoomsRefreshTick(n => n + 1); }
   };
 
   const handleJoinRoom = async (roomId: string) => {
     try {
-      await multiplayerService.joinRoom(roomId);
-      const room = await multiplayerService.rejoinRoom(roomId);
+      const room = await multiplayerService.withRtdb(async () => {
+        await multiplayerService.joinRoom(roomId);
+        return multiplayerService.rejoinRoom(roomId);
+      });
       setCurrentRoom(room.room); setView('room');
-    } catch (err: any) { showToast(errText(err)); }
+    } catch (err: any) { showToast(errText(err)); setRoomsRefreshTick(n => n + 1); }
   };
 
   const handleLeaveRoomConfirmed = async () => {
@@ -183,7 +202,7 @@ export const MultiplayerLobby = ({ onBack, onStartGame }: MultiplayerLobbyProps)
 
   const handleAbandon = async () => {
     if (!rejoinableRoom) return;
-    try { await multiplayerService.leaveRoom(rejoinableRoom.id); }
+    try { await multiplayerService.withRtdb(() => multiplayerService.leaveRoom(rejoinableRoom.id)); }
     catch { multiplayerService.clearCurrentRoom(); }
     setRejoinableRoom(null); setView('list');
   };
@@ -223,6 +242,15 @@ export const MultiplayerLobby = ({ onBack, onStartGame }: MultiplayerLobbyProps)
             <ActionBtn onClick={() => setShowAchievements(true)}><Emoji glyph="🏅" size={16} /></ActionBtn>
             <ActionBtn onClick={() => setShowHallOfFame(true)}><Emoji glyph="🏆" size={16} /></ActionBtn>
             <ActionBtn onClick={() => setShowRankings(true)}><Emoji glyph="📊" size={16} /></ActionBtn>
+            {/* 목록이 단발 조회로 바뀌어(연결 절약) 새로고침 버튼이 갱신 수단이다.
+                ActionBtn은 모바일에서 숨겨지므로 전용 버튼을 쓴다 — 갱신 수단이 사라지면 안 된다. */}
+            <RefreshBtn
+              onClick={() => setRoomsRefreshTick(n => n + 1)}
+              disabled={roomsLoading}
+              title={t('lobby.refresh')}
+            >
+              <Emoji glyph="🔄" size={16} />
+            </RefreshBtn>
             <CreateRoomBtn onClick={() => setView('create')}>+ {t('lobby.createRoom')}</CreateRoomBtn>
           </HeaderActions>
         </PageHeader>
@@ -545,6 +573,19 @@ const ActionBtn = styled.button`
   display:flex; align-items:center; justify-content:center;
   &:hover { background:rgba(255,255,255,0.1); }
   ${media.mobile} { display:none; }
+`;
+
+// 방 목록 새로고침 — ActionBtn과 달리 모바일에서도 보여야 한다(실시간 구독을 없앤 대가).
+const RefreshBtn = styled.button`
+  width:36px; height:36px; background:rgba(255,255,255,0.05);
+  border:1px solid rgba(255,255,255,0.08); border-radius:8px;
+  font-size:16px; cursor:pointer; transition:all 0.2s;
+  display:flex; align-items:center; justify-content:center; flex:0 0 auto;
+  &:hover:not(:disabled) { background:rgba(255,255,255,0.1); }
+  &:disabled { opacity:0.4; cursor:default; }
+  /* 실시간 구독을 걷어낸 뒤로 방 목록을 갱신하는 유일한 수단이라 손가락으로 확실히
+     눌려야 한다 — 모바일에서 줄이지 않고 오히려 키운다(권장 터치 영역 40px 이상). */
+  ${media.mobile} { width:40px; height:40px; }
 `;
 
 const CreateRoomBtn = styled.button`

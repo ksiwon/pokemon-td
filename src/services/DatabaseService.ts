@@ -57,6 +57,29 @@ export interface QuizRankingEntry {
   updatedAt: number;
 }
 
+// ─── 퀴즈 주간 랭킹 엔트리 (seasons/{주차}/quizRankings/{uid}) ─────────────────
+// 보드(종목)마다 문서를 따로 만들지 않고 **유저당 주 1문서**에 scores 맵으로 모은다.
+//   - write: 종목을 여러 개 해도 같은 문서에 merge → 문서 수가 유저 수만큼만 늘어난다
+//   - read : orderBy('scores.<보드>')는 Firestore **자동 단일 필드 색인**으로 처리돼
+//            복합 색인(firestore.indexes.json) 추가가 필요 없다
+export interface QuizWeeklyEntry {
+  userId: string;
+  userName: string | null;
+  /** 보드키(QuizBoardKey) → 이번 주 최고 점수. 플레이한 종목만 존재한다. */
+  scores: Record<string, number>;
+  updatedAt: number;
+}
+
+// ─── 퀴즈 속도전(멀티) 통산 랭킹 엔트리 ────────────────────────────────────────
+export interface QuizSpeedRankingEntry {
+  userId: string;
+  userName: string | null;
+  wins: number;      // 1등으로 끝낸 판 수 (정렬 기준)
+  games: number;     // 참가한 판 수
+  bestScore: number; // 한 판 최고 점수
+  updatedAt: number;
+}
+
 // ─── 미니 포켓 랜덤 대전 주간 승수 랭킹 엔트리 ─────────────────────────────────
 export interface PvpSeasonRankingEntry {
   userId: string;
@@ -939,6 +962,148 @@ class DatabaseService {
     }
   }
 
+  // ─── 퀴즈 주간 랭킹 (종목별, seasons/{주차}/quizRankings/{uid}) ─────────────
+  /**
+   * 이번 주 보드 최고 기록 갱신. 호출부(QuizService.recordWeekly)가 **경신했을 때만** 부른다.
+   * merge:true — 다른 종목의 점수를 지우지 않고 해당 키만 덮어쓴다.
+   */
+  async updateQuizWeekly(boardKey: string, score: number): Promise<void> {
+    const user = authService.getCurrentUser();
+    if (!user || !this.canWrite()) return;
+
+    const season = seasonId();
+    const value = `${season}:${boardKey}:${score}`;
+    if (this.alreadySynced('quizWeekly', value)) return;
+
+    try {
+      await setDoc(
+        doc(db, 'seasons', season, 'quizRankings', user.uid),
+        {
+          userId: user.uid,
+          userName: user.displayName,
+          scores: { [boardKey]: score },
+          updatedAt: Date.now(),
+        },
+        { merge: true },
+      );
+      this.markSynced('quizWeekly', value);
+      this.invalidateCache(`quizWeekly:${season}:${boardKey}`, 'myRank:');
+      this.cleanupMyOldSeasonEntries();
+    } catch (err) {
+      quotaGuard.report(err);
+      console.warn('[DB] updateQuizWeekly failed:', err);
+    }
+  }
+
+  /** 이번 주 특정 보드 Top N. [FREE-TIER] 보드가 17개라 fetch 상한을 30으로 낮춘다. */
+  async getQuizWeeklyRanking(boardKey: string, limitCount = 30): Promise<QuizWeeklyEntry[]> {
+    const season = seasonId();
+    try {
+      return await this.cachedRead(`quizWeekly:${season}:${boardKey}:${limitCount}`, async () => {
+        const q = query(
+          collection(db, 'seasons', season, 'quizRankings'),
+          orderBy(`scores.${boardKey}`, 'desc'),
+          limit(limitCount)
+        );
+        const snapshot = await getDocs(q);
+        return snapshot.docs.map(d => d.data() as QuizWeeklyEntry);
+      });
+    } catch {
+      return [];
+    }
+  }
+
+  /** 이번 주 특정 보드에서 내 순위. 점수가 없으면 null(미참가). */
+  async getMyQuizWeeklyRank(boardKey: string): Promise<number | null> {
+    const user = authService.getCurrentUser();
+    if (!user) return null;
+    const season = seasonId();
+    const cacheKey = this.myRankKey(`quizWeekly:${season}:${boardKey}`);
+    if (!cacheKey) return null;
+    try {
+      return await this.cachedRead(cacheKey, async () => {
+        const myDoc = await getDoc(doc(db, 'seasons', season, 'quizRankings', user.uid));
+        if (!myDoc.exists()) return null;
+        const myValue = (myDoc.data() as QuizWeeklyEntry).scores?.[boardKey];
+        if (typeof myValue !== 'number') return null;
+        const q = query(
+          collection(db, 'seasons', season, 'quizRankings'),
+          where(`scores.${boardKey}`, '>', myValue),
+          limit(RANK_SCAN_LIMIT)
+        );
+        return this.countPlusOne(q); // 집계 카운트(1 read)
+      });
+    } catch {
+      return null;
+    }
+  }
+
+  // ─── 퀴즈 속도전(멀티) 통산 랭킹 ───────────────────────────────────────────
+  /** 속도전 통산 전적 업로드. 판이 끝날 때 1 write(승수는 단조 증가라 overwrite). */
+  async updateQuizSpeedRanking(stats: { wins: number; games: number; bestScore: number }): Promise<void> {
+    const user = authService.getCurrentUser();
+    if (!user || !this.canWrite()) return;
+    const value = `${stats.wins}:${stats.games}:${stats.bestScore}`;
+    if (this.alreadySynced('quizSpeed', value)) return;
+
+    const entry: QuizSpeedRankingEntry = {
+      userId: user.uid,
+      userName: user.displayName,
+      wins: stats.wins,
+      games: stats.games,
+      bestScore: stats.bestScore,
+      updatedAt: Date.now(),
+    };
+    try {
+      await setDoc(doc(db, 'quizSpeedRankings', user.uid), entry);
+      this.markSynced('quizSpeed', value);
+      this.invalidateCache('quizSpeedRanking:', 'myRank:');
+    } catch (err) {
+      quotaGuard.report(err);
+      console.warn('[DB] updateQuizSpeedRanking failed:', err);
+    }
+  }
+
+  /** 속도전 통산 승수 랭킹 Top N. */
+  async getQuizSpeedRanking(limitCount = RANKING_FETCH_LIMIT): Promise<QuizSpeedRankingEntry[]> {
+    try {
+      return await this.cachedRead(`quizSpeedRanking:${limitCount}`, async () => {
+        const q = query(
+          collection(db, 'quizSpeedRankings'),
+          orderBy('wins', 'desc'),
+          limit(limitCount)
+        );
+        const snapshot = await getDocs(q);
+        return snapshot.docs.map(d => d.data() as QuizSpeedRankingEntry);
+      });
+    } catch {
+      return [];
+    }
+  }
+
+  /** 내 속도전 통산 순위 (나보다 승수 많은 사람 수 + 1). */
+  async getMyQuizSpeedRank(): Promise<number | null> {
+    const user = authService.getCurrentUser();
+    if (!user) return null;
+    const cacheKey = this.myRankKey('quizSpeed');
+    if (!cacheKey) return null;
+    try {
+      return await this.cachedRead(cacheKey, async () => {
+        const myDoc = await getDoc(doc(db, 'quizSpeedRankings', user.uid));
+        if (!myDoc.exists()) return null;
+        const myValue = (myDoc.data() as QuizSpeedRankingEntry).wins;
+        const q = query(
+          collection(db, 'quizSpeedRankings'),
+          where('wins', '>', myValue),
+          limit(RANK_SCAN_LIMIT)
+        );
+        return this.countPlusOne(q);
+      });
+    } catch {
+      return null;
+    }
+  }
+
   // ─── 미니 포켓 주간 시즌 공통: 구세즌 내 문서 lazy cleanup ────────────────
   // 주차가 바뀌면 새 경로에 쓰므로 지난 주 문서는 영영 남는다(누적). 각 유저가
   // 시즌 쓰기 시점에 자신의 최근 4주 치 옛 문서를 지워 자연 수렴시킨다.
@@ -966,6 +1131,7 @@ class DatabaseService {
       const oldSeason = seasonId(new Date(Date.now() - WEEK_MS * i));
       deleteDoc(doc(db, 'seasons', oldSeason, 'cardRankings', user.uid)).catch(() => {});
       deleteDoc(doc(db, 'seasons', oldSeason, 'pvpRankings', user.uid)).catch(() => {});
+      deleteDoc(doc(db, 'seasons', oldSeason, 'quizRankings', user.uid)).catch(() => {});
     }
     try { localStorage.setItem(DatabaseService.OLD_SEASON_CLEANUP_LS_KEY, thisWeek); } catch { /* ignore */ }
   }

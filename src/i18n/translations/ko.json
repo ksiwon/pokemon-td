@@ -688,7 +688,10 @@
     "colWins": "승수",
     "winsSuffix": "{n}승",
     "quotaNotice": "지금은 서버 사용량 한도에 걸려 최신 랭킹을 불러올 수 없습니다. 마지막으로 받아둔 기록을 보여주는 중이며, 잠시 후 자동으로 복구됩니다.",
-    "seasonNote": "🗓 이번 주 시즌 · 리셋까지 {n}일 · 매주 초기화"
+    "seasonNote": "🗓 이번 주 시즌 · 리셋까지 {n}일 · 매주 초기화",
+    "quizSingle": "싱글",
+    "quizMulti": "멀티",
+    "quizWeekly": "주간 랭킹"
   },
   "hallOfFame": {
     "title": " 전당등록",
@@ -797,6 +800,7 @@
     "kickConfirmNo": "취소",
     "kicked": "방장에 의해 강퇴되었습니다.",
     "emptyHintCreate": "방을 직접 만들어보세요",
+    "refresh": "방 목록 새로고침",
     "playersCount": "{cur} / {max} 플레이어",
     "emptySlot": "— 대기 중 —"
   },
@@ -1300,14 +1304,91 @@
       "typeHard": { "name": "타입 (어려움)", "desc": "제시 타입과 정확히 일치하는 포켓몬 입력" },
       "dexNumber": { "name": "도감번호", "desc": "전국도감 번호 맞히기" },
       "chosungEasy": { "name": "초성 (쉬움)", "desc": "유형 힌트 O · 초성 보고 맞히기" },
-      "chosungHard": { "name": "초성 (어려움)", "desc": "유형 힌트 X · 초성만 보고 맞히기" }
+      "chosungHard": { "name": "초성 (어려움)", "desc": "유형 힌트 X · 초성만 보고 맞히기" },
+      "hint": { "name": "랜덤 힌트", "desc": "힌트 3개만 보고 이름 맞히기" },
+      "typeOdd": { "name": "타입 오드원", "desc": "4마리 중 타입 조합이 혼자 다른 하나" },
+      "special": { "name": "전설 · 환상", "desc": "전설/환상/패러독스/UB 분류하기" },
+      "similarName": { "name": "헷갈리는 이름", "desc": "비슷한 이름 4개 중 진짜 고르기" },
+      "signature": { "name": "전용기술", "desc": "그 기술을 배우는 유일한 포켓몬" },
+      "chosung": { "name": "초성", "desc": "초성만 보고 이름 맞히기" }
     },
     "exam": {
       "name": "수능 모의고사",
       "desc": "포덕 고인물용 종합 시험 · 등급 산출"
     },
+    "speed": {
+      "name": "속도전 (멀티)",
+      "desc": "여럿이 동시에 풀고 빨리 맞힐수록 고득점",
+      "title": "퀴즈 속도전",
+      "winCount": "{n}승",
+      "createTitle": "방 만들기",
+      "createBtn": "방 만들고 대기하기",
+      "secondsLabel": "제한 시간",
+      "secondsValue": "{n}초",
+      "scoreHint": "점수 = 남은 시간 비례(최대 100점) + 순위 보너스(1등 50 · 2등 30 · 3등 15). 정답은 포켓몬 이름이고 한글·영문 둘 다 인정돼요.",
+      "roomList": "대기 중인 방",
+      "noRooms": "지금 대기 중인 방이 없어요. 직접 만들면 다른 사람이 들어올 수 있어요.",
+      "hostRoom": "{name}님의 방",
+      "refresh": "새로고침",
+      "loginRequired": "속도전은 다른 사람과 실시간으로 겨루는 모드라 로그인이 필요해요. 혼자 하는 종목별 퀴즈와 모의고사는 오프라인에서도 즐길 수 있어요.",
+      "waitingRoom": "대기실",
+      "waitingTitle": "참가자를 기다리는 중",
+      "waitHost": "{name}님이 시작하기를 기다리는 중...",
+      "startBtn": "시작하기",
+      "needPlayers": "2명부터 시작할 수 있어요",
+      "hostTag": "방장",
+      "leave": "나가기",
+      "answered": "제출 완료 — 결과를 기다리는 중",
+      "gotIt": "정답! {order}번째 · +{n}점",
+      "finalTitle": "최종 결과",
+      "winner": "{name} 우승!",
+      "roomClosed": "방이 닫혔어요.",
+      "full": "가득 참",
+      "roomsBusy": "지금 방 {n}개가 전부 사용 중이에요. 기존 방에 자리가 나면 들어가거나, 잠시 뒤 새로고침해 주세요.",
+      "langLabel": "방 언어",
+      "langPick": "먼저 방 언어를 고르세요. 언어에 따라 낼 수 있는 종목이 달라집니다.",
+      "passLabel": "비밀번호 (선택)",
+      "passPlaceholder": "비우면 공개 방",
+      "passPrompt": "{name}님의 방은 비밀번호가 필요해요",
+      "passEnter": "입장",
+      "lockedRoom": "비밀번호 방",
+      "errWrongPass": "비밀번호가 맞지 않아요.",
+      "kindsLabel": "출제 종목",
+      "kindsAll": "전 종목",
+      "langNotice": "고른 언어로 문제가 나갑니다. 도감설명·힌트·초성은 번역되지 않아요.",
+      "lang": {
+        "ko": "한국어",
+        "en": "English"
+      },
+      "roomsBusyBtn": "방이 모두 사용 중",
+      "serverBusy": "서버가 붐벼서 방에 연결하지 못했어요. 잠시 뒤 다시 시도해 주세요.",
+      "errRoomLimit": "지금은 방이 가득 찼어요. 잠시 뒤 다시 시도하거나 대기 중인 방에 들어가 보세요.",
+      "errRoomFull": "그 방은 정원이 찼어요.",
+      "errRoomGone": "그 방은 이미 사라졌어요.",
+      "errStarted": "그 방은 이미 게임이 시작됐어요.",
+      "errLoad": "방 목록을 불러오지 못했어요. 잠시 뒤 다시 시도해 주세요."
+    },
     "chosung": {
       "cat": { "pokemon": "포켓몬", "move": "기술", "ability": "특성", "item": "도구" }
+    },
+    "hint": {
+      "type": "타입은 {types}",
+      "gen": "{n}세대 포켓몬",
+      "bst": "종족값 총합은 {n}",
+      "topStat": "가장 높은 능력치는 {stat} {n}",
+      "size": "키 {h}m · 몸무게 {w}kg",
+      "genus": "분류는 「{genus}」",
+      "ability": "특성 중 하나는 「{name}」",
+      "flavor": "도감설명: {text}"
+    },
+    "special": {
+      "cat": {
+        "legendary": "전설의 포켓몬",
+        "mythical": "환상의 포켓몬",
+        "paradox": "패러독스 포켓몬",
+        "ultraBeast": "울트라비스트",
+        "normal": "일반 포켓몬"
+      }
     },
     "bst": {
       "stat": { "hp": "HP", "attack": "공격", "defense": "방어", "specialAttack": "특공", "specialDefense": "특방", "speed": "스피드" }
@@ -1343,7 +1424,15 @@
       "bstDuelStatPrompt": "「{stat}」이(가) 더 높은 쪽은? · 오른쪽은 왼쪽보다?",
       "duelMore": "더 많이",
       "duelLess": "더 적게",
-      "duelReveal": "{ln} {lv}  vs  {rn} {rv}"
+      "duelReveal": "{ln} {lv}  vs  {rn} {rv}",
+      "hintPrompt": "힌트 3개, 이 포켓몬은?",
+      "typeOddPrompt": "타입 조합이 혼자 다른 포켓몬은?",
+      "typeOddRevealSub": "혼자 {odd} · 나머지 셋은 {common}",
+      "specialPrompt": "「{name}」의 분류는?",
+      "similarNamePrompt": "이 포켓몬의 진짜 이름은?",
+      "signaturePrompt": "「{move}」를 배우는 포켓몬은?",
+      "signatureRevealSub": "전용기술 「{move}」",
+      "flavorPrompt": "이 도감설명의 주인공은?"
     },
     "result": {
       "title": "결과",

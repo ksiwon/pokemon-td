@@ -3,7 +3,11 @@ import { useState, useEffect } from 'react';
 import styled from 'styled-components';
 import { lMedia, media } from '../../utils/responsive.utils';
 import { Emoji } from '../shared/Emoji';
-import { databaseService, APRankingEntry, CardRankingEntry, QuizRankingEntry, PvpSeasonRankingEntry } from '../../services/DatabaseService';
+import {
+  databaseService, APRankingEntry, CardRankingEntry, QuizRankingEntry,
+  PvpSeasonRankingEntry, QuizSpeedRankingEntry, QuizWeeklyEntry,
+} from '../../services/DatabaseService';
+import { QuizBoardKey, availableBoardKeys } from '../../types/quiz';
 import { authService } from '../../services/AuthService';
 import { quotaGuard } from '../../services/QuotaGuard';
 import { saveService } from '../../services/SaveService';
@@ -17,6 +21,8 @@ import {
 } from '../shared/modal.styles';
 
 type RankTab = 'ap' | 'pvp' | 'tower' | 'cardpvp' | 'collection' | 'quiz';
+/** 퀴즈 탭 하위 보드 — 싱글(모의고사 통산) · 멀티(속도전 통산) · 주간(종목별). */
+type QuizSubTab = 'single' | 'multi' | 'weekly';
 
 interface RankingsProps {
   onClose: () => void;
@@ -24,7 +30,7 @@ interface RankingsProps {
 }
 
 export const Rankings = ({ onClose, initialTab = 'ap' }: RankingsProps) => {
-  const { t } = useTranslation();
+  const { t, language } = useTranslation();
 
   const [activeTab, setActiveTab] = useState<RankTab>(initialTab);
   const [apRankings, setApRankings] = useState<APRankingEntry[]>([]);
@@ -35,6 +41,13 @@ export const Rankings = ({ onClose, initialTab = 'ap' }: RankingsProps) => {
   const [myCardRank, setMyCardRank] = useState<number | null>(null);
   const [quizRankings, setQuizRankings] = useState<QuizRankingEntry[]>([]);
   const [myQuizRank, setMyQuizRank] = useState<number | null>(null);
+  const [quizSub, setQuizSub] = useState<QuizSubTab>('single');
+  /** 주간 보드에서 보고 있는 종목. 종목이 17개라 한 번에 하나씩만 읽는다([FREE-TIER]). */
+  const [weeklyBoard, setWeeklyBoard] = useState<QuizBoardKey>('exam');
+  const [quizSpeedRankings, setQuizSpeedRankings] = useState<QuizSpeedRankingEntry[]>([]);
+  const [myQuizSpeedRank, setMyQuizSpeedRank] = useState<number | null>(null);
+  const [quizWeeklyRankings, setQuizWeeklyRankings] = useState<QuizWeeklyEntry[]>([]);
+  const [myQuizWeeklyRank, setMyQuizWeeklyRank] = useState<number | null>(null);
   const [cardPvpRankings, setCardPvpRankings] = useState<PvpSeasonRankingEntry[]>([]);
   const [myCardPvpRank, setMyCardPvpRank] = useState<number | null>(null);
   const [loading, setLoading] = useState(false);
@@ -77,12 +90,29 @@ export const Rankings = ({ onClose, initialTab = 'ap' }: RankingsProps) => {
         setCardPvpRankings(data);
         setMyCardPvpRank(rank);
       } else if (activeTab === 'quiz') {
-        const [data, rank] = await Promise.all([
-          databaseService.getQuizRanking(),
-          databaseService.getMyQuizRank(),
-        ]);
-        setQuizRankings(data);
-        setMyQuizRank(rank);
+        // 하위 보드 중 지금 보고 있는 것만 읽는다 — 세 보드를 한꺼번에 읽으면 read가 3배.
+        if (quizSub === 'single') {
+          const [data, rank] = await Promise.all([
+            databaseService.getQuizRanking(),
+            databaseService.getMyQuizRank(),
+          ]);
+          setQuizRankings(data);
+          setMyQuizRank(rank);
+        } else if (quizSub === 'multi') {
+          const [data, rank] = await Promise.all([
+            databaseService.getQuizSpeedRanking(),
+            databaseService.getMyQuizSpeedRank(),
+          ]);
+          setQuizSpeedRankings(data);
+          setMyQuizSpeedRank(rank);
+        } else {
+          const [data, rank] = await Promise.all([
+            databaseService.getQuizWeeklyRanking(weeklyBoard),
+            databaseService.getMyQuizWeeklyRank(weeklyBoard),
+          ]);
+          setQuizWeeklyRankings(data);
+          setMyQuizWeeklyRank(rank);
+        }
       } else {
         const [data, rank] = await Promise.all([
           databaseService.getCollectionRanking(),
@@ -101,14 +131,21 @@ export const Rankings = ({ onClose, initialTab = 'ap' }: RankingsProps) => {
   useEffect(() => {
     setCurrentPage(0);
     loadRankings();
-  }, [activeTab]);
+  }, [activeTab, quizSub, weeklyBoard]);
+
+  /** 주간 보드에서 선택 가능한 종목(영어권에서는 초성 제외). */
+  const boardKeys = availableBoardKeys(language);
+  /** 보드키 → 표시 이름. exam/speed는 각자 이름을, 나머지는 종목 이름을 쓴다. */
+  const boardLabel = (k: QuizBoardKey) =>
+    k === 'exam' ? t('quiz.exam.name') : k === 'speed' ? t('quiz.speed.name') : t(`quiz.types.${k}.name`);
 
   const currentRankings =
     activeTab === 'ap' ? apRankings :
     activeTab === 'pvp' ? pvpRankings :
     activeTab === 'cardpvp' ? cardPvpRankings :
-    activeTab === 'quiz' ? quizRankings :
-    cardRankings;
+    activeTab === 'quiz'
+      ? (quizSub === 'single' ? quizRankings : quizSub === 'multi' ? quizSpeedRankings : quizWeeklyRankings)
+      : cardRankings;
   const totalPages = Math.ceil(currentRankings.length / PAGE_SIZE);
   const displayedRankings = currentRankings.slice(currentPage * PAGE_SIZE, (currentPage + 1) * PAGE_SIZE);
 
@@ -182,9 +219,36 @@ export const Rankings = ({ onClose, initialTab = 'ap' }: RankingsProps) => {
         )}
 
         {activeTab === 'quiz' && (
-          <MyRankBadgeWrapper>
-            <MyRankBadge><Emoji glyph="🎯" size={13} /> {t('rankings.myRank', { rank: myQuizRank !== null ? myQuizRank : '-' })} ({t('rankings.scoreSuffix', { n: quizService.getExamBest() })})</MyRankBadge>
-          </MyRankBadgeWrapper>
+          <>
+            <SubTabRow>
+              <SubTab $active={quizSub === 'single'} onClick={() => setQuizSub('single')}>{t('rankings.quizSingle')}</SubTab>
+              <SubTab $active={quizSub === 'multi'} onClick={() => setQuizSub('multi')}>{t('rankings.quizMulti')}</SubTab>
+              <SubTab $active={quizSub === 'weekly'} onClick={() => setQuizSub('weekly')}>{t('rankings.quizWeekly')}</SubTab>
+            </SubTabRow>
+
+            {quizSub === 'weekly' && (
+              <BoardPickRow>
+                <BoardSelect value={weeklyBoard} onChange={e => setWeeklyBoard(e.target.value as QuizBoardKey)}>
+                  {boardKeys.map(k => <option key={k} value={k}>{boardLabel(k)}</option>)}
+                </BoardSelect>
+              </BoardPickRow>
+            )}
+
+            <MyRankBadgeWrapper>
+              {quizSub === 'single' && (
+                <MyRankBadge><Emoji glyph="🎯" size={13} /> {t('rankings.myRank', { rank: myQuizRank !== null ? myQuizRank : '-' })} ({t('rankings.scoreSuffix', { n: quizService.getExamBest() })})</MyRankBadge>
+              )}
+              {quizSub === 'multi' && (
+                <MyRankBadge><Emoji glyph="🎯" size={13} /> {t('rankings.myRank', { rank: myQuizSpeedRank !== null ? myQuizSpeedRank : '-' })} ({t('rankings.winsSuffix', { n: quizService.getSpeedStats().wins })})</MyRankBadge>
+              )}
+              {quizSub === 'weekly' && (
+                <>
+                  <MyRankBadge><Emoji glyph="🎯" size={13} /> {t('rankings.myRank', { rank: myQuizWeeklyRank !== null ? myQuizWeeklyRank : '-' })} ({t('rankings.scoreSuffix', { n: quizService.getWeeklyBest(weeklyBoard) })})</MyRankBadge>
+                  <SeasonNote>{t('rankings.seasonNote', { n: daysUntilSeasonReset() })}</SeasonNote>
+                </>
+              )}
+            </MyRankBadgeWrapper>
+          </>
         )}
         
         <ModalBody>
@@ -267,7 +331,7 @@ export const Rankings = ({ onClose, initialTab = 'ap' }: RankingsProps) => {
                   <TableHead $isAp={false}>
                     <ColRank>{t('rankings.colRank')}</ColRank>
                     <ColPlayer>{t('rankings.colPlayer')}</ColPlayer>
-                    <ColScore>{t('rankings.colScore')}</ColScore>
+                    <ColScore>{quizSub === 'multi' ? t('rankings.colWins') : t('rankings.colScore')}</ColScore>
                   </TableHead>
                   {displayedRankings.map((entry, index) => {
                     const rank = currentPage * PAGE_SIZE + index;
@@ -279,7 +343,11 @@ export const Rankings = ({ onClose, initialTab = 'ap' }: RankingsProps) => {
                             : t('rankings.rankSuffix', { rank: rank + 1 })}
                         </ColRank>
                         <ColPlayer>{entry.userName ?? '???'}</ColPlayer>
-                        <ColScore $accent><Emoji glyph="🎓" size={13} /> {t('rankings.scoreSuffix', { n: entry.examBest ?? 0 })}</ColScore>
+                        <ColScore $accent>
+                          {quizSub === 'single' && <><Emoji glyph="🎓" size={13} /> {t('rankings.scoreSuffix', { n: entry.examBest ?? 0 })}</>}
+                          {quizSub === 'multi' && <><Emoji glyph="⚡" size={13} /> {t('rankings.winsSuffix', { n: entry.wins ?? 0 })}</>}
+                          {quizSub === 'weekly' && <><Emoji glyph="📅" size={13} /> {t('rankings.scoreSuffix', { n: entry.scores?.[weeklyBoard] ?? 0 })}</>}
+                        </ColScore>
                       </TableRow>
                     );
                   })}
@@ -376,6 +444,46 @@ const MyRankBadge = styled.div`
 const SeasonNote = styled.div`
   margin-top: 6px; font-size: 12px; font-weight: 600; color: rgba(251,191,36,0.85);
   ${media.mobile} { font-size: 11px; }
+`;
+
+// ─── 퀴즈 탭 하위 보드(싱글/멀티/주간) ────────────────────────────────────────
+// 이 두 줄(하위탭·보드선택)은 ModalBody 바깥, 즉 **스크롤되지 않는 고정 헤더**다.
+// 폰 가로(높이 ~390px)에서는 90vh 안에서 목록이 보일 자리를 그만큼 잡아먹으므로
+// phoneSm에서 높이를 줄인다 — 안 그러면 주간 탭에서 순위가 3줄밖에 안 보인다.
+const SubTabRow = styled.div`
+  display: flex; gap: 5px; padding: 0 24px; margin-bottom: 10px;
+  ${media.tablet} { padding: 0 18px; }
+  ${media.mobile} { padding: 0 14px; margin-bottom: 8px; }
+  ${lMedia.phoneSm} { padding: 0 12px; margin-bottom: 6px; }
+`;
+
+const SubTab = styled.button<{ $active: boolean }>`
+  flex: 1; padding: 7px 10px; border-radius: 8px; cursor: pointer;
+  font-size: 13px; font-weight: 700; transition: background 0.15s, color 0.15s;
+  border: 1px solid ${p => p.$active ? 'rgba(79,195,247,0.45)' : 'rgba(255,255,255,0.1)'};
+  background: ${p => p.$active ? 'rgba(79,195,247,0.16)' : 'transparent'};
+  color: ${p => p.$active ? '#4fc3f7' : 'rgba(255,255,255,0.55)'};
+  &:hover { color: ${p => p.$active ? '#4fc3f7' : '#fff'}; }
+  ${media.mobile} { font-size: 12px; padding: 6px 8px; }
+  ${lMedia.phoneSm} { font-size: 11.5px; padding: 4px 8px; }
+`;
+
+const BoardPickRow = styled.div`
+  padding: 0 24px; margin-bottom: 10px;
+  ${media.tablet} { padding: 0 18px; }
+  ${media.mobile} { padding: 0 14px; margin-bottom: 8px; }
+  ${lMedia.phoneSm} { padding: 0 12px; margin-bottom: 6px; }
+`;
+
+const BoardSelect = styled.select`
+  width: 100%; padding: 9px 12px; border-radius: 8px; cursor: pointer;
+  font-size: 13.5px; font-weight: 700; color: #e7edf3; outline: none;
+  background: rgba(255,255,255,0.06); border: 1px solid rgba(255,255,255,0.14);
+  &:focus { border-color: rgba(79,195,247,0.5); }
+  /* 네이티브 드롭다운은 OS 배경을 쓰므로 옵션 색을 명시하지 않으면 흰 배경에 흰 글씨가 된다. */
+  & option { background: #16202b; color: #e7edf3; }
+  ${media.mobile} { font-size: 12.5px; padding: 8px 10px; }
+  ${lMedia.phoneSm} { font-size: 12px; padding: 5px 10px; }
 `;
 
 // [FREE-TIER] 무료 쿼터 소진으로 최신 데이터를 못 받는 상태를 '빈 목록'과 구분해 알린다.
