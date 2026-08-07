@@ -1325,7 +1325,7 @@
       "createBtn": "Create room and wait",
       "secondsLabel": "Time limit",
       "secondsValue": "{n}s",
-      "scoreHint": "Score = time left (up to 100) + order bonus (1st 50 · 2nd 30 · 3rd 15). Answers are Pokémon names — Korean and English both count.",
+      "scoreHint": "Score = time left (up to 100) + order bonus (1st 50 · 2nd 30 · 3rd 15). Answers count in Korean or English; spacing and punctuation are ignored.",
       "roomList": "Open rooms",
       "noRooms": "No open rooms right now. Create one and others can join you.",
       "hostRoom": "{name}'s room",
@@ -1356,6 +1356,8 @@
       "errWrongPass": "That password doesn't match.",
       "kindsLabel": "Quiz types",
       "kindsAll": "All types",
+      "typePrompt": "What typing is this Pokémon? (e.g. Fire/Flying)",
+      "typeInputPlaceholder": "Type the typing",
       "langNotice": "Questions are generated in the language you pick. Dex entries and hints are not translated.",
       "lang": {
         "ko": "한국어",

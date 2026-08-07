@@ -22,10 +22,44 @@ import { authService } from '../../services/AuthService';
 import { serverNow } from '../../config/firebase';
 import { QUIZ_MAX_PLAYERS_PER_ROOM } from '../../config/rtdbBudget';
 import { QuizRoom, QuizRoundResult, QuizAnswer, QuizRoomLang } from '../../types/quizRoom';
-import { SpeedRevealPayload, speedKindsForLang } from '../../types/quiz';
+import { SpeedRevealPayload, SpeedRoundPayload, speedKindsForLang } from '../../types/quiz';
 
 /** 정답 공개를 보여 주는 시간(ms). 너무 짧으면 누가 몇 점 받았는지 못 읽는다. */
 const REVEAL_MS = 3500;
+
+/**
+ * 문제 지문 — 호스트가 보낸 건 `kind`(+슬러그)뿐이고 문장은 **각자 자기 언어로** 만든다.
+ * 대부분은 솔로 종목의 지문 키를 그대로 쓰고, 매개변수가 필요한 셋만 갈라 낸다.
+ */
+function speedPrompt(
+  p: SpeedRoundPayload, t: (k: string, params?: Record<string, string | number>) => string,
+): string {
+  if (p.kind === 'chosungEasy') {
+    return t('quiz.play.chosungEasyPrompt', { cat: t(`quiz.chosung.cat.${p.chosungCat ?? 'pokemon'}`) });
+  }
+  if (p.kind === 'typeHard') {
+    return t('quiz.play.typeHardPrompt', { types: (p.typeSlugs ?? []).map(s => t(`types.${s}`)).join(' / ') });
+  }
+  // 솔로 타입(쉬움) 지문은 포켓몬 이름을 끼워 넣는데, 속도전은 이름을 못 보낸다
+  // (언어가 섞인 방에서 남의 말로 보이고, 이름 자체가 힌트가 된다) → 전용 지문을 쓴다.
+  if (p.kind === 'type') return t('quiz.speed.typePrompt');
+  return t(`quiz.play.${p.kind}Prompt`);
+}
+
+/**
+ * 입력창 안내 문구. 모든 종목의 정답이 포켓몬 이름인 건 아니다 —
+ * 타입(쉬움)은 타입 조합이고, 초성은 기술·특성·도구도 나온다.
+ */
+function speedPlaceholder(
+  p: SpeedRoundPayload, t: (k: string, params?: Record<string, string | number>) => string,
+): string {
+  if (p.kind === 'type') return t('quiz.speed.typeInputPlaceholder');
+  if (p.kind === 'chosungEasy') {
+    return t('quiz.play.chosungEasyPlaceholder', { cat: t(`quiz.chosung.cat.${p.chosungCat ?? 'pokemon'}`) });
+  }
+  if (p.kind === 'chosungHard') return t('quiz.play.chosungHardPlaceholder');
+  return t('quiz.play.inputPlaceholder');
+}
 
 interface Props {
   roomId: string;
@@ -300,11 +334,7 @@ export const SpeedQuizRoom = ({ roomId, onExit }: Props) => {
         {/* ── 문제 / 정답 공개 ── */}
         {!finished && room.status === 'playing' && round && (
           <>
-            <Prompt>
-              {round.payload.kind === 'chosung'
-                ? t('quiz.play.chosungEasyPrompt', { cat: t(`quiz.chosung.cat.${round.payload.chosungCat ?? 'pokemon'}`) })
-                : t(`quiz.play.${round.payload.kind}Prompt`)}
-            </Prompt>
+            <Prompt>{speedPrompt(round.payload, t)}</Prompt>
 
             {round.payload.bigText && <BigText>{round.payload.bigText}</BigText>}
 
@@ -338,7 +368,7 @@ export const SpeedQuizRoom = ({ roomId, onExit }: Props) => {
                   value={text}
                   onChange={e => setText(e.target.value)}
                   onKeyDown={e => { if (e.key === 'Enter') submit(); }}
-                  placeholder={iAnswered ? t('quiz.speed.answered') : t('quiz.play.inputPlaceholder')}
+                  placeholder={iAnswered ? t('quiz.speed.answered') : speedPlaceholder(round.payload, t)}
                   disabled={iAnswered}
                   autoFocus
                 />
