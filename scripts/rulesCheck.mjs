@@ -3,6 +3,7 @@
 import { initializeApp } from 'firebase/app';
 import {
   getDatabase, connectDatabaseEmulator, ref, set, update, remove, get, serverTimestamp,
+  onValue, runTransaction,
 } from 'firebase/database';
 
 const EMU_HOST = '127.0.0.1';
@@ -164,6 +165,45 @@ await expect('만료된 방은 아무나 삭제(고아 회수)', true, () => rem
 await expect('없는 방의 답안 노드에 쓰레기 주입(용량 부풀리기)', false,
   () => set(ref(p2Db, 'quizAnswers/ghost'), { [P2]: { text: 'x', at: serverTimestamp() } }));
 await expect('없는 방의 고아 답안 삭제', true, () => remove(ref(p2Db, 'quizAnswers/ghost')));
+
+// ── TD 방 입장: 트랜잭션이 '구독한 적 없는 경로'에서 서버 값을 보는가 ──────────
+// 회귀 방지. runTransaction은 콜백을 **로컬 캐시 값으로 먼저** 부르는데, 로비가 방을
+// 구독하지 않게 된 뒤로 그 값이 늘 null이었다. joinRoom은 null에서 중단(return undefined)
+// 하므로 서버에 물어보지도 못한 채 "Room not found"로 끝났다 — 두 번째 사람이 어떤 방에도
+// 못 들어가는 상태로 배포됐다. 구독+get 선행이 빠지면 이 케이스가 즉시 깨진다.
+console.log('\n─── TD 방 입장 트랜잭션 ───');
+{
+  const TR = 'roomTx';
+  const tdRoom = {
+    id: TR, name: 'Host의 방', mapId: 'map1', mapName: 'Map', hostId: HOST, hostName: 'Host',
+    players: [{ userId: HOST, userName: 'Host', isReady: true, isAI: false, rating: 1000 }],
+    maxPlayers: 8, status: 'waiting', createdAt: Date.now(), memberIds: { [HOST]: true },
+  };
+  await set(ref(hostDb, `rooms/${TR}`), tdRoom);
+
+  const roomRef = ref(p2Db, `rooms/${TR}`);
+  const stopSync = onValue(roomRef, () => {});
+  let sawServerValue = false;
+  try {
+    await get(roomRef);
+    await runTransaction(roomRef, r => {
+      if (!r) return;                       // 캐시가 비어 있으면 여기서 끝난다(회귀)
+      sawServerValue = true;
+      return {
+        ...r,
+        players: [...r.players, { userId: P2, userName: 'P2', isReady: false, isAI: false, rating: 1000 }],
+        memberIds: { ...(r.memberIds ?? {}), [P2]: true },
+      };
+    });
+  } finally { stopSync(); }
+
+  const players = (await get(ref(hostDb, `rooms/${TR}/players`))).val() ?? [];
+  await expect('입장 트랜잭션이 서버 값을 본다(로컬 캐시 null로 중단되지 않음)', true,
+    async () => { if (!sawServerValue) throw new Error('콜백이 null만 받고 중단됨'); });
+  await expect('입장 후 인원이 2명', true,
+    async () => { if (players.length !== 2) throw new Error(`인원 ${players.length}`); });
+  await remove(ref(hostDb, `rooms/${TR}`)).catch(() => {});
+}
 
 console.log('\n' + results.join('\n'));
 console.log(`\n결과: ${pass} pass / ${fail} fail`);
