@@ -929,13 +929,13 @@
         "desc": "You start with 6 cards and some coins! Jump into the tower right away, or open packs to collect more.\nDuplicate cards merge to raise a card's star rank.",
         "d0": "Normal / Type / Premium packs — higher tiers boost rare odds",
         "d1": "Duplicates auto-merge → ⭐ star rank up",
-        "d2": "Earn more coins & shards by clearing tower floors and playing the main game"
+        "d2": "Earn coins & shards in bulk from the main game, a trickle from the tower"
       },
       "slide2": {
         "title": "Deck Building & Synergy",
         "desc": "Place cards across 3 front + 3 back slots (6 total).\nGathering the same type triggers synergy buffs.",
         "d0": "Front row tanks up front; back row deals from behind",
-        "d1": "Same type 2 / 4 / 6 units → higher synergy tier",
+        "d1": "Same type 2 / 4 / 6 units → ATK & DEF ×1.1 / ×1.3 / ×1.5",
         "d2": "Some types 'pierce' — striking the enemy back row directly"
       },
       "slide3": {
@@ -944,6 +944,20 @@
         "d0": "Battles are seed-based and deterministic — same deck, same result",
         "d1": "Clearing a floor rewards coins & star shards",
         "d2": "Spend rewards on more packs to strengthen your deck"
+      },
+      "slide4": {
+        "title": "Earning Coins & Shards",
+        "desc": "Mini Pocket currency is separate from main-game gold — it is not an exchange. You earn it on top, based on how far you get.\nThe main game is where you earn; Mini Pocket is where you spend!",
+        "d0": "Single / Story: 4 + (wave÷6) coins per wave, plus 350 coins & 50 shards for clearing wave 50",
+        "d1": "Multiplayer: one lump sum by final placement — 1st gets 300 coins & 40 shards, last still gets 80 & 8",
+        "d2": "Tower pays small (10 + floor×2); shards mostly come from achievements & Pokédex milestones"
+      },
+      "slide5": {
+        "title": "How Battles Are Calculated",
+        "desc": "Cards use their original base stats. Higher star rank raises both level and stats.\n(★1 Lv.30, +8 per star → ★5 Lv.62; stats +12% per star)",
+        "d0": "Attacks use the higher of ATK / SP.ATK, and are taken on the matching DEF / SP.DEF",
+        "d1": "Move type is auto-picked from the card's own types for best matchup — immune deals 0, crits deal ×1.5",
+        "d2": "Turn order is by Speed — the same card moves first at a higher star rank"
       }
     }
   },
@@ -1024,7 +1038,7 @@
     "guestEnter": "Enter as Guest",
     "guestEntering": "Entering...",
     "cancel": "Cancel",
-    "noticeGuest": " Guest data (rankings/achievements) may not be saved.",
+    "noticeGuest": " Guests do get rankings & achievements saved. You can't continue on another browser or device, but signing in with Google later keeps this browser's achievements, collection and progress (Hall of Fame entries already posted don't carry over).",
     "noticeDefault": " Login with Google to save progress across devices.",
     "errEmpty": "Please enter a nickname.",
     "errLength": "Nickname must be 2-12 characters long.",

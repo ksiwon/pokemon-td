@@ -229,6 +229,31 @@ const buildCardsSlides = (t: TFunc): Slide[] => [
       { icon: '🔁', text: t('tutorial.cards.slide3.d2') },
     ],
   },
+  // [문의 대응] "본편 2만 골드가 왜 900 코인이냐 / 비율식이 있냐"는 질문이 반복됐다.
+  //   환전이 아니라 별도 지급이라는 점과 실제 액수를 슬라이드로 명시.
+  //   동시에 '본편 > 타워' 수급 격차(의도된 설계)가 읽히게 한다.
+  {
+    icon: '💰',
+    title: t('tutorial.cards.slide4.title'),
+    desc:  t('tutorial.cards.slide4.desc'),
+    details: [
+      { icon: '🎮', text: t('tutorial.cards.slide4.d0') },
+      { icon: '🏆', text: t('tutorial.cards.slide4.d1') },
+      { icon: '🗼', text: t('tutorial.cards.slide4.d2') },
+    ],
+  },
+  // [문의 대응] 종족값·데미지·스피드 반영 방식을 안내해달라는 요청.
+  //   수치 출처는 CardBattleService(levelForStars / buildBattleCard / calcDamage).
+  {
+    icon: '📐',
+    title: t('tutorial.cards.slide5.title'),
+    desc:  t('tutorial.cards.slide5.desc'),
+    details: [
+      { icon: '⚔️', text: t('tutorial.cards.slide5.d0') },
+      { icon: '🔥', text: t('tutorial.cards.slide5.d1') },
+      { icon: '⚡', text: t('tutorial.cards.slide5.d2') },
+    ],
+  },
 ];
 
 // ─── 메인 컴포넌트 ───────────────────────────────────────────────────────────
