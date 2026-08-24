@@ -40,6 +40,14 @@ export const SkillPicker: React.FC = () => {
     return null;
   }
 
+  // [DUP-MOVE-FIX] 최후 방어선 — 이미 장착 중인 기술이 '새 기술'로 올라오면
+  //   현재/신규 칸에 같은 기술이 보이는 무의미한 선택창이 된다. 조용히 넘긴다.
+  //   (근본 원인은 pokeapi.getLearnableMoves / gameStore에서 차단했다.)
+  if (newMove.name === currentMove.name) {
+    removeCurrentSkillChoice();
+    return null;
+  }
+
   const handleLearnNewMove = () => {
     updateTower(towerId, { equippedMoves: [newMove] });
     removeCurrentSkillChoice();

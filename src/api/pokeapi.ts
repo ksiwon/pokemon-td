@@ -648,15 +648,21 @@ class PokeAPIService {
       } else {
         const res = await axios.get(`${API_BASE}/pokemon/${pokemonId}`);
         const d = res.data;
+        // [DUP-MOVE-FIX] 같은 기술이 세대(version group)마다 습득 레벨이 다르면,
+        //   예전 로직(level_learned_at === level을 some으로 판정)은 그 레벨마다 전부
+        //   후보로 올려 동일 기술이 여러 번 제안됐다.
+        //   예) 테오키스 night-shade = Lv5/7/9, teleport = Lv10/13/17
+        //   → 기술별 '최소 습득 레벨'로 정규화해 한 기술은 딱 한 번만 제안한다.
         moveNames = d.moves
-          .filter((m: any) =>
-            m.version_group_details.some(
-              (vg: any) =>
-                vg.move_learn_method.name === 'level-up' &&
-                vg.level_learned_at === level
-            )
-          )
-          .map((m: any) => m.move.name)
+          .map((m: any) => {
+            const levels: number[] = m.version_group_details
+              .filter((vg: any) => vg.move_learn_method.name === 'level-up')
+              .map((vg: any) => vg.level_learned_at)
+              .filter((lv: number) => lv > 0);
+            return { name: m.move.name, minLevel: levels.length ? Math.min(...levels) : -1 };
+          })
+          .filter((m: { minLevel: number }) => m.minLevel === level)
+          .map((m: { name: string }) => m.name)
           .slice(0, 5);
         
         this.learnableMovesCache.set(levelKey, moveNames);

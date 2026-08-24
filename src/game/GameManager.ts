@@ -291,6 +291,11 @@ export class GameManager {
     });
 
     if (toRemoveIds.size > 0 || enemyUpdates.size > 0) {
+      // [WAVE-RECORD-FIX] 게임오버 '전환' 감지용. setState updater 안에서 직접
+      //   비동기 쓰기를 하면 updater가 재실행될 때 중복 전송될 수 있어, 플래그만 세우고
+      //   setState 밖에서 1회 전송한다.
+      let justGameOver = false;
+
       useGameStore.setState(state => {
         let newLives = state.lives;
         let isGameOver = state.gameOver;
@@ -304,6 +309,7 @@ export class GameManager {
             if (!multiRoomId) {
               isGameOver = true;
               isWaveActive = false;
+              justGameOver = true;
             }
           }
         }
@@ -320,6 +326,22 @@ export class GameManager {
             })
         };
       });
+
+      // [WAVE-RECORD-FIX] 최고 웨이브 기록의 마지막 조각을 여기서 채운다.
+      //   기존에는 completeWave의 `wave % 5 === 0`에서만 리더보드를 갱신했기 때문에
+      //   도달 웨이브가 항상 5의 배수로 내림됐다(예: 64웨이브 도달 → 60으로 기록,
+      //   최대 4웨이브 손실). 게임오버는 런당 1회뿐이라 Firestore 쓰기 부담도 없다.
+      if (justGameOver) {
+        const { wave, currentMap } = useGameStore.getState();
+        // state.wave는 nextWave()에서 '웨이브 시작 시' 올라간다 → 게임오버 시점의 wave는
+        // 실패 중인 웨이브 번호다. 기록 기준은 completeWave와 동일하게 '클리어한 웨이브'이므로 -1.
+        //   예) 64웨이브 클리어 후 65웨이브에서 전멸 → wave=65 → 64로 기록.
+        const clearedWave = wave - 1;
+        if (clearedWave > 0) {
+          this.withTimeout(databaseService.updateLeaderboard(currentMap, undefined, clearedWave))
+            .catch(() => {}); // 오프라인/쿼터 소진/타임아웃은 무시 (게임오버 연출을 막지 않는다)
+        }
+      }
     }
   }
 
