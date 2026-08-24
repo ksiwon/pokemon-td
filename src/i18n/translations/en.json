@@ -976,6 +976,7 @@
     "achievements": "Achievements",
     "hallOfFame": "Hall of Fame",
     "rankings": "Rankings",
+    "patchNotes": "Patch Notes",
     "settings": "Settings",
     "helpSingle": "Single Player Guide",
     "helpStory": "Story Mode Guide",
@@ -1842,5 +1843,36 @@
         "desc": "Clear the final chapter — defeat the wild Kingdra, Dragon of the Deep (Dragon type)"
       }
     }
+  },
+  "patchNotes": {
+    "title": "Patch Notes",
+    "intro": "Recent updates. To report a bug, use [Report a Bug] on the game screen.",
+    "latest": "Latest",
+    "kind": {
+      "added": "New",
+      "changed": "Changed",
+      "fixed": "Fixed"
+    },
+    "v2_24": {
+      "dupMove": "Fixed the same move being offered again and again on level-up. Moves that are learned at different levels depending on the generation (e.g. Deoxys learns Night Shade at Lv5, 7 and 9) were each counted separately, so they showed up once per level. Now each move is offered only once, and moves you already know or previously declined will not come back.",
+      "waveRecord": "Fixed highest-wave records being rounded down to a multiple of 5 (e.g. reaching wave 64 was recorded as 60). Your wave at game over is now recorded as-is. Records already saved are not corrected retroactively; new runs will be accurate."
+    },
+    "v2_23": {
+      "cardsGuide": "Added two slides to the Mini Pocket guide. Coins and Star Shards are not converted from main-mode gold — they are a separate payout — and the battle formulas (level and stats, auto physical/special pick, move type pick, turn order) are now documented.",
+      "guestNotice": "Corrected the guest login notice. Rankings and achievements are saved; the real limits are that you cannot restore progress on another browser or device, and that Hall of Fame entries do not follow your account."
+    },
+    "v2_22": {
+      "quizSpeed": "Added real-time Speed Match to Pokémon Quiz, along with weekly rankings and 5 new quiz types. Speed Match now draws from 9 types instead of 6.",
+      "quizRoomOptions": "Speed Match rooms now let you pick the language and the quiz types directly, and set an optional password.",
+      "roomJoin": "Fixed being unable to join multiplayer rooms, plus 4 lobby issues."
+    },
+    "v2_21": {
+      "englishLeak": "Removed Korean text that was still showing in English mode."
+    },
+    "v2_20": {
+      "mergeProgress": "Mini Pocket now shows duplicate-card merge progress on screen.",
+      "chunkReload": "Tabs left open across an update now auto-refresh instead of failing to load the game."
+    },
+    "footnote": "The full change history lives in docs/CHANGELOG.md in the repository."
   }
 }

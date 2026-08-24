@@ -11,6 +11,7 @@ import { AchievementsPanel } from '../modals/Achievements';
 import { HallOfFame } from '../modals/HallOfFame';
 import { Rankings } from '../modals/Rankings';
 import { TutorialModal, hasTowerTutorialSeen, hasMultiTutorialSeen, hasStoryTutorialSeen, hasCardsTutorialSeen } from '../modals/TutorialModal';
+import { PatchNotes, hasUnreadPatchNotes } from '../modals/PatchNotes';
 import { showToast } from '../shared/Toast';
 
 export const MainMenu = () => {
@@ -21,6 +22,9 @@ export const MainMenu = () => {
   const [showAchievements, setShowAchievements] = useState(false);
   const [showHallOfFame, setShowHallOfFame] = useState(false);
   const [showRankings, setShowRankings] = useState(false);
+  const [showPatchNotes, setShowPatchNotes] = useState(false);
+  // 안 본 최신 패치가 있으면 버튼에 점 표시. 모달을 열면 읽음 처리되므로 여기서 내린다.
+  const [patchUnread, setPatchUnread] = useState(hasUnreadPatchNotes);
   const [tutorial, setTutorial] = useState<'tower' | 'multi' | 'story' | 'cards' | null>(null);
   const [pendingNav, setPendingNav] = useState<string | null>(null);
 
@@ -203,6 +207,11 @@ export const MainMenu = () => {
               <UtilBtn onClick={handleRankings} $dim={isOffline}>
                 <UtilIcon><Emoji glyph="📊" size={16} /></UtilIcon>{t('mainMenu.rankings')}
               </UtilBtn>
+              {/* 패치노트는 서버를 쓰지 않는다 → 오프라인에서도 열린다 */}
+              <UtilBtn onClick={() => { setShowPatchNotes(true); setPatchUnread(false); }}>
+                <UtilIcon><Emoji glyph="📜" size={16} /></UtilIcon>{t('mainMenu.patchNotes')}
+                {patchUnread && <UnreadDot />}
+              </UtilBtn>
             </UtilRow>
           </UtilSection>
 
@@ -227,6 +236,7 @@ export const MainMenu = () => {
       {showAchievements && <AchievementsPanel onClose={() => setShowAchievements(false)} />}
       {showHallOfFame   && <HallOfFame        onClose={() => setShowHallOfFame(false)} />}
       {showRankings     && <Rankings          onClose={() => setShowRankings(false)} />}
+      {showPatchNotes   && <PatchNotes        onClose={() => setShowPatchNotes(false)} />}
       {tutorial && (
         <TutorialModal mode={tutorial} onClose={handleClose}
           onProceed={pendingNav ? handleProceed : undefined} />
@@ -449,12 +459,14 @@ const UtilLabel = styled.div`
 `;
 
 const UtilRow = styled.div`
-  display:grid; grid-template-columns:repeat(3,1fr); gap:10px;
-  ${media.mobile} { gap:8px; }
-  ${lMedia.phoneSm} { gap:6px; }
+  /* 버튼 4개(업적·전당·랭킹·패치노트). 좁은 화면에서 글자가 잘리므로 2×2로 접는다. */
+  display:grid; grid-template-columns:repeat(4,1fr); gap:10px;
+  ${media.mobile} { grid-template-columns:repeat(2,1fr); gap:8px; }
+  ${lMedia.phoneSm} { grid-template-columns:repeat(2,1fr); gap:6px; }
 `;
 
 const UtilBtn = styled.button<{ $dim?: boolean }>`
+  position:relative;
   display:flex; align-items:center; justify-content:center; gap:7px;
   padding:12px 10px;
   background:rgba(255,255,255,0.03);
@@ -466,6 +478,13 @@ const UtilBtn = styled.button<{ $dim?: boolean }>`
   &:hover { background:rgba(255,255,255,0.07); border-color:rgba(255,255,255,0.14); color:#fff; }
   ${media.mobile} { font-size:13px; padding:10px 8px; }
   ${lMedia.phoneSm} { font-size:11px; padding:8px 6px; gap:5px; }
+`;
+
+// 패치노트 미확인 표시 — 텍스트 배치를 건드리지 않도록 절대 위치로 띄운다.
+const UnreadDot = styled.span`
+  position:absolute; top:7px; right:8px;
+  width:7px; height:7px; border-radius:50%;
+  background:#4fc3f7; box-shadow:0 0 6px rgba(79,195,247,0.8);
 `;
 
 // [FREE-TIER] 오프라인 모드 배너
