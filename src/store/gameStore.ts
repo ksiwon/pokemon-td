@@ -591,10 +591,24 @@ export const useGameStore = create<GameStore>((set, get) => ({
       try {
         // [V8-FIX-12-1] _pokeAPI alias 제거 → pokeAPI 직접 사용
         // [V8-FIX-12-1] rejectedMoves 필터 — 이미 거절한 기술은 다시 제안하지 않음
+        // [DUP-MOVE-FIX] 중복 제안 3종을 여기서 모두 차단한다.
+        //   1) rejectedMoves를 스냅샷(tower)이 아니라 get()의 최신값으로 읽는다.
+        //      멀티 레벨업은 fetch가 병렬로 돌아, 스냅샷을 쓰면 방금 거절한 기술이
+        //      큐의 다음 항목에서 걸러지지 않았다.
+        //   2) 이미 장착한 기술은 제외 — 현재/신규 칸에 같은 기술이 뜨는 현상 방지.
+        //   3) 같은 타워의 대기 큐에 이미 올라간 기술도 제외.
         levelUps.forEach(lvl => {
           pokeAPI.getLearnableMoves(tower.pokemonId, lvl).then((newMoves: any[]) => {
-            const rejectedMoves: string[] = tower.rejectedMoves ?? [];
-            const filtered = newMoves.filter(m => !rejectedMoves.includes(m.name));
+            const fresh = get().towers.find(t => t.id === towerId);
+            if (!fresh) return;
+            const excluded = new Set<string>([
+              ...(fresh.rejectedMoves ?? []),
+              ...fresh.equippedMoves.map(m => m.name),
+              ...get().skillChoiceQueue
+                .filter(c => c.towerId === towerId)
+                .flatMap(c => c.newMoves.map(m => m.name)),
+            ]);
+            const filtered = newMoves.filter(m => !excluded.has(m.name));
             if (filtered.length > 0) {
               addSkillChoice({ towerId, newMoves: filtered });
             }
