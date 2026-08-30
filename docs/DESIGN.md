@@ -328,8 +328,12 @@ styled 컴포넌트가 거의 없는 자리도 색은 토큰에서 가져온다.
 grep -rL "styles/tokens\|styles/pixel\|modal.styles" --include=*.tsx src/components
 ```
 
-색 리터럴은 `tokens.ts` 로 모였다. 타입 색은 `TYPE_COLOR` 한 곳이 단일 출처이며
-`utils/typeEffectiveness.ts` 의 `getTypeColor()` 가 여기로 위임한다.
+타입 색은 `TYPE_COLOR` 한 곳이 단일 출처이며 `utils/typeEffectiveness.ts` 의
+`getTypeColor()` 가 여기로 위임한다. **다만 색 리터럴이 전부 모인 것은 아니다.**
+`npm run ui:lint`(scripts/checkDesign.mjs)가 이 문서의 금지 목록을 코드에 대조하는데,
+2026-08-31 기준 색 리터럴 267건이 남아 있고 그중 32건은 이 문서가 금지한 Tailwind
+팔레트다. 대부분 상태이상·레어도·스탯 막대처럼 '값에 붙은 색'이라 토큰으로 옮기려면
+의미 있는 이름을 먼저 정해야 한다 — 남은 일이지 예외가 아니다.
 
 ### 의도적 예외
 
