@@ -825,8 +825,8 @@
   "tutorial": {
     "dontShowAgain": "Don't show again",
     "openDocs": "Numbers and formulas are in Reference",
-    "prev": "← Prev",
-    "next": "Next →",
+    "prev": "Prev",
+    "next": "Next",
     "start": "Let's Go!",
     "tower": {
       "label": "Single Player",
@@ -1150,7 +1150,7 @@
       "battlePrepError": "An error occurred while preparing the battle."
     },
     "lab": {
-      "backToMenu": "← Menu",
+      "backToMenu": "Menu",
       "packShop": "Pack Shop",
       "autobattle": "Auto-Battle",
       "trainerTower": "Trainer Tower",
@@ -1230,7 +1230,7 @@
       "firstClear": "First Clear",
       "coins": "+{n} coins",
       "shards": "+{n} shards",
-      "nextFloor": "Next Floor →",
+      "nextFloor": "Next Floor",
       "retry": "Retry",
       "exit": "Exit"
     },
@@ -1292,7 +1292,7 @@
       "desc": "Prove your Poké-fandom!"
     },
     "hub": {
-      "backToMenu": "← Menu",
+      "backToMenu": "Menu",
       "backHub": "Quiz",
       "headline": "Pick a quiz and play!",
       "roundInfo": "10 questions · 4 choices",

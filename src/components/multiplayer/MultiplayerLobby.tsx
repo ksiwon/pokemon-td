@@ -25,11 +25,11 @@ interface MultiplayerLobbyProps {
 }
 
 const DIFF_META: Record<string, { label: string; color: string }> = {
-  easiest: { label: 'EASIEST', color: '#94a3b8' },
-  easy:    { label: 'EASY',    color: '#4ade80' },
-  medium:  { label: 'MEDIUM',  color: '#60a5fa' },
-  hard:    { label: 'HARD',    color: '#fb923c' },
-  expert:  { label: 'EXPERT',  color: '#f87171' },
+  easiest: { label: 'EASIEST', color: C.plain },
+  easy:    { label: 'EASY',    color: C.green },
+  medium:  { label: 'MEDIUM',  color: C.blue },
+  hard:    { label: 'HARD',    color: C.orange },
+  expert:  { label: 'EXPERT',  color: C.red },
 };
 
 export const MultiplayerLobby = ({ onBack, onStartGame }: MultiplayerLobbyProps) => {
@@ -498,8 +498,8 @@ export const MultiplayerLobby = ({ onBack, onStartGame }: MultiplayerLobbyProps)
         {kickConfirm.open && kickConfirm.player && (
           <ModalOverlay onClick={() => setKickConfirm({ open: false, player: null })}>
             <ConfirmModal onClick={e => e.stopPropagation()}>
-              <ConfirmIcon style={{ color: '#f87171' }}><Emoji glyph="🚫" size={24} /></ConfirmIcon>
-              <ConfirmTitle style={{ color: '#f87171' }}>{t('lobby.kickConfirmTitle')}</ConfirmTitle>
+              <ConfirmIcon style={{ color: C.red }}><Emoji glyph="🚫" size={24} /></ConfirmIcon>
+              <ConfirmTitle style={{ color: C.red }}>{t('lobby.kickConfirmTitle')}</ConfirmTitle>
               <ConfirmText>
                 {t('lobby.kickConfirmMsg', { name: kickConfirm.player.userName })}
               </ConfirmText>
@@ -508,7 +508,7 @@ export const MultiplayerLobby = ({ onBack, onStartGame }: MultiplayerLobbyProps)
                   {t('lobby.kickConfirmNo')}
                 </CancelModalBtn>
                 <LeaveModalBtn
-                  style={{ background: 'rgba(239,68,68,0.15)', borderColor: 'rgba(239,68,68,0.4)', color: '#f87171' }}
+                  style={{ background: `${C.red}26`, borderColor: `${C.red}66`, color: C.red }}
                   onClick={handleKickPlayer}
                 >
                   {t('lobby.kickConfirmYes')}

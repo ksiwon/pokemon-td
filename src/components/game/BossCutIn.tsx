@@ -5,7 +5,7 @@
 // 게임 루프를 막지 않는 비차단(pointer-events:none) 오버레이.
 import React, { useEffect, useRef, useState } from 'react';
 import styled, { keyframes } from 'styled-components';
-import { C, FONT, SP } from '../../styles/tokens';
+import { C, FONT, SP, SCALE } from '../../styles/tokens';
 import { winThin, pixelBold } from '../../styles/pixel';
 import { Emoji } from '../shared/Emoji';
 import { useGameStore } from '../../store/gameStore';
@@ -130,8 +130,8 @@ const Band = styled.div`
   min-width: 460px;
   max-width: 88vw;
   background: linear-gradient(100deg, rgba(120,8,8,0) 0%, rgba(120,8,8,0.92) 14%, rgba(20,4,4,0.96) 100%);
-  border-top: 2px solid #f59e0b;
-  border-bottom: 2px solid #f59e0b;
+  border-top: ${SCALE}px solid ${C.gold};
+  border-bottom: ${SCALE}px solid ${C.gold};
   box-shadow: 0 0 40px rgba(245,158,11,0.35), inset 0 0 60px rgba(0,0,0,0.5);
   animation: ${bandIn} 3.4s cubic-bezier(0.16, 1, 0.3, 1) both;
   overflow: hidden;

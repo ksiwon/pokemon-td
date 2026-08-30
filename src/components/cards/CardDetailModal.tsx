@@ -11,7 +11,7 @@ import { getTypeColor } from '../../utils/typeEffectiveness';
 import { useTranslation } from '../../i18n';
 import { MAX_STARS, MERGE_COPIES } from '../../services/CardService';
 import { CardView } from './CardView';
-import { C, FONT, SP, SCALE } from '../../styles/tokens';
+import { C, FONT, SP, SCALE, STAT_RAMP } from '../../styles/tokens';
 import { win, sunken, pixelText, pixelBold, shadowLg } from '../../styles/pixel';
 
 interface Props {
@@ -34,7 +34,8 @@ const STAT_ROWS: Array<{ key: keyof PokemonData['stats']; label: string }> = [
 
 // 종족값 → 막대 색(낮음 빨강 → 높음 초록)
 const statBarColor = (v: number): string =>
-  v >= 120 ? '#22c55e' : v >= 90 ? '#84cc16' : v >= 60 ? '#eab308' : v >= 40 ? '#f97316' : '#ef4444';
+  v >= 120 ? STAT_RAMP.best : v >= 90 ? STAT_RAMP.high
+  : v >= 60 ? STAT_RAMP.mid : v >= 40 ? STAT_RAMP.low : STAT_RAMP.worst;
 
 export const CardDetailModal = ({ pokemonId, stars, copies = 0, rarity, onClose }: Props) => {
   const { t } = useTranslation();

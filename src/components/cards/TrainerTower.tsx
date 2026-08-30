@@ -16,7 +16,7 @@ import {
 } from '../../services/CardBattleService';
 import { BattleLogPanel, nextStatusMap, UnitStatusMap, UnitStatusBadge } from './BattleLogPanel';
 import { showToast } from '../shared/Toast';
-import { C, FONT, SP, SCALE } from '../../styles/tokens';
+import { C, FONT, SP, SCALE, ICON } from '../../styles/tokens';
 import { win, winThin, btn, btnThin, pixelText, pixelBold, shadowLg } from '../../styles/pixel';
 
 type Phase = 'idle' | 'loading' | 'battle' | 'result';
@@ -270,20 +270,20 @@ export const TrainerTower = ({ onBack }: { onBack: () => void }) => {
             {reward && (reward.coins > 0 || reward.starShards > 0) && (
               <RewardRow>
                 {reward.firstClear && <FirstBadge>{t('cards.tower.firstClear')}</FirstBadge>}
-                {reward.coins > 0 && <Rw $c="#fbbf24">{t('cards.tower.coins', { n: reward.coins })}</Rw>}
-                {reward.starShards > 0 && <Rw $c="#c084fc">{t('cards.tower.shards', { n: reward.starShards })}</Rw>}
+                {reward.coins > 0 && <Rw $c={C.gold}>{t('cards.tower.coins', { n: reward.coins })}</Rw>}
+                {reward.starShards > 0 && <Rw $c={C.purple}>{t('cards.tower.shards', { n: reward.starShards })}</Rw>}
               </RewardRow>
             )}
             {reward?.daily && (
               <RewardRow>
                 <FirstBadge>{t('cards.daily.firstWin')}</FirstBadge>
-                <Rw $c="#fbbf24">{t('cards.tower.coins', { n: reward.daily.coins })}</Rw>
-                {reward.daily.starShards > 0 && <Rw $c="#c084fc">{t('cards.tower.shards', { n: reward.daily.starShards })}</Rw>}
+                <Rw $c={C.gold}>{t('cards.tower.coins', { n: reward.daily.coins })}</Rw>
+                {reward.daily.starShards > 0 && <Rw $c={C.purple}>{t('cards.tower.shards', { n: reward.daily.starShards })}</Rw>}
               </RewardRow>
             )}
             <ResultBtns>
               {result.winner === 'player'
-                ? <PrimaryBtn onClick={reset}>{t('cards.tower.nextFloor')}</PrimaryBtn>
+                ? <PrimaryBtn onClick={reset}>{t('cards.tower.nextFloor')} <ChevronsRight size={ICON.md} /></PrimaryBtn>
                 : <PrimaryBtn onClick={reset}>{t('cards.tower.retry')}</PrimaryBtn>}
               <GhostBtn onClick={onBack}>{t('cards.tower.exit')}</GhostBtn>
             </ResultBtns>

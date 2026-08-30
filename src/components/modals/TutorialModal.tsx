@@ -15,6 +15,7 @@ import {
 } from '../shared/modal.styles';
 import { C, FONT, SP, SCALE, ICON } from '../../styles/tokens';
 import { WinColor, btn, sunken, pixelBold, shadowLg } from '../../styles/pixel';
+import { ChevronLeft, ChevronRight } from 'lucide-react';
 import { Emoji } from '../shared/Emoji';
 import { lMedia, media } from '../../utils/responsive.utils';
 import { useTranslation } from '../../i18n';
@@ -379,7 +380,7 @@ export const TutorialModal: React.FC<TutorialModalProps> = ({ mode, onClose, onP
 
           <NavButtons>
             {page > 0 && (
-              <PrevBtn onClick={() => go(page - 1)}>{t('tutorial.prev')}</PrevBtn>
+              <PrevBtn onClick={() => go(page - 1)}><ChevronLeft size={ICON.md} /> {t('tutorial.prev')}</PrevBtn>
             )}
             <NextBtn
               $grad={grad}
@@ -389,7 +390,7 @@ export const TutorialModal: React.FC<TutorialModalProps> = ({ mode, onClose, onP
             >
               {isLast
                 ? (onProceed ? <>{t('tutorial.start')} <Emoji glyph="🚀" size={14} /></> : t('tutorial.next'))
-                : t('tutorial.next')}
+                : <>{t('tutorial.next')} <ChevronRight size={ICON.md} /></>}
             </NextBtn>
           </NavButtons>
         </Footer>

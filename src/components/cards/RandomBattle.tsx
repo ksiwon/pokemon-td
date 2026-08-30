@@ -315,14 +315,14 @@ export const RandomBattle = ({ onBack }: { onBack: () => void }) => {
             </ResultSub>
             {rewardCoins > 0 && (
               <RewardRow>
-                <Rw $c="#fbbf24">{t('cards.tower.coins', { n: rewardCoins })}</Rw>
+                <Rw $c={C.gold}>{t('cards.tower.coins', { n: rewardCoins })}</Rw>
               </RewardRow>
             )}
             {dailyReward && (
               <RewardRow>
                 <DailyBadge>{t('cards.daily.firstWin')}</DailyBadge>
-                <Rw $c="#fbbf24">{t('cards.tower.coins', { n: dailyReward.coins })}</Rw>
-                {dailyReward.starShards > 0 && <Rw $c="#c084fc">{t('cards.tower.shards', { n: dailyReward.starShards })}</Rw>}
+                <Rw $c={C.gold}>{t('cards.tower.coins', { n: dailyReward.coins })}</Rw>
+                {dailyReward.starShards > 0 && <Rw $c={C.purple}>{t('cards.tower.shards', { n: dailyReward.starShards })}</Rw>}
               </RewardRow>
             )}
             <ResultBtns>

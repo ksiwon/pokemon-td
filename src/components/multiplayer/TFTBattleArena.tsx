@@ -566,7 +566,7 @@ export const TFTBattleArena: React.FC<TFTBattleArenaProps> = ({
                       onMouseDown={() => isPrep && u.team === 'my' && setDragId(u.id)}
                       onContextMenu={(e) => { e.preventDefault(); handleReturnToBench(u.id); }}
                     >
-                      {!u.fainted && <HpBg><HpFill style={{ width: `${(u.hp / u.maxHp) * 100}%`, background: u.team === 'my' ? '#4ade80' : '#f87171' }} /></HpBg>}
+                      {!u.fainted && <HpBg><HpFill style={{ width: `${(u.hp / u.maxHp) * 100}%`, background: u.team === 'my' ? C.green : C.red }} /></HpBg>}
                       {u.detail.sprite ? <Sprite src={u.detail.sprite} $fainted={u.fainted} $flip={myPosition === 'R' ? u.team === 'my' : u.team === 'opp'} /> : <Fallback $team={u.team}>{u.detail.name?.slice(0, 2)}</Fallback>}
                       <UnitName>{u.detail.name}</UnitName>
                     </UnitWrap>

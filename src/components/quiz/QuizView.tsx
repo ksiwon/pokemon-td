@@ -4,11 +4,11 @@
 import { useEffect, useMemo, useState } from 'react';
 import styled from 'styled-components';
 import { useNavigate } from 'react-router-dom';
-import { Ghost, Volume2, Search, Shapes, Swords, Hash, ScrollText, GraduationCap, Flame, Trophy, ChevronRight, Type, Languages, Combine, Lightbulb, Shuffle, Sparkles, SpellCheck, Zap } from 'lucide-react';
+import { Ghost, Volume2, Search, Shapes, Swords, Hash, ScrollText, GraduationCap, Flame, Trophy, ChevronRight, Type, Languages, Combine, Lightbulb, Shuffle, Sparkles, SpellCheck, Zap, ArrowLeft } from 'lucide-react';
 import { media } from '../../utils/responsive.utils';
 import { Screen as Root, ScreenBackBtn as BackBtn, ScreenBody as Body, ScreenTitle as Title, ScreenTopBar as TopBar, SectionLabel } from '../shared/screen';
 import { useTranslation } from '../../i18n';
-import { C, FONT, SP, SCALE } from '../../styles/tokens';
+import { C, FONT, SP, SCALE, ICON } from '../../styles/tokens';
 import { winThin, btn, btnThin, pixelText, pixelBold } from '../../styles/pixel';
 import { QuizKind, QuizMode, availableQuizKinds, ROUND_SIZES, RANKED_ROUND_SIZE } from '../../types/quiz';
 import { quizService } from '../../services/QuizService';
@@ -77,7 +77,7 @@ export const QuizView = () => {
   return (
     <Root>
       <TopBar>
-        <BackBtn onClick={() => navigate('/')}>{t('quiz.hub.backToMenu')}</BackBtn>
+        <BackBtn onClick={() => navigate('/')}><ArrowLeft size={ICON.md} /> {t('quiz.hub.backToMenu')}</BackBtn>
         <Title>{t('quiz.menu.title')}</Title>
         <StreakChip><Flame size={13} /> {state.bestStreak}</StreakChip>
       </TopBar>

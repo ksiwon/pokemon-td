@@ -857,8 +857,8 @@
   "tutorial": {
     "dontShowAgain": "다시 보지 않기",
     "openDocs": "수치·계산식은 자료실에서",
-    "prev": "← 이전",
-    "next": "다음 →",
+    "prev": "이전",
+    "next": "다음",
     "start": "시작하기",
     "tower": {
       "label": "싱글 플레이",
@@ -1150,7 +1150,7 @@
       "battlePrepError": "전투 준비 중 오류가 발생했습니다."
     },
     "lab": {
-      "backToMenu": "← 메뉴",
+      "backToMenu": "메뉴",
       "packShop": "팩 상점",
       "autobattle": "오토배틀",
       "trainerTower": "트레이너 타워",
@@ -1230,7 +1230,7 @@
       "firstClear": "첫 클리어",
       "coins": "+{n} 코인",
       "shards": "+{n} 별조각",
-      "nextFloor": "다음 층 →",
+      "nextFloor": "다음 층",
       "retry": "다시 도전",
       "exit": "나가기"
     },
@@ -1292,7 +1292,7 @@
       "desc": "포덕임을 증명하라!"
     },
     "hub": {
-      "backToMenu": "← 메뉴",
+      "backToMenu": "메뉴",
       "backHub": "퀴즈",
       "headline": "퀴즈를 골라 도전!",
       "roundInfo": "한 판 10문제 · 4지선다",

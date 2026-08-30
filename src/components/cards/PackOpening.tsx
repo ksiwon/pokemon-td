@@ -18,7 +18,7 @@ const isRare = (r: Rarity) => rarityRank(r) >= rarityRank('Gold');
 type Phase = 'sealed' | 'reveal' | 'summary';
 
 const PACK_COLOR: Record<PackType, string> = {
-  normal: '#60a5fa', type: '#34d399', premium: '#c084fc',
+  normal: C.blue, type: C.teal, premium: C.purple,
 };
 
 interface Props {
@@ -106,8 +106,8 @@ export const PackOpening = ({ packType, filterType, results, onClose }: Props) =
 
           {flipped && (
             <RevealTags>
-              {results[idx].isNew && <Tag $bg="#ef4444">NEW</Tag>}
-              {results[idx].starUp && <Tag $bg="#f59e0b">★ UP → {results[idx].stars}</Tag>}
+              {results[idx].isNew && <Tag $bg={C.red}>NEW</Tag>}
+              {results[idx].starUp && <Tag $bg={C.gold}>★ UP → {results[idx].stars}</Tag>}
               {/* 별이 오르지 않은 중복 — 표시가 없으면 '아무 일도 안 일어남'으로 보여
                   합성이 고장난 줄 안다. 몇 장 더 모으면 되는지까지 알려준다. */}
               {!results[idx].isNew && !results[idx].starUp && results[idx].copies > 0 && (
@@ -115,7 +115,7 @@ export const PackOpening = ({ packType, filterType, results, onClose }: Props) =
                   {t('cards.pack.mergeProgress', { n: results[idx].copies, of: MERGE_COPIES })}
                 </Tag>
               )}
-              {results[idx].refundCoins > 0 && <Tag $bg="#64748b">{t('cards.pack.plusCoins', { n: results[idx].refundCoins })}</Tag>}
+              {results[idx].refundCoins > 0 && <Tag $bg={C.textDim}>{t('cards.pack.plusCoins', { n: results[idx].refundCoins })}</Tag>}
             </RevealTags>
           )}
 
@@ -129,9 +129,9 @@ export const PackOpening = ({ packType, filterType, results, onClose }: Props) =
           <SumTitle>{t('cards.pack.resultTitle')}</SumTitle>
           <SumStats>
             {newCount > 0 && <SumStat $c="#fca5a5">{t('cards.pack.newCount', { n: newCount })}</SumStat>}
-            {starUps > 0 && <SumStat $c="#fbbf24">{t('cards.pack.starUpCount', { n: starUps })}</SumStat>}
+            {starUps > 0 && <SumStat $c={C.gold}>{t('cards.pack.starUpCount', { n: starUps })}</SumStat>}
             {merging > 0 && <SumStat $c="#c4b5fd">{t('cards.pack.mergeCount', { n: merging })}</SumStat>}
-            {refund > 0 && <SumStat $c="#94a3b8">{t('cards.pack.refundCount', { n: refund })}</SumStat>}
+            {refund > 0 && <SumStat $c={C.plain}>{t('cards.pack.refundCount', { n: refund })}</SumStat>}
           </SumStats>
           <Grid>
             {results.map((r, i) => (

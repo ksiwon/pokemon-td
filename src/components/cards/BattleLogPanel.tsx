@@ -8,14 +8,17 @@ import { ScrollText, Flame, Skull, Zap, Snowflake } from 'lucide-react';
 import { media } from '../../utils/responsive.utils';
 import { getTypeColor } from '../../utils/typeEffectiveness';
 import { useTranslation } from '../../i18n';
-import { C, FONT, SP, SCALE } from '../../styles/tokens';
+import { C, FONT, SP, SCALE, TYPE_COLOR } from '../../styles/tokens';
 import { win, pixelText, pixelBold } from '../../styles/pixel';
 import {
   BattleCard, BattleLogEntry, StatusKind, BURN_TURNS, POISON_TURNS,
 } from '../../services/CardBattleService';
 
+// 상태이상 색은 대응하는 타입 색을 그대로 쓴다(화상=불꽃, 독=독, 마비=전기, 얼음=얼음).
+// 따로 만들면 같은 개념에 색이 두 벌 생긴다.
 const STATUS_COLOR: Record<StatusKind, string> = {
-  burn: '#f97316', poison: '#a855f7', paralyze: '#eab308', freeze: '#38bdf8',
+  burn: TYPE_COLOR.fire, poison: TYPE_COLOR.poison,
+  paralyze: TYPE_COLOR.electric, freeze: TYPE_COLOR.ice,
 };
 
 // ─── 아레나 유닛 상태이상 표시 (TrainerTower/RandomBattle 공용) ────────────────
@@ -133,10 +136,10 @@ export const BattleLogPanel = ({ log, units, count }: Props) => {
             <Name $side={tgt?.side ?? 'enemy'}>{tgt?.name ?? '???'}</Name>
             {/* 무효는 '-0' 대신 아래 '효과 없음' 뱃지로만 표기 */}
             {e.effectiveness > 0 && <Dmg $crit={e.isCrit}>-{e.damage}</Dmg>}
-            {e.isCrit && <Badge $c="#fbbf24">{t('cards.battleLog.crit')}</Badge>}
-            {e.effectiveness >= 2 && <Badge $c="#34d399">{t('cards.battleLog.superEffective')}</Badge>}
-            {e.effectiveness > 0 && e.effectiveness <= 0.5 && <Badge $c="#94a3b8">{t('cards.battleLog.notEffective')}</Badge>}
-            {e.effectiveness === 0 && <Badge $c="#64748b">{t('cards.battleLog.immune')}</Badge>}
+            {e.isCrit && <Badge $c={C.gold}>{t('cards.battleLog.crit')}</Badge>}
+            {e.effectiveness >= 2 && <Badge $c={C.teal}>{t('cards.battleLog.superEffective')}</Badge>}
+            {e.effectiveness > 0 && e.effectiveness <= 0.5 && <Badge $c={C.plain}>{t('cards.battleLog.notEffective')}</Badge>}
+            {e.effectiveness === 0 && <Badge $c={C.textDim}>{t('cards.battleLog.immune')}</Badge>}
             {e.inflicted && <Badge $c={STATUS_COLOR[e.inflicted]}>{statusName(e.inflicted)}</Badge>}
           </Line>,
         );

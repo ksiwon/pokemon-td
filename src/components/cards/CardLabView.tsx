@@ -6,7 +6,7 @@ import styled, { keyframes } from 'styled-components';
 import { useNavigate } from 'react-router-dom';
 import { media } from '../../utils/responsive.utils';
 import { Screen as Root, ScreenBackBtn as BackBtn, ScreenBody as Body, ScreenTitle as Title, ScreenTopBar as TopBar } from '../shared/screen';
-import { Coins, Sparkles, Package, Layers, Swords, Trophy, ChevronRight, Users, CloudUpload, CloudDownload, X } from 'lucide-react';
+import { Coins, Sparkles, Package, Layers, Swords, Trophy, ChevronRight, Users, CloudUpload, CloudDownload, X, ArrowLeft } from 'lucide-react';
 import { pokeAPI } from '../../api/pokeapi';
 import { useTranslation } from '../../i18n';
 import { cardService, PACK_DEFS, seasonRewardForRank } from '../../services/CardService';
@@ -220,11 +220,11 @@ export const CardLabView = () => {
   return (
     <Root>
       <TopBar>
-        <BackBtn onClick={() => navigate('/')}>{t('cards.lab.backToMenu')}</BackBtn>
+        <BackBtn onClick={() => navigate('/')}><ArrowLeft size={ICON.md} /> {t('cards.lab.backToMenu')}</BackBtn>
         <Title>{t('cards.menu.title')}</Title>
         <Wallet>
-          <WChip><Coins size={15} color="#fbbf24" /> {state.wallet.coins.toLocaleString()}</WChip>
-          <WChip><Sparkles size={15} color="#c084fc" /> {state.wallet.starShards.toLocaleString()}</WChip>
+          <WChip><Coins size={ICON.md} color={C.gold} /> {state.wallet.coins.toLocaleString()}</WChip>
+          <WChip><Sparkles size={ICON.md} color={C.purple} /> {state.wallet.starShards.toLocaleString()}</WChip>
         </Wallet>
       </TopBar>
 
@@ -256,11 +256,11 @@ export const CardLabView = () => {
             <>
               <MyRankRow>
                 <MyRankChip>
-                  <Swords size={13} color="#c084fc" /> {t('cards.rank.tower')}{' '}
+                  <Swords size={ICON.sm} color={C.purple} /> {t('cards.rank.tower')}{' '}
                   <b>{rankInfo.towerRank ? t('cards.rank.rankSuffix', { n: rankInfo.towerRank }) : t('cards.rank.unranked')}</b>
                 </MyRankChip>
                 <MyRankChip>
-                  <Layers size={13} color="#38bdf8" /> {t('cards.rank.coll')}{' '}
+                  <Layers size={ICON.sm} color={C.cyan} /> {t('cards.rank.coll')}{' '}
                   <b>{rankInfo.collRank ? t('cards.rank.rankSuffix', { n: rankInfo.collRank }) : t('cards.rank.unranked')}</b>
                 </MyRankChip>
               </MyRankRow>

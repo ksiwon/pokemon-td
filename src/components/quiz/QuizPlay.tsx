@@ -235,8 +235,8 @@ export const QuizPlay = ({ mode, roundSize = 30, onExit }: QuizPlayProps) => {
               {milestones.map(m => (
                 <MilestoneRow key={m.threshold}>
                   <span>{t('quiz.result.milestoneAt', { n: m.threshold })}</span>
-                  <MilestoneRw $c="#fbbf24">{t('quiz.result.rewardCoins', { n: m.coins })}</MilestoneRw>
-                  {m.starShards > 0 && <MilestoneRw $c="#c084fc">{t('quiz.result.rewardShards', { n: m.starShards })}</MilestoneRw>}
+                  <MilestoneRw $c={C.gold}>{t('quiz.result.rewardCoins', { n: m.coins })}</MilestoneRw>
+                  {m.starShards > 0 && <MilestoneRw $c={C.purple}>{t('quiz.result.rewardShards', { n: m.starShards })}</MilestoneRw>}
                 </MilestoneRow>
               ))}
             </MilestoneBox>
@@ -365,7 +365,7 @@ export const QuizPlay = ({ mode, roundSize = 30, onExit }: QuizPlayProps) => {
                 </div>
               </RevealBody>
               <NextBtn onClick={onNext}>
-                {idx + 1 >= ROUND ? t('quiz.play.seeResult') : t('quiz.play.next')} →
+                {idx + 1 >= ROUND ? t('quiz.play.seeResult') : t('quiz.play.next')}
               </NextBtn>
             </RevealCard>
           )}
