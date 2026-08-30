@@ -8,6 +8,8 @@ import { MERGE_COPIES } from '../../services/CardService';
 import { Rarity } from '../../data/evolution';
 import { useTranslation } from '../../i18n';
 import { CardView } from './CardView';
+import { C, FONT, SP, SCALE } from '../../styles/tokens';
+import { btn, btnThin, pixelText, pixelBold, shadowLg } from '../../styles/pixel';
 
 const rarityRank = (r: Rarity): number =>
   ['Bronze', 'Silver', 'Gold', 'Diamond', 'Master', 'Legend'].indexOf(r);
@@ -160,6 +162,10 @@ const pop = keyframes`0%{opacity:0;transform:scale(0.8) translateY(10px)}100%{op
 const tagPop = keyframes`0%{opacity:0;transform:scale(0.6)}60%{transform:scale(1.15)}100%{opacity:1;transform:scale(1)}`;
 
 // ─── styled ──────────────────────────────────────────────────────────────────
+//
+// 팩 개봉 연출(섬광·광택·카드 뒤집기)은 이 모드의 핵심 콘텐츠라 그대로 둔다.
+// 트레이딩 카드의 질감은 장르 관습이고, CardView와 같은 예외다(docs/DESIGN.md).
+// 대신 껍데기 — 건너뛰기·닫기 버튼, 글자, 태그 — 는 디자인 토큰에 맞춘다.
 const Overlay = styled.div`
   position: fixed; inset: 0; z-index: 4000;
   background: radial-gradient(circle at center, rgba(15,18,30,0.96), rgba(4,5,10,0.99));
@@ -191,15 +197,23 @@ const PackShine = styled.div`
   background: linear-gradient(100deg, transparent, rgba(255,255,255,0.5), transparent);
   animation: ${shimmer} 2.4s ease-in-out infinite;
 `;
-const PackLabel = styled.div`font-size: 22px; font-weight: 900; color: #fff; text-shadow: 0 2px 8px rgba(0,0,0,0.6); z-index: 1;`;
-const PackSub = styled.div`font-size: 13px; color: rgba(255,255,255,0.8); z-index: 1;`;
-const TapHint = styled.div`font-size: 15px; color: rgba(255,255,255,0.6); letter-spacing: 0.1em; animation: ${float} 2s ease-in-out infinite;`;
+const PackLabel = styled.div`
+  ${pixelBold}
+  font-size: ${FONT.xl}; color: ${C.text}; z-index: 1;
+  text-shadow: ${SCALE}px ${SCALE}px 0 ${C.ink};
+`;
+const PackSub = styled.div`${pixelText} font-size: ${FONT.sm}; color: ${C.textSub}; z-index: 1;`;
+const TapHint = styled.div`
+  ${pixelBold}
+  font-size: ${FONT.sm}; color: ${C.textSub};
+  animation: ${float} 2s ease-in-out infinite;
+`;
 
 const RevealWrap = styled.div`
   position: absolute; inset: 0; display: flex; flex-direction: column;
   align-items: center; justify-content: center; gap: 18px; cursor: pointer;
 `;
-const Counter = styled.div`font-size: 13px; font-weight: 700; color: rgba(255,255,255,0.5); letter-spacing: 0.15em;`;
+const Counter = styled.div`${pixelBold} font-size: ${FONT.sm}; color: ${C.textSub};`;
 
 const FlipStage = styled.div`perspective: 1200px;`;
 const Flipper = styled.div<{ $flipped: boolean }>`
@@ -228,25 +242,37 @@ const FaceFront = styled(Face)`transform: rotateY(180deg);`;
 
 const RevealTags = styled.div`display: flex; gap: 8px; min-height: 24px;`;
 const Tag = styled.span<{ $bg: string }>`
-  background: ${p => p.$bg}; color: #fff; font-size: 12px; font-weight: 800;
-  padding: 4px 10px; border-radius: 20px; box-shadow: 0 2px 8px rgba(0,0,0,0.4);
+  ${pixelBold}
+  background: ${p => p.$bg}; color: ${C.text};
+  border: 2px solid ${C.ink};
+  font-size: ${FONT.sm}; line-height: 1.4;
+  padding: ${SP.xs} ${SP.sm};
   animation: ${tagPop} 0.35s ease-out both;
 `;
-const RevealHint = styled.div`font-size: 13px; color: rgba(255,255,255,0.45); letter-spacing: 0.08em;`;
+const RevealHint = styled.div`${pixelText} font-size: ${FONT.sm}; color: ${C.textDim};`;
 const SkipBtn = styled.button`
+  ${btnThin('plain')}
+  ${pixelBold}
   position: absolute; top: 20px; right: 20px;
-  background: rgba(255,255,255,0.08); border: 1px solid rgba(255,255,255,0.15);
-  color: rgba(255,255,255,0.7); font-size: 13px; padding: 7px 14px; border-radius: 8px; cursor: pointer;
-  &:hover { background: rgba(255,255,255,0.15); }
+  color: ${C.text}; font-size: ${FONT.sm};
+  padding: ${SP.xs} ${SP.sm};
+  &:focus, &:focus-visible { outline: none; }
 `;
 
 const SummaryWrap = styled.div`
   display: flex; flex-direction: column; align-items: center; gap: 18px;
   padding: 24px; max-width: 92vw; animation: ${pop} 0.4s ease-out both;
 `;
-const SumTitle = styled.h2`font-size: 24px; font-weight: 900; color: #f8fafc; margin: 0;`;
+const SumTitle = styled.h2`
+  ${pixelBold}
+  font-size: ${FONT.xl}; color: ${C.text}; margin: 0;
+  ${shadowLg}
+`;
 const SumStats = styled.div`display: flex; gap: 12px; flex-wrap: wrap; justify-content: center;`;
-const SumStat = styled.span<{ $c: string }>`font-size: 13px; font-weight: 700; color: ${p => p.$c};`;
+const SumStat = styled.span<{ $c: string }>`
+  ${pixelBold}
+  font-size: ${FONT.sm}; color: ${p => p.$c};
+`;
 const Grid = styled.div`
   display: flex; gap: 12px; flex-wrap: wrap; justify-content: center; max-width: 720px;
 `;
@@ -254,8 +280,9 @@ const GridCell = styled.div<{ $delay: number }>`
   animation: ${pop} 0.4s ease-out both; animation-delay: ${p => p.$delay}s;
 `;
 const CloseBtn = styled.button<{ $color: string }>`
-  margin-top: 8px; padding: 12px 40px; border-radius: 10px; border: none;
-  background: ${p => p.$color}; color: #07090f; font-size: 16px; font-weight: 800; cursor: pointer;
-  box-shadow: 0 6px 20px ${p => p.$color}55; transition: transform 0.15s;
-  &:hover { transform: translateY(-2px); }
+  ${btn('gold')}
+  ${pixelBold}
+  margin-top: ${SP.sm}; padding: ${SP.sm} ${SP.xxl};
+  color: ${C.text}; font-size: ${FONT.sm};
+  &:focus, &:focus-visible { outline: none; }
 `;

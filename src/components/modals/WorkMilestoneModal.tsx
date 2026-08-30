@@ -1,6 +1,8 @@
 import React from 'react';
 import styled from 'styled-components';
 import { useTranslation } from '../../i18n';
+import { C, FONT, SP } from '../../styles/tokens';
+import { winThin, btn, pixelBold } from '../../styles/pixel';
 import { useGameStore } from '../../store/gameStore';
 import {
   ModalOverlay, ModalBox, ModalHeader, ModalTitle,
@@ -74,55 +76,36 @@ export const WorkMilestoneModal: React.FC = () => {
   );
 };
 
+// ─── Styled Components ────────────────────────────────────────────────────────
+// docs/DESIGN.md 의 디자인 시스템을 따른다.
+
 const WarnBox = styled.div`
-  margin-top: 10px;
-  padding: 8px 10px;
-  border: 1px solid rgba(243, 156, 18, 0.45);
-  border-radius: 8px;
-  background: rgba(243, 156, 18, 0.12);
-  color: #f6c66b;
-  font-size: 12.5px;
-  line-height: 1.55;
-  ${media.mobile} {
-    font-size: 11.5px;
-  }
+  ${winThin('gold')}
+  margin-top: ${SP.sm};
+  padding: ${SP.sm};
+  color: ${C.gold};
+  font-size: ${FONT.sm};
+  text-shadow: 1px 1px 0 ${C.textShadow};
 `;
 
 const Desc = styled.p`
   margin: 0;
-  font-size: 14px;
-  line-height: 1.6;
-  color: #e2e8f0;
+  font-size: ${FONT.sm};
+  color: ${C.textSub};
   white-space: pre-line;
-  ${media.mobile} {
-    font-size: 12px;
-  }
 `;
 
 const ActionBtn = styled.button<{ $primary?: boolean }>`
-  background: ${p => p.$primary
-    ? 'linear-gradient(135deg, #f39c12 0%, #d35400 100%)'
-    : 'linear-gradient(135deg, #34495e 0%, #2c3e50 100%)'};
-  border: 1px solid ${p => p.$primary ? '#f39c12' : '#34495e'};
-  box-shadow: 0 4px 6px rgba(0,0,0,0.15);
-  color: white;
-  padding: 10px 16px;
-  border-radius: 8px;
-  font-size: 13px;
-  font-weight: bold;
-  cursor: pointer;
+  ${p => btn(p.$primary ? 'gold' : 'plain')}
+  ${pixelBold}
+  color: ${C.text};
+  padding: ${SP.sm} ${SP.md};
+  font-size: ${FONT.sm};
   display: flex;
   align-items: center;
   justify-content: center;
-  gap: 6px;
-  transition: transform 0.1s ease, filter 0.15s ease;
+  gap: ${SP.xs};
+  &:focus, &:focus-visible { outline: none; }
 
-  &:hover { filter: brightness(1.1); }
-  &:active { transform: scale(0.98); }
-
-  ${media.mobile} {
-    flex: 1;
-    padding: 12px;
-    font-size: 12px;
-  }
+  ${media.mobile} { flex: 1; }
 `;

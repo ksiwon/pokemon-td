@@ -24,6 +24,8 @@ import {
 import { Emoji } from '../shared/Emoji';
 import { media } from '../../utils/responsive.utils';
 import { useTranslation } from '../../i18n';
+import { C, FONT, SP, SCALE } from '../../styles/tokens';
+import { winThin, pixelBold } from '../../styles/pixel';
 
 // ─── 데이터 ──────────────────────────────────────────────────────────────────
 // 최신 버전이 배열 맨 앞. date는 ISO(YYYY-MM-DD) — 표시 형식은 로케일에 맡긴다.
@@ -42,6 +44,18 @@ type PatchNote = {
 };
 
 export const PATCH_NOTES: PatchNote[] = [
+  {
+    id: 'v2_25', version: 'v2.25', date: '2026-08-30',
+    items: [
+      { kind: 'changed', key: 'uiOverhaul' },
+      { kind: 'added',   key: 'gameDocs' },
+      { kind: 'added',   key: 'quizKindReward' },
+      { kind: 'changed', key: 'quizRanked' },
+      { kind: 'fixed',   key: 'mapTooltip' },
+      { kind: 'fixed',   key: 'typeColor' },
+      { kind: 'fixed',   key: 'modalSpacing' },
+    ],
+  },
   {
     id: 'v2_24', version: 'v2.24', date: '2026-08-24',
     items: [
@@ -152,50 +166,52 @@ export const PatchNotes: React.FC<PatchNotesProps> = ({ onClose }) => {
 
 // ─── Styles ──────────────────────────────────────────────────────────────────
 const KIND_COLOR: Record<PatchKind, string> = {
-  added:   '#2ecc71',
-  changed: '#4fc3f7',
-  fixed:   '#ffb74d',
+  added:   C.green,
+  changed: C.blue,
+  fixed:   C.gold,
 };
 
+// ─── Styled Components ────────────────────────────────────────────────────────
+// docs/DESIGN.md 의 디자인 시스템을 따른다.
+
 const Intro = styled.p`
-  margin: 0 0 18px;
-  font-size: 12.5px;
-  line-height: 1.6;
-  color: rgba(255,255,255,0.55);
+  margin: 0 0 ${SP.md};
+  font-size: ${FONT.sm};
+  color: ${C.textSub};
 `;
 
 const Version = styled.section`
-  & + & { margin-top: 20px; padding-top: 18px; border-top: 1px solid rgba(255,255,255,0.07); }
+  & + & {
+    margin-top: ${SP.lg};
+    padding-top: ${SP.md};
+    border-top: ${SCALE}px solid ${C.ink};
+  }
 `;
 
 const VersionHead = styled.div`
   display: flex;
   align-items: center;
-  gap: 8px;
-  margin-bottom: 10px;
+  gap: ${SP.sm};
+  margin-bottom: ${SP.sm};
 `;
 
 const VersionLabel = styled.span<{ $latest: boolean }>`
-  font-size: 15px;
-  font-weight: 800;
-  letter-spacing: 0.3px;
-  color: ${p => p.$latest ? '#4fc3f7' : 'rgba(255,255,255,0.85)'};
+  ${pixelBold}
+  font-size: ${FONT.sm};
+  color: ${p => (p.$latest ? C.blue : C.text)};
 `;
 
 const LatestBadge = styled.span`
-  font-size: 9.5px;
-  font-weight: 700;
-  padding: 2px 6px;
-  border-radius: 999px;
-  background: rgba(79,195,247,0.15);
-  border: 1px solid rgba(79,195,247,0.4);
-  color: #4fc3f7;
+  ${winThin('blue')}
+  ${pixelBold}
+  font-size: ${FONT.sm};
+  color: ${C.blue};
 `;
 
 const VersionDate = styled.span`
   margin-left: auto;
-  font-size: 11px;
-  color: rgba(255,255,255,0.35);
+  font-size: ${FONT.sm};
+  color: ${C.textDim};
   font-variant-numeric: tabular-nums;
 `;
 
@@ -205,46 +221,46 @@ const ItemList = styled.ul`
   list-style: none;
   display: flex;
   flex-direction: column;
-  gap: 9px;
+  gap: ${SP.sm};
 `;
 
 const Item = styled.li`
   display: flex;
   align-items: flex-start;
-  gap: 9px;
+  gap: ${SP.sm};
 
   ${media.mobile} {
     flex-direction: column;
-    gap: 4px;
+    gap: ${SP.xs};
   }
 `;
 
+/** 변경 종류 배지 — 알약을 걷어내고 각진 면 + 검은 외곽선. */
 const ItemKind = styled.span<{ $kind: PatchKind }>`
+  ${pixelBold}
   flex: 0 0 auto;
   display: inline-flex;
   align-items: center;
-  gap: 4px;
+  gap: ${SP.xs};
   min-width: 62px;
-  padding: 2px 7px;
-  border-radius: 6px;
-  font-size: 10px;
-  font-weight: 700;
-  background: ${p => KIND_COLOR[p.$kind]}1f;
-  border: 1px solid ${p => KIND_COLOR[p.$kind]}55;
+  padding: 0 ${SP.xs};
+  font-size: ${FONT.sm};
+  line-height: 1.5;
+  background: ${C.panelSunk};
+  border: 2px solid ${C.ink};
   color: ${p => KIND_COLOR[p.$kind]};
 `;
 
 const ItemText = styled.span`
-  font-size: 12.5px;
-  line-height: 1.65;
-  color: rgba(255,255,255,0.8);
+  font-size: ${FONT.sm};
+  color: ${C.text};
+  word-break: keep-all;
 `;
 
 const Footnote = styled.p`
-  margin: 22px 0 0;
-  padding-top: 14px;
-  border-top: 1px solid rgba(255,255,255,0.07);
-  font-size: 11px;
-  line-height: 1.6;
-  color: rgba(255,255,255,0.35);
+  margin: ${SP.lg} 0 0;
+  padding-top: ${SP.md};
+  border-top: ${SCALE}px solid ${C.ink};
+  font-size: ${FONT.sm};
+  color: ${C.textDim};
 `;

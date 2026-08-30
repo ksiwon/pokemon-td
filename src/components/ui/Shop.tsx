@@ -10,6 +10,8 @@ import { useGameStore } from "../../store/gameStore";
 import { canEvolveWithItem, getEvolvableWithItem } from "../../data/evolution";
 import { Emoji } from "../shared/Emoji";
 import { showToast } from "../shared/Toast";
+import { C, FONT, SP, SCALE } from "../../styles/tokens";
+import { win, btn, btnThin, sunken, pixelText, pixelBold, cursorMark, cursorOn, CURSOR_GUTTER, shadowLg } from "../../styles/pixel";
 import {
   EVOLUTION_ITEMS_BY_CATEGORY,
   EVOLUTION_ITEMS,
@@ -341,10 +343,12 @@ export const Shop: React.FC<Props> = ({ embedded = false }) => {
 };
 
 // ─── Styled Components ────────────────────────────────────────────
+// docs/DESIGN.md 의 디자인 시스템을 따른다. 값은 tokens.ts, 창틀·글자는 pixel.ts.
+//
+// 걷어낸 것: 가격 pill 배지(= 요금제 표로 읽히던 원인), 반투명 유리 행,
+//           둥근 모서리, hover 밝기 변화, 12px 미만 글자.
 
 // ── 반응형 헬퍼 → lMedia 사용 ────────────────────────────────────
-const L1024 = lMedia.tablet;
-const L768  = lMedia.phone;
 
 // ── Embedded ──────────────────────────────────────────────────────
 
@@ -352,12 +356,13 @@ const EmbeddedContainer = styled.div`
   flex: 1; min-height: 0; overflow-y: auto;
   display: flex; flex-direction: column;
 
-  &::-webkit-scrollbar { width: 4px; }
-  &::-webkit-scrollbar-track { background: transparent; }
-  &::-webkit-scrollbar-thumb { background: rgba(243,156,18,.3); border-radius: 2px; }
+  /* 각진 도트 스크롤바 — modal.styles 의 scrollArea 와 같은 문법 */
+  &::-webkit-scrollbar { width: 10px; }
+  &::-webkit-scrollbar-track { background: ${C.panelSunk}; border: ${SCALE}px solid ${C.ink}; }
+  &::-webkit-scrollbar-thumb { background: ${C.divider}; border: ${SCALE}px solid ${C.ink}; }
 `;
 
-// ── Floating ──────────────────────────────────────────────────────
+// ── Floating (현재 미사용 — GameLayout이 embedded로만 렌더한다) ────
 
 const ShopOverlay = styled.div`
   position: fixed;
@@ -368,248 +373,250 @@ const ShopOverlay = styled.div`
 `;
 
 const ShopModal = styled.div<{ $isCollapsed: boolean }>`
-  background: linear-gradient(145deg, rgba(26,31,46,.98), rgba(15,20,25,.98));
-  color: #e8edf3;
-  border-radius: 12px;
-  padding: 0;
-  width: 240px;
-  max-height: ${p => p.$isCollapsed ? "46px" : "70vh"};
+  ${win('gold')}
+  ${pixelText}
+  color: ${C.text};
+  width: 260px;
+  max-height: ${p => p.$isCollapsed ? "52px" : "70vh"};
   overflow: hidden;
-  box-shadow: 0 20px 60px rgba(243,156,18,.4), 0 0 2px 1px rgba(243,156,18,.3);
-  border: 3px solid rgba(243,156,18,.4);
-  backdrop-filter: blur(10px);
-  transition: all .4s cubic-bezier(.4,0,.2,1);
-  animation: slideInRight .3s ease-out;
-  ${media.mobile} {
-    width: 150px;
-    max-height: ${p => p.$isCollapsed ? "36px" : "60vh"};
-    border-width: 2px; border-radius: 10px;
-  }
+  ${media.mobile} { width: 200px; max-height: ${p => p.$isCollapsed ? "44px" : "60vh"}; }
 `;
 
 const ShopHeader = styled.div`
-  padding: 12px;
-  background: linear-gradient(90deg, rgba(243,156,18,.2), transparent);
-  border-bottom: 2px solid rgba(243,156,18,.3);
+  padding: ${SP.sm} ${SP.md};
+  background: ${C.panelSunk};
+  border-bottom: ${SCALE}px solid ${C.ink};
   display: flex; justify-content: space-between; align-items: center;
-  cursor: pointer; user-select: none; min-height: 36px;
-  @media (hover: hover) { &:hover { background: linear-gradient(90deg, rgba(243,156,18,.3), transparent); } }
-  ${media.mobile} { padding: 8px; min-height: 34px; }
+  cursor: pointer; user-select: none;
 `;
 
 const ToggleButton = styled.span`
-  font-size: 14px; opacity: .8; transition: transform .3s ease;
+  font-size: ${FONT.sm}; color: ${C.textDim};
 `;
 
 const ShopTitle = styled.h2`
-  font-size: 16px; font-weight: bold; margin: 0;
-  color: #f39c12;
-  text-shadow: 0 0 10px rgba(243,156,18,.6);
+  ${pixelBold}
+  font-size: ${FONT.sm}; margin: 0;
+  color: ${C.gold};
+  display: flex; align-items: center; gap: ${SP.xs};
 `;
 
 const CollapseContent = styled.div<{ $isCollapsed: boolean }>`
   max-height: ${p => p.$isCollapsed ? "0" : "65vh"};
   opacity:    ${p => p.$isCollapsed ? 0   : 1  };
   overflow-y: auto;
-  transition: all .4s cubic-bezier(.4,0,.2,1);
 
-  &::-webkit-scrollbar { width: 6px; }
-  &::-webkit-scrollbar-track { background: rgba(0,0,0,.1); }
-  &::-webkit-scrollbar-thumb { background: rgba(243,156,18,.3); border-radius: 3px; }
+  &::-webkit-scrollbar { width: 10px; }
+  &::-webkit-scrollbar-track { background: ${C.panelSunk}; border: ${SCALE}px solid ${C.ink}; }
+  &::-webkit-scrollbar-thumb { background: ${C.divider}; border: ${SCALE}px solid ${C.ink}; }
 `;
 
 const MoneyDisplay = styled.div`
-  font-size: 13px; font-weight: bold; color: #ffd700;
-  margin: 8px 12px; text-align: center;
-  text-shadow: 0 0 10px rgba(255,215,0,.7);
-  padding: 6px; background: rgba(255,215,0,.1); border-radius: 8px;
-  ${media.mobile} { font-size: 11px; margin: 4px 8px; padding: 4px; }
+  ${sunken()}
+  ${pixelBold}
+  font-size: ${FONT.sm}; color: ${C.gold};
+  margin: ${SP.sm}; padding: ${SP.xs}; text-align: center;
 `;
 
 // ── Shared shop UI ────────────────────────────────────────────────
 
 const TabContainer = styled.div<{ $embedded?: boolean }>`
   display: flex;
-  gap: ${p => p.$embedded ? "4px" : "6px"};
-  padding: ${p => p.$embedded ? "5px 7px" : "0 12px 10px"};
+  gap: ${SP.xs};
+  padding: ${SP.sm};
   flex-shrink: 0;
-  ${L1024} { padding: ${(p: any) => p.$embedded ? "4px 6px" : "0 10px 8px"}; gap: 3px; }
-  ${L768}  { padding: ${(p: any) => p.$embedded ? "3px 5px" : "0 8px 6px"}; gap: 3px; }
+  ${lMedia.phone} { padding: ${SP.xs}; }
 `;
 
+/** 미사용 갯수 배지 — 원이 아니라 네모. 도트 UI에 정원은 없다. */
 const TabBadge = styled.span`
-  position: absolute; top: -6px; right: -6px;
-  background: #e74c3c; color: #fff;
-  border-radius: 50%; width: 16px; height: 16px;
-  font-size: 10px; font-weight: bold;
+  position: absolute; top: -6px; right: -4px;
+  background: ${C.red}; color: ${C.text};
+  border: 2px solid ${C.ink};
+  min-width: 18px; height: 18px; padding: 0 2px;
+  ${pixelBold}
+  font-size: ${FONT.sm}; line-height: 1;
+  text-shadow: none;
   display: flex; align-items: center; justify-content: center;
 `;
 
+/** 탭 — 선택된 쪽만 골드 창틀. 배경 그라디언트로 상태를 알리지 않는다. */
 const TabButton = styled.button<{ $isActive: boolean }>`
-  flex: 1; position: relative; padding: 6px 8px;
-  background: ${p => p.$isActive
-    ? "linear-gradient(145deg,rgba(243,156,18,.3),rgba(243,156,18,.15))"
-    : "linear-gradient(145deg,rgba(30,40,60,.6),rgba(15,20,35,.6))"};
-  color: ${p => p.$isActive ? "#f39c12" : "#a0aec0"};
-  border: ${p => p.$isActive
-    ? "2px solid rgba(243,156,18,.6)"
-    : "1px solid rgba(255,255,255,.1)"};
-  border-radius: 8px;
-  font-size: 12px; font-weight: bold; cursor: pointer;
-  transition: all .2s ease;
-  @media (hover: hover) { &:hover { background: linear-gradient(145deg,rgba(243,156,18,.2),rgba(243,156,18,.1)); } }
-  ${L1024} { font-size: 10px; padding: 5px 6px; }
-  ${L768}  { font-size: 9px;  padding: 4px 5px; }
+  ${p => btnThin(p.$isActive ? 'gold' : 'plain')}
+  ${pixelBold}
+  flex: 1; position: relative; min-width: 0;
+  padding: ${SP.xs} 2px;
+  font-size: ${FONT.sm};
+  color: ${p => p.$isActive ? C.gold : C.textSub};
+  display: flex; align-items: center; justify-content: center; gap: ${SP.xs};
+  white-space: nowrap;
+  &:focus, &:focus-visible { outline: none; }
 `;
 
 const ItemsContainer = styled.div`
-  padding: 0 8px 8px;
-  display: flex; flex-direction: column; gap: 5px;
-  ${L1024} { padding: 0 6px 6px; gap: 4px; }
-  ${L768}  { padding: 0 5px 5px; gap: 3px; }
+  padding: 0 ${SP.sm} ${SP.sm};
+  display: flex; flex-direction: column; gap: ${SP.xs};
+  ${lMedia.phone} { padding: 0 ${SP.xs} ${SP.xs}; }
 `;
 
-/* ── 일반/진화 공통 클릭 가능 아이템 ── */
+/**
+ * 상점 한 줄 — 파인 칸 + ▶ 커서.
+ *
+ * 예전에는 반투명 유리 행에 둥근 가격 pill이 붙어 있어 요금제 표로 읽혔다.
+ * 게임 상점은 목록이고, 선택은 커서로 알린다.
+ */
 const ClickableItem = styled.div<{ $isUsable?: boolean }>`
-  background: ${p => p.$isUsable ? "rgba(46,204,113,.07)" : "rgba(255,255,255,.03)"};
-  border: 1px solid ${p => p.$isUsable ? "rgba(46,204,113,.35)" : "rgba(255,255,255,.09)"};
-  border-radius: 8px; padding: 7px 9px; cursor: pointer;
-  display: flex; flex-direction: column; gap: 3px;
-  transition: filter .15s, border-color .15s;
-  @media (hover: hover) { &:hover { filter: brightness(1.14); border-color: rgba(243,156,18,.4); } }
-  &:active { filter: brightness(0.88); }
-  ${L1024} { padding: 6px 7px; gap: 2px; border-radius: 7px; }
-  ${L768}  { padding: 4px 6px; gap: 2px; border-radius: 6px; }
+  ${p => sunken(p.$isUsable ? '#2f4038' : C.panelSunk)}
+  ${cursorMark}
+  padding: ${SP.sm} ${SP.sm} ${SP.sm} ${CURSOR_GUTTER}px;
+  cursor: pointer;
+  display: flex; flex-direction: column; gap: 2px;
+  @media (hover: hover) { &:hover { ${cursorOn} } }
+
+  /* 폰 가로에서는 패널이 152px이라 커서 자리(24px)를 빼면 글자가 넘친다. */
+  ${lMedia.phone} {
+    padding: ${SP.sm} ${SP.xs};
+    &::before { display: none; }
+  }
 `;
 
 /* 이름 | 가격 (같은 줄) */
 const ItemTop = styled.div`
-  display: flex; align-items: center;
-  justify-content: space-between; gap: 6px;
-  ${L768} { gap: 4px; }
+  display: flex; align-items: baseline;
+  justify-content: space-between; gap: ${SP.xs};
 `;
 
 const ItemName = styled.div`
-  font-size: 13px; font-weight: bold; color: #e8edf3;
-  display: flex; align-items: center; gap: 5px; flex-wrap: wrap;
-  word-break: keep-all;
-  ${L1024} { font-size: 11px; gap: 4px; }
-  ${L768}  { font-size: 9px;  gap: 3px; }
+  ${pixelBold}
+  font-size: ${FONT.sm}; color: ${C.text};
+  display: flex; align-items: center; gap: ${SP.xs}; flex-wrap: wrap;
+  word-break: keep-all; min-width: 0;
 `;
 
+/** 가격 — 테두리 없는 골드 글자. 배지로 감싸면 가격표가 된다. */
 const PriceBadge = styled.span`
-  flex-shrink: 0; font-size: 11px; font-weight: 700;
-  color: #f5b030; background: rgba(245,176,48,.12);
-  border: 1px solid rgba(245,176,48,.45);
-  border-radius: 5px; padding: 2px 9px; white-space: nowrap;
-  ${L1024} { font-size: 10px; padding: 2px 7px; }
-  ${L768}  { font-size: 8px;  padding: 1px 5px; border-radius: 4px; }
+  ${pixelBold}
+  flex-shrink: 0;
+  font-size: ${FONT.sm}; color: ${C.gold};
+  white-space: nowrap;
 `;
 
 /* 설명 (두 번째 줄) */
 const ItemDesc = styled.div`
-  font-size: 10px; color: #7a8a9a;
-  word-break: keep-all; line-height: 1.4;
-  ${L1024} { font-size: 9px; }
-  ${L768}  { font-size: 8px; }
+  font-size: ${FONT.sm}; color: ${C.textDim};
+  word-break: keep-all;
 `;
 
 const UsableTag = styled.span`
-  font-size: 9px; font-weight: 600; color: #4fe08a;
-  background: rgba(46,204,113,.18); border-radius: 3px;
-  padding: 1px 5px; white-space: nowrap;
-  ${L1024} { font-size: 8px; padding: 1px 4px; }
-  ${L768}  { font-size: 7px; padding: 1px 3px; }
+  ${pixelBold}
+  font-size: ${FONT.sm}; color: ${C.green};
+  white-space: nowrap;
 `;
 
 /* 진화 탭 */
 const EvolutionTab = styled.div`
-  padding: 0 8px 12px; display: flex; flex-direction: column; gap: 10px;
-  ${L1024} { padding: 0 6px 10px; gap: 8px; }
-  ${L768}  { padding: 0 5px 8px;  gap: 6px; }
+  padding: 0 ${SP.sm} ${SP.md};
+  display: flex; flex-direction: column; gap: ${SP.md};
+  ${lMedia.phone} { padding: 0 ${SP.xs} ${SP.sm}; gap: ${SP.sm}; }
 `;
-const CategorySection = styled.div`display:flex;flex-direction:column;gap:5px;`;
+const CategorySection = styled.div`display:flex;flex-direction:column;gap:${SP.xs};`;
 const CategoryTitle   = styled.div`
-  font-size: 11px; font-weight: bold; color: #a8b8c8;
-  padding: 3px 0; border-bottom: 1px solid rgba(255,255,255,.07);
-  ${L1024} { font-size: 10px; }
-  ${L768}  { font-size: 9px; }
+  ${pixelBold}
+  font-size: ${FONT.sm}; color: ${C.gold};
+  padding-bottom: ${SP.xs};
+  border-bottom: ${SCALE}px solid ${C.ink};
+  display: flex; align-items: center; gap: ${SP.xs};
 `;
 const ItemGrid = styled.div`
-  display: flex; flex-direction: column; gap: 4px;
-  ${L768} { gap: 3px; }
+  display: flex; flex-direction: column; gap: ${SP.xs};
 `;
 
 // ── Target selection overlay ──────────────────────────────────────
 
 const TargetOverlay = styled.div`
-  position: fixed; top: 0; left: 0; right: 0; bottom: 0;
-  background: radial-gradient(circle at center, rgba(0,0,0,.85), rgba(0,0,0,.95));
-  backdrop-filter: blur(8px);
+  position: fixed; inset: 0;
+  /* blur 없는 단순 딤 */
+  background: rgba(20, 16, 26, 0.86);
   display: flex; justify-content: center; align-items: center;
   z-index: 9999;
-  animation: fadeIn .3s ease-out;
-  @keyframes fadeIn { from{opacity:0} to{opacity:1} }
+  padding: ${SP.lg};
 `;
 
 const TargetModal = styled.div`
-  background: linear-gradient(145deg, #1a1f2e 0%, #0f1419 100%);
-  color: #e8edf3; border-radius: 24px; padding: 32px;
-  max-width: 1000px; width: 90%; max-height: 90vh; overflow-y: auto;
-  box-shadow: 0 25px 80px rgba(0,0,0,.6), 0 0 1px 1px rgba(76,175,255,.3);
-  border: 2px solid rgba(76,175,255,.2);
-  animation: slideInUp .4s ease-out;
-  @keyframes slideInUp { from{opacity:0;transform:translateY(30px)} to{opacity:1;transform:translateY(0)} }
-  ${media.mobile} { padding: 16px; width: 96%; border-radius: 16px; max-height: 92vh; }
+  ${win('blue')}
+  ${pixelText}
+  color: ${C.text};
+  padding: ${SP.xl};
+  max-width: 1000px; width: 100%; max-height: 90vh; overflow-y: auto;
+
+  &::-webkit-scrollbar { width: 10px; }
+  &::-webkit-scrollbar-track { background: ${C.panelSunk}; border: ${SCALE}px solid ${C.ink}; }
+  &::-webkit-scrollbar-thumb { background: ${C.divider}; border: ${SCALE}px solid ${C.ink}; }
+
+  ${media.mobile}  { padding: ${SP.md}; max-height: 92vh; }
+  ${lMedia.phone}  { padding: ${SP.md}; max-height: 94vh; }
 `;
-const TargetTitle    = styled.h2`text-align:center;font-size:24px;font-weight:bold;color:#4cafff;margin-bottom:16px;`;
-const TargetSubtitle = styled.p`text-align:center;font-size:16px;color:#a8b8c8;margin-bottom:24px;`;
+const TargetTitle    = styled.h2`
+  ${pixelBold}
+  ${shadowLg}
+  text-align: center; font-size: ${FONT.xl}; color: ${C.blue};
+  margin: 0 0 ${SP.md};
+  ${lMedia.phone} { font-size: ${FONT.sm}; }
+`;
+const TargetSubtitle = styled.p`
+  text-align: center; font-size: ${FONT.sm}; color: ${C.textSub};
+  margin: 0 0 ${SP.xl};
+`;
 
 const TowerGrid = styled.div`
   display: grid;
   grid-template-columns: repeat(auto-fill, minmax(160px, 1fr));
-  gap: 20px; padding-bottom: 24px;
-  ${media.mobile} { grid-template-columns: repeat(auto-fill,minmax(130px,1fr)); gap:10px; padding-bottom:12px; }
+  gap: ${SP.lg}; padding-bottom: ${SP.xl};
+  ${media.mobile} { grid-template-columns: repeat(auto-fill,minmax(130px,1fr)); gap:${SP.sm}; padding-bottom:${SP.md}; }
+  ${lMedia.phone} { grid-template-columns: repeat(auto-fill,minmax(130px,1fr)); gap:${SP.sm}; padding-bottom:${SP.md}; }
 `;
 
+/** 대상 카드 — 진화 가능하면 초록 창틀, 아니면 파랑. hover로 떠오르지 않는다. */
 const TowerCard = styled.div<{ $isSelectable: boolean; $isEvolveTarget: boolean }>`
-  background: linear-gradient(145deg, rgba(30,40,60,.9), rgba(15,20,35,.95));
-  border: 2px solid ${p => p.$isEvolveTarget ? "#2ecc71" : "rgba(52,152,219,.4)"};
-  border-radius: 16px; padding: 20px; text-align: center;
-  transition: all .3s ease;
-  box-shadow: 0 8px 24px rgba(0,0,0,.3);
-  opacity: ${p => p.$isSelectable ? 1 : 0.3};
+  ${p => win(p.$isEvolveTarget ? 'green' : 'blue')}
+  ${cursorMark}
+  padding: ${SP.md} ${SP.sm};
+  text-align: center;
+  opacity: ${p => p.$isSelectable ? 1 : 0.35};
   cursor: ${p => p.$isSelectable ? "pointer" : "not-allowed"};
   ${p => p.$isSelectable && css`
-    @media (hover: hover) {
-      &:hover {
-        transform: translateY(-2px);
-        border-color: ${p.$isEvolveTarget ? "#34f58b" : "#4cafff"};
-      }
-    }
+    @media (hover: hover) { &:hover { ${cursorOn} } }
   `}
 `;
-const TowerImg  = styled.img`width:80px;height:80px;image-rendering:pixelated;margin-bottom:12px;filter:drop-shadow(0 4px 8px rgba(0,0,0,.6));`;
-const TowerName = styled.h4`font-size:16px;font-weight:700;margin:0 0 8px;color:#fff;`;
-const TowerInfo = styled.p`font-size:12px;margin:4px 0;color:#a8b8c8;`;
-const FaintedLabel = styled.p`color:#e74c3c;font-weight:bold;font-size:12px;margin-top:8px;`;
+const TowerImg  = styled.img`
+  width: 80px; height: 80px; image-rendering: pixelated; margin-bottom: ${SP.sm};
+`;
+const TowerName = styled.h4`
+  ${pixelBold}
+  font-size: ${FONT.sm}; margin: 0 0 ${SP.sm}; color: ${C.text};
+`;
+const TowerInfo = styled.p`font-size:${FONT.sm};margin:2px 0;color:${C.textSub};`;
+const FaintedLabel = styled.p`
+  ${pixelBold}
+  color: ${C.red}; font-size: ${FONT.sm}; margin-top: ${SP.sm};
+`;
 
-const priceColorMap: Record<string, string> = {
-  candy:  "#f39c12",
-  revive: "#e74c3c",
-  exp:    "#9b59b6",
-  evolve: "#2ecc71",
+const PRICE_COLOR: Record<string, string> = {
+  candy:  C.gold,
+  revive: C.red,
+  exp:    C.purple,
+  evolve: C.green,
 };
 const PriceLabel = styled.p<{ $type: "candy"|"revive"|"exp"|"evolve" }>`
-  font-weight: bold; font-size: 12px; margin-top: 8px;
-  color: ${p => priceColorMap[p.$type] ?? "#fff"};
+  ${pixelBold}
+  font-size: ${FONT.sm}; margin-top: ${SP.sm};
+  color: ${p => PRICE_COLOR[p.$type] ?? C.text};
 `;
 
 const CancelBtn = styled.button`
-  width: 100%; margin-top: 24px; padding: 16px; font-size: 18px;
-  background: linear-gradient(135deg,#e74c3c 0%,#c0392b 100%);
-  color: #fff; border: 2px solid rgba(231,76,60,.4);
-  border-radius: 14px; cursor: pointer; font-weight: bold;
-  box-shadow: 0 6px 20px rgba(231,76,60,.4), inset 0 1px 0 rgba(255,255,255,.2);
-  @media (hover: hover) { &:hover { background: linear-gradient(135deg,#c0392b 0%,#a93226 100%); } }
+  ${btn('red')}
+  ${pixelBold}
+  width: 100%; margin-top: ${SP.xl}; padding: ${SP.md};
+  font-size: ${FONT.sm};
+  color: ${C.text};
 `;

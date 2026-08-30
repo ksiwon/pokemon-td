@@ -12,6 +12,8 @@ import { lMedia } from '../../utils/responsive.utils';
 import { GamePokemon, Synergy } from '../../types/game';
 import { useGameStore } from '../../store/gameStore';
 import { useTranslation } from '../../i18n';
+import { C, FONT, SP, SCALE, TYPE_COLOR, ICON } from '../../styles/tokens';
+import { win, winThin, pixelText, pixelBold } from '../../styles/pixel';
 // [SIM-EXTRACT] 전투 순수 로직은 src/game/arenaSim.ts로 이동 — 밸런스 시뮬 하네스와 공유.
 //   여기서는 렌더링/타이머/네트워크 오케스트레이션만 담당한다.
 import {
@@ -29,7 +31,6 @@ const floatUp = keyframes`0%{opacity:0;transform:translateX(-50%) translateY(10p
 const hitFlash = keyframes`0%,100%{filter:brightness(1);}50%{filter:brightness(2.5) saturate(0);}`;
 const atkBounce = keyframes`0%,100%{transform:scale(1);}50%{transform:scale(1.25);}`;
 const revealPulse = keyframes`0%,100%{opacity:0.8;transform:scale(0.95);}50%{opacity:1;transform:scale(1.05);}`;
-const benchPulse = keyframes`0%,100%{box-shadow:0 0 0px rgba(74,222,128,0);}50%{box-shadow:0 0 15px rgba(74,222,128,0.4);}`;
 
 export interface TFTBattleResult {
   winner: 'player1' | 'player2';
@@ -603,221 +604,301 @@ const AchievementToastDisplay: React.FC = () => {
   );
 };
 
+// ─── Styled Components ────────────────────────────────────────────────────────
+// docs/DESIGN.md 의 디자인 시스템을 따른다.
+//
+// 보드 위 유닛 연출(피격 플래시·공격 바운스·데미지 숫자)은 전투의 핵심 표현이라
+// 그대로 둔다. 걷어낸 것은 껍데기 쪽이다: 유리 패널, 알약 배지, 원형 점,
+// uppercase eyebrow, backdrop-filter, 둥근 모서리, 번지는 그림자, 6~11px 글자.
+
 // ── [FIX] 반응형 헬퍼 → responsive.utils의 lMedia 사용 ──────────
-const L1024  = lMedia.tablet;
 const LPHONE = lMedia.phoneSm;
 
 const Wrap = styled.div`
-  width:100%; height:100%; display:flex; flex-direction:column;
-  background:#0b0e14; color:#fff; overflow:hidden; padding:20px;
-  ${L1024} { padding: 10px 12px; }
-  ${LPHONE} { padding: 4px 6px; }
+  width: 100%; height: 100%; display: flex; flex-direction: column;
+  background: ${C.bg};
+  ${pixelText}
+  color: ${C.text}; overflow: hidden; padding: ${SP.lg};
+  ${lMedia.tablet}  { padding: ${SP.sm}; }
+  ${LPHONE} { padding: ${SP.xs}; }
 `;
 
 const Header = styled.div`
-  display:flex; flex-direction:column; align-items:center; gap:12px; margin-bottom:24px;
-  ${L1024} { gap: 6px; margin-bottom: 10px; }
-  ${LPHONE} { gap: 3px; margin-bottom: 5px; }
+  display: flex; flex-direction: column; align-items: center; gap: ${SP.sm}; margin-bottom: ${SP.lg};
+  ${lMedia.tablet}  { gap: ${SP.xs}; margin-bottom: ${SP.sm}; }
+  ${LPHONE} { gap: ${SP.xs}; margin-bottom: ${SP.xs}; }
 `;
-const TitleRow = styled.div`display:flex;align-items:center;gap:12px;`;
-const ArenaIcon = styled.div`font-size:24px; ${LPHONE} { font-size: 16px; }`;
+const TitleRow = styled.div`display: flex; align-items: center; gap: ${SP.sm};`;
+const ArenaIcon = styled.div`font-size: ${ICON.xl}px; line-height: 1; ${LPHONE} { font-size: ${ICON.md}px; }`;
+/** uppercase + letter-spacing 을 걷어냈다 — 번역된 이름 그대로. */
 const ArenaTitle = styled.div`
-  font-size:20px; font-weight:900; letter-spacing:1px; text-transform:uppercase;
-  ${L1024} { font-size: 16px; }
-  ${LPHONE} { font-size: 12px; letter-spacing: 0.5px; }
+  ${pixelBold}
+  font-size: ${FONT.sm}; color: ${C.gold};
 `;
 const PhasePill = styled.div`
-  display:flex; align-items:center; gap:8px; background:rgba(255,255,255,0.08);
-  padding:6px 14px; border-radius:20px; font-size:12px; font-weight:700; color:rgba(255,255,255,0.8);
-  ${L1024} { padding: 4px 10px; font-size: 11px; gap: 5px; }
-  ${LPHONE} { padding: 3px 8px; font-size: 10px; gap: 4px; border-radius: 14px; }
+  ${winThin('plain')}
+  ${pixelBold}
+  display: flex; align-items: center; gap: ${SP.sm};
+  font-size: ${FONT.sm}; color: ${C.textSub};
 `;
-const PhaseDot = styled.div`width:8px;height:8px;border-radius:50%;background:#fbbf24;box-shadow:0 0 8px #fbbf24; ${LPHONE}{ width:6px;height:6px; }`;
+/** 상태 점 — 원이 아니라 네모. 글로우를 걷어냈다. */
+const PhaseDot = styled.div`
+  width: 8px; height: 8px; background: ${C.gold}; border: 1px solid ${C.ink};
+`;
 
 const VersusRow = styled.div`
-  display:flex; align-items:center; gap:20px; width:100%; justify-content:center;
-  ${L1024} { gap: 12px; }
-  ${LPHONE} { gap: 8px; }
+  display: flex; align-items: center; gap: ${SP.lg}; width: 100%; justify-content: center;
+  ${lMedia.tablet}  { gap: ${SP.sm}; }
+  ${LPHONE} { gap: ${SP.sm}; }
 `;
-const PosVS = styled.div`font-size:14px;font-weight:900;color:rgba(255,255,255,0.2); ${LPHONE}{ font-size:12px; }`;
+const PosVS = styled.div`
+  ${pixelBold}
+  font-size: ${FONT.sm}; color: ${C.textDim};
+`;
 const PosLabel = styled.div<{ $isMe: boolean }>`
-  font-size:14px; font-weight:800;
-  color:${p => p.$isMe ? '#4ade80' : '#f87171'};
-  text-shadow:0 0 10px ${p => p.$isMe ? 'rgba(74,222,128,0.3)' : 'rgba(248,113,113,0.3)'};
-  ${L1024} { font-size: 13px; }
-  ${LPHONE} { font-size: 11px; }
+  ${pixelBold}
+  font-size: ${FONT.sm};
+  color: ${p => (p.$isMe ? C.green : C.red)};
 `;
-// [FIX-3] 타이머 — 모든 화면 크기에서 항상 보임 (PhasePill 대체 + 보완)
+/* [FIX-3] 타이머 — 모든 화면 크기에서 항상 보임 */
 const CountdownBadge = styled.div`
-  display: flex; align-items: center; gap: 6px;
-  background: rgba(251,191,36,0.15);
-  border: 1.5px solid rgba(251,191,36,0.5);
-  border-radius: 20px; padding: 4px 14px;
-  font-size: 15px; font-weight: 900; color: #fbbf24;
-  letter-spacing: 1px;
-  text-shadow: 0 0 12px rgba(251,191,36,0.5);
-  &::before { content: '⏱'; margin-right: 2px; }
-  ${L1024} { font-size: 13px; padding: 3px 10px; }
-  ${LPHONE} { font-size: 10px; padding: 2px 8px; border-radius: 14px; }
+  ${winThin('gold')}
+  ${pixelBold}
+  display: flex; align-items: center; gap: ${SP.xs};
+  font-size: ${FONT.sm}; color: ${C.gold};
+  &::before { content: '⏱'; }
 `;
 
 const MainGrid = styled.div`
-  display:flex; flex:1; gap:24px; justify-content:center; align-items:stretch; min-height:0;
-  ${L1024} { gap: 6px; }
-  ${LPHONE} { gap: 4px; }
+  display: flex; flex: 1; gap: ${SP.lg}; justify-content: center; align-items: stretch; min-height: 0;
+  ${lMedia.tablet}  { gap: ${SP.xs}; }
+  ${LPHONE} { gap: ${SP.xs}; }
 `;
 
-// [FIX] 사이드바: 모든 화면에서 표시. L1024/LPHONE에서 너비만 축소
+/* [FIX] 사이드바: 모든 화면에서 표시. 좁은 화면에서 너비만 축소.
+   폭이 곧 글자 크기의 상한이므로 12px이 들어갈 만큼은 남긴다(docs/DESIGN.md). */
 const LeftSidebar  = styled.div`
-  width: 260px; display:flex; flex-direction:column; gap:20px; min-height:0;
-  ${L1024} { width: 150px; gap: 10px; }
-  ${LPHONE} { width: 110px; gap: 6px; }
+  width: 260px; display: flex; flex-direction: column; gap: ${SP.lg}; min-height: 0;
+  ${lMedia.tablet}  { width: 168px; gap: ${SP.sm}; }
+  ${LPHONE} { width: 148px; gap: ${SP.xs}; }
 `;
 const RightSidebar = styled.div`
-  width: 260px; display:flex; flex-direction:column; gap:20px; min-height:0;
-  ${L1024} { width: 150px; gap: 10px; }
-  ${LPHONE} { width: 110px; gap: 6px; }
+  width: 260px; display: flex; flex-direction: column; gap: ${SP.lg}; min-height: 0;
+  ${lMedia.tablet}  { width: 168px; gap: ${SP.sm}; }
+  ${LPHONE} { width: 148px; gap: ${SP.xs}; }
 `;
 
-// [FIX-2] CenterArea: 보드가 항상 정사각형으로 보이도록 overflow:visible (scale은 JS로 처리)
+/* [FIX-2] CenterArea: 보드가 항상 정사각형으로 보이도록 overflow:visible (scale은 JS로 처리) */
 const CenterArea = styled.div`
   display: flex; flex-direction: column; align-items: center;
   flex: 1; min-width: 0; min-height: 0; overflow: visible;
 `;
 
+/** uppercase eyebrow를 걷어낸 자리 — 골드 라벨. */
 const PanelTitle = styled.div`
-  font-size:11px;font-weight:800;color:rgba(255,255,255,0.5);margin-bottom:12px;
-  text-transform:uppercase;letter-spacing:1.5px;padding-left:4px;
-  ${L1024} { font-size: 9px; margin-bottom: 6px; letter-spacing: 0.5px; }
-  ${LPHONE} { font-size: 8px; margin-bottom: 3px; letter-spacing: 0.3px; padding-left: 2px; }
+  ${pixelBold}
+  font-size: ${FONT.sm}; color: ${C.gold}; margin-bottom: ${SP.sm};
+  ${LPHONE} { margin-bottom: ${SP.xs}; }
 `;
 
 const BenchArea = styled.div`
-  flex:1;background:rgba(255,255,255,0.02);border:1px solid rgba(255,255,255,0.08);
-  border-radius:16px;padding:16px;display:flex;flex-direction:column;min-height:0;
-  ${L1024} { padding: 8px; border-radius: 10px; }
-  ${LPHONE} { padding: 6px; border-radius: 8px; }
+  ${win('plain')}
+  flex: 1; display: flex; flex-direction: column; min-height: 0;
+  ${LPHONE} { padding: ${SP.sm}; }
 `;
 const BenchGrid = styled.div`
-  flex:1;display:flex;flex-direction:column;gap:8px;overflow-y:auto;padding-right:4px;
-  ${L1024} { gap: 5px; }
-  ${LPHONE} { gap: 3px; padding-right: 2px; }
+  flex: 1; display: flex; flex-direction: column; gap: ${SP.xs}; overflow-y: auto;
+
+  &::-webkit-scrollbar { width: 8px; }
+  &::-webkit-scrollbar-track { background: ${C.panelSunk}; border: 2px solid ${C.ink}; }
+  &::-webkit-scrollbar-thumb { background: ${C.divider}; border: 2px solid ${C.ink}; }
 `;
 
+/** 벤치 카드 — 고른 것만 초록 창틀. 글로우 펄스 대신 창틀 색이 진다. */
 const TowerCard = styled.div<{ $selected?: boolean }>`
+  ${p => winThin(p.$selected ? 'green' : 'plain')}
   display: flex;
   align-items: center;
-  padding: 8px 12px;
-  border-radius: 12px;
-  background: ${p => p.$selected ? 'rgba(74,222,128,0.1)' : 'rgba(255,255,255,0.04)'};
-  border: 1.5px solid ${p => p.$selected ? 'rgba(74,222,128,0.4)' : 'rgba(255,255,255,0.08)'};
-  gap: 12px;
+  gap: ${SP.sm};
   cursor: pointer;
-  transition: background 0.2s;
-  ${p => p.$selected ? css`animation: ${benchPulse} 1s ease infinite;` : ''}
-  @media (hover: hover) { &:hover { background: rgba(255,255,255,0.08); } }
-  ${L1024} { padding: 5px 7px; gap: 6px; border-radius: 8px; }
-  /* LPHONE: 데스크탑과 동일한 가로 배치 유지, 크기만 축소 */
-  ${LPHONE} { padding: 4px 5px; gap: 4px; border-radius: 6px; }
+  ${LPHONE} { gap: ${SP.xs}; }
 `;
 const CardSprite = styled.img`
-  width:36px;height:36px;image-rendering:pixelated;
-  ${L1024} { width: 28px; height: 28px; }
+  width: 36px; height: 36px; image-rendering: pixelated;
+  ${lMedia.tablet}  { width: 28px; height: 28px; }
   ${LPHONE} { width: 24px; height: 24px; }
 `;
 const CardFallback = styled.div`
-  width:36px;height:36px;display:flex;align-items:center;justify-content:center;
-  background:rgba(255,255,255,0.05);border-radius:8px;font-size:10px;font-weight:800;color:rgba(255,255,255,0.4);
-  ${L1024} { width: 28px; height: 28px; font-size: 8px; }
-  ${LPHONE} { width: 24px; height: 24px; font-size: 7px; }
+  ${pixelBold}
+  width: 36px; height: 36px; display: flex; align-items: center; justify-content: center;
+  background: ${C.panelSunk}; border: 2px solid ${C.ink};
+  font-size: ${FONT.sm}; color: ${C.textDim};
+  text-shadow: none;
+  ${lMedia.tablet}  { width: 28px; height: 28px; }
+  ${LPHONE} { width: 24px; height: 24px; }
 `;
-// 이름/레벨: 모든 화면에서 표시 (데스크탑과 동일한 구조 유지)
-const CardInfo = styled.div`flex:1;min-width:0;`;
-const CardNameRow = styled.div`display:flex;justify-content:space-between;align-items:baseline;margin-bottom:4px; ${L1024}{ margin-bottom: 2px; } ${LPHONE}{ margin-bottom: 1px; }`;
+/* 이름/레벨: 모든 화면에서 표시 */
+const CardInfo = styled.div`flex: 1; min-width: 0;`;
+const CardNameRow = styled.div`display: flex; justify-content: space-between; align-items: baseline; gap: ${SP.xs};`;
 const CardName = styled.div`
-  font-size:12px;font-weight:800;color:#fff;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;
-  ${L1024} { font-size: 10px; }
-  ${LPHONE} { font-size: 9px; }
+  ${pixelBold}
+  font-size: ${FONT.sm}; color: ${C.text};
+  white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
 `;
 const CardLevel = styled.div`
-  font-size:10px;color:rgba(255,255,255,0.4);font-weight:700;flex-shrink:0;margin-left:4px;
-  ${L1024} { font-size: 8px; }
-  ${LPHONE} { font-size: 7px; margin-left: 2px; }
+  font-size: ${FONT.sm}; color: ${C.textDim}; flex-shrink: 0; margin-left: ${SP.xs};
 `;
-const CardTypes = styled.div`display:flex;gap:4px; ${L1024}{ gap: 2px; } ${LPHONE}{ display: none; }`;
-// CardNameSmall: 더 이상 폰에서 사용하지 않음 (CardInfo 표시로 대체)
+const CardTypes = styled.div`display: flex; gap: ${SP.xs}; ${LPHONE} { display: none; }`;
+/* CardNameSmall: 더 이상 폰에서 사용하지 않음 (CardInfo 표시로 대체) */
 const CardNameSmall = styled.div`display: none;`;
-const CardLevelSmall = styled.span`font-size: 6px; color: rgba(255,255,255,0.4); font-weight: 600;`;
+const CardLevelSmall = styled.span`font-size: ${FONT.sm}; color: ${C.textDim};`;
 
 const OpponentInfoPanel = styled.div`
-  flex:1;background:rgba(255,255,255,0.02);border:1px solid rgba(255,255,255,0.08);
-  border-radius:16px;padding:16px;display:flex;flex-direction:column;min-height:0;
-  ${L1024} { padding: 8px; border-radius: 10px; }
-  ${LPHONE} { padding: 6px; border-radius: 8px; }
+  ${win('plain')}
+  flex: 1; display: flex; flex-direction: column; min-height: 0;
+  ${LPHONE} { padding: ${SP.sm}; }
 `;
-const Board = styled.div<{ $isPrep: boolean }>`position:relative;width:${COLS * CELL}px;height:${ROWS * CELL}px;background:rgba(15,25,45,0.05);border:4px solid rgba(255,255,255,0.1);border-radius:12px;overflow:hidden;box-shadow:0 30px 60px rgba(0,0,0,0.6);flex-shrink:0;&::before{content:'';position:absolute;inset:0;background-image:url('/images/maps/battle_field.webp');background-size:cover;background-position:center;opacity:0.60;pointer-events:none;z-index:0;}`;
-const Cell = styled.div<{ $col: number; $row: number; $isMy: boolean; $isTarget: boolean }>`position:absolute;left:${p => p.$col * CELL}px;top:${p => p.$row * CELL}px;width:${CELL}px;height:${CELL}px;border:1px solid rgba(255,255,255,0.03);background:${p => p.$isTarget ? 'rgba(74,222,128,0.1)' : 'rgba(255,255,255,0.01)'};@media (hover: hover){&:hover{background:${p => p.$isTarget ? 'rgba(74,222,128,0.2)' : 'rgba(255,255,255,0.03)'};}}`;
-const ZoneLbl = styled.div`position:absolute;font-size:10px;font-weight:800;color:rgba(255,255,255,0.2);text-transform:uppercase;letter-spacing:1px;pointer-events:none;z-index:3;`;
+
+/** 전투 보드 — 맵 이미지 위에 도트 유닛이 선다. 번지는 그림자를 걷어냈다. */
+const Board = styled.div<{ $isPrep: boolean }>`
+  position: relative;
+  width: ${COLS * CELL}px; height: ${ROWS * CELL}px;
+  background: ${C.ink};
+  border: ${SCALE}px solid ${C.ink};
+  box-shadow: inset 0 0 0 ${SCALE}px ${C.divider};
+  overflow: hidden; flex-shrink: 0;
+  &::before {
+    content: ''; position: absolute; inset: 0;
+    background-image: url('/images/maps/battle_field.webp');
+    background-size: cover; background-position: center;
+    image-rendering: pixelated;
+    opacity: 0.6; pointer-events: none; z-index: 0;
+  }
+`;
+const Cell = styled.div<{ $col: number; $row: number; $isMy: boolean; $isTarget: boolean }>`
+  position: absolute;
+  left: ${p => p.$col * CELL}px; top: ${p => p.$row * CELL}px;
+  width: ${CELL}px; height: ${CELL}px;
+  border: 1px solid rgba(22, 27, 40, 0.35);
+  background: ${p => (p.$isTarget ? 'rgba(127, 208, 112, 0.14)' : 'transparent')};
+  @media (hover: hover) {
+    &:hover { background: ${p => (p.$isTarget ? 'rgba(127, 208, 112, 0.26)' : 'rgba(255,255,255,0.04)')}; }
+  }
+`;
+const ZoneLbl = styled.div`
+  ${pixelBold}
+  position: absolute; font-size: ${FONT.sm}; color: ${C.textSub};
+  text-shadow: 1px 1px 0 ${C.ink};
+  pointer-events: none; z-index: 3;
+`;
 const UnitWrap = styled.div<{ $team: 'my' | 'opp'; $fainted: boolean; $hit: boolean; $atk: boolean; $sel: boolean }>`
   position: absolute;
   display: flex;
   flex-direction: column;
   align-items: center;
-  z-index: ${p => p.$sel ? 20 : 10};
-  opacity: ${p => p.$fainted ? 0.25 : 1};
+  z-index: ${p => (p.$sel ? 20 : 10)};
+  opacity: ${p => (p.$fainted ? 0.25 : 1)};
   ${p => (!p.$hit && !p.$atk) ? css`transition: left ${TICK_MS}ms linear, top ${TICK_MS}ms linear;` : ''}
   ${p => p.$hit ? css`animation: ${hitFlash} 0.35s ease;` : p.$atk ? css`animation: ${atkBounce} 0.3s ease;` : ''}
-  ${p => p.$sel ? 'filter: drop-shadow(0 0 12px #4ade80);' : ''}
+  ${p => p.$sel ? `filter: drop-shadow(0 0 0 ${C.green});` : ''}
 `;
 
-const HpBg = styled.div`width:90%;height:4px;border-radius:2px;background:rgba(0,0,0,0.6);overflow:hidden;margin-bottom:2px;`;
-const HpFill = styled.div`height:100%;border-radius:2px;transition:width 0.2s cubic-bezier(0.4, 0, 0.2, 1);`;
-const Sprite = styled.img<{ $fainted: boolean; $flip: boolean }>`width:60px;height:60px;image-rendering:pixelated;${p => p.$fainted && 'filter:grayscale(1) brightness(0.5);'}${p => p.$flip && 'transform:scaleX(-1);'}`;
-const Fallback = styled.div<{ $team: 'my' | 'opp' }>`width:60px;height:60px;display:flex;align-items:center;justify-content:center;border-radius:8px;font-size:12px;font-weight:800;background:${p => p.$team === 'my' ? 'rgba(74,222,128,0.2)' : 'rgba(248,113,113,0.2)'};color:${p => p.$team === 'my' ? '#4ade80' : '#f87171'};`;
-const UnitName = styled.div`font-size:9px;color:rgba(255,255,255,0.6);font-weight:700;margin-top:2px;text-shadow:0 1px 2px rgba(0,0,0,0.8);`;
-const FloatEl = styled.div`position:absolute;z-index:50;font-size:18px;font-weight:900;pointer-events:none;animation:${floatUp} 1s cubic-bezier(0.18, 0.89, 0.32, 1.28) forwards;transform:translateX(-50%);text-shadow:0 2px 8px rgba(0,0,0,0.9);`;
+/** HP 게이지 — 각진 트랙 + 각진 막대. */
+const HpBg = styled.div`
+  width: 90%; height: 5px;
+  background: ${C.panelSunk};
+  border: 1px solid ${C.ink};
+  overflow: hidden; margin-bottom: 2px;
+`;
+const HpFill = styled.div`height: 100%; transition: width 0.2s linear;`;
+const Sprite = styled.img<{ $fainted: boolean; $flip: boolean }>`
+  width: 60px; height: 60px; image-rendering: pixelated;
+  ${p => p.$fainted && 'filter:grayscale(1) brightness(0.5);'}
+  ${p => p.$flip && 'transform:scaleX(-1);'}
+`;
+const Fallback = styled.div<{ $team: 'my' | 'opp' }>`
+  ${pixelBold}
+  width: 60px; height: 60px;
+  display: flex; align-items: center; justify-content: center;
+  font-size: ${FONT.sm};
+  background: ${C.panelSunk};
+  border: 2px solid ${C.ink};
+  color: ${p => (p.$team === 'my' ? C.green : C.red)};
+  text-shadow: none;
+`;
+const UnitName = styled.div`
+  ${pixelBold}
+  font-size: ${FONT.sm}; color: ${C.text}; margin-top: 2px;
+  text-shadow: 1px 1px 0 ${C.ink};
+`;
+const FloatEl = styled.div`
+  ${pixelBold}
+  position: absolute; z-index: 50; font-size: ${FONT.sm};
+  pointer-events: none;
+  animation: ${floatUp} 1s cubic-bezier(0.18, 0.89, 0.32, 1.28) forwards;
+  transform: translateX(-50%);
+  text-shadow: ${SCALE}px ${SCALE}px 0 ${C.ink};
+`;
 
-const EmptyMsg = styled.div`padding:30px;text-align:center;color:rgba(255,255,255,0.15);font-size:11px;font-weight:600;font-style:italic; ${LPHONE}{ padding:12px 6px;font-size:9px; }`;
-const Hint = styled.div`margin-top:12px;font-size:9px;color:rgba(255,255,255,0.2);text-align:center;line-height:1.5;padding:0 8px; ${LPHONE}{ font-size:8px;margin-top:6px;padding:0 4px; }`;
+const EmptyMsg = styled.div`
+  padding: ${SP.xl} ${SP.sm}; text-align: center;
+  color: ${C.textDim}; font-size: ${FONT.sm};
+  ${LPHONE} { padding: ${SP.sm} ${SP.xs}; }
+`;
+const Hint = styled.div`
+  margin-top: ${SP.sm}; font-size: ${FONT.sm}; color: ${C.textDim};
+  text-align: center; padding: 0 ${SP.sm};
+  ${LPHONE} { margin-top: ${SP.xs}; padding: 0 ${SP.xs}; }
+`;
 
-const RevealOverlay = styled.div`position:absolute;inset:0;z-index:100;display:flex;align-items:center;justify-content:center;background:rgba(0,0,0,0.5);backdrop-filter:blur(4px);`;
-const RevealText = styled.div`color:#fbbf24;font-size:40px;font-weight:900;text-shadow:0 0 30px rgba(251,191,36,0.5);animation:${revealPulse} 1s infinite;${LPHONE}{font-size:28px;}`;
+const RevealOverlay = styled.div`
+  position: absolute; inset: 0; z-index: 100;
+  display: flex; align-items: center; justify-content: center;
+  background: rgba(20, 16, 26, 0.7);
+`;
+const RevealText = styled.div`
+  ${pixelBold}
+  color: ${C.gold}; font-size: ${FONT.display};
+  text-shadow: ${SCALE}px ${SCALE}px 0 ${C.ink};
+  animation: ${revealPulse} 1s steps(2, end) infinite;
+  ${LPHONE} { font-size: ${FONT.xl}; }
+`;
 
-const TypeBadge = styled.span<{ $type?: string }>`font-size:8px;padding:2px 5px;border-radius:4px;background:${p => getTypeColor(p.$type)};color:#fff;font-weight:900;text-transform:uppercase; ${LPHONE}{ font-size:7px;padding:1px 3px;border-radius:3px; }`;
+/** 타입 배지 — 색은 tokens.ts 의 TYPE_COLOR 단일 출처를 쓴다. */
+const TypeBadge = styled.span<{ $type?: string }>`
+  ${pixelBold}
+  font-size: ${FONT.sm}; line-height: 1.3;
+  padding: 0 ${SP.xs};
+  background: ${p => TYPE_COLOR[(p.$type ?? '').toLowerCase()] ?? C.panelSunk};
+  border: 1px solid ${C.ink};
+  color: ${C.text};
+  text-shadow: 1px 1px 0 ${C.ink};
+`;
 
-function getTypeColor(type?: string) {
-  const colors: Record<string, string> = {
-    fire: '#ef4444', water: '#3b82f6', grass: '#22c55e', electric: '#eab308', ice: '#6ee7b7', fighting: '#f97316',
-    poison: '#a855f7', ground: '#78350f', flying: '#818cf8', psychic: '#ec4899', bug: '#84cc16', rock: '#71717a',
-    ghost: '#6366f1', dragon: '#4f46e5', dark: '#1f2937', steel: '#94a3b8', fairy: '#f472b6', normal: '#9ca3af'
-  };
-  return colors[type?.toLowerCase() || ''] || 'rgba(255,255,255,0.1)';
-}
-
-// 최초 달성: 2.5s 슬라이드인→유지→페이드아웃 (작고 빠름)
+/* 최초 달성: 2.5s 슬라이드인→유지→페이드아웃 (작고 빠름) */
 const achSlideIn = keyframes`0%{opacity:0;transform:translateX(40px);}12%{opacity:1;transform:translateX(0);}72%{opacity:1;transform:translateX(0);}100%{opacity:0;transform:translateX(20px);}`;
-// 반복 달성: 1.5s 빠른 페이드
+/* 반복 달성: 1.5s 빠른 페이드 */
 const achSlideInRepeat = keyframes`0%{opacity:0;transform:translateX(16px);}12%{opacity:0.6;transform:translateX(0);}72%{opacity:0.6;}100%{opacity:0;}`;
 
 const AchievementToastPill = styled.div<{ $color: string; $first: boolean }>`
-  position: absolute; top: 10px; right: 10px; z-index: 1002;
-  display: flex; align-items: center; gap: 6px;
-  padding: ${p => p.$first ? '7px 14px' : '5px 11px'};
-  border-radius: 20px;
-  background: rgba(55,55,70,0.92);
-  border: 1px solid ${p => p.$color}${p => p.$first ? '99' : '55'};
-  font-size: ${p => p.$first ? '12px' : '11px'};
-  font-weight: 700;
-  color: rgba(255,255,255,${p => p.$first ? '0.92' : '0.65'});
-  animation: ${p => p.$first ? achSlideIn : achSlideInRepeat} ${p => p.$first ? '2.5s' : '1.5s'} ease forwards;
+  ${winThin('gold')}
+  ${pixelBold}
+  position: absolute; top: ${SP.sm}; right: ${SP.sm}; z-index: 1002;
+  display: flex; align-items: center; gap: ${SP.xs};
+  font-size: ${FONT.sm};
+  color: ${C.text};
+  animation: ${p => (p.$first ? achSlideIn : achSlideInRepeat)} ${p => (p.$first ? '2.5s' : '1.5s')} ease forwards;
   pointer-events: none;
   white-space: nowrap;
   max-width: 240px;
   overflow: hidden;
   text-overflow: ellipsis;
-  backdrop-filter: blur(6px);
-  box-shadow: 0 2px 12px rgba(0,0,0,0.5);
 `;
 
-const AchPillName = styled.span<{ $first: boolean }>`color:rgba(255,255,255,${p => p.$first ? '0.88' : '0.55'});overflow:hidden;text-overflow:ellipsis;`;
-const AchPillAP = styled.span<{ $color: string }>`color:${p => p.$color};font-size:10px;font-weight:700;flex-shrink:0;opacity:0.85;`;
+const AchPillName = styled.span<{ $first: boolean }>`
+  color: ${p => (p.$first ? C.text : C.textSub)};
+  overflow: hidden; text-overflow: ellipsis;
+`;
+const AchPillAP = styled.span<{ $color: string }>`
+  color: ${p => p.$color}; font-size: ${FONT.sm}; flex-shrink: 0;
+`;

@@ -2,7 +2,7 @@
 import { useState, useEffect } from 'react';
 import styled from 'styled-components';
 import {
-  ModalOverlay, ModalBox, ModalCloseBtn,
+  ModalOverlay, ModalBox, ModalCloseBtn, modalPadX, ModalTabBtn, ModalChipBtn,
   MODAL_ACCENT,
 } from '../shared/modal.styles';
 import { lMedia, media } from '../../utils/responsive.utils';
@@ -12,6 +12,9 @@ import { MAPS } from '../../data/maps';
 import { authService } from '../../services/AuthService';
 import { quotaGuard } from '../../services/QuotaGuard';
 import { useTranslation } from '../../i18n';
+
+import { C, FONT, SP, SCALE } from '../../styles/tokens';
+import { winThin, btnThin, pixelBold, FRAME_W, shadowLg } from '../../styles/pixel';
 import { Emoji } from '../shared/Emoji';
 
 type ViewTab = 'global_clear' | 'global_wave' | 'mine';
@@ -326,55 +329,30 @@ const MyRecordList = ({ entries }: { entries: HallOfFameEntry[] }) => {
 };
 
 // ─── Styled Components ────────────────────────────────────────────────────────
-
-
+// docs/DESIGN.md 의 디자인 시스템을 따른다.
+// 걷어낸 것: 유리 카드, 알약 칩, uppercase eyebrow, hover 떠오름+글로우,
+//           둥근 모서리, 10~11px 글자.
 
 const TabRow = styled.div`
-  display: flex; gap: 4px; margin-bottom: 10px;
-  padding: 0 24px;
-
-  ${media.tablet} { padding: 0 18px; }
-  ${media.mobile} { margin-bottom: 8px; padding: 0 14px; }
-  ${lMedia.phoneSm} { padding: 0 12px; }
+  ${modalPadX}
+  display: flex; gap: ${SP.xs}; margin-bottom: ${SP.sm};
 `;
 
-const Tab = styled.button<{ $active: boolean }>`
-  padding: 8px 18px; font-size: 14px; font-weight: bold;
-  border: none; border-radius: 10px 10px 0 0; cursor: pointer;
-  transition: background 0.2s, color 0.2s;
-  background: ${p => p.$active ? 'rgba(255,215,0,0.18)' : 'rgba(255,255,255,0.06)'};
-  color: ${p => p.$active ? '#FFD700' : 'rgba(255,255,255,0.5)'};
-  border-bottom: ${p => p.$active ? '2px solid #FFD700' : '2px solid transparent'};
-  @media (hover: hover) { &:hover { background: rgba(255,215,0,0.12); color: #FFD700; } }
-
-  /* 태블릿 세로 */
-  ${media.tablet} { padding: 7px 14px; font-size: 13px; }
-  /* 모바일 세로 */
-  ${media.mobile} { padding: 6px 10px; font-size: 11.5px; border-radius: 8px 8px 0 0; }
-  /* 가로 모드 */
-  ${lMedia.phoneSm} { padding: 5px 10px; font-size: 11px; }
-`;
+/** 주 탭 — 무엇을 볼까(최단 클리어 / 최고 웨이브 / 내 기록). */
+const Tab = styled(ModalTabBtn).attrs<{ $active?: boolean }>(p => ({
+  $on: p.$active, $c: 'gold' as const,
+}))``;
 
 const MapFilterRow = styled.div`
-  display: flex; gap: 6px; flex-wrap: wrap; padding-bottom: 12px;
-  padding: 0 24px 12px;
-
-  ${media.tablet} { padding: 0 18px 12px; }
-  ${media.mobile} { gap: 5px; padding: 0 14px 8px; }
-  ${lMedia.phoneSm} { gap: 4px; padding: 0 12px 6px; }
+  ${modalPadX}
+  display: flex; gap: ${SP.xs}; flex-wrap: wrap;
+  padding-bottom: ${SP.sm};
 `;
 
-const FilterChip = styled.button<{ $active: boolean }>`
-  padding: 4px 12px; font-size: 12px; border-radius: 20px; cursor: pointer;
-  border: 1px solid ${p => p.$active ? '#FFD700' : 'rgba(255,255,255,0.2)'};
-  background: ${p => p.$active ? 'rgba(255,215,0,0.18)' : 'rgba(255,255,255,0.05)'};
-  color: ${p => p.$active ? '#FFD700' : 'rgba(255,255,255,0.6)'};
-  transition: border-color 0.2s, color 0.2s;
-  @media (hover: hover) { &:hover { border-color: #FFD700; color: #FFD700; } }
-
-  ${media.mobile} { padding: 3px 9px; font-size: 11px; }
-  ${lMedia.phoneSm} { padding: 3px 8px; font-size: 10.5px; }
-`;
+/** 하위 필터 — 고른 탭 안에서 맵을 걸러낸다. 주 탭보다 한 단계 작다. */
+const FilterChip = styled(ModalChipBtn).attrs<{ $active?: boolean }>(p => ({
+  $on: p.$active, $c: 'gold' as const,
+}))``;
 
 /**
  * Body:
@@ -382,17 +360,19 @@ const FilterChip = styled.button<{ $active: boolean }>`
  *  overflow-x: hidden → 테이블 가로 스크롤은 TableWrapper 에서 처리
  */
 const Body = styled.div`
+  ${modalPadX}
   flex: 1; overflow-y: auto; overflow-x: hidden;
-  padding: 16px 24px 24px;
+  padding-top: ${SP.md}; padding-bottom: ${SP.lg};
 
-  ${media.tablet} { padding: 14px 18px 20px; }
-  ${media.mobile} { padding: 12px 12px 16px; }
-  ${lMedia.phoneSm} { padding: 10px 10px 14px; }
+  &::-webkit-scrollbar { width: 10px; }
+  &::-webkit-scrollbar-track { background: ${C.panelSunk}; border: ${SCALE}px solid ${C.ink}; }
+  &::-webkit-scrollbar-thumb { background: ${C.divider}; border: ${SCALE}px solid ${C.ink}; }
+
+  ${media.mobile}   { padding-top: ${SP.sm}; padding-bottom: ${SP.md}; }
+  ${lMedia.phoneSm} { padding-top: ${SP.sm}; padding-bottom: ${SP.md}; }
 `;
 
-/**
- * TableWrapper: 모바일/태블릿에서 테이블이 넘칠 때 가로 스크롤 제공
- */
+/** TableWrapper: 좁은 화면에서 테이블이 넘칠 때 가로 스크롤 제공 */
 const TableWrapper = styled.div`
   width: 100%;
   overflow-x: auto;
@@ -400,17 +380,13 @@ const TableWrapper = styled.div`
 `;
 
 const CenterMsg = styled.div`
-  text-align: center; color: rgba(255,255,255,0.6);
-  padding: 60px 0; font-size: 1.1rem;
-
-  ${media.mobile} { padding: 40px 0; font-size: 1rem; }
+  text-align: center; color: ${C.textSub};
+  padding: ${SP.xxl} 0; font-size: ${FONT.sm};
 `;
 
 const EmptyMsg = styled.div`
-  text-align: center; color: rgba(255,255,255,0.5);
-  padding: 60px 20px; font-size: 1rem; line-height: 1.8;
-
-  ${media.mobile} { padding: 40px 12px; font-size: 0.9rem; }
+  text-align: center; color: ${C.textDim};
+  padding: ${SP.xxl} ${SP.lg}; font-size: ${FONT.sm};
 `;
 
 // ─── 테이블 ──────────────────────────────────────────────────────────────────
@@ -419,87 +395,66 @@ const EmptyMsg = styled.div`
  * hide-mobile / hide-tablet 클래스:
  *  - .hide-mobile  → 모바일 세로(≤480px) + 폰 가로에서 숨김
  *  - .hide-tablet  → 태블릿 세로(≤768px)에서도 숨김
- *
- * 이를 통해 좁은 화면에서 핵심 정보만 표시 (오버플로 대신 열 숨김)
  */
 const Table = styled.table`
   width: 100%;
   border-collapse: collapse;
-  min-width: 320px; /* 최소 너비 보장 — TableWrapper 가 스크롤 제공 */
+  min-width: 320px;
 
-  /* 모바일 세로 + 폰 가로 */
-  ${media.mobile} {
-    .hide-mobile { display: none; }
-  }
-  ${lMedia.phoneSm} {
-    .hide-mobile { display: none; }
-  }
-
-  /* 태블릿 세로 */
-  ${media.tablet} {
-    .hide-tablet { display: none; }
-  }
+  ${media.mobile}   { .hide-mobile { display: none; } }
+  ${lMedia.phoneSm} { .hide-mobile { display: none; } }
+  ${media.tablet}   { .hide-tablet { display: none; } }
 `;
 
 const Th = styled.th`
-  text-align: left; padding: 10px 12px;
-  font-size: 12px; font-weight: bold;
-  color: rgba(255,215,0,0.7);
-  border-bottom: 1px solid rgba(255,215,0,0.15);
+  ${pixelBold}
+  text-align: left; padding: ${SP.sm};
+  font-size: ${FONT.sm};
+  color: ${C.gold};
+  background: ${C.panelSunk};
+  border-bottom: ${SCALE}px solid ${C.ink};
   white-space: nowrap;
 
-  ${media.tablet} { padding: 9px 10px; font-size: 11px; }
-  ${media.mobile} { padding: 8px 8px; font-size: 11px; }
-  ${lMedia.phoneSm} { padding: 7px 8px; font-size: 10.5px; }
+  ${media.mobile}   { padding: ${SP.xs}; }
+  ${lMedia.phoneSm} { padding: ${SP.xs}; }
 `;
 
 const Tr = styled.tr<{ $isMe?: boolean; $rank?: number }>`
-  border-bottom: 1px solid rgba(255,255,255,0.06);
-  background: ${p =>
-    p.$isMe ? 'rgba(255,215,0,0.08)' :
-    p.$rank === 0 ? 'rgba(255,215,0,0.05)' :
-    p.$rank === 1 ? 'rgba(192,192,192,0.05)' :
-    p.$rank === 2 ? 'rgba(205,127,50,0.05)' : 'transparent'};
-  transition: background 0.15s;
-  @media (hover: hover) { &:hover { background: rgba(255,255,255,0.06); } }
+  border-bottom: 2px solid ${C.ink};
+  background: ${p => (p.$isMe ? C.panelSunk : 'transparent')};
 `;
 
 const Td = styled.td<{ $center?: boolean; $bold?: boolean; $accent?: boolean; $small?: boolean }>`
-  padding: 10px 12px;
-  font-size: ${p => p.$small ? '11px' : '13px'};
-  color: ${p => p.$accent ? '#4fc3f7' : 'rgba(255,255,255,0.85)'};
-  font-weight: ${p => p.$bold ? 'bold' : 'normal'};
-  text-align: ${p => p.$center ? 'center' : 'left'};
+  padding: ${SP.sm};
+  font-size: ${FONT.sm};
+  color: ${p => (p.$accent ? C.blue : C.text)};
+  font-weight: ${p => (p.$bold ? 700 : 400)};
+  text-align: ${p => (p.$center ? 'center' : 'left')};
   white-space: nowrap;
 
-  ${media.tablet} { padding: 9px 10px; font-size: ${p => p.$small ? '10px' : '12px'}; }
-  ${media.mobile} { padding: 8px 8px; font-size: ${p => p.$small ? '10px' : '11.5px'}; }
-  ${lMedia.phoneSm} { padding: 7px 8px; font-size: 11px; }
+  ${media.mobile}   { padding: ${SP.xs}; }
+  ${lMedia.phoneSm} { padding: ${SP.xs}; }
 `;
 
 const PokemonCell = styled.td`
-  padding: 8px 12px;
-  display: flex; flex-wrap: wrap; gap: 4px; align-items: center;
-
-  ${media.tablet} { padding: 7px 10px; gap: 3px; }
+  padding: ${SP.xs} ${SP.sm};
+  display: flex; flex-wrap: wrap; gap: ${SP.xs}; align-items: center;
 `;
 
 const WaveCell = styled.td`
-  padding: 10px 12px;
-  font-size: 18px; font-weight: bold; color: #FFD700;
-
-  ${media.tablet} { font-size: 15px; padding: 9px 10px; }
-  ${media.mobile} { font-size: 14px; padding: 8px 8px; }
+  ${pixelBold}
+  padding: ${SP.sm};
+  font-size: ${FONT.sm}; color: ${C.gold};
 `;
 
 const PokemonTag = styled.span`
-  font-size: 11px; padding: 2px 8px;
-  background: rgba(76,175,255,0.15);
-  border: 1px solid rgba(76,175,255,0.3);
-  border-radius: 10px; color: #4cafff;
+  ${pixelBold}
+  font-size: ${FONT.sm}; line-height: 1.4;
+  padding: ${SP.xs} ${SP.sm};
+  background: ${C.panelSunk};
+  border: 2px solid ${C.ink};
+  color: ${C.blue};
   white-space: nowrap;
-
-  ${media.mobile} { font-size: 10px; padding: 2px 6px; }
 `;
 
 // ─── 내 기록 카드 ─────────────────────────────────────────────────────────────
@@ -507,142 +462,118 @@ const PokemonTag = styled.span`
 const CardGrid = styled.div`
   display: grid;
   grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
-  gap: 16px;
+  gap: ${SP.md};
 
-  /* 태블릿 세로 */
-  ${media.tablet} {
-    grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
-    gap: 12px;
-  }
-  /* 모바일 세로 */
-  ${media.mobile} {
-    grid-template-columns: 1fr;
-    gap: 10px;
-  }
-  /* 태블릿 가로 */
-  ${lMedia.tablet} {
-    grid-template-columns: repeat(auto-fill, minmax(240px, 1fr));
-    gap: 12px;
-  }
-  /* 폰 가로 */
-  ${lMedia.phoneSm} {
-    grid-template-columns: 1fr;
-    gap: 8px;
-  }
+  ${media.tablet}   { grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)); gap: ${SP.sm}; }
+  ${media.mobile}   { grid-template-columns: 1fr; gap: ${SP.sm}; }
+  ${lMedia.tablet}  { grid-template-columns: repeat(auto-fill, minmax(240px, 1fr)); gap: ${SP.sm}; }
+  ${lMedia.phoneSm} { grid-template-columns: 1fr; gap: ${SP.sm}; }
 `;
 
 const RecordCard = styled.div`
-  background: rgba(255,255,255,0.05);
-  border: 1px solid rgba(255,215,0,0.2);
-  border-radius: 14px; padding: 16px;
-  transition: transform 0.2s, box-shadow 0.2s;
-  @media (hover: hover) { &:hover { transform: translateY(-3px); box-shadow: 0 8px 24px rgba(255,215,0,0.15); } }
-
-  ${media.mobile} { padding: 12px; border-radius: 10px; }
-  ${lMedia.phoneSm} { padding: 10px; border-radius: 10px; }
+  ${winThin('gold')}
+  padding: ${SP.md};
+  ${media.mobile}   { padding: ${SP.sm}; }
+  ${lMedia.phoneSm} { padding: ${SP.sm}; }
 `;
 
 const CardTop = styled.div`
   display: flex; justify-content: space-between; align-items: center;
-  margin-bottom: 10px;
-
-  ${media.mobile} { margin-bottom: 8px; }
+  gap: ${SP.sm};
+  margin-bottom: ${SP.sm};
 `;
 
 const MapBadge = styled.div`
-  font-size: 13px; font-weight: bold; color: #e8edf3;
-  ${media.mobile} { font-size: 12px; }
+  ${pixelBold}
+  font-size: ${FONT.sm}; color: ${C.text};
 `;
 
 const WaveBadge = styled.div`
-  font-size: 13px; font-weight: bold; color: #FFD700;
-  background: rgba(255,215,0,0.12);
-  padding: 2px 10px; border-radius: 12px;
-  ${media.mobile} { font-size: 12px; padding: 2px 8px; }
+  ${pixelBold}
+  font-size: ${FONT.sm}; color: ${C.gold};
+  background: ${C.panelSunk};
+  border: 2px solid ${C.ink};
+  padding: ${SP.xs} ${SP.sm};
 `;
 
 const TimeRow = styled.div`
-  font-size: 15px; font-weight: bold; color: #4fc3f7;
-  margin-bottom: 12px;
-
-  ${media.mobile} { font-size: 13px; margin-bottom: 8px; }
+  ${pixelBold}
+  font-size: ${FONT.sm}; color: ${C.blue};
+  margin-bottom: ${SP.sm};
 `;
 
 const PokemonSection = styled.div``;
 
+/** uppercase eyebrow를 걷어낸 자리 — 그냥 작은 라벨. */
 const SectionLabel = styled.div`
-  font-size: 11px; color: rgba(255,255,255,0.4);
-  margin-bottom: 6px; text-transform: uppercase; letter-spacing: 0.5px;
-
-  ${media.mobile} { font-size: 10px; margin-bottom: 4px; }
+  font-size: ${FONT.sm}; color: ${C.textDim};
+  margin-bottom: ${SP.xs};
 `;
 
 const PokemonGrid = styled.div`
-  display: flex; flex-wrap: wrap; gap: 4px;
-  ${media.mobile} { gap: 3px; }
+  display: flex; flex-wrap: wrap; gap: ${SP.xs};
 `;
 
 const DateRow = styled.div`
-  margin-top: 12px; font-size: 11px; color: rgba(255,255,255,0.3);
+  margin-top: ${SP.sm}; font-size: ${FONT.sm}; color: ${C.textDim};
   text-align: right;
-
-  ${media.mobile} { margin-top: 8px; font-size: 10px; }
 `;
 
 // ── 헤더 섹션 래퍼 ──
 const TitleRow = styled.div`
+  ${modalPadX}
   display: flex; align-items: center; justify-content: space-between;
-  padding: 18px 24px 14px; gap: 12px;
-  ${media.tablet} { padding: 14px 18px 12px; }
-  ${media.mobile} { padding: 12px 14px 10px; }
-  ${lMedia.phoneSm} { padding: 10px 12px 8px; }
+  gap: ${SP.md};
+  padding-top: ${SP.lg}; padding-bottom: ${SP.md};
+  ${media.mobile}   { padding-top: ${SP.md}; padding-bottom: ${SP.sm}; }
+  ${lMedia.phoneSm} { padding-top: ${SP.md}; padding-bottom: ${SP.sm}; }
 `;
 
 const SectionTitle = styled.h2`
-  font-size: 20px; font-weight: 800; color: #FFD700; margin: 0;
-  text-shadow: 0 0 20px rgba(255,215,0,0.35);
-  display: flex; align-items: center; gap: 8px; flex: 1;
-  ${media.tablet} { font-size: 18px; }
-  ${media.mobile} { font-size: 16px; }
-  ${lMedia.phoneSm} { font-size: 15px; }
+  ${pixelBold}
+  ${shadowLg}
+  font-size: ${FONT.xl}; color: ${C.gold}; margin: 0;
+  display: flex; align-items: center; gap: ${SP.sm}; flex: 1; min-width: 0;
 `;
 
+/**
+ * 제목 띠 — 창틀 안쪽 끝까지 사방으로 붙인다(업적·자료실과 같은 규칙).
+ * 예전에는 창틀 안에 얌전히 들어앉아 있어, 창틀과 띠 사이에 창 바탕이 12px 남았다.
+ */
 const HeaderSection = styled.div`
-  border-bottom: 1px solid rgba(255,255,255,0.07);
+  margin: -${FRAME_W}px -${FRAME_W}px ${SP.md};
+  padding: 0 ${FRAME_W}px;
+  background: ${C.panelSunk};
+  border-bottom: ${SCALE}px solid ${C.ink};
   flex-shrink: 0;
 `;
 
 const PaginationRow = styled.div`
-  display: flex; align-items: center; justify-content: center; gap: 16px;
-  margin-top: 16px; margin-bottom: 8px;
+  display: flex; align-items: center; justify-content: center; gap: ${SP.md};
+  margin-top: ${SP.md}; margin-bottom: ${SP.sm};
 `;
 
 const PageBtn = styled.button`
-  padding: 6px 14px; border-radius: 8px;
-  background: rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.1);
-  color: #fff; cursor: pointer; font-size: 13px; font-weight: bold;
-  transition: all 0.2s;
+  ${btnThin('plain')}
+  ${pixelBold}
+  padding: ${SP.xs} ${SP.sm};
+  color: ${C.text}; font-size: ${FONT.sm};
   display: flex; align-items: center; justify-content: center;
-  &:disabled { opacity: 0.35; cursor: not-allowed; }
-  &:not(:disabled):hover { background: rgba(255,255,255,0.12); border-color: rgba(255,255,255,0.2); }
-  ${media.mobile} { padding: 5px 12px; font-size: 12px; }
+  &:focus, &:focus-visible { outline: none; }
 `;
 
 const PageInfo = styled.span`
-  font-size: 13px; color: rgba(255,255,255,0.55); font-weight: 700;
+  ${pixelBold}
+  font-size: ${FONT.sm}; color: ${C.textSub};
   font-variant-numeric: tabular-nums;
-  ${media.mobile} { font-size: 12px; }
 `;
 
 // ── 데이터 보존 안내 ──
 const DataNotice = styled.div`
   flex-shrink: 0;
-  padding: 8px 20px 10px;
-  border-top: 1px solid rgba(255,255,255,0.06);
-  font-size: 11px;
-  color: rgba(255,255,255,0.28);
+  padding: ${SP.sm} ${SP.md};
+  border-top: ${SCALE}px solid ${C.ink};
+  font-size: ${FONT.sm};
+  color: ${C.textDim};
   text-align: center;
-  line-height: 1.5;
-
-  ${media.mobile} { font-size: 10px; padding: 6px 14px 8px; }
 `;

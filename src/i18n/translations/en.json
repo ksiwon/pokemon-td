@@ -21,7 +21,9 @@
     "female": "♀",
     "genderless": "⚪",
     "day": "Day",
-    "night": "Night"
+    "night": "Night",
+    "on": "On",
+    "off": "Off"
   },
   "alerts": {
     "notEnoughMoney": "Not enough money!",
@@ -71,11 +73,14 @@
     "inProgress": "In Progress",
     "menu": "Menu",
     "multiView": "Multi View",
+    "gold": "Gold",
+    "lives": "Lives",
+    "wave": "Wave",
     "pokemon": "Pokémon",
     "rotateDevice": "Please rotate your device to landscape"
   },
   "mapSelector": {
-    "subtitle": "Made by Team FreakIT @ KAIST",
+    "subtitle": "Made by Siwon @ KAIST",
     "filterAll": "All",
     "easiest": "Easiest",
     "easy": "Easy",
@@ -88,7 +93,7 @@
     "diffHard": "Hard",
     "diffExpert": "Expert",
     "noMaps": "No maps found for this difficulty.",
-    "clickToSelect": "Click to select →"
+    "clickToSelect": "Click to select"
   },
   "work": {
     "milestoneTitle": "Work Milestone Reached!",
@@ -819,6 +824,7 @@
   },
   "tutorial": {
     "dontShowAgain": "Don't show again",
+    "openDocs": "Numbers and formulas are in Reference",
     "prev": "← Prev",
     "next": "Next →",
     "start": "Let's Go!",
@@ -944,20 +950,6 @@
         "d0": "Battles are seed-based and deterministic — same deck, same result",
         "d1": "Clearing a floor rewards coins & star shards",
         "d2": "Spend rewards on more packs to strengthen your deck"
-      },
-      "slide4": {
-        "title": "Earning Coins & Shards",
-        "desc": "Mini Pocket currency is separate from main-game gold — it is not an exchange. You earn it on top, based on how far you get.\nThe main game is where you earn; Mini Pocket is where you spend!",
-        "d0": "Single / Story: 4 + (wave÷6) coins per wave, plus 350 coins & 50 shards for clearing wave 50",
-        "d1": "Multiplayer: one lump sum by final placement — 1st gets 300 coins & 40 shards, last still gets 80 & 8",
-        "d2": "Tower pays small (10 + floor×2); shards mostly come from achievements & Pokédex milestones"
-      },
-      "slide5": {
-        "title": "How Battles Are Calculated",
-        "desc": "Cards use their original base stats. Higher star rank raises both level and stats.\n(★1 Lv.30, +8 per star → ★5 Lv.62; stats +12% per star)",
-        "d0": "Attacks use the higher of ATK / SP.ATK, and are taken on the matching DEF / SP.DEF",
-        "d1": "Move type is auto-picked from the card's own types for best matchup — immune deals 0, crits deal ×1.5",
-        "d2": "Turn order is by Speed — the same card moves first at a higher star rank"
       }
     }
   },
@@ -982,6 +974,7 @@
     "helpStory": "Story Mode Guide",
     "helpMulti": "Multiplayer Guide",
     "helpCards": "Mini Pocket Guide",
+    "helpDocs": "Reference",
     "gameTitle": "Pokémon Aegis",
     "ratingLabel": "⭐ Rating: {rating}",
     "offlineBadge": "Offline Mode",
@@ -1081,6 +1074,9 @@
     "replay": "▶ Replay",
     "start": "▶ Start",
     "selectChapter": "Select a chapter",
+    "badgeClear": "Clear",
+    "badgeNext": "Next",
+    "chapterShort": "Ch.{n}",
     "clearedCount": "/ {total} cleared",
     "chapterAria": "Chapter {n}: {title}",
     "loadingImages": "Loading images... {progress}%",
@@ -1302,6 +1298,7 @@
       "roundInfo": "10 questions · 4 choices",
       "pickQuiz": "Quizzes by type",
       "roundSize": "Questions",
+      "rankedRule": "Ranked at {n} questions",
       "qCount": "{n}Q",
       "best": "Best {n}",
       "examBest": "Best {n}",
@@ -1310,21 +1307,66 @@
       "onlineNote": "Quiz data is loaded live from PokeAPI · internet required"
     },
     "types": {
-      "silhouette": { "name": "Who's That?", "desc": "Name the silhouette" },
-      "cry": { "name": "Cry", "desc": "Guess by sound" },
-      "zoom": { "name": "Zoom", "desc": "Guess the zoomed image" },
-      "flavor": { "name": "Dex Entry", "desc": "Guess by description" },
-      "bstDuel": { "name": "Base Stat Duel", "desc": "Guess which one's stat is higher" },
-      "type": { "name": "Type (Easy)", "desc": "Pick the Pokémon's type" },
-      "typeHard": { "name": "Type (Hard)", "desc": "Name a Pokémon matching the type exactly" },
-      "dexNumber": { "name": "Dex Number", "desc": "Guess the National Dex no." },
-      "chosungEasy": { "name": "Initials (Easy)", "desc": "Category shown · guess from Korean initials" },
-      "chosungHard": { "name": "Initials (Hard)", "desc": "No category · guess from initials only" },
-      "hint": { "name": "Random Hints", "desc": "Name it from 3 hints only" },
-      "typeOdd": { "name": "Type Odd One Out", "desc": "Spot the different type combo of 4" },
-      "special": { "name": "Legendary & Mythical", "desc": "Legendary / Mythical / Paradox / UB" },
-      "similarName": { "name": "Confusing Names", "desc": "Pick the real name out of 4 look-alikes" },
-      "signature": { "name": "Signature Move", "desc": "The only Pokémon that learns it" }
+      "silhouette": {
+        "name": "Who's That?",
+        "desc": "Name the silhouette"
+      },
+      "cry": {
+        "name": "Cry",
+        "desc": "Guess by sound"
+      },
+      "zoom": {
+        "name": "Zoom",
+        "desc": "Guess the zoomed image"
+      },
+      "flavor": {
+        "name": "Dex Entry",
+        "desc": "Guess by description"
+      },
+      "bstDuel": {
+        "name": "Base Stat Duel",
+        "desc": "Guess which one's stat is higher"
+      },
+      "type": {
+        "name": "Type (Easy)",
+        "desc": "Pick the Pokémon's type"
+      },
+      "typeHard": {
+        "name": "Type (Hard)",
+        "desc": "Name a Pokémon matching the type exactly"
+      },
+      "dexNumber": {
+        "name": "Dex Number",
+        "desc": "Guess the National Dex no."
+      },
+      "chosungEasy": {
+        "name": "Initials (Easy)",
+        "desc": "Category shown · guess from Korean initials"
+      },
+      "chosungHard": {
+        "name": "Initials (Hard)",
+        "desc": "No category · guess from initials only"
+      },
+      "hint": {
+        "name": "Random Hints",
+        "desc": "Name it from 3 hints only"
+      },
+      "typeOdd": {
+        "name": "Type Odd One Out",
+        "desc": "Spot the different type combo of 4"
+      },
+      "special": {
+        "name": "Legendary & Mythical",
+        "desc": "Legendary / Mythical / Paradox / UB"
+      },
+      "similarName": {
+        "name": "Confusing Names",
+        "desc": "Pick the real name out of 4 look-alikes"
+      },
+      "signature": {
+        "name": "Signature Move",
+        "desc": "The only Pokémon that learns it"
+      }
     },
     "exam": {
       "name": "Mock Exam",
@@ -1386,7 +1428,12 @@
       "errLoad": "Couldn't load the room list. Please try again shortly."
     },
     "chosung": {
-      "cat": { "pokemon": "Pokémon", "move": "Move", "ability": "Ability", "item": "Item" }
+      "cat": {
+        "pokemon": "Pokémon",
+        "move": "Move",
+        "ability": "Ability",
+        "item": "Item"
+      }
     },
     "hint": {
       "type": "Its type is {types}",
@@ -1408,7 +1455,14 @@
       }
     },
     "bst": {
-      "stat": { "hp": "HP", "attack": "Attack", "defense": "Defense", "specialAttack": "Sp. Atk", "specialDefense": "Sp. Def", "speed": "Speed" }
+      "stat": {
+        "hp": "HP",
+        "attack": "Attack",
+        "defense": "Defense",
+        "specialAttack": "Sp. Atk",
+        "specialDefense": "Sp. Def",
+        "speed": "Speed"
+      }
     },
     "play": {
       "silhouettePrompt": "Who's that Pokémon?",
@@ -1456,13 +1510,14 @@
       "score": "{score} / {total}",
       "grade": "Grade {n}",
       "newBest": "New best!",
-      "milestoneTitle": "🎓 Exam milestone reached! (Mini Pocket rewards)",
+      "milestoneTitle": "🎓 Milestone reached! (Mini Pocket rewards)",
       "milestoneAt": "{n}+ points",
       "rewardCoins": "+{n} coins",
       "rewardShards": "+{n} shards",
       "best": "Best {n}",
       "examBest": "Best {n}",
       "maxStreak": "Best streak {n}",
+      "notRanked": "Only {n}-question runs are ranked. This one counted toward your personal best and rewards.",
       "retry": "Play again",
       "exit": "Exit"
     }
@@ -1482,30 +1537,78 @@
     }
   },
   "synergyData": {
-    "baby": { "name": "Baby Pokémon" },
-    "yoonga": { "name": "Yoonganom's Party" },
-    "nunparty": { "name": "Nunparty's Party" },
-    "sejun": { "name": "Park Sejun's Party" },
-    "etusha": { "name": "Etusha's Party" },
-    "legendary_birds": { "name": "Legendary Birds" },
-    "legendary_dogs": { "name": "Legendary Beasts" },
-    "baruki": { "name": "Tyrogue Kids" },
-    "fossil": { "name": "Fossil Pokémon" },
-    "legendary_jellyfish": { "name": "Lake Guardians" },
-    "three_monkeys": { "name": "Elemental Monkeys" },
-    "lati": { "name": "Latias & Latios" },
-    "swords_of_justice": { "name": "Swords of Justice" },
-    "forces_of_nature": { "name": "Forces of Nature" },
-    "ash_no_crown": { "name": "Ash's Kalos Team" },
-    "ash_alola_champion": { "name": "Ash's Alola League Team" },
-    "ash_world_champion": { "name": "Ash's World Champion Team" },
-    "volcanion_magearna": { "name": "Volcanion & Magearna" },
-    "tapu": { "name": "Island Guardians" },
-    "ultra_beast": { "name": "Ultra Beasts" },
-    "regi": { "name": "Regi Series" },
-    "accelgor_escavalier": { "name": "Dondozo & Tatsugiri" },
-    "four_treasures": { "name": "Treasures of Ruin" },
-    "loyal_three": { "name": "The Loyal Three & Pecharunt" }
+    "baby": {
+      "name": "Baby Pokémon"
+    },
+    "yoonga": {
+      "name": "Yoonganom's Party"
+    },
+    "nunparty": {
+      "name": "Nunparty's Party"
+    },
+    "sejun": {
+      "name": "Park Sejun's Party"
+    },
+    "etusha": {
+      "name": "Etusha's Party"
+    },
+    "legendary_birds": {
+      "name": "Legendary Birds"
+    },
+    "legendary_dogs": {
+      "name": "Legendary Beasts"
+    },
+    "baruki": {
+      "name": "Tyrogue Kids"
+    },
+    "fossil": {
+      "name": "Fossil Pokémon"
+    },
+    "legendary_jellyfish": {
+      "name": "Lake Guardians"
+    },
+    "three_monkeys": {
+      "name": "Elemental Monkeys"
+    },
+    "lati": {
+      "name": "Latias & Latios"
+    },
+    "swords_of_justice": {
+      "name": "Swords of Justice"
+    },
+    "forces_of_nature": {
+      "name": "Forces of Nature"
+    },
+    "ash_no_crown": {
+      "name": "Ash's Kalos Team"
+    },
+    "ash_alola_champion": {
+      "name": "Ash's Alola League Team"
+    },
+    "ash_world_champion": {
+      "name": "Ash's World Champion Team"
+    },
+    "volcanion_magearna": {
+      "name": "Volcanion & Magearna"
+    },
+    "tapu": {
+      "name": "Island Guardians"
+    },
+    "ultra_beast": {
+      "name": "Ultra Beasts"
+    },
+    "regi": {
+      "name": "Regi Series"
+    },
+    "accelgor_escavalier": {
+      "name": "Dondozo & Tatsugiri"
+    },
+    "four_treasures": {
+      "name": "Treasures of Ruin"
+    },
+    "loyal_three": {
+      "name": "The Loyal Three & Pecharunt"
+    }
   },
   "achData": {
     "category": {
@@ -1853,6 +1956,15 @@
       "changed": "Changed",
       "fixed": "Fixed"
     },
+    "v2_25": {
+      "uiOverhaul": "The interface has been rebuilt from the ground up, with pixel window frames and a dot font throughout.",
+      "gameDocs": "Added Reference — damage formulas, drop rates and where currency comes from, all in one place. Open it from the help row on the main menu.",
+      "quizKindReward": "Quiz categories now pay out too. Coins and star shards are granted by your best score (one fifth of the mock exam, once per tier).",
+      "quizRanked": "Quiz rankings now count 50-question runs only. Runs of 10 or 30 are for practice and still count toward your personal best and rewards.",
+      "mapTooltip": "Fixed the in-game Pokémon tooltip being clipped off screen, and lingering after the cursor left the map.",
+      "typeColor": "Fixed the same type showing different colours on different screens. Terastal tiles and their tooltip now match.",
+      "modalSpacing": "Unified the title bar and spacing across the Achievements, Hall of Fame, Rankings and Library windows, and fixed tabs and tables that stuck out past the title."
+    },
     "v2_24": {
       "dupMove": "Fixed the same move being offered again and again on level-up. Moves that are learned at different levels depending on the generation (e.g. Deoxys learns Night Shade at Lv5, 7 and 9) were each counted separately, so they showed up once per level. Now each move is offered only once, and moves you already know or previously declined will not come back.",
       "waveRecord": "Fixed highest-wave records being rounded down to a multiple of 5 (e.g. reaching wave 64 was recorded as 60). Your wave at game over is now recorded as-is. Records already saved are not corrected retroactively; new runs will be accurate."
@@ -1874,5 +1986,153 @@
       "chunkReload": "Tabs left open across an update now auto-refresh instead of failing to load the game."
     },
     "footnote": "The full change history lives in docs/CHANGELOG.md in the repository."
+  },
+  "docs": {
+    "title": "Reference",
+    "updated": "Last updated {date}",
+    "tab": {
+      "single": "Single / Story",
+      "multi": "Multiplayer",
+      "cards": "Mini Pocket",
+      "quiz": "Quiz"
+    },
+    "lead": {
+      "single": "Formulas and numbers for tower defense (Single and Story). Story mode differs only in enemy scaling; everything else matches Single.",
+      "multi": "How a multiplayer match runs and how battles pay out. Damage uses the same formula as Single.",
+      "cards": "Pack odds, star merging, battle math, and where Mini Pocket currency comes from.",
+      "quiz": "How quiz rewards are paid out and how the rankings work."
+    },
+    "single": {
+      "damage": "Damage",
+      "dmgLevel": "Level term (fixed for everyone)",
+      "dmgEff": "Type effectiveness",
+      "dmgStab": "STAB",
+      "dmgTera": "Terastal STAB",
+      "dmgCrit": "Critical (rate / multiplier)",
+      "dmgRandom": "Damage roll",
+      "dmgEnemy": "Enemy move power",
+      "dmgSplash": "Enemy splash (radius / share)",
+      "damageFoot": "Formula = ((2×50÷5+2) × power × ATK ÷ DEF ÷ 50 + 2) × effectiveness × STAB × roll. Physical moves are taken on DEF, special moves on SP.DEF. Single uses raw base stats, so it is a world where everyone is level 50 — hence the fixed level term.",
+      "growth": "Growth",
+      "xpPerLevel": "XP per level",
+      "levelGain": "Gain per level (all but Speed, compounding)",
+      "killXp": "Kill XP (normal / boss)",
+      "maxLevel": "Max level",
+      "range": "Attack range",
+      "growthFoot": "Attack interval = 2.0s × max(0.2, 1 − Speed ÷ 300). XP does not depend on who landed the kill: every Pokémon that is alive and not away on a job gets the full amount.",
+      "economy": "Gold",
+      "startGold": "Starting gold",
+      "pickerCost": "Picker entry fee",
+      "killGold": "Kill gold (normal / boss)",
+      "rewardMult": "Difficulty reward multiplier",
+      "economyFoot": "Buy price = floor(25 + base stat total ÷ 600 × 200). Sell price = max(level × 20, buy price × 0.5) — you cannot sell mid-wave or while a Pokémon is away on a job. Kill gold is multiplied by the difficulty reward multiplier.",
+      "enemy": "Enemy scaling",
+      "enemyCount": "Enemies per wave",
+      "enemyScale": "HP / ATK growth",
+      "storyScale": "Story mode growth",
+      "diffMult": "Difficulty multiplier (HP / ATK)",
+      "boss": "Boss (HP / stats)",
+      "bossLife": "Lives lost if a boss gets through",
+      "enemyFoot": "W = wave number. Bosses spawn on every third wave in addition to the normal count. Difficulty multipliers are listed from easiest to hardest.",
+      "forms": "Form changes",
+      "megaCount": "Mega Evolution (species)",
+      "gmaxCount": "Gigantamax (species)",
+      "fusionCount": "Fusion (pairs)",
+      "fusionCost": "Fusion cost",
+      "dropRate": "Reward drop chance (n = eligible Pokémon)",
+      "formsFoot": "Mega Stones and Max Mushrooms appear only among end-of-wave reward choices, and never in Story mode. Fusion is done from the Pokémon management screen and consumes the material Pokémon. Primal Reversion, Zacian / Zamazenta form changes, Palafin, Ogerpon and Terapagos are not implemented yet."
+    },
+    "multi": {
+      "flow": "Match flow",
+      "players": "Max players",
+      "startLife": "Starting lives",
+      "flowFoot": "Each round cycles shop, wave, then battle. You are eliminated at 0 lives, and the last player standing wins.",
+      "reward": "Battle payout",
+      "win": "Win",
+      "winStreak": "Win streak (2 / 3 / 4)",
+      "winAlive": "3 or more survivors",
+      "loseLife": "Lives lost (n = enemy survivors)",
+      "loseStreak": "Loss streak consolation (2 / 3 / 4 / 5)",
+      "lowLife": "Low-life bonus (≤20 / ≤10)",
+      "rewardFoot": "Loss-streak consolation and the low-life bonus stack. Losses are settled from a running ledger even if you disconnect and come back, so leaving mid-battle does not dodge the life loss.",
+      "arena": "TFT battle arena",
+      "board": "Board",
+      "myZone": "Your rows",
+      "aiGrowth": "AI growth efficiency (easy / medium / hard)",
+      "arenaFoot": "Damage, type effectiveness and synergies are identical to Single. AI opponents grow the same way players do (+5% to all stats per level); difficulty only changes how fast."
+    },
+    "cards": {
+      "pack": "Packs",
+      "packNormal": "Normal pack (coins)",
+      "packType": "Type pack (coins)",
+      "packPremium": "Premium pack (star shards)",
+      "packSize": "Cards per pack",
+      "packMin": "Guaranteed minimum (normal / type / premium)",
+      "packBoost": "Rarity boost (normal / type / premium)",
+      "packPity": "Normal pack pity (cards)",
+      "packFoot": "Pity — after 20 normal-pack cards without a Gold or better, the next pack guarantees one. A higher rarity boost shifts the draw toward better grades.",
+      "rarity": "Rarity",
+      "weights": "Draw weights",
+      "cutoff": "Base stat total cutoffs",
+      "pool": "Card pool",
+      "rarityFoot": "Higher weight means more common. Card rarity comes from the base stat total of that Pokémon itself, not its evolution stage. The pool is cut at the Pokédex numbers, so Mega, Gigantamax, fusion and regional forms never appear as cards — one card per species.",
+      "stars": "Stars",
+      "merge": "Duplicates needed to merge",
+      "maxStars": "Max stars",
+      "level": "Level (★1 to ★5)",
+      "perStarLv": "Level per star",
+      "statMult": "Stats per star",
+      "refund": "Refund for duplicates at max stars (coins)",
+      "battle": "Battle math",
+      "power": "Power constant",
+      "crit": "Critical (rate / multiplier)",
+      "random": "Damage roll",
+      "immune": "Damage against an immunity",
+      "battleFoot": "A card attacks with the higher of ATK / SP.ATK, and the defender takes it on the matching DEF / SP.DEF. The move type is auto-picked from its own types for the best matchup. Turn order is by Speed, so a higher star rank moves first even on the same card.",
+      "synergy": "Type synergy (2 / 4 / 6 cards)",
+      "tier": "Stat multiplier",
+      "dot": "Burn / poison chance (Fire, Poison)",
+      "stun": "Paralysis / freeze chance (Electric, Ice)",
+      "lifesteal": "Lifesteal (Grass)",
+      "critAdd": "Added crit rate (Fighting)",
+      "critMult": "Crit multiplier (Dark)",
+      "synergyFoot": "Burn deals 5% of max HP per turn for 2 turns; poison deals 4% for 3 turns. Each synergy steps up at 2, 4 and 6 cards of the same type.",
+      "currency": "Currency income (coins / star shards)",
+      "tdWave": "Single wave clear (coins)",
+      "tdClear": "Single or Story full clear",
+      "multiTop": "Multiplayer 1st place",
+      "multiLow": "Multiplayer last place",
+      "tower": "Trainer Tower floor clear (coins)",
+      "pvp": "Card battle (win / loss, coins)",
+      "daily": "First win of the day",
+      "ach": "First achievement unlock (shards by tier)",
+      "currencyFoot": "W = wave, F = floor. Mini Pocket currency is not exchanged from main-game gold — it is granted separately. The big earners are Single and Multiplayer; auto-battle pays little on purpose, since it is meant to spend currency rather than farm it."
+    },
+    "quiz": {
+      "round": "Question count",
+      "roundSizes": "Selectable counts",
+      "ranked": "Counted for ranking",
+      "roundFoot": "Because the score is simply the number of correct answers, mixing question counts makes a board meaningless — a perfect 10-question run (10) would sit next to 40 out of 50. So only 50-question runs are ranked. Runs of 10 or 30 still count toward your personal best and rewards.",
+      "at": "{n} correct",
+      "total": "Total",
+      "examReward": "Mock exam rewards (coins / star shards)",
+      "examRewardFoot": "A tier unlocks only when you beat your best score, and pays out once. It cannot be farmed repeatedly.",
+      "kindReward": "Per-category rewards (coins / star shards)",
+      "kindRewardFoot": "Each category pays one fifth of the mock exam, under the same once-per-tier rule. The two initial-consonant categories are Korean-only, so other languages have 13 categories.",
+      "rank": "Rankings",
+      "boards": "Weekly boards",
+      "reset": "Weekly reset",
+      "resetV": "Mondays 00:00 KST",
+      "needLogin": "Sign-in",
+      "needLoginV": "Required",
+      "rankFoot": "Three separate boards run at once — all-time single is your best mock exam score, all-time speed is total wins, and weekly is your best score of the week per board. There are 17 weekly boards (15 categories, mock exam, speed quiz), each ranked on its own. As a guest, records stay on this device only.",
+      "speed": "Speed quiz scoring",
+      "speedTime": "Time score",
+      "speedOrder": "Order bonus (1st / 2nd / 3rd)",
+      "speedMiss": "Wrong or no answer",
+      "speedRound": "Room question count",
+      "speedSec": "Room time limit (seconds)",
+      "speedFoot": "The time score is proportional to time remaining, so 100 is the cap no matter the limit. The weekly speed board does not separate room sizes, which favours 30-question rooms."
+    }
   }
 }

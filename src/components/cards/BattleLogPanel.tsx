@@ -8,6 +8,8 @@ import { ScrollText, Flame, Skull, Zap, Snowflake } from 'lucide-react';
 import { media } from '../../utils/responsive.utils';
 import { getTypeColor } from '../../utils/typeEffectiveness';
 import { useTranslation } from '../../i18n';
+import { C, FONT, SP, SCALE } from '../../styles/tokens';
+import { win, pixelText, pixelBold } from '../../styles/pixel';
 import {
   BattleCard, BattleLogEntry, StatusKind, BURN_TURNS, POISON_TURNS,
 } from '../../services/CardBattleService';
@@ -58,11 +60,13 @@ export const UnitStatusBadge = ({ kind }: { kind: StatusKind }) => {
   const Icon = STATUS_ICON[kind];
   return <SBadge $c={STATUS_COLOR[kind]}><Icon size={9} /></SBadge>;
 };
+/** 동그라미 + 번진 그림자였던 걸 각진 칸 + 잉크 테두리로. 도트 문법(docs/DESIGN.md). */
 const SBadge = styled.span<{ $c: string }>`
-  position: absolute; top: -3px; right: 3px; width: 16px; height: 16px; border-radius: 50%;
+  position: absolute; top: -3px; right: 3px; width: 16px; height: 16px;
   display: flex; align-items: center; justify-content: center;
-  background: ${p => p.$c}; color: #fff;
-  box-shadow: 0 1px 3px rgba(0,0,0,0.55); z-index: 2;
+  background: ${p => p.$c}; color: ${C.text};
+  border: ${SCALE}px solid ${C.ink};
+  z-index: 2;
 `;
 
 interface Props {
@@ -170,46 +174,66 @@ export const BattleLogPanel = ({ log, units, count }: Props) => {
 };
 
 // ─── styled ──────────────────────────────────────────────────────────────────
+// docs/DESIGN.md 의 디자인 시스템을 따른다.
+
 const Root = styled.aside`
+  ${win('plain')}
+  ${pixelText}
+  color: ${C.text};
   flex: 0 0 290px; min-width: 0; display: flex; flex-direction: column;
-  background: rgba(10, 12, 22, 0.72); border: 1px solid rgba(255,255,255,0.08);
-  border-radius: 14px; overflow: hidden; max-height: 520px;
+  overflow: hidden; max-height: 520px;
   ${media.tablet} { flex: 0 0 auto; width: 100%; max-height: 200px; }
 `;
 const Head = styled.div`
-  display: flex; align-items: center; gap: 6px; padding: 10px 14px;
-  font-size: 12px; font-weight: 800; letter-spacing: 0.08em; color: rgba(255,255,255,0.65);
-  border-bottom: 1px solid rgba(255,255,255,0.07); background: rgba(255,255,255,0.03);
+  ${pixelBold}
+  display: flex; align-items: center; gap: ${SP.xs};
+  padding: ${SP.xs} ${SP.sm};
+  font-size: ${FONT.sm}; color: ${C.gold};
+  background: ${C.panelSunk};
+  border-bottom: ${SCALE}px solid ${C.ink};
 `;
 const Body = styled.div`
-  flex: 1; overflow-y: auto; padding: 10px 12px; display: flex; flex-direction: column; gap: 4px;
-  scrollbar-width: thin; scrollbar-color: rgba(255,255,255,0.18) transparent;
+  flex: 1; overflow-y: auto; padding: ${SP.sm};
+  display: flex; flex-direction: column; gap: ${SP.xs};
+
+  &::-webkit-scrollbar { width: 10px; }
+  &::-webkit-scrollbar-track { background: ${C.panelSunk}; border: ${SCALE}px solid ${C.ink}; }
+  &::-webkit-scrollbar-thumb { background: ${C.divider}; border: ${SCALE}px solid ${C.ink}; }
 `;
-const Waiting = styled.div`font-size: 12px; color: rgba(255,255,255,0.35); padding: 8px 2px;`;
+const Waiting = styled.div`font-size: ${FONT.sm}; color: ${C.textDim}; padding: ${SP.xs} 0;`;
 const TurnDivider = styled.div`
-  display: flex; align-items: center; gap: 8px; margin: 6px 0 2px;
-  font-size: 10px; font-weight: 800; color: rgba(192,132,252,0.8); letter-spacing: 0.1em;
-  &::before, &::after { content: ''; flex: 1; height: 1px; background: rgba(192,132,252,0.18); }
+  ${pixelBold}
+  display: flex; align-items: center; gap: ${SP.sm}; margin: ${SP.xs} 0 0;
+  font-size: ${FONT.sm}; color: ${C.purple};
+  &::before, &::after { content: ''; flex: 1; height: ${SCALE}px; background: ${C.divider}; }
 `;
 const Line = styled.div`
-  display: flex; align-items: center; gap: 5px; flex-wrap: wrap;
-  font-size: 12px; line-height: 1.5;
+  display: flex; align-items: center; gap: ${SP.xs}; flex-wrap: wrap;
+  font-size: ${FONT.sm};
 `;
 const Name = styled.span<{ $side: 'player' | 'enemy' }>`
-  font-weight: 700; color: ${p => (p.$side === 'enemy' ? '#fca5a5' : '#86efac')};
+  ${pixelBold}
+  color: ${p => (p.$side === 'enemy' ? C.red : C.green)};
   max-width: 84px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
 `;
-const Arrow = styled.span`color: rgba(255,255,255,0.3); font-size: 11px;`;
+const Arrow = styled.span`color: ${C.textDim}; font-size: ${FONT.sm};`;
 const Dmg = styled.span<{ $crit: boolean }>`
-  font-weight: 800; color: ${p => (p.$crit ? '#fbbf24' : '#e8edf5')};
+  ${pixelBold}
+  color: ${p => (p.$crit ? C.gold : C.text)};
 `;
 const Badge = styled.span<{ $c: string }>`
-  font-size: 9px; font-weight: 800; color: ${p => p.$c};
-  border: 1px solid ${p => p.$c}44; background: ${p => p.$c}14;
-  padding: 1px 5px; border-radius: 5px; white-space: nowrap;
+  ${pixelBold}
+  font-size: ${FONT.sm}; line-height: 1.3; color: ${p => p.$c};
+  border: 2px solid ${C.ink};
+  background: ${C.panelSunk};
+  padding: ${SP.xs} ${SP.sm}; white-space: nowrap;
 `;
 const FaintLine = styled.div`
-  font-size: 11px; font-weight: 700; color: #f87171; padding-left: 8px;
+  ${pixelBold}
+  font-size: ${FONT.sm}; color: ${C.red}; padding-left: ${SP.sm};
 `;
-const SkipText = styled.span`font-size: 11px; font-weight: 700; color: rgba(255,255,255,0.5);`;
-const HealText = styled.span`font-size: 12px; font-weight: 800; color: #34d399;`;
+const SkipText = styled.span`${pixelBold} font-size: ${FONT.sm}; color: ${C.textSub};`;
+const HealText = styled.span`
+  ${pixelBold}
+  font-size: ${FONT.sm}; color: ${C.green};
+`;

@@ -7,6 +7,8 @@ import { Emoji } from '../shared/Emoji';
 import { useTranslation } from '../../i18n';
 import { useGameStore } from '../../store/gameStore';
 import { modalBoxCss, MODAL_ACCENT } from '../shared/modal.styles';
+import { C, FONT, SP, SCALE } from '../../styles/tokens';
+import { winThin, btn, sunken, pixelText, pixelBold } from '../../styles/pixel';
 
 const TYPE_ICON_API_BASE = 'https://www.serebii.net/pokedex-bw/type/';
 
@@ -161,216 +163,174 @@ export const SkillPicker: React.FC = () => {
 };
 
 // ── 반응형 헬퍼 (landscape 전용) ─────────────────────────────────
-const L1024 = lMedia.tablet;
-const L768  = lMedia.phone;
 
 // Styled Components
+// docs/DESIGN.md 의 디자인 시스템을 따른다.
+// 걷어낸 것: backdrop-filter, 그라디언트 버튼, 글로우 그림자, 둥근 모서리,
+//           uppercase eyebrow, 11px 글자.
+
 const Container = styled.div`
+  ${modalBoxCss(MODAL_ACCENT.purple)}
+  ${pixelText}
   position: fixed;
-  left: 16px;
+  left: ${SP.md};
   top: 50%;
   transform: translateY(-50%);
-  width: 280px;
+  width: 300px;
   max-height: 80vh;
   overflow-y: auto;
-  ${modalBoxCss(MODAL_ACCENT.purple)}
-  border-radius: 20px;
-  padding: 16px;
-  backdrop-filter: blur(10px);
+  color: ${C.text};
   z-index: 1000;
-  animation: slideInLeft 0.3s ease-out;
+
+  &::-webkit-scrollbar { width: 10px; }
+  &::-webkit-scrollbar-track { background: ${C.panelSunk}; border: ${SCALE}px solid ${C.ink}; }
+  &::-webkit-scrollbar-thumb { background: ${C.divider}; border: ${SCALE}px solid ${C.ink}; }
 
   /* [FIX] 태블릿/폰 가로 화면: left:16px이 맵 패널과 겹침 → 중앙 정렬 */
-  ${L1024} {
-    left: 50%;
-    top: 50%;
+  ${lMedia.tablet} {
+    left: 50%; top: 50%;
     transform: translate(-50%, -50%);
     width: min(340px, 85vw);
     max-height: 82vh;
-    padding: 14px;
-    border-left-width: 2px;
-    border-right-width: 2px;
-    border-bottom-width: 2px;
-    border-radius: 16px;
   }
-  /* [FIX] 폰 가로 화면(작은): 더 컴팩트하게 */
-  ${L768} {
+  ${lMedia.phone} {
     width: min(300px, 88vw);
     max-height: 78vh;
-    padding: 10px;
-    border-radius: 12px;
   }
-  /* 세로 모바일 */
   ${media.mobile} {
-    width: 88vw;
-    max-width: 320px;
-    left: 50%;
-    top: 50%;
+    width: 88vw; max-width: 320px;
+    left: 50%; top: 50%;
     transform: translate(-50%, -50%);
-    padding: 12px;
     max-height: 85vh;
-    border-left-width: 2px;
-    border-right-width: 2px;
-    border-bottom-width: 2px;
   }
 `;
 
+/**
+ * 제목 띠 — 창틀 안쪽 끝까지 붙인다. 다른 창과 같은 규칙이되, 300px 고정 패널이라
+ * 좌변은 큰 창의 28px이 아니라 이 창 자신의 여백(12px)을 따른다. 28px을 주면
+ * 기술 이름·설명이 들어갈 폭이 244px까지 눌린다.
+ */
 const Header = styled.div`
+  margin: -${SP.md} -${SP.md} ${SP.md};
+  padding: ${SP.md};
+  background: ${C.panelSunk};
+  border-bottom: ${SCALE}px solid ${C.ink};
   text-align: center;
-  margin-bottom: 12px;
-  padding-bottom: 12px;
-  border-bottom: 1px solid rgba(255, 255, 255, 0.1);
 `;
 
 const Title = styled.h3`
-  font-size: 20px;
-  ${media.mobile} { font-size: 16px; }
-  font-weight: bold;
-  margin: 0 0 4px 0;
-  color: #4fc3f7;
-  text-shadow: 0 0 10px rgba(79, 195, 247, 0.5);
+  ${pixelBold}
+  font-size: ${FONT.md};
+  margin: 0 0 ${SP.xs};
+  color: ${C.purple};
 `;
 
 const PokemonName = styled.div`
-  font-size: 14px;
-  color: #a8b8c8;
-  font-weight: 600;
+  font-size: ${FONT.sm};
+  color: ${C.textSub};
 `;
 
 const Subtitle = styled.div`
-  font-size: 14px;
+  ${pixelBold}
+  font-size: ${FONT.sm};
   text-align: center;
-  color: #4cafff;
-  margin-bottom: 12px;
-  font-weight: 600;
+  color: ${C.blue};
+  margin-bottom: ${SP.md};
 `;
 
 const SkillSection = styled.div`
-  margin-bottom: 12px;
+  margin-bottom: ${SP.md};
 `;
 
+/** uppercase eyebrow를 걷어낸 자리 — 파랑 라벨. */
 const SectionLabel = styled.div`
-  font-size: 12px;
-  font-weight: bold;
-  color: #4cafff;
-  margin-bottom: 8px;
-  text-transform: uppercase;
+  ${pixelBold}
+  font-size: ${FONT.sm};
+  color: ${C.blue};
+  margin-bottom: ${SP.sm};
 `;
 
+/** 새로 배우는 기술만 보라 창틀. 글로우 대신 창틀 색이 구분을 진다. */
 const SkillCard = styled.div<{ $isNew: boolean }>`
-  background: linear-gradient(145deg, rgba(30, 40, 60, 0.9), rgba(15, 20, 35, 0.95));
-  border: 2px solid ${props => props.$isNew ? 'rgba(155, 89, 182, 0.5)' : 'rgba(52, 152, 219, 0.4)'};
-  box-shadow: ${props => props.$isNew ? '0 0 15px rgba(155, 89, 182, 0.3)' : 'none'};
-  border-radius: 12px;
-  padding: 12px;
-  margin-bottom: 8px;
+  ${p => winThin(p.$isNew ? 'purple' : 'blue')}
+  padding: ${SP.sm};
+  margin-bottom: ${SP.sm};
 `;
 
 const SkillName = styled.div`
-  align-items: center;
-  font-size: 15px;
-  font-weight: bold;
-  color: #4cafff;
-  margin-bottom: 8px;
-  text-transform: capitalize;
+  ${pixelBold}
+  display: flex; align-items: center;
+  font-size: ${FONT.sm};
+  color: ${C.text};
+  margin-bottom: ${SP.sm};
 `;
 
 const TypeIcon = styled.img`
   height: 14px;
   object-fit: contain;
-  margin-left: 8px;
-  margin-bottom: -2px;
+  margin-left: ${SP.sm};
 `;
 
 const SkillStats = styled.div`
   display: flex;
-  gap: 12px;
-  margin-bottom: 8px;
+  gap: ${SP.md};
+  margin-bottom: ${SP.sm};
 `;
 
 const StatRow = styled.div`
   display: flex;
   align-items: center;
-  gap: 4px;
-  font-size: 13px;
-  color: #e8edf3;
-  font-weight: 600;
+  gap: ${SP.xs};
+  font-size: ${FONT.sm};
+  color: ${C.textSub};
 `;
 
 const EffectBadge = styled.div<{ $type: 'status' | 'drain' | 'aoe' }>`
-  padding: 4px 8px;
-  border-radius: 6px;
-  font-size: 11px;
-  margin-top: 4px;
-  font-weight: 600;
-
-  ${props => props.$type === 'status' && `
-    background: rgba(155, 89, 182, 0.2);
-    border: 1px solid rgba(155, 89, 182, 0.3);
-  `}
-  
-  ${props => props.$type === 'drain' && `
-    background: rgba(46, 204, 113, 0.2);
-    border: 1px solid rgba(46, 204, 113, 0.3);
-  `}
-  
-  ${props => props.$type === 'aoe' && `
-    background: rgba(243, 156, 18, 0.2);
-    border: 1px solid rgba(243, 156, 18, 0.3);
-  `}
+  ${pixelBold}
+  padding: ${SP.xs} ${SP.sm};
+  font-size: ${FONT.sm};
+  margin-top: ${SP.xs};
+  background: ${C.panelSunk};
+  border: 2px solid ${C.ink};
+  color: ${p =>
+    p.$type === 'status' ? C.purple :
+    p.$type === 'drain'  ? C.green  : C.gold};
 `;
 
 const KeepBtn = styled.button`
+  ${btn('plain')}
+  ${pixelBold}
   width: 100%;
-  padding: 10px;
-  font-size: 14px;
-  background: linear-gradient(135deg, #3498db 0%, #2980b9 100%);
-  color: #fff;
-  border: 2px solid rgba(52, 152, 219, 0.4);
-  border-radius: 10px;
-  cursor: pointer;
-  font-weight: bold;
-  box-shadow: 0 4px 12px rgba(52, 152, 219, 0.3);
-  transition: all 0.2s ease;
-
-  &:hover {
-    background: linear-gradient(135deg, #2980b9 0%, #2471a3 100%);
-  }
+  padding: ${SP.sm};
+  font-size: ${FONT.sm};
+  color: ${C.text};
+  &:focus, &:focus-visible { outline: none; }
 `;
 
 const LearnBtn = styled.button`
+  ${btn('blue')}
+  ${pixelBold}
   width: 100%;
-  padding: 10px;
-  font-size: 14px;
-  background: linear-gradient(135deg, #2471a3 0%, #1a5276 100%);
-  color: #fff;
-  border: 2px solid rgba(79, 195, 247, 0.4);
-  border-radius: 10px;
-  cursor: pointer;
-  font-weight: bold;
-  box-shadow: 0 4px 12px rgba(79, 195, 247, 0.25);
-  transition: all 0.2s ease;
-
-  &:hover {
-    background: linear-gradient(135deg, #2980b9 0%, #2471a3 100%);
-  }
+  padding: ${SP.sm};
+  font-size: ${FONT.sm};
+  color: ${C.text};
+  &:focus, &:focus-visible { outline: none; }
 `;
 
+/** 기존→신규 방향 표시. 웹 화살표(→) 대신 포켓몬 메뉴의 ▼. */
 const Arrow = styled.div`
+  ${pixelBold}
   text-align: center;
-  font-size: 24px;
-  color: #4fc3f7;
-  margin: 8px 0;
-  text-shadow: 0 0 10px rgba(79, 195, 247, 0.5);
+  font-size: ${FONT.sm};
+  color: ${C.blue};
+  margin: ${SP.sm} 0;
 `;
 
 const QueueInfo = styled.div`
+  ${sunken()}
   text-align: center;
-  font-size: 11px;
-  color: #a8b8c8;
-  margin-top: 12px;
-  padding: 6px;
-  background: rgba(155, 89, 182, 0.1);
-  border-radius: 8px;
-  border: 1px solid rgba(155, 89, 182, 0.2);
+  font-size: ${FONT.sm};
+  color: ${C.textSub};
+  margin-top: ${SP.md};
+  padding: ${SP.xs} ${SP.sm};
 `;

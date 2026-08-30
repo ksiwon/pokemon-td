@@ -16,12 +16,12 @@ import { multiplayerService } from '../../services/MultiplayerService';
 import { PlayerGameState, TowerDetail } from '../../types/multiplayer';
 import { authService } from '../../services/AuthService';
 import { useTranslation } from '../../i18n';
+import { C, FONT, SP, SCALE } from '../../styles/tokens';
+import { winThin, btnThin, pixelBold } from '../../styles/pixel';
 import { lMedia } from '../../utils/responsive.utils';
 import { ModalOverlay, ModalBox, ModalCloseBtn, MODAL_ACCENT } from '../shared/modal.styles';
 
 // ─── 반응형 헬퍼 → lMedia 사용 ───────────────────────────────────────────────
-const L1024 = lMedia.tablet;   // ≤1024px landscape
-const L768  = lMedia.phone;    // ≤768px  landscape
 const LSm   = lMedia.phoneSm;  // landscape + max-height ≤520px
 
 interface MultiplayerViewProps {
@@ -115,7 +115,7 @@ export const MultiplayerView = ({ roomId, onClose }: MultiplayerViewProps) => {
               {isRefreshing ? <><Emoji glyph="🔄" size={12} /> {t('multiView.refreshing')}</> : <><Emoji glyph="⏱" size={12} /> {refreshedTimeStr}</>}
             </RefreshInfo>
             <ManualRefreshBtn onClick={fetchTowerDetails} disabled={isRefreshing} title={t('multiView.manualRefresh')}><Emoji glyph="🔃" size={14} /></ManualRefreshBtn>
-            <ModalCloseBtn onClick={onClose}><Emoji glyph="❌" size={14} /></ModalCloseBtn>
+            <ModalCloseBtn onClick={onClose}>✕</ModalCloseBtn>
           </HeaderRight>
         </Header>
 
@@ -186,157 +186,115 @@ export const MultiplayerView = ({ roomId, onClose }: MultiplayerViewProps) => {
 };
 
 // ─── 애니메이션 ───────────────────────────────────────────────────────────────
-const shimmer = keyframes`
-  0%{background-position:-200% 0}
-  100%{background-position:200% 0}
-`;
 const blink = keyframes`0%,100%{opacity:0.3}50%{opacity:1}`;
 
 // ─── Styled Components ────────────────────────────────────────────────────────
-
-
+// docs/DESIGN.md 의 디자인 시스템을 따른다.
+// 걷어낸 것: 유리 행, 원형 순위 배지, 알약 태그, 그라디언트, shimmer 스켈레톤,
+//           둥근 모서리, rem 단위·6~11px 글자.
 
 const Header = styled.div`
   display: flex; justify-content: space-between; align-items: center;
-  padding: 16px 20px 14px;
-  border-bottom: 1px solid rgba(255,255,255,0.07);
-  gap: 8px;
+  padding: ${SP.md} ${SP.lg};
+  border-bottom: ${SCALE}px solid ${C.ink};
+  gap: ${SP.sm};
 
-  ${L1024} { padding: 14px 18px 12px; }
-  ${L768}  { padding: 12px 16px 10px; flex-wrap: wrap; }
-  ${LSm}   { padding: 10px 14px 8px; flex-wrap: wrap; }
+  ${lMedia.phone} { padding: ${SP.sm} ${SP.md}; flex-wrap: wrap; }
+  ${LSm}  { padding: ${SP.sm} ${SP.md}; flex-wrap: wrap; }
 `;
 
 const Title = styled.h2`
-  color: #ffd700; margin: 0; font-size: 20px; font-weight: 800;
-  text-shadow: 0 0 20px rgba(255,215,0,0.35);
-
-  ${L1024} { font-size: 18px; }
-  ${L768}  { font-size: 16px; }
-  ${LSm}   { font-size: 14px; }
+  ${pixelBold}
+  color: ${C.gold}; margin: 0; font-size: ${FONT.sm};
 `;
 
-const HeaderRight = styled.div`display: flex; align-items: center; gap: 8px; flex-shrink: 0;
-  ${L768} { gap: 6px; }
+const HeaderRight = styled.div`
+  display: flex; align-items: center; gap: ${SP.sm}; flex-shrink: 0;
 `;
 
 const RefreshInfo = styled.span<{ $refreshing: boolean }>`
-  font-size: 11px;
-  color: ${p => p.$refreshing ? '#4fc3f7' : 'rgba(255,255,255,0.4)'};
+  font-size: ${FONT.sm};
+  color: ${p => (p.$refreshing ? C.blue : C.textDim)};
   white-space: nowrap;
-
-  ${L768} { font-size: 10px; }
-  ${LSm}  { display: none; }
+  ${LSm} { display: none; }
 `;
 
 const ManualRefreshBtn = styled.button`
-  background: rgba(255,255,255,0.1); border: none;
-  color: #fff; width: 32px; height: 32px; border-radius: 50%;
-  cursor: pointer; font-size: 14px; transition: background 0.2s;
-  @media(hover:hover){&:hover:not(:disabled){background:rgba(79,195,247,0.3);}}
-  &:disabled{opacity: 0.4; cursor: not-allowed;}
-
-  ${L768} { width: 28px; height: 28px; font-size: 12px; }
-  ${LSm}  { width: 26px; height: 26px; font-size: 11px; }
+  ${btnThin('plain')}
+  color: ${C.text}; width: 32px; height: 32px; padding: 0;
+  font-size: ${FONT.sm};
+  display: flex; align-items: center; justify-content: center;
+  &:focus, &:focus-visible { outline: none; }
 `;
-
 
 const PlayerList = styled.div`
-  display: flex; flex-direction: column; gap: 12px;
-
-  ${L768} { gap: 8px; }
-  ${LSm}  { gap: 6px; }
+  display: flex; flex-direction: column; gap: ${SP.sm};
 `;
 
+/** 플레이어 행 — 내 행만 파랑 창틀. 그라디언트 대신 창틀 색이 구분을 진다. */
 const PlayerRow = styled.div<{ $isMe: boolean; $isDead: boolean }>`
-  display: flex; align-items: center; gap: 1rem; padding: 16px;
-  background: ${p => p.$isMe
-    ? 'linear-gradient(135deg,rgba(52,152,219,0.2),rgba(52,152,219,0.1))'
-    : 'rgba(255,255,255,0.05)'};
-  border-radius: 12px;
-  border: 2px solid ${p => p.$isMe ? 'rgba(52,152,219,0.4)' : 'transparent'};
-  opacity: ${p => p.$isDead ? 0.5 : 1};
+  ${p => winThin(p.$isMe ? 'blue' : 'plain')}
+  display: flex; align-items: center; gap: ${SP.md}; padding: ${SP.sm} ${SP.md};
+  opacity: ${p => (p.$isDead ? 0.5 : 1)};
   position: relative;
 
-  /* 태블릿 가로 */
-  ${L1024} { padding: 0.8rem; gap: 0.8rem; border-radius: 10px; }
-  /* 폰 가로 */
-  ${L768}  { padding: 0.65rem; gap: 0.65rem; flex-wrap: wrap; border-radius: 8px; }
-  /* 소형 폰 가로 */
-  ${LSm}   { padding: 0.5rem; gap: 8px; }
+  ${lMedia.phone} { padding: ${SP.sm}; gap: ${SP.sm}; flex-wrap: wrap; }
+  ${LSm}  { padding: ${SP.sm}; gap: ${SP.sm}; }
 `;
 
+/** 순위 표시 — 원이 아니라 네모. 1~3위만 메달 색. */
 const RankBadge = styled.div<{ $rank: number }>`
-  width: 32px; height: 32px; border-radius: 50%;
+  ${pixelBold}
+  width: 28px; height: 28px;
   display: flex; align-items: center; justify-content: center;
-  font-weight: bold; font-size: 1rem; flex-shrink: 0;
-  background: ${p => {
-    if (p.$rank === 1) return 'linear-gradient(135deg,#ffd700,#ff8c00)';
-    if (p.$rank === 2) return 'linear-gradient(135deg,#c0c0c0,#a0a0a0)';
-    if (p.$rank === 3) return 'linear-gradient(135deg,#cd7f32,#a0522d)';
-    return 'rgba(255,255,255,0.1)';
-  }};
-  color: ${p => p.$rank <= 3 ? '#000' : '#fff'};
-
-  ${L768} { width: 26px; height: 26px; font-size: 0.85rem; }
-  ${LSm}  { width: 22px; height: 22px; font-size: 0.75rem; }
+  font-size: ${FONT.sm}; flex-shrink: 0;
+  border: 2px solid ${C.ink};
+  background: ${p =>
+    p.$rank === 1 ? C.gold :
+    p.$rank === 2 ? '#c5cbd8' :
+    p.$rank === 3 ? '#c08a4a' : C.panelSunk};
+  color: ${p => (p.$rank <= 3 ? C.ink : C.text)};
+  text-shadow: none;
 `;
 
 const PlayerInfo = styled.div`flex: 1; min-width: 0;`;
 
 const PlayerNameRow = styled.div`
-  font-size: 1rem; font-weight: bold; color: white;
-  display: flex; align-items: center; gap: 8px;
+  ${pixelBold}
+  font-size: ${FONT.sm}; color: ${C.text};
+  display: flex; align-items: center; gap: ${SP.sm};
   overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
-
-  ${L1024} { font-size: 0.95rem; }
-  ${L768}  { font-size: 0.88rem; }
-  ${LSm}   { font-size: 0.82rem; }
 `;
 
 const MeTag = styled.span`
-  font-size: 0.8rem; color: #4cafff; font-weight: normal; flex-shrink: 0;
-  ${LSm} { font-size: 0.72rem; }
+  font-size: ${FONT.sm}; color: ${C.blue}; font-weight: 400; flex-shrink: 0;
 `;
 
 const PlayerStats = styled.div`
-  display: flex; gap: 12px; margin-top: 0.25rem; flex-wrap: wrap;
-
-  ${L768} { gap: 8px; margin-top: 0.15rem; }
-  ${LSm}  { gap: 6px; }
+  display: flex; gap: ${SP.md}; margin-top: ${SP.xs}; flex-wrap: wrap;
+  ${lMedia.phone} { gap: ${SP.sm}; }
 `;
 
 const StatIcon = styled.span`
-  font-size: 0.85rem; color: rgba(255,255,255,0.8);
-
-  ${L768} { font-size: 0.78rem; }
-  ${LSm}  { font-size: 0.72rem; }
+  font-size: ${FONT.sm}; color: ${C.textSub};
 `;
 
 const PokemonSection = styled.div`
-  display: flex; flex-direction: column; align-items: flex-end; gap: 6px;
-
-  ${L768} { gap: 0.25rem; }
+  display: flex; flex-direction: column; align-items: flex-end; gap: ${SP.xs};
 `;
 
 const PokemonCount = styled.div`
-  font-size: 0.8rem; color: rgba(255,255,255,0.6);
-  display: flex; align-items: center; gap: 4px;
-
-  ${L768} { font-size: 0.72rem; }
-  ${LSm}  { font-size: 0.68rem; }
+  font-size: ${FONT.sm}; color: ${C.textSub};
+  display: flex; align-items: center; gap: ${SP.xs};
 `;
 
 const LoadingDot = styled.span`
-  font-size: 0.75rem; color: #4fc3f7;
-  animation: ${blink} 1.2s ease infinite;
+  font-size: ${FONT.sm}; color: ${C.blue};
+  animation: ${blink} 1.2s steps(1, end) infinite;
 `;
 
 const PokemonIcons = styled.div`
-  display: flex; gap: 5px; flex-wrap: wrap; justify-content: flex-end;
-
-  ${L768} { gap: 3px; }
-  ${LSm}  { gap: 2px; }
+  display: flex; gap: ${SP.xs}; flex-wrap: wrap; justify-content: flex-end;
 `;
 
 const PokemonIconWrapper = styled.div`
@@ -344,72 +302,65 @@ const PokemonIconWrapper = styled.div`
 `;
 
 const PokemonIcon = styled.img<{ $isFainted: boolean }>`
-  width: 38px; height: 38px; border-radius: 6px;
-  background: rgba(0,0,0,0.3); object-fit: contain;
-  filter: ${p => p.$isFainted ? 'grayscale(100%) opacity(0.35)' : 'none'};
+  width: 36px; height: 36px;
+  background: ${C.panelSunk}; object-fit: contain;
+  filter: ${p => (p.$isFainted ? 'grayscale(100%) opacity(0.35)' : 'none')};
   image-rendering: pixelated;
-  border: 1px solid rgba(255,255,255,0.1);
+  border: 2px solid ${C.ink};
 
-  ${L1024} { width: 32px; height: 32px; }
-  ${L768}  { width: 28px; height: 28px; }
-  ${LSm}   { width: 24px; height: 24px; border-radius: 4px; }
+  ${lMedia.phone} { width: 28px; height: 28px; }
+  ${LSm}  { width: 24px; height: 24px; }
 `;
 
+/** 미니 HP 게이지 — 각진 트랙 + 각진 막대. */
 const MiniHpBar = styled.div`
-  width: 38px; height: 3px;
-  background: rgba(0,0,0,0.4); border-radius: 2px; overflow: hidden;
+  width: 36px; height: 4px;
+  background: ${C.panelSunk};
+  border: 1px solid ${C.ink};
+  overflow: hidden;
 
-  ${L1024} { width: 32px; }
-  ${L768}  { width: 28px; }
-  ${LSm}   { width: 24px; height: 2px; }
+  ${lMedia.phone} { width: 28px; }
+  ${LSm}  { width: 24px; }
 `;
 
 const MiniHpFill = styled.div<{ $pct: number; $fainted: boolean }>`
-  height: 100%; border-radius: 2px;
+  height: 100%;
   width: ${p => p.$pct}%;
-  background: ${p => p.$fainted ? '#555' : p.$pct > 50 ? '#2ecc71' : p.$pct > 25 ? '#f39c12' : '#e74c3c'};
-  transition: width 0.4s ease;
+  background: ${p =>
+    p.$fainted ? C.divider : p.$pct > 50 ? C.green : p.$pct > 25 ? C.gold : C.red};
 `;
 
 const LvBadge = styled.div`
-  font-size: 8px; color: rgba(255,255,255,0.5); line-height: 1;
-
-  ${L768} { font-size: 7px; }
-  ${LSm}  { font-size: 6px; }
+  font-size: ${FONT.sm}; color: ${C.textDim}; line-height: 1;
+  ${lMedia.phone} { display: none; }
+  ${LSm}  { display: none; }
 `;
 
+/** 로딩 자리 — 흐르는 광택 대신 그냥 빈 파인 칸. */
 const PokemonPlaceholder = styled.div`
-  width: 38px; height: 38px; border-radius: 6px;
-  background: linear-gradient(90deg, rgba(255,255,255,0.05) 25%, rgba(255,255,255,0.1) 50%, rgba(255,255,255,0.05) 75%);
-  background-size: 200% 100%;
-  animation: ${shimmer} 1.5s infinite;
-  border: 1px solid rgba(255,255,255,0.07);
+  width: 36px; height: 36px;
+  background: ${C.panelSunk};
+  border: 2px solid ${C.ink};
 
-  ${L768} { width: 28px; height: 28px; }
+  ${lMedia.phone} { width: 28px; height: 28px; }
   ${LSm}  { width: 24px; height: 24px; }
 `;
 
 const DeadBadge = styled.div`
-  position: absolute; top: 0.5rem; right: 0.5rem;
-  font-size: 0.75rem; color: #ff6b6b;
-  background: rgba(255,107,107,0.1);
-  padding: 2px 8px; border-radius: 10px;
-  border: 1px solid rgba(255,107,107,0.3);
-
-  ${L768} { font-size: 0.68rem; padding: 2px 6px; }
-  ${LSm}  { font-size: 0.62rem; padding: 1px 5px; top: 0.3rem; right: 0.3rem; }
+  ${pixelBold}
+  position: absolute; top: ${SP.xs}; right: ${SP.xs};
+  font-size: ${FONT.sm}; line-height: 1.3; color: ${C.red};
+  background: ${C.panelSunk};
+  border: 2px solid ${C.ink};
+  padding: 0 ${SP.xs};
 `;
 
 const Footer = styled.div`
-  margin-top: 1rem; padding-top: 0.6rem;
-  border-top: 1px solid rgba(255,255,255,0.07);
+  margin-top: ${SP.md}; padding-top: ${SP.sm};
+  border-top: ${SCALE}px solid ${C.ink};
   text-align: center;
-
-  ${L768} { margin-top: 0.6rem; padding-top: 0.4rem; }
-  ${LSm}  { margin-top: 0.4rem; padding-top: 0.3rem; }
 `;
 
 const FooterNote = styled.div`
-  font-size: 11px; color: rgba(255,255,255,0.3);
-  ${L768} { font-size: 10px; }
+  font-size: ${FONT.sm}; color: ${C.textDim};
 `;

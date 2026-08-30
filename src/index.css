@@ -1,3 +1,25 @@
+/* src/index.css
+   ───────────────────────────────────────────────────────────────────────────
+   전역 기반. 포켓몬 게임 UI 문법 (포케로그 참고) — 탁한 보라회색 창 + 하드 그림자.
+   색·간격·믹스인은 src/styles/tokens.ts, src/styles/pixel.ts 를 쓴다.
+   ─────────────────────────────────────────────────────────────────────────── */
+
+/* Galmuri11 — 정은빈·이민서(quiple) 제작, SIL OFL 1.1.
+   전문은 /fonts/GALMURI-LICENSE.md.
+   원본 크기 12px. 12/24/36 등 정수배에서만 도트가 선명하다. */
+@font-face {
+  font-family: 'Galmuri11';
+  src: url('/fonts/Galmuri11.woff2') format('woff2');
+  font-weight: 400;
+  font-display: swap;
+}
+@font-face {
+  font-family: 'Galmuri11';
+  src: url('/fonts/Galmuri11-Bold.woff2') format('woff2');
+  font-weight: 700;
+  font-display: swap;
+}
+
 * {
   margin: 0;
   padding: 0;
@@ -5,145 +27,80 @@
 }
 
 body {
-  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', sans-serif;
-  -webkit-font-smoothing: antialiased;
-  background: linear-gradient(135deg, #0f1419 0%, #1a1f2e 50%, #0f1419 100%);
+  font-family: 'Galmuri11', 'Apple SD Gothic Neo', sans-serif;
+  font-size: 12px;
+  /* 도트 폰트는 안티에일리어싱을 끄지 않으면 가장자리에 회색 반픽셀이 생겨
+     흐물흐물해진다. 이전 값은 antialiased 였다. */
+  -webkit-font-smoothing: none;
+  font-smooth: never;
+  color: #ffffff;
+  background: #232a3d;
   min-height: 100vh;
+}
+
+/* 도트 에셋(스프라이트·맵·창틀)이 브라우저 보간으로 뭉개지지 않게 */
+img,
+canvas {
+  image-rendering: pixelated;
 }
 
 button {
   font-family: inherit;
-  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-  position: relative;
-  overflow: hidden;
+  font-size: inherit;
+  color: inherit;
   touch-action: manipulation;
   -webkit-tap-highlight-color: transparent;
 }
 
-button::before {
-  content: '';
-  position: absolute;
-  top: 50%;
-  left: 50%;
-  width: 0;
-  height: 0;
-  border-radius: 50%;
-  background: rgba(255, 255, 255, 0.3);
-  transform: translate(-50%, -50%);
-  transition: width 0.6s, height 0.6s;
-}
+/* ───────────────────────────────────────────────────────────────────────────
+   여기 있던 전역 button 규칙(hover 시 translateY(-3px) + scale(1.02) +
+   파란 글로우 + brightness, 그리고 ::before 가 300px 로 퍼지는 머티리얼
+   리플)은 제거했다.
 
-@media (hover: hover) {
-  button:hover:not(:disabled) {
-    transform: translateY(-3px) scale(1.02);
-    box-shadow: 0 8px 24px rgba(76, 175, 255, 0.4), 0 0 40px rgba(76, 175, 255, 0.2);
-    filter: brightness(1.1);
-  }
+   그 규칙이 게임의 모든 버튼 — 모드 카드, 상점 행, 맵 타일까지 — 을 마우스만
+   올리면 떠오르게 만들고 있었고, 리뷰에서 "AI가 디자인한 것 같다"고 지적된
+   인상의 상당 부분이 여기서 나왔다. 게임 버튼은 눌리지 떠오르지 않는다.
 
-  button:hover:not(:disabled)::before {
-    width: 300px;
-    height: 300px;
-  }
-}
-
-button:active:not(:disabled) {
-  transform: translateY(-1px) scale(0.98);
-}
+   대체재는 src/styles/pixel.ts 의 btn() 믹스인이다. 누르면 하드 그림자가
+   사라지며 실제로 내려앉고 명암이 뒤집힌다.
+   ─────────────────────────────────────────────────────────────────────────── */
 
 button:disabled {
   cursor: not-allowed;
-  opacity: 0.5;
-  filter: grayscale(0.5);
 }
+
+/* ── 애니메이션 ─────────────────────────────────────────────────────────────
+   DS UI의 움직임은 짧고 딱 끊긴다. 길게 흐르는 ease 곡선은 웹 문법이다. */
 
 @keyframes fadeIn {
-  from {
-    opacity: 0;
-    transform: scale(0.95);
-  }
-  to {
-    opacity: 1;
-    transform: scale(1);
-  }
+  from { opacity: 0; }
+  to   { opacity: 1; }
 }
 
-@keyframes slideInUp {
-  from {
-    opacity: 0;
-    transform: translateY(30px);
-  }
-  to {
-    opacity: 1;
-    transform: translateY(0);
-  }
+/* 커서·강조의 깜빡임. 부드럽게 페이드하지 않고 켜짐/꺼짐으로 끊는다. */
+@keyframes blink {
+  0%, 49%   { opacity: 1; }
+  50%, 100% { opacity: 0; }
 }
 
-@keyframes slideInLeft {
-  from {
-    opacity: 0;
-    transform: translateX(-30px) translateY(-50%);
-  }
-  to {
-    opacity: 1;
-    transform: translateX(0) translateY(-50%);
-  }
-}
+/* ── 스크롤바 ───────────────────────────────────────────────────────────────
+   그라디언트·둥근 모서리를 걷어내고 각진 도트 막대로. */
 
-@keyframes slideInRight {
-  from {
-    opacity: 0;
-    transform: translateX(30px) translateY(-50%);
-  }
-  to {
-    opacity: 1;
-    transform: translateX(0) translateY(-50%);
-  }
-}
-
-@keyframes pulse {
-  0%, 100% {
-    transform: scale(1);
-    opacity: 1;
-  }
-  50% {
-    transform: scale(1.05);
-    opacity: 0.8;
-  }
-}
-
-@keyframes glow {
-  0%, 100% {
-    box-shadow: 0 0 20px rgba(76, 175, 255, 0.4);
-  }
-  50% {
-    box-shadow: 0 0 40px rgba(76, 175, 255, 0.8);
-  }
-}
-
-/* 스크롤바 스타일링 */
 ::-webkit-scrollbar {
-  width: 8px;
-  height: 8px;
-}
-
-@media (max-width: 480px) {
-  ::-webkit-scrollbar {
-    width: 4px;
-    height: 4px;
-  }
+  width: 12px;
+  height: 12px;
 }
 
 ::-webkit-scrollbar-track {
-  background: rgba(0, 0, 0, 0.2);
-  border-radius: 10px;
+  background: #2c3348;
+  border: 3px solid #161b28;
 }
 
 ::-webkit-scrollbar-thumb {
-  background: linear-gradient(135deg, #4cafff, #0088cc);
-  border-radius: 10px;
-  border: 2px solid rgba(0, 0, 0, 0.2);
+  background: #5c6684;
+  border: 3px solid #161b28;
 }
 
 ::-webkit-scrollbar-thumb:hover {
-  background: linear-gradient(135deg, #5fc0ff, #0099dd);
+  background: #c5cbd8;
 }

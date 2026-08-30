@@ -5,12 +5,12 @@ import styled from 'styled-components';
 import { lMedia } from '../../utils/responsive.utils';
 import { Emoji } from '../shared/Emoji';
 import { useTranslation } from '../../i18n';
+import { C, FONT, SP } from '../../styles/tokens';
+import { btn, pixelBold, shadowLg } from '../../styles/pixel';
 import { useGameStore } from '../../store/gameStore';
-import { ModalOverlay, ModalBox, MODAL_ACCENT } from '../shared/modal.styles';
+import { ModalOverlay, MODAL_ACCENT, ModalPlainBox, ModalPlainHeader } from '../shared/modal.styles';
 
 // ─── 반응형 헬퍼 ──────────────────────────────────────────────────────────────
-const L1024 = lMedia.tablet;   // ≤1024px landscape
-const L768  = lMedia.phone;    // ≤768px  landscape
 const LSm   = lMedia.phoneSm;  // landscape + max-height ≤520px
 
 export const EvolutionConfirmModal: React.FC = () => {
@@ -38,7 +38,7 @@ export const EvolutionConfirmModal: React.FC = () => {
 
   return (
     <ModalOverlay>
-      <ModalBox $size="sm" $accent={MODAL_ACCENT.gold} $animate="slideUp" $scroll>
+      <ModalPlainBox $size="sm" $accent={MODAL_ACCENT.gold} $animate="slideUp" $scroll>
         <Title><Emoji glyph="✨" size={16} /> {t('evoConfirm.title')}</Title>
         <Sprite src={tower.sprite} alt={tower.displayName} />
         <Message>
@@ -62,127 +62,91 @@ export const EvolutionConfirmModal: React.FC = () => {
         <CancelBtn onClick={handleCancel}>
           <Emoji glyph="❌" size={13} /> {t('evoConfirm.cancel')}
         </CancelBtn>
-      </ModalBox>
+      </ModalPlainBox>
     </ModalOverlay>
   );
 };
 
 // ─── Styled Components ────────────────────────────────────────────────────────
+// docs/DESIGN.md 의 디자인 시스템을 따른다.
 
-
-
-const Title = styled.h2`
-  font-size: 28px;
-  font-weight: bold;
-  margin-bottom: 15px;
-  padding-top: 24px;
+/** 이 창은 Header가 따로 없어 제목이 그대로 띠가 된다. */
+const Title = styled(ModalPlainHeader).attrs({ as: 'h2' })`
+  ${pixelBold}
+  ${shadowLg}
+  font-size: ${FONT.xl};
   text-align: center;
-  background: linear-gradient(135deg, #FFD700, #FFA500);
-  background-clip: text;
-  -webkit-text-fill-color: transparent;
+  color: ${C.gold};
 
-  ${L1024} { font-size: 24px; margin-bottom: 12px; }
-  ${L768}  { font-size: 20px; margin-bottom: 10px; }
-  ${LSm}   { font-size: 18px; margin-bottom: 8px; }
+  ${lMedia.phone} { font-size: ${FONT.sm}; }
+  ${LSm}  { font-size: ${FONT.sm}; }
 `;
 
 const Sprite = styled.img`
   width: 120px;
   height: 120px;
   display: block;
-  margin: 0 auto 15px;
+  margin: 0 auto ${SP.md};
   image-rendering: pixelated;
 
-  ${L1024} { width: 96px;  height: 96px;  margin-bottom: 12px; }
-  ${L768}  { width: 80px;  height: 80px;  margin-bottom: 10px; }
-  ${LSm}   { width: 64px;  height: 64px;  margin-bottom: 8px; }
+  ${lMedia.tablet} { width: 96px; height: 96px; }
+  ${lMedia.phone}  { width: 80px; height: 80px; }
+  ${LSm}   { width: 64px; height: 64px; }
 `;
 
 const Message = styled.p`
-  font-size: 18px;
+  font-size: ${FONT.sm};
   text-align: center;
-  margin-bottom: 20px;
-  color: #e0e0e0;
+  margin: 0 0 ${SP.lg};
+  color: ${C.textSub};
 
-  strong { color: #fff; font-weight: bold; }
+  strong { color: ${C.text}; font-weight: 700; }
 
-  ${L1024} { font-size: 16px; margin-bottom: 16px; }
-  ${L768}  { font-size: 14px; margin-bottom: 12px; }
-  ${LSm}   { font-size: 13px; margin-bottom: 10px; }
+  ${lMedia.phone} { margin: 0 0 ${SP.md}; }
+  ${LSm}  { margin: 0 0 ${SP.sm}; }
 `;
 
 const Options = styled.div`
   display: flex;
   flex-direction: column;
-  gap: 12px;
-  margin-bottom: 20px;
+  gap: ${SP.sm};
+  margin-bottom: ${SP.lg};
 
-  ${L1024} { gap: 10px; margin-bottom: 16px; }
-  ${L768}  { gap: 8px;  margin-bottom: 12px; }
-  ${LSm}   { gap: 7px;  margin-bottom: 10px; }
+  ${lMedia.phone} { margin-bottom: ${SP.md}; }
+  ${LSm}  { margin-bottom: ${SP.sm}; }
 `;
 
 const EvolveBtn = styled.button`
-  padding: 15px;
-  font-size: 16px;
-  font-weight: bold;
-  background: linear-gradient(135deg, #f39c12 0%, #e67e22 100%);
-  color: white;
-  border: none;
-  border-radius: 12px;
-  cursor: pointer;
-  transition: all 0.3s ease;
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
-
-  &:hover {
-    transform: translateY(-2px);
-    box-shadow: 0 8px 20px rgba(102, 126, 234, 0.6);
-  }
-
-  ${L1024} { padding: 12px; border-radius: 10px; }
-  ${L768}  { padding: 10px; border-radius: 8px; }
-  ${LSm}   { padding: 8px;  border-radius: 7px; }
+  ${btn('gold')}
+  ${pixelBold}
+  padding: ${SP.sm} ${SP.md};
+  font-size: ${FONT.sm};
+  color: ${C.text};
+  &:focus, &:focus-visible { outline: none; }
 `;
 
 const EvolveBtnContent = styled.div`
   display: flex;
   flex-direction: column;
-  gap: 5px;
-
-  ${L768} { gap: 3px; }
+  gap: ${SP.xs};
 `;
 
 const EvolveBtnTitle = styled.span`
-  font-size: 18px;
-
-  ${L1024} { font-size: 16px; }
-  ${L768}  { font-size: 14px; }
-  ${LSm}   { font-size: 13px; }
+  font-size: ${FONT.sm};
 `;
 
 const EvolveBtnMethod = styled.span`
-  font-size: 14px;
-  opacity: 0.8;
-
-  ${L768} { font-size: 12px; }
-  ${LSm}  { font-size: 11px; }
+  font-size: ${FONT.sm};
+  color: ${C.textSub};
+  font-weight: 400;
 `;
 
 const CancelBtn = styled.button`
+  ${btn('plain')}
+  ${pixelBold}
   width: 100%;
-  padding: 12px;
-  font-size: 16px;
-  font-weight: bold;
-  background: #444;
-  color: white;
-  border: none;
-  border-radius: 12px;
-  cursor: pointer;
-  transition: all 0.2s ease;
-
-  &:hover { background: #666; }
-
-  ${L1024} { padding: 10px; font-size: 14px; border-radius: 10px; }
-  ${L768}  { padding: 9px;  font-size: 13px; border-radius: 8px; }
-  ${LSm}   { padding: 8px;  font-size: 12px; }
+  padding: ${SP.sm} ${SP.md};
+  font-size: ${FONT.sm};
+  color: ${C.text};
+  &:focus, &:focus-visible { outline: none; }
 `;

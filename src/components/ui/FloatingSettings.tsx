@@ -4,39 +4,34 @@ import { lMedia} from '../../utils/responsive.utils';
 import { Settings } from '../modals/Settings';
 import { Emoji } from '../shared/Emoji';
 import { useTranslation } from '../../i18n';
+import { C, ICON } from '../../styles/tokens';
+import { btnThin } from '../../styles/pixel';
 
+/**
+ * 화면 오른쪽 아래에 늘 떠 있는 설정 버튼.
+ * 원형 + blur 였던 걸 얇은 창틀로 바꿨다 — docs/DESIGN.md.
+ */
 const FloatingBtn = styled.button`
+  ${btnThin('plain')}
   position: fixed;
   bottom: 12px;
   right: 12px;
   width: 36px;
   height: 36px;
-  border-radius: 50%;
-  background: rgba(0, 0, 0, 0.6);
-  border: 2px solid rgba(255, 255, 255, 0.3);
-  color: white;
-  font-size: 18px;
-  cursor: pointer;
+  padding: 0;
+  color: ${C.text};
+  font-size: ${ICON.lg}px;
   display: flex;
   justify-content: center;
   align-items: center;
   z-index: 1000;
-  backdrop-filter: blur(4px);
-  transition: background 0.2s, border-color 0.2s;
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
   touch-action: manipulation;
-  
-  @media (hover: hover) {
-    &:hover {
-      background: rgba(0, 0, 0, 0.8);
-      transform: scale(1.1);
-      border-color: rgba(255, 255, 255, 0.6);
-    }
-  }
+  &:focus, &:focus-visible { outline: none; }
+
   ${lMedia.phoneSm} {
     width: 32px;
     height: 32px;
-    font-size: 16px;
+    font-size: ${ICON.md}px;
     bottom: 8px;
     right: 8px;
   }

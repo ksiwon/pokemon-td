@@ -1,11 +1,13 @@
 import { useState } from 'react';
-import styled, { keyframes } from 'styled-components';
+import styled from 'styled-components';
 import { media, lMedia } from '../../utils/responsive.utils';
+import { Screen } from '../shared/screen';
 import { authService } from '../../services/AuthService';
-import { ShootingStarsBackground } from '../ui/ShootingStarsBackground';
 import { Settings } from '../modals/Settings';
 import { useTranslation } from '../../i18n';
 import { Emoji } from '../shared/Emoji';
+import { C, FONT, SP, SCALE, ICON } from '../../styles/tokens';
+import { win, winThin, btn, btnThin, sunken, backdrop, pixelText, pixelBold, shadowLg } from '../../styles/pixel';
 
 export const LoginScreen = () => {
   const { t } = useTranslation();
@@ -61,7 +63,6 @@ export const LoginScreen = () => {
 
   return (
     <>
-      <ShootingStarsBackground />
       <Root>
         <SettingsBtn onClick={() => setShowSettings(true)}>
           <Emoji glyph="⚙" size={14} /> {t('nav.settings')}
@@ -70,7 +71,6 @@ export const LoginScreen = () => {
         <Layout>
           <BrandPanel>
             <BrandContent>
-              <BrandEyebrow>POKEMON</BrandEyebrow>
               <BrandTitle>AEGIS</BrandTitle>
               <BrandTagline>{t('login.brandTagline')}</BrandTagline>
               <BrandDivider />
@@ -149,223 +149,212 @@ export const LoginScreen = () => {
   );
 };
 
-const fadeUp = keyframes`from{opacity:0;transform:translateY(20px)}to{opacity:1;transform:translateY(0)}`;
-const pulse = keyframes`0%,100%{opacity:.7;transform:scale(1)}50%{opacity:1;transform:scale(1.04)}`;
+// ─── styled ──────────────────────────────────────────────────────────────────
+// docs/DESIGN.md 의 디자인 시스템을 따른다.
+//
+// 걷어낸 것: 별똥별 배경(장식용 파티클), eyebrow(letter-spacing 0.4em),
+//           유리 카드 + backdrop-filter, 스태거 fadeUp, hover 떠오름+글로우,
+//           둥근 모서리, Tailwind 팔레트(#2563eb #10b981 #f59e0b …).
+// 배경은 실제 게임 맵을 어둡게 깐다 — backdrop().
 
-const Root = styled.div`
+const Root = styled(Screen)`
+  ${backdrop('easy_loop')}
   position: relative; z-index: 10;
-  min-height: 100vh; display: flex; flex-direction: column;
 `;
 
 const SettingsBtn = styled.button`
-  position: fixed; top: 20px; right: 20px; z-index: 100;
-  display: flex; align-items: center; gap: 6px;
-  background: rgba(255,255,255,0.06); border: 1px solid rgba(255,255,255,0.1);
-  border-radius: 8px; color: rgba(255,255,255,0.55); padding: 8px 14px;
-  font-size: 13px; cursor: pointer; transition: all 0.2s; backdrop-filter: blur(8px);
-  &:hover { background: rgba(255,255,255,0.1); color:#fff; border-color:rgba(255,255,255,0.2); }
-  ${media.mobile} { padding:7px 11px;font-size:12px;top:12px;right:12px; }
-  ${lMedia.phoneSm} { top:8px;right:8px; }
+  ${btnThin('plain')}
+  ${pixelBold}
+  position: fixed; top: ${SP.lg}; right: ${SP.lg}; z-index: 100;
+  display: flex; align-items: center; gap: ${SP.xs};
+  color: ${C.text}; padding: ${SP.xs} ${SP.sm};
+  font-size: ${FONT.sm};
+  &:focus, &:focus-visible { outline: none; }
+  ${media.mobile}   { top: ${SP.md}; right: ${SP.md}; }
+  ${lMedia.phoneSm} { top: ${SP.sm}; right: ${SP.sm}; }
 `;
 
 const Layout = styled.div`
-  flex:1; display:grid; grid-template-columns:1fr 1fr; min-height:100vh;
-  ${media.tablet} { grid-template-columns:1fr; }
+  flex: 1; display: grid; grid-template-columns: 1fr 1fr; min-height: 100vh;
+  ${media.tablet} { grid-template-columns: 1fr; }
 `;
 
 const BrandPanel = styled.div`
-  display:flex; flex-direction:column; justify-content:space-between;
-  padding:60px 52px;
-  background: linear-gradient(160deg,rgba(15,20,40,0.75) 0%,rgba(5,8,16,0.92) 100%);
-  border-right: 1px solid rgba(245,158,11,0.1);
-  position:relative; overflow:hidden;
-  &::before {
-    content:''; position:absolute; inset:0;
-    background: repeating-linear-gradient(-55deg,transparent,transparent 24px,rgba(245,158,11,0.018) 24px,rgba(245,158,11,0.018) 25px);
-    pointer-events:none;
-  }
-  ${media.tablet} { display:none; }
+  display: flex; flex-direction: column; justify-content: space-between;
+  padding: ${SP.xxl} ${SP.xxl};
+  border-right: ${SCALE}px solid ${C.ink};
+  position: relative; overflow: hidden;
+  ${media.tablet} { display: none; }
 `;
 
-const BrandContent = styled.div`animation:${fadeUp} 0.8s ease both;`;
-
-const BrandEyebrow = styled.div`
-  font-size:11px; font-weight:800; letter-spacing:0.4em;
-  color:rgba(245,158,11,0.55); margin-bottom:8px;
-`;
+const BrandContent = styled.div``;
 
 const BrandTitle = styled.h1`
-  font-size:clamp(56px,6vw,88px); font-weight:900; letter-spacing:-0.02em;
-  color:#f8fafc; margin:0 0 10px; line-height:1;
-  text-shadow:0 0 60px rgba(245,158,11,0.2);
+  ${pixelBold}
+  font-size: clamp(48px, 6vw, 84px);
+  color: ${C.gold};
+  margin: 0 0 ${SP.sm};
+  line-height: 1;
+  text-shadow: ${SCALE * 2}px ${SCALE * 2}px 0 ${C.ink};
 `;
 
 const BrandTagline = styled.div`
-  font-size:17px; color:rgba(255,255,255,0.38); font-weight:400; letter-spacing:0.05em;
+  font-size: ${FONT.sm}; color: ${C.textSub};
 `;
 
 const BrandDivider = styled.div`
-  width:48px; height:2px;
-  background:linear-gradient(90deg,#f59e0b,transparent);
-  margin:32px 0;
+  width: 96px; height: ${SCALE}px;
+  background: ${C.gold};
+  margin: ${SP.xl} 0;
 `;
 
-const BrandFeatures = styled.div`display:flex; flex-direction:column; gap:12px;`;
+const BrandFeatures = styled.div`display: flex; flex-direction: column; gap: ${SP.sm};`;
 
 const Feature = styled.div`
-  display:flex; align-items:center; gap:10px;
-  font-size:14px; color:rgba(255,255,255,0.45);
-  animation:${fadeUp} 0.8s ease both;
-  &:nth-child(1){animation-delay:.1s} &:nth-child(2){animation-delay:.2s}
-  &:nth-child(3){animation-delay:.3s} &:nth-child(4){animation-delay:.4s}
+  display: flex; align-items: center; gap: ${SP.sm};
+  font-size: ${FONT.sm}; color: ${C.textSub};
 `;
 
+/** 목록 점 — 원이 아니라 네모. */
 const FeatureDot = styled.div`
-  width:5px; height:5px; border-radius:50%; background:#f59e0b; flex-shrink:0;
+  width: 6px; height: 6px; background: ${C.gold}; flex-shrink: 0;
 `;
 
-const BrandLogoWrap = styled.div`display:flex; align-items:flex-end; justify-content:flex-end;`;
+const BrandLogoWrap = styled.div`display: flex; align-items: flex-end; justify-content: flex-end;`;
 
 const BrandLogo = styled.img`
-  height:200px; object-fit:contain;
-  filter:drop-shadow(0 0 48px rgba(245,158,11,0.28));
-  animation:${pulse} 4.5s ease-in-out infinite; opacity:0.8;
+  height: 200px; object-fit: contain;
 `;
 
 const FormPanel = styled.div`
-  display:flex; align-items:center; justify-content:center;
-  padding:40px 24px;
-  background:rgba(7,9,15,0.55); backdrop-filter:blur(20px);
-  ${media.tablet} { padding:60px 24px; }
-  ${lMedia.phoneSm} { padding:32px 16px; }
+  display: flex; align-items: center; justify-content: center;
+  padding: ${SP.xxl} ${SP.lg};
+  ${media.tablet}   { padding: ${SP.xxl} ${SP.lg}; }
+  ${lMedia.phoneSm} { padding: ${SP.xl} ${SP.md}; }
 `;
 
+/** 로그인 창 — 창틀 안에 담는다. */
 const FormCard = styled.div`
-  width:100%; max-width:400px;
-  animation:${fadeUp} 0.6s ease both; animation-delay:0.2s;
+  ${win('gold')}
+  width: 100%; max-width: 400px;
+  padding: ${SP.xl};
+  ${lMedia.phoneSm} { padding: ${SP.md}; }
 `;
 
 const MobileLogo = styled.img`
-  display:none; height:72px; object-fit:contain;
-  margin:0 auto 28px; filter:drop-shadow(0 0 24px rgba(245,158,11,0.35));
-  ${media.tablet} { display:block; }
-  ${lMedia.phoneSm} { height:52px; margin-bottom:18px; }
+  display: none; height: 72px; object-fit: contain;
+  margin: 0 auto ${SP.lg};
+  ${media.tablet}   { display: block; }
+  ${lMedia.phoneSm} { height: 52px; margin-bottom: ${SP.md}; }
 `;
 
 const FormHeading = styled.h2`
-  font-size:28px; font-weight:800; color:#f8fafc;
-  margin:0 0 6px; letter-spacing:-0.01em;
-  ${media.mobile} { font-size:24px; }
+  ${pixelBold}
+  ${shadowLg}
+  font-size: ${FONT.xl}; color: ${C.text};
+  margin: 0 0 ${SP.xs};
 `;
 
 const FormSubheading = styled.p`
-  font-size:14px; color:rgba(255,255,255,0.38);
-  margin:0 0 36px; line-height:1.5;
-  ${media.mobile} { margin-bottom:28px; font-size:13px; }
-  ${lMedia.phoneSm} { margin-bottom:20px; }
+  font-size: ${FONT.sm}; color: ${C.textSub};
+  margin: 0 0 ${SP.xl};
+  ${lMedia.phoneSm} { margin-bottom: ${SP.md}; }
 `;
 
 const GoogleBtn = styled.button`
-  width:100%; display:flex; align-items:center; gap:14px;
-  padding:15px 20px; background:#2563eb;
-  border:1px solid rgba(37,99,235,0.3); border-radius:10px;
-  color:#fff; font-size:15px; font-weight:600;
-  cursor:pointer; transition:all 0.2s; margin-bottom:16px;
-  &:hover:not(:disabled) { background:#1d4ed8; transform:translateY(-1px); box-shadow:0 8px 24px rgba(37,99,235,0.35); }
-  &:disabled { opacity:.5; cursor:not-allowed; }
-  ${media.mobile} { padding:13px 18px; font-size:14px; }
-  ${lMedia.phoneSm} { padding:11px 16px; }
+  ${btn('blue')}
+  ${pixelBold}
+  width: 100%; display: flex; align-items: center; gap: ${SP.md};
+  padding: ${SP.sm} ${SP.md};
+  color: ${C.text}; font-size: ${FONT.sm};
+  margin-bottom: ${SP.md};
+  &:focus, &:focus-visible { outline: none; }
 `;
 
 const GoogleLetter = styled.div`
-  width:26px; height:26px; background:rgba(255,255,255,0.15);
-  border-radius:50%; display:flex; align-items:center; justify-content:center;
-  font-weight:900; font-size:15px; flex-shrink:0;
+  width: 24px; height: 24px;
+  background: ${C.panelSunk};
+  border: 2px solid ${C.ink};
+  display: flex; align-items: center; justify-content: center;
+  font-size: ${FONT.sm}; flex-shrink: 0;
+  text-shadow: none;
 `;
 
-const OrRow = styled.div`display:flex; align-items:center; gap:12px; margin:20px 0;`;
-const OrLine = styled.div`flex:1; height:1px; background:rgba(255,255,255,0.08);`;
-const OrText = styled.span`font-size:12px; color:rgba(255,255,255,0.28); letter-spacing:.06em; text-transform:uppercase;`;
+const OrRow = styled.div`display: flex; align-items: center; gap: ${SP.md}; margin: ${SP.md} 0;`;
+const OrLine = styled.div`flex: 1; height: ${SCALE}px; background: ${C.divider};`;
+/** uppercase 를 걷어낸 자리 — 번역된 '또는' 그대로. */
+const OrText = styled.span`font-size: ${FONT.sm}; color: ${C.textDim};`;
 
 const GhostBtn = styled(GoogleBtn)`
-  background:rgba(255,255,255,0.04); border-color:rgba(255,255,255,0.1); margin-bottom:0;
-  &:hover:not(:disabled) { background:rgba(255,255,255,0.08); transform:translateY(-1px); box-shadow:0 8px 24px rgba(0,0,0,0.3); }
+  ${btn('plain')}
+  margin-bottom: 0;
 `;
 
-const GhostIcon = styled.div`font-size:18px; width:26px; text-align:center; flex-shrink:0;`;
+const GhostIcon = styled.div`font-size: ${ICON.lg}px; width: 24px; text-align: center; flex-shrink: 0; line-height: 1;`;
 
-const GuestForm = styled.div`display:flex; flex-direction:column; gap:0;`;
+const GuestForm = styled.div`display: flex; flex-direction: column; gap: ${SP.xs};`;
 
 const GuestInput = styled.input`
-  width:100%; padding:14px 16px;
-  background:rgba(255,255,255,0.05); border:1px solid rgba(255,255,255,0.12);
-  border-bottom:none; border-radius:10px 10px 0 0;
-  color:#f8fafc; font-size:15px; outline:none; transition:border-color 0.2s; box-sizing:border-box;
-  &:focus { border-color:rgba(245,158,11,0.5); }
-  &::placeholder { color:rgba(255,255,255,0.2); }
-  ${media.mobile} { padding:12px 14px; font-size:14px; }
+  ${sunken()}
+  ${pixelText}
+  width: 100%; padding: ${SP.sm} ${SP.md};
+  color: ${C.text}; font-size: ${FONT.sm}; outline: none; box-sizing: border-box;
+  &:focus { outline: none; }
+  &::placeholder { color: ${C.textDim}; }
 `;
 
 const GuestChars = styled.div`
-  text-align:right; font-size:11px; color:rgba(255,255,255,0.2); padding:5px 14px;
-  background:rgba(255,255,255,0.03); border:1px solid rgba(255,255,255,0.12); border-top:none; border-bottom:none;
+  text-align: right; font-size: ${FONT.sm}; color: ${C.textDim};
 `;
 
 const ConfirmBtn = styled.button`
-  width:100%; padding:14px; background:#10b981; border:none;
-  border-radius:0 0 10px 10px; color:#fff; font-size:15px; font-weight:700;
-  cursor:pointer; transition:all 0.2s;
-  &:hover:not(:disabled) { background:#059669; }
-  &:disabled { opacity:.5; cursor:not-allowed; }
-  ${media.mobile} { padding:12px; font-size:14px; }
+  ${btn('green')}
+  ${pixelBold}
+  width: 100%; padding: ${SP.sm};
+  color: ${C.text}; font-size: ${FONT.sm};
+  &:focus, &:focus-visible { outline: none; }
 `;
 
 const CancelLink = styled.span`
-  display:block; text-align:center; margin-top:14px; font-size:13px;
-  color:rgba(255,255,255,0.28); cursor:pointer; transition:color 0.2s;
-  &:hover { color:rgba(255,255,255,0.6); }
+  display: block; text-align: center; margin-top: ${SP.sm};
+  font-size: ${FONT.sm}; color: ${C.textDim}; cursor: pointer;
+  @media (hover: hover) { &:hover { color: ${C.text}; } }
 `;
 
 const ErrorBox = styled.div`
-  margin-top:16px; padding:12px 16px;
-  background:rgba(239,68,68,0.08); border:1px solid rgba(239,68,68,0.25);
-  border-radius:8px; color:#fca5a5; font-size:13px; line-height:1.5;
+  ${winThin('red')}
+  margin-top: ${SP.md}; padding: ${SP.sm};
+  color: ${C.red}; font-size: ${FONT.sm};
+  text-shadow: 1px 1px 0 ${C.textShadow};
 `;
 
-// [FREE-TIER] 무료 서버 한계 안내 박스
+/* [FREE-TIER] 무료 서버 한계 안내 박스 */
 const LimitBox = styled.div`
-  margin-top:16px; padding:14px 16px;
-  background:rgba(245,158,11,0.08); border:1px solid rgba(245,158,11,0.3);
-  border-radius:10px;
+  ${winThin('gold')}
+  margin-top: ${SP.md}; padding: ${SP.sm};
 `;
 
 const LimitTitle = styled.div`
-  font-size:14px; font-weight:700; color:#fbbf24; margin-bottom:6px;
+  ${pixelBold}
+  font-size: ${FONT.sm}; color: ${C.gold}; margin-bottom: ${SP.xs};
 `;
 
 const LimitDesc = styled.div`
-  font-size:12.5px; color:rgba(255,255,255,0.62); line-height:1.6;
+  font-size: ${FONT.sm}; color: ${C.textSub};
 `;
 
-// [FREE-TIER] 오프라인 플레이 버튼 ($highlight: 서버 한계 시 강조)
+/* [FREE-TIER] 오프라인 플레이 버튼 ($highlight: 서버 한계 시 강조) */
 const OfflineBtn = styled.button<{ $highlight?: boolean }>`
-  width:100%; margin-top:16px; padding:14px 18px;
-  border-radius:10px; cursor:pointer; font-size:14px; font-weight:600;
-  transition:all 0.2s;
-  background:${p => p.$highlight ? 'rgba(245,158,11,0.16)' : 'rgba(255,255,255,0.04)'};
-  border:1px solid ${p => p.$highlight ? 'rgba(245,158,11,0.5)' : 'rgba(255,255,255,0.1)'};
-  color:${p => p.$highlight ? '#fcd34d' : 'rgba(255,255,255,0.55)'};
-  &:hover:not(:disabled) {
-    background:${p => p.$highlight ? 'rgba(245,158,11,0.24)' : 'rgba(255,255,255,0.08)'};
-    color:#fff;
-  }
-  &:disabled { opacity:.5; cursor:not-allowed; }
-  ${media.mobile} { padding:12px 16px; font-size:13px; }
+  ${p => btn(p.$highlight ? 'gold' : 'plain')}
+  ${pixelBold}
+  width: 100%; margin-top: ${SP.md}; padding: ${SP.sm} ${SP.md};
+  font-size: ${FONT.sm};
+  color: ${p => (p.$highlight ? C.gold : C.text)};
+  &:focus, &:focus-visible { outline: none; }
 `;
 
 const Notice = styled.div`
-  margin-top:28px; font-size:12px; color:rgba(255,255,255,0.2);
-  line-height:1.6; text-align:center;
-  ${media.mobile} { margin-top:20px; }
-  ${lMedia.phoneSm} { margin-top:14px; }
+  margin-top: ${SP.xl}; font-size: ${FONT.sm}; color: ${C.textDim};
+  text-align: center;
+  ${lMedia.phoneSm} { margin-top: ${SP.md}; }
 `;

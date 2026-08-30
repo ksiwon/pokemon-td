@@ -1,6 +1,6 @@
 // src/components/modals/Achievements.tsx
 import React, { useState, useEffect } from 'react';
-import styled, { keyframes, css } from 'styled-components';
+import styled, { css } from 'styled-components';
 import { Emoji } from '../shared/Emoji';
 import { lMedia, media } from '../../utils/responsive.utils';
 import {
@@ -16,7 +16,13 @@ import { saveService } from '../../services/SaveService';
 import { authService } from '../../services/AuthService';
 import { Achievement, AchievementTier, TIER_POINTS } from '../../types/game';
 import { useTranslation } from '../../i18n';
-import { ModalOverlay, ModalBox, MODAL_ACCENT } from '../shared/modal.styles';
+
+import { C, FONT, SP, SCALE, ICON } from '../../styles/tokens';
+import { winThin, btnThin, sunken, pixelBold, FRAME_W } from '../../styles/pixel';
+import {
+  ModalOverlay, ModalBox, MODAL_ACCENT, modalPadX, ModalTitle, ModalCloseBtn,
+  ModalTabBtn, ModalScrollRowPad,
+} from '../shared/modal.styles';
 
 // 문구는 achievements.ts의 정의를 통해서만 해석한다 — 세이브에는 한국어 이름이 굳어 있다.
 
@@ -125,7 +131,7 @@ export const AchievementsPanel: React.FC<{ onClose: () => void }> = ({ onClose }
               <HiddenToggle onClick={() => setShowHidden(v => !v)}>
                 {showHidden ? t('achievementsPanel.hideHidden') : t('achievementsPanel.showHidden')}
               </HiddenToggle>
-              <CloseBtn onClick={onClose}>✕</CloseBtn>
+              <ModalCloseBtn onClick={onClose}>✕</ModalCloseBtn>
             </HeaderActions>
           </HeaderTop>
 
@@ -144,7 +150,8 @@ export const AchievementsPanel: React.FC<{ onClose: () => void }> = ({ onClose }
 
         {/* ── 업적 탭 ── */}
         <>
-            <CategoryTabRow>
+            <ModalScrollRowPad>
+              <CategoryTabRow>
               <CatTab $active={activeTab === 'all'} onClick={() => setActiveTab('all')}>
                 {t('achievementsPanel.catAll')} <TabBadge>{unlockedCount}/{totalCount}</TabBadge>
               </CatTab>
@@ -159,7 +166,8 @@ export const AchievementsPanel: React.FC<{ onClose: () => void }> = ({ onClose }
                   </CatTab>
                 );
               })}
-            </CategoryTabRow>
+              </CategoryTabRow>
+            </ModalScrollRowPad>
 
             <AchievementScroll>
               {loading ? (
@@ -245,301 +253,222 @@ export const AchievementsPanel: React.FC<{ onClose: () => void }> = ({ onClose }
 };
 
 // ─── Styled Components ────────────────────────────────────────────────────────
+// docs/DESIGN.md 의 디자인 시스템을 따른다.
+// 걷어낸 것: 유리 카드, 알약 배지, 원형 닫기, hover 떠오름+그림자, shimmer 광택,
+//           둥근 모서리, 10~11px 글자.
 
 // ── 헤더
+/**
+ * 제목 띠 — 창틀 안쪽 끝까지 사방으로 붙인다.
+ * 창틀에서 떨어뜨리면 띠가 붕 떠 보인다. 밖으로 나간 만큼 좌우 패딩으로 되돌려,
+ * 안쪽 줄들이 공용 여백(modalPadX)만 쓰면 본문과 좌변이 맞게 한다.
+ */
 const ModalHeader = styled.div`
-  padding: 18px 22px 0;
-  border-bottom: 1px solid rgba(255,255,255,0.07);
+  margin: -${FRAME_W}px -${FRAME_W}px ${SP.md};
+  padding: 0 ${FRAME_W}px ${SP.md};
+  background: ${C.panelSunk};
+  border-bottom: ${SCALE}px solid ${C.ink};
   flex-shrink: 0;
-
-  ${media.tablet} { padding: 14px 16px 0; }
-  ${media.mobile} { padding: 12px 12px 0; }
-  ${lMedia.phoneSm} { padding: 10px 12px 0; }
 `;
 
 const HeaderTop = styled.div`
+  ${modalPadX}
   display: flex; justify-content: space-between; align-items: center;
-  margin-bottom: 10px;
+  gap: ${SP.sm};
+  padding-top: ${SP.lg};
+  margin-bottom: ${SP.sm};
 
-  ${media.mobile} { margin-bottom: 8px; }
-  ${lMedia.phoneSm} { margin-bottom: 6px; }
+  ${media.mobile}   { padding-top: ${SP.md}; }
+  ${lMedia.phoneSm} { padding-top: ${SP.md}; }
 `;
 
-const TitleArea = styled.div`display:flex;align-items:center;gap:12px;`;
-
-const ModalTitle = styled.h2`
-  font-size: 1.4rem; font-weight: 800; color: #FFD700;
-  text-shadow: 0 0 20px rgba(255,215,0,0.4);
-
-  ${media.tablet} { font-size: 1.25rem; }
-  ${media.mobile} { font-size: 1.1rem; }
-  ${lMedia.phoneSm} { font-size: 1.05rem; }
-`;
+const TitleArea = styled.div`display: flex; align-items: center; gap: ${SP.sm}; min-width: 0;`;
 
 const APBadge = styled.div`
-  padding: 4px 12px; border-radius: 20px;
-  background: rgba(255,215,0,0.12); border: 1px solid rgba(255,215,0,0.35);
-  color: #FFD700; font-size: 13px; font-weight: 700;
-  text-shadow: 0 0 8px rgba(255,215,0,0.4);
-
-  ${media.mobile} { font-size: 11px; padding: 3px 9px; }
-  ${lMedia.phoneSm} { font-size: 11px; padding: 3px 8px; }
+  ${winThin('gold')}
+  ${pixelBold}
+  padding: ${SP.xs} ${SP.sm};
+  color: ${C.gold}; font-size: ${FONT.sm};
+  white-space: nowrap;
 `;
 
-const HeaderActions = styled.div`display:flex;gap:8px;align-items:center;`;
+const HeaderActions = styled.div`display: flex; gap: ${SP.sm}; align-items: center;`;
 
 const HiddenToggle = styled.button`
-  padding: 5px 12px; font-size: 11px; border-radius: 16px; cursor: pointer;
-  border: 1px solid rgba(255,255,255,0.15);
-  background: rgba(255,255,255,0.05); color: rgba(255,255,255,0.6);
-  transition: all 0.2s;
-  &:hover { background: rgba(255,255,255,0.10); color: #fff; }
-
-  /* 모바일에서 텍스트 줄이기 */
-  ${media.mobile} { padding: 4px 8px; font-size: 10px; }
-`;
-
-const CloseBtn = styled.button`
-  width: 30px; height: 30px; border-radius: 50%; border: none;
-  background: rgba(255,255,255,0.08); color: rgba(255,255,255,0.7);
-  cursor: pointer; font-size: 14px; display:flex;align-items:center;justify-content:center;
-  transition: all 0.2s;
-  &:hover { background: rgba(255,100,100,0.3); color:#fff; }
+  ${btnThin('plain')}
+  ${pixelBold}
+  padding: ${SP.xs} ${SP.sm};
+  font-size: ${FONT.sm};
+  color: ${C.textSub};
+  white-space: nowrap;
+  &:focus, &:focus-visible { outline: none; }
 `;
 
 // ── 진행 바
 const ProgressArea = styled.div`
-  margin-bottom: 10px;
-  ${media.mobile} { margin-bottom: 7px; }
+  ${modalPadX}
 `;
 const ProgressStats = styled.div`
   display: flex; justify-content: space-between;
-  font-size: 11px; color: rgba(255,255,255,0.45); margin-bottom: 4px;
-  ${media.mobile} { font-size: 10px; }
+  font-size: ${FONT.sm}; color: ${C.textDim}; margin-bottom: ${SP.xs};
 `;
+/** 게이지 — 파인 트랙 + 각진 골드 막대. */
 const ProgressBarOuter = styled.div`
-  height: 5px; background: rgba(255,255,255,0.08); border-radius: 3px; overflow: hidden;
+  ${sunken()}
+  height: 12px; overflow: hidden;
 `;
 const ProgressBarInner = styled.div<{ $pct: number }>`
   height: 100%; width: ${p => p.$pct}%;
-  background: linear-gradient(90deg, #FFD700, #FF8C00);
-  border-radius: 3px; transition: width 0.6s ease;
+  background: ${C.gold};
 `;
-
-// ── 서브탭
 
 // ── 카테고리 탭
+/* 여백은 바깥(ModalScrollRowPad)이 잡는다. 여기 주면 스크롤과 함께 밀려 사라진다. */
 const CategoryTabRow = styled.div`
-  display:flex; gap:2px; overflow-x:auto; padding:10px 16px 0;
-  flex-shrink:0;
-  &::-webkit-scrollbar { height:3px; }
-  &::-webkit-scrollbar-thumb { background:rgba(255,215,0,0.3); border-radius:2px; }
+  display: flex; gap: ${SP.xs}; overflow-x: auto;
+  padding-top: ${SP.sm}; padding-bottom: ${SP.xs};
+  &::-webkit-scrollbar { height: 8px; }
+  &::-webkit-scrollbar-track { background: ${C.panelSunk}; border: 2px solid ${C.ink}; }
+  &::-webkit-scrollbar-thumb { background: ${C.divider}; border: 2px solid ${C.ink}; }
 
-  ${media.tablet} { padding: 8px 12px 0; }
-  ${media.mobile} { padding: 7px 10px 0; gap: 1px; }
-  ${lMedia.phoneSm} { padding: 6px 10px 0; }
+  ${media.mobile}   { padding-top: ${SP.xs}; }
+  ${lMedia.phoneSm} { padding-top: ${SP.xs}; }
 `;
-const CatTab = styled.button<{ $active: boolean }>`
-  display:flex;align-items:center;gap:4px; white-space:nowrap;
-  padding: 6px 12px; font-size: 11px; font-weight: 700;
-  border:none; border-radius:8px 8px 0 0; cursor:pointer; transition:all 0.2s;
-  background: ${p => p.$active ? 'rgba(255,255,255,0.08)' : 'transparent'};
-  color: ${p => p.$active ? '#fff' : 'rgba(255,255,255,0.35)'};
-  border-bottom: 2px solid ${p => p.$active ? 'rgba(255,255,255,0.4)' : 'transparent'};
-  &:hover { color:#fff; }
-
-  ${media.mobile} { padding: 5px 9px; font-size: 10px; }
-  ${lMedia.phoneSm} { padding: 5px 9px; font-size: 10px; }
-`;
+/** 카테고리 탭 — 화면을 갈아끼우는 주 탭이라 공용 큰 버튼을 쓴다. */
+const CatTab = styled(ModalTabBtn).attrs<{ $active?: boolean }>(p => ({
+  $on: p.$active, $c: 'gold' as const,
+}))``;
 const TabBadge = styled.span`
-  font-size: 9px; padding: 1px 5px; background:rgba(255,255,255,0.10); border-radius:6px;
+  font-size: ${FONT.sm}; color: ${C.textDim}; font-weight: 400;
 `;
 
 // ── 업적 스크롤
 const AchievementScroll = styled.div`
-  flex:1; overflow-y:auto; padding:12px 16px 20px;
-  display:flex; flex-direction:column; gap:16px;
-  &::-webkit-scrollbar { width:5px; }
-  &::-webkit-scrollbar-thumb { background:rgba(255,215,0,0.25); border-radius:3px; }
+  ${modalPadX}
+  flex: 1; overflow-y: auto;
+  padding-top: ${SP.md}; padding-bottom: ${SP.lg};
+  display: flex; flex-direction: column; gap: ${SP.md};
+  &::-webkit-scrollbar { width: 10px; }
+  &::-webkit-scrollbar-track { background: ${C.panelSunk}; border: ${SCALE}px solid ${C.ink}; }
+  &::-webkit-scrollbar-thumb { background: ${C.divider}; border: ${SCALE}px solid ${C.ink}; }
 
-  ${media.tablet} { padding: 10px 14px 16px; gap: 12px; }
-  ${media.mobile} { padding: 8px 10px 16px; gap: 10px; }
-  ${lMedia.phoneSm} { padding: 8px 10px 14px; gap: 8px; }
+  ${media.mobile}   { padding-top: ${SP.sm}; padding-bottom: ${SP.md}; gap: ${SP.sm}; }
+  ${lMedia.phoneSm} { padding-top: ${SP.sm}; padding-bottom: ${SP.md}; gap: ${SP.sm}; }
 `;
-
 
 // ── 티어 섹션
-const TierSection = styled.div`display:flex;flex-direction:column;gap:8px;
-  ${media.mobile} { gap: 6px; }
-`;
+const TierSection = styled.div`display: flex; flex-direction: column; gap: ${SP.sm};`;
 const TierHeader = styled.div<{ $color: string }>`
-  display:flex;align-items:center;justify-content:space-between;
-  padding: 4px 8px;
-  border-left: 3px solid ${p => p.$color};
-  padding-left: 12px;
+  display: flex; align-items: center; justify-content: space-between;
+  gap: ${SP.sm};
+  padding: ${SP.xs} 0 ${SP.xs} ${SP.sm};
+  border-left: ${SCALE}px solid ${p => p.$color};
 `;
-const TierLabel = styled.span`font-size:13px;font-weight:800;color:rgba(255,255,255,0.85);
-  ${media.mobile} { font-size: 12px; }
+const TierLabel = styled.span`
+  ${pixelBold}
+  font-size: ${FONT.sm}; color: ${C.text};
 `;
-const TierPts = styled.span`font-size:11px;color:rgba(255,255,255,0.35);
-  ${media.mobile} { font-size: 10px; }
-`;
+const TierPts = styled.span`font-size: ${FONT.sm}; color: ${C.textDim};`;
 
 /**
  * TierGrid:
  *  데스크탑: auto-fill minmax(320px, 1fr) → 2~3열
- *  태블릿 세로: 2열 (minmax 220px)
- *  모바일 세로: 1열
- *  태블릿 가로: 2열
- *  폰 가로: 1열
+ *  태블릿/폰: 열 수를 줄인다
  */
 const TierGrid = styled.div`
   display: grid;
   grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
-  gap: 8px;
+  gap: ${SP.sm};
 
-  ${media.tablet} {
-    grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
-    gap: 7px;
-  }
-  ${media.mobile} {
-    grid-template-columns: 1fr;
-    gap: 6px;
-  }
-  ${lMedia.tablet} {
-    grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
-  }
-  ${lMedia.phoneSm} {
-    grid-template-columns: 1fr;
-    gap: 5px;
-  }
+  ${media.tablet}   { grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)); }
+  ${media.mobile}   { grid-template-columns: 1fr; gap: ${SP.xs}; }
+  ${lMedia.tablet}  { grid-template-columns: repeat(auto-fill, minmax(260px, 1fr)); }
+  ${lMedia.phoneSm} { grid-template-columns: 1fr; gap: ${SP.xs}; }
 `;
 
-// ── 업적 카드
-const shimmer = keyframes`
-  0%   { background-position: -200% center; }
-  100% { background-position: 200% center; }
-`;
-
+/**
+ * 업적 카드 — 달성한 것만 티어 색 띠를 두른다.
+ * 예전에는 유리 카드에 광택이 흐르고 hover에서 떠올랐다.
+ */
 const AchCard = styled.div<{
   $unlocked: boolean;
   $tier: string;
   $borderColor: string;
   $bgColor: string;
 }>`
-  display:flex; gap:12px; padding:12px 14px;
-  border-radius:12px;
-  border: 1px solid ${p => p.$unlocked ? p.$borderColor : 'rgba(255,255,255,0.07)'};
-  background: ${p => p.$unlocked ? p.$bgColor : 'rgba(255,255,255,0.025)'};
-  opacity: ${p => p.$unlocked ? 1 : 0.65};
-  transition: transform 0.15s, box-shadow 0.15s, opacity 0.15s;
+  ${sunken()}
+  display: flex; gap: ${SP.sm}; padding: ${SP.sm};
+  opacity: ${p => (p.$unlocked ? 1 : 0.6)};
   position: relative; overflow: hidden;
-
-  ${p => p.$unlocked && css`
-    &::before {
-      content: '';
-      position: absolute; inset: 0;
-      background: linear-gradient(
-        105deg,
-        transparent 40%,
-        rgba(255,255,255,0.04) 50%,
-        transparent 60%
-      );
-      background-size: 200% 100%;
-      animation: ${shimmer} 3s linear infinite;
-    }
-  `}
-
-  &:hover {
-    transform: translateY(-2px);
-    box-shadow: 0 4px 16px rgba(0,0,0,0.4);
-    opacity: 1;
-  }
-
-  ${media.mobile} { padding: 10px 12px; gap: 10px; border-radius: 10px; }
-  ${lMedia.phoneSm} { padding: 9px 11px; gap: 9px; }
+  ${p => p.$unlocked && css`box-shadow: inset 0 0 0 ${SCALE}px ${p.$borderColor};`}
 `;
 
 const CardIcon = styled.div<{ $unlocked: boolean; $tier: string; $color: string }>`
-  flex-shrink:0;
-  width:44px; height:44px; font-size:24px;
-  display:flex; align-items:center; justify-content:center;
-  border-radius:10px;
-  background: ${p => p.$unlocked
-    ? `rgba(${p.$color.replace('#','').match(/.{2}/g)!.map(h=>parseInt(h,16)).join(',')}, 0.15)`
-    : 'rgba(255,255,255,0.05)'};
-  filter: ${p => p.$unlocked ? 'none' : 'grayscale(70%)'};
+  flex-shrink: 0;
+  width: 44px; height: 44px; font-size: ${ICON.xl}px;
+  display: flex; align-items: center; justify-content: center;
+  background: ${C.panel};
+  border: 2px solid ${C.ink};
+  filter: ${p => (p.$unlocked ? 'none' : 'grayscale(70%)')};
 
-  ${media.mobile} { width: 38px; height: 38px; font-size: 20px; }
-  ${lMedia.phoneSm} { width: 36px; height: 36px; font-size: 19px; }
+  ${media.mobile}   { width: 38px; height: 38px; font-size: ${ICON.lg}px; }
+  ${lMedia.phoneSm} { width: 36px; height: 36px; font-size: ${ICON.md}px; }
 `;
 
-const CardBody = styled.div`flex:1;min-width:0;display:flex;flex-direction:column;gap:3px;`;
-const CardNameRow = styled.div`display:flex;align-items:center;gap:6px;flex-wrap:wrap;`;
+const CardBody = styled.div`flex: 1; min-width: 0; display: flex; flex-direction: column;`;
+const CardNameRow = styled.div`display: flex; align-items: center; gap: ${SP.xs}; flex-wrap: wrap;`;
 
 const CardName = styled.span<{ $unlocked: boolean; $color: string }>`
-  font-size:13px; font-weight:700;
-  color: ${p => p.$unlocked ? p.$color : 'rgba(255,255,255,0.7)'};
-  ${media.mobile} { font-size: 12px; }
+  ${pixelBold}
+  font-size: ${FONT.sm};
+  color: ${p => (p.$unlocked ? p.$color : C.textSub)};
 `;
 
 const CompletionBadge = styled.span<{ $color: string }>`
-  font-size:11px; font-weight:800; padding:1px 7px; border-radius:10px;
-  background:rgba(255,255,255,0.08); color: ${p => p.$color};
-  border: 1px solid ${p => p.$color}44;
+  ${pixelBold}
+  font-size: ${FONT.sm}; line-height: 1.3;
+  padding: ${SP.xs} ${SP.sm};
+  background: ${C.panel};
+  border: 2px solid ${C.ink};
+  color: ${p => p.$color};
 `;
 
 const UnlockedMark = styled.span<{ $color: string }>`
-  font-size:11px; font-weight:700;
-  color: ${p => p.$color}; opacity:0.8;
+  ${pixelBold}
+  font-size: ${FONT.sm}; color: ${p => p.$color};
 `;
 
 const CardDesc = styled.div`
-  font-size:11px;color:rgba(255,255,255,0.4);line-height:1.4;
-  ${media.mobile} { font-size: 10.5px; }
+  font-size: ${FONT.sm}; color: ${C.textDim};
+  word-break: keep-all;
 `;
 
-const CardBottom = styled.div`display:flex;align-items:center;gap:8px;margin-top:4px;`;
+const CardBottom = styled.div`display: flex; align-items: center; gap: ${SP.sm}; margin-top: ${SP.xs};`;
 
 const MiniBar = styled.div`
-  flex:1; max-width:140px; height:4px;
-  background:rgba(255,255,255,0.08); border-radius:2px; overflow:hidden;
+  flex: 1; max-width: 140px; height: 8px;
+  background: ${C.panel};
+  border: 2px solid ${C.ink};
+  overflow: hidden;
 
   ${media.mobile} { max-width: 100px; }
 `;
 const MiniFill = styled.div<{ $pct: number; $color: string }>`
-  height:100%; width:${p => p.$pct}%;
-  background:${p => p.$color}; border-radius:2px; transition:width 0.4s ease;
+  height: 100%; width: ${p => p.$pct}%;
+  background: ${p => p.$color};
 `;
-const ProgressTxt = styled.span`font-size:10px;color:rgba(255,255,255,0.3);`;
+const ProgressTxt = styled.span`font-size: ${FONT.sm}; color: ${C.textDim};`;
 const APEarned = styled.span<{ $color: string }>`
-  font-size:11px;font-weight:700;color:${p => p.$color};
-  text-shadow:0 0 8px ${p => p.$color}66;
+  ${pixelBold}
+  font-size: ${FONT.sm}; color: ${p => p.$color};
 `;
-
-// ── 랭킹
-
-/**
- * 랭킹 헤더/행 컬럼:
- *  데스크탑: 60px 1fr 100px 100px (4열)
- *  태블릿:   44px 1fr 80px 80px   (4열, 축소)
- *  모바일:   44px 1fr 80px        (3열 — Count 숨김)
- */
-
-
-
-
-
-/**
- * RankStat: 모바일 세로 + 폰 가로에서 숨겨 3열 레이아웃 유지
- */
 
 const LoadingMsg = styled.div`
-  text-align: center; padding: 48px 24px;
-  color: rgba(255,255,255,0.5); font-size: 15px;
+  text-align: center; padding: ${SP.xxl} ${SP.lg};
+  color: ${C.textSub}; font-size: ${FONT.sm};
 `;
 
 const EmptyMsg = styled.div`
-  text-align: center; padding: 48px 24px;
-  color: rgba(255,255,255,0.35); font-size: 14px;
+  text-align: center; padding: ${SP.xxl} ${SP.lg};
+  color: ${C.textDim}; font-size: ${FONT.sm};
 `;

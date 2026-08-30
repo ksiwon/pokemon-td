@@ -11,7 +11,9 @@
 //   - 5분 후 cleanupExpiredRooms가 자동으로 방 삭제
 
 import { useState, useEffect, useCallback, useRef, lazy, Suspense, type ComponentType } from "react";
-import styled, { keyframes } from "styled-components";
+import styled, { keyframes } from "styled-components";
+import { C, FONT } from './styles/tokens';
+import { sunken, pixelText, pixelBold, shadowLg } from './styles/pixel';
 import { Routes, Route, useNavigate, useLocation, Navigate } from 'react-router-dom';
 import { authService } from "./services/AuthService";
 import { User } from "./types/multiplayer";
@@ -59,7 +61,7 @@ const fadeIn = keyframes`from { opacity: 0; } to { opacity: 1; }`;
 const PreloadingOverlay = styled.div`
   position: fixed;
   top: 0; left: 0; right: 0; bottom: 0;
-  background: radial-gradient(circle at center, rgba(0,0,0,0.85), rgba(0,0,0,0.95));
+  background: ${C.bg};
   display: flex;
   flex-direction: column;
   justify-content: center;
@@ -70,17 +72,19 @@ const PreloadingOverlay = styled.div`
 `;
 
 const LoadingTitle = styled.h1`
-  font-size: 24px;
-  color: #fff;
-  text-shadow: 0 0 15px rgba(255,255,255,0.7);
+  ${pixelBold}
+  font-size: ${FONT.xl};
+  color: ${C.text};
+  ${shadowLg}
   margin: 0;
 `;
 
+/** 진행 게이지 — 한 단 파인 트랙 + 각진 단색 막대. */
 const ProgressBarOuter = styled.div`
+  ${sunken()}
   width: 320px;
-  height: 12px;
-  background: rgba(255,255,255,0.15);
-  border-radius: 6px;
+  height: 16px;
+  padding: 0;
   overflow: hidden;
   max-width: 90vw;
 `;
@@ -88,14 +92,13 @@ const ProgressBarOuter = styled.div`
 const ProgressBarInner = styled.div<{ $pct: number }>`
   height: 100%;
   width: ${p => p.$pct}%;
-  background: linear-gradient(90deg, #3498db, #2ecc71);
-  border-radius: 6px;
-  transition: width 0.2s ease;
+  background: ${C.gold};
 `;
 
 const ProgressText = styled.p`
-  font-size: 13px;
-  color: rgba(255,255,255,0.6);
+  ${pixelText}
+  font-size: ${FONT.sm};
+  color: ${C.textSub};
   margin: 0;
 `;
 

@@ -1,20 +1,23 @@
 // src/components/quiz/QuizPlay.tsx
-// 퀴즈 한 라운드 진행 — 개별 종목(10문제) 또는 수능 모의고사(전 종목 혼합 20문제).
+// 퀴즈 한 라운드 진행 — 개별 종목 또는 수능 모의고사(전 종목 혼합). 문항 수는 10/30/50.
 // 문제 렌더(이미지/실루엣/확대/울음소리) · 즉시 피드백 · 다음문제 프리페치 · 결과 정산.
 
 import { useEffect, useRef, useState } from 'react';
 import styled, { keyframes } from 'styled-components';
 import { ArrowLeft, Check, X, Flame, RotateCcw, Volume2, ChevronUp, ChevronDown } from 'lucide-react';
 import { media } from '../../utils/responsive.utils';
+import { Screen as Root, ScreenBackBtn as BackBtn, ScreenBody, ScreenTitle as TopTitle, ScreenTopBar as TopBar } from '../shared/screen';
 import { useTranslation } from '../../i18n';
-import { QuizKind, QuizMode, QuizQuestion, KO_ONLY_QUIZ_KINDS } from '../../types/quiz';
+import { C, FONT, SP, SCALE } from '../../styles/tokens';
+import { win, winThin, btn, sunken, pixelBold, shadowLg } from '../../styles/pixel';
+import { QuizKind, QuizMode, QuizQuestion, KO_ONLY_QUIZ_KINDS, RANKED_ROUND_SIZE } from '../../types/quiz';
 import { createQuizSession, createExamSession, normalizeAnswer } from '../../services/QuizEngine';
 import { quizService, ExamMilestoneReward } from '../../services/QuizService';
 import { databaseService } from '../../services/DatabaseService';
 
 interface QuizPlayProps {
   mode: QuizMode;
-  /** 개별 종목 문항 수(모의고사는 20 고정). */
+  /** 문항 수(10/30/50). 50문항만 랭킹에 반영된다 — RANKED_ROUND_SIZE. */
   roundSize?: number;
   onExit: () => void;
 }
@@ -139,13 +142,17 @@ export const QuizPlay = ({ mode, roundSize = 30, onExit }: QuizPlayProps) => {
         setNewBest(isBest);
         // 최고점 갱신으로 새로 도달한 마일스톤 보상(미니 포켓 재화) 1회성 지급
         setMilestones(quizService.claimExamMilestones());
-        databaseService.updateQuizRanking(quizService.getExamBest()).catch(() => {});
+        // 통산 보드는 50문항 완주만 집계 — 경신했을 때만 1 write.
+        const ranked = quizService.recordRankedExam(score, ROUND);
+        if (ranked !== null) databaseService.updateQuizRanking(ranked).catch(() => {});
       } else {
         setNewBest(quizService.recordRound(mode, score, maxStreak));
+        // 종목도 모의고사와 같은 방식으로 재화를 준다(액수는 1/5, 구간마다 1회).
+        setMilestones(quizService.claimKindMilestones(mode as QuizKind));
       }
       // 주간 랭킹 — [FREE-TIER] 이번 주 최고를 경신했을 때만 1 write.
       const boardKey = isExam ? 'exam' : (mode as QuizKind);
-      if (quizService.recordWeekly(boardKey, score)) {
+      if (quizService.recordWeekly(boardKey, score, ROUND)) {
         databaseService.updateQuizWeekly(boardKey, score).catch(() => {});
       }
       setPhase('result');
@@ -238,6 +245,9 @@ export const QuizPlay = ({ mode, roundSize = 30, onExit }: QuizPlayProps) => {
             ? t('quiz.result.examBest', { n: quizService.getExamBest() })
             : t('quiz.result.best', { n: quizService.getBest(mode) })}</ResultStat>
           <ResultStat>{t('quiz.result.maxStreak', { n: maxStreak })}</ResultStat>
+          {ROUND !== RANKED_ROUND_SIZE && (
+            <RankNote>{t('quiz.result.notRanked', { n: RANKED_ROUND_SIZE })}</RankNote>
+          )}
           <ResultBtns>
             <PrimaryBtn onClick={reset}><RotateCcw size={16} /> {t('quiz.result.retry')}</PrimaryBtn>
             <GhostBtn onClick={onExit}>{t('quiz.result.exit')}</GhostBtn>
@@ -427,306 +437,328 @@ const DuelView = ({ duel, phase, onSelect, t }: {
 };
 
 // ─── styled ──────────────────────────────────────────────────────────────────
-const spin = keyframes`to { transform: rotate(360deg); }`;
-const pop = keyframes`0%{transform:translateY(4px);opacity:0}100%{transform:translateY(0);opacity:1}`;
+// docs/DESIGN.md 의 디자인 시스템을 따른다.
+// 걷어낸 것: 유리 카드(SURFACE/SURFACE_HI/BORDER), 알약 배지, 원형 스피너·마크,
+//           backdrop-filter, 둥근 모서리, 번지는 그림자, Tailwind 팔레트.
 
-const ACCENT = '#22d3ee';
-const SURFACE = 'rgba(255,255,255,0.035)';
-const SURFACE_HI = 'rgba(255,255,255,0.06)';
-const BORDER = 'rgba(255,255,255,0.09)';
+/** 대기 표시 — 원이 돌지 않고 네모가 깜빡인다. */
+const blockBlink = keyframes`
+  0%,  49%  { opacity: 1;    }
+  50%, 100% { opacity: 0.25; }
+`;
+const pop = keyframes`0%{opacity:0}100%{opacity:1}`;
 
-const Root = styled.div`
-  min-height: 100vh; background: #0b0f14;
-  color: #e7edf3; display: flex; flex-direction: column;
-`;
-const TopBar = styled.header`
-  display: flex; align-items: center; justify-content: space-between; gap: 10px;
-  padding: 14px 20px; border-bottom: 1px solid ${BORDER};
-  background: rgba(11,15,20,0.85); position: sticky; top: 0; z-index: 20; backdrop-filter: blur(10px);
-  ${media.mobile} { padding: 10px 12px; gap: 6px; }
-`;
-const BackBtn = styled.button`
-  flex: 0 0 auto; display: flex; align-items: center; gap: 5px;
-  background: transparent; border: 1px solid ${BORDER}; color: rgba(255,255,255,0.65);
-  padding: 7px 12px; border-radius: 9px; cursor: pointer; font-size: 13.5px; white-space: nowrap;
-  transition: background 0.15s, color 0.15s;
-  &:hover { background: ${SURFACE_HI}; color: #fff; }
-  ${media.mobile} { padding: 6px 9px; font-size: 12px; }
-`;
-const TopTitle = styled.h1`font-size: 16px; font-weight: 800; margin: 0;`;
 const Progress = styled.div`
-  font-size: 14px; font-weight: 700; color: rgba(255,255,255,0.6); font-variant-numeric: tabular-nums;
-  ${media.mobile} { font-size: 13px; }
-`;
-const ScorePills = styled.div`display: flex; align-items: center; gap: 6px; flex: 0 0 auto;`;
-const CountPill = styled.div`
-  display: flex; align-items: center; gap: 4px; min-width: 34px; justify-content: center;
-  font-size: 14px; font-weight: 800; padding: 5px 10px; border-radius: 8px;
+  ${pixelBold}
+  font-size: ${FONT.sm}; color: ${C.textSub};
   font-variant-numeric: tabular-nums;
-  ${media.mobile} { font-size: 13px; padding: 4px 8px; min-width: 30px; }
 `;
-const CorrectPill = styled(CountPill)`
-  color: #34d399; background: rgba(52,211,153,0.12); border: 1px solid rgba(52,211,153,0.3);
+const ScorePills = styled.div`display: flex; align-items: center; gap: ${SP.xs}; flex: 0 0 auto;`;
+const CountPill = styled.div`
+  ${pixelBold}
+  display: flex; align-items: center; gap: ${SP.xs};
+  min-width: 34px; justify-content: center;
+  font-size: ${FONT.sm};
+  padding: ${SP.xs} ${SP.sm};
+  border: 2px solid ${C.ink};
+  background: ${C.panelSunk};
+  font-variant-numeric: tabular-nums;
 `;
-const WrongPill = styled(CountPill)`
-  color: #f87171; background: rgba(248,113,113,0.1); border: 1px solid rgba(248,113,113,0.28);
+const CorrectPill = styled(CountPill)`color: ${C.green};`;
+const WrongPill   = styled(CountPill)`color: ${C.red};`;
+const StreakPill  = styled(CountPill)`color: ${C.gold};`;
+
+/** 진행 게이지 — 파인 트랙 + 각진 막대. */
+const ProgressBar = styled.div`
+  height: ${SCALE * 2}px;
+  background: ${C.panelSunk};
+  border-bottom: ${SCALE}px solid ${C.ink};
 `;
-const StreakPill = styled.div`
-  display: flex; align-items: center; gap: 3px; font-size: 13px; font-weight: 800; color: #fb923c;
-  background: rgba(251,146,60,0.1); border: 1px solid rgba(251,146,60,0.25);
-  padding: 5px 9px; border-radius: 8px;
-`;
-const ProgressBar = styled.div`height: 3px; background: rgba(255,255,255,0.06);`;
 const ProgressFill = styled.div<{ $pct: number }>`
-  height: 100%; width: ${p => p.$pct}%; background: ${ACCENT}; transition: width 0.3s ease;
+  height: 100%; width: ${p => p.$pct}%; background: ${C.cyan};
 `;
 
-const Body = styled.main`
-  flex: 1; width: 100%; max-width: 620px; margin: 0 auto; padding: 24px 18px 48px;
-  display: flex; flex-direction: column; gap: 18px;
-  ${media.mobile} { padding: 18px 14px 40px; gap: 14px; }
-`;
+/** 읽는 화면이라 좁은 폭. 여백은 공용 껍데기가 정한다. */
+const Body = styled(ScreenBody).attrs({ $narrow: true })``;
+
 const Prompt = styled.h2`
-  font-size: 20px; font-weight: 800; text-align: center; margin: 0; line-height: 1.4;
+  ${pixelBold}
+  font-size: ${FONT.xl}; text-align: center; margin: 0;
+  ${shadowLg}
   word-break: keep-all;
-  ${media.mobile} { font-size: 16px; }
+  ${media.mobile} { font-size: ${FONT.sm}; }
 `;
+/** 초성 등 큰 글자 — 파인 면 위에 시안 단색. 글로우를 걷어냈다. */
 const BigText = styled.div`
-  text-align: center; font-weight: 900; color: ${ACCENT};
-  font-size: 52px; letter-spacing: 0.18em; line-height: 1.25; word-break: keep-all;
-  padding: 18px 12px; margin: 2px auto; border-radius: 16px;
-  background: rgba(34,211,238,0.06); border: 1px solid rgba(34,211,238,0.22);
-  text-shadow: 0 2px 18px rgba(34,211,238,0.25);
-  ${media.mobile} { font-size: 38px; letter-spacing: 0.14em; padding: 14px 8px; }
+  ${sunken()}
+  ${pixelBold}
+  text-align: center; color: ${C.cyan};
+  font-size: 48px; line-height: 1.25; word-break: keep-all;
+  padding: ${SP.md}; margin: 0 auto;
+  ${shadowLg}
+  ${media.mobile} { font-size: ${FONT.display}; }
 `;
+
 // ─── 랜덤 힌트 목록 ────────────────────────────────────────────────────────────
-const HintList = styled.div`display: flex; flex-direction: column; gap: 8px;`;
+const HintList = styled.div`display: flex; flex-direction: column; gap: ${SP.sm};`;
 const HintRow = styled.div`
-  display: flex; align-items: flex-start; gap: 10px; padding: 13px 15px; border-radius: 12px;
-  background: ${SURFACE}; border: 1px solid ${BORDER};
-  ${media.mobile} { padding: 11px 12px; gap: 8px; }
+  ${sunken()}
+  display: flex; align-items: flex-start; gap: ${SP.sm};
+  padding: ${SP.sm} ${SP.md};
 `;
+/** 번호 — 원이 아니라 네모. */
 const HintNo = styled.div`
-  flex: 0 0 auto; width: 21px; height: 21px; border-radius: 50%; margin-top: 1px;
+  ${pixelBold}
+  flex: 0 0 auto; width: 20px; height: 20px;
   display: flex; align-items: center; justify-content: center;
-  font-size: 11.5px; font-weight: 800; color: #062430; background: ${ACCENT};
+  font-size: ${FONT.sm}; color: ${C.ink}; background: ${C.cyan};
+  border: 2px solid ${C.ink};
+  text-shadow: none;
 `;
 const HintText = styled.div`
-  flex: 1; min-width: 0; font-size: 14.5px; font-weight: 600; line-height: 1.5; color: #e2e8f0;
+  flex: 1; min-width: 0; font-size: ${FONT.sm}; color: ${C.text};
   word-break: keep-all;
-  ${media.mobile} { font-size: 13.5px; }
 `;
 
 // ─── 종족값 대결 스타일 ────────────────────────────────────────────────────────
 const DuelWrap = styled.div`
-  position: relative; display: flex; gap: 10px; align-items: stretch;
-  ${media.mobile} { gap: 6px; }
+  position: relative; display: flex; gap: ${SP.sm}; align-items: stretch;
 `;
 const DuelPanel = styled.div`
+  ${sunken()}
   position: relative; flex: 1; min-width: 0; overflow: hidden;
-  border-radius: 16px; border: 1px solid ${BORDER}; background: ${SURFACE};
   min-height: 300px; display: flex; align-items: center; justify-content: center;
   ${media.mobile} { min-height: 240px; }
 `;
 const DuelImg = styled.img`
   position: absolute; inset: 0; margin: auto; width: 80%; height: 80%; object-fit: contain;
-  opacity: 0.92; pointer-events: none;
+  pointer-events: none;
 `;
 const DuelInfo = styled.div`
-  position: relative; z-index: 1; width: 100%; padding: 16px 12px;
-  display: flex; flex-direction: column; align-items: center; gap: 8px;
-  background: radial-gradient(ellipse at center, rgba(11,15,20,0.78) 0%, rgba(11,15,20,0.4) 68%, transparent 100%);
+  position: relative; z-index: 1; width: 100%; padding: ${SP.md} ${SP.sm};
+  display: flex; flex-direction: column; align-items: center; gap: ${SP.sm};
+  background: rgba(22, 27, 40, 0.72);
 `;
 const DuelName = styled.div`
-  font-size: 20px; font-weight: 900; color: #fff; text-align: center; word-break: keep-all;
-  text-shadow: 0 2px 12px rgba(0,0,0,0.85);
-  ${media.mobile} { font-size: 15px; }
+  ${pixelBold}
+  font-size: ${FONT.sm}; color: ${C.text}; text-align: center; word-break: keep-all;
+  text-shadow: 1px 1px 0 ${C.ink};
 `;
 const DuelStatCap = styled.div`
-  font-size: 12px; font-weight: 700; color: rgba(255,255,255,0.72); letter-spacing: 0.04em;
+  font-size: ${FONT.sm}; color: ${C.textSub};
 `;
 const DuelValue = styled.div<{ $dir?: 'up' | 'down' }>`
-  font-size: 42px; font-weight: 900; font-variant-numeric: tabular-nums; line-height: 1;
-  color: ${p => p.$dir === 'up' ? '#34d399' : p.$dir === 'down' ? '#f87171' : ACCENT};
-  text-shadow: 0 2px 14px rgba(0,0,0,0.6);
-  ${media.mobile} { font-size: 32px; }
+  ${pixelBold}
+  font-size: ${FONT.display}; font-variant-numeric: tabular-nums; line-height: 1.2;
+  color: ${p => (p.$dir === 'up' ? C.green : p.$dir === 'down' ? C.red : C.cyan)};
+  text-shadow: ${SCALE}px ${SCALE}px 0 ${C.ink};
+  ${media.mobile} { font-size: ${FONT.xl}; }
 `;
-const DuelBtns = styled.div`display: flex; flex-direction: column; gap: 8px; width: 100%; max-width: 210px;`;
+const DuelBtns = styled.div`display: flex; flex-direction: column; gap: ${SP.sm}; width: 100%; max-width: 210px;`;
 const DuelBtn = styled.button<{ $dir: 'up' | 'down' }>`
-  display: flex; align-items: center; justify-content: center; gap: 5px;
-  padding: 12px 16px; border-radius: 11px; cursor: pointer; font-size: 15px; font-weight: 800;
-  color: #06202a; border: none;
-  background: ${p => p.$dir === 'up' ? '#34d399' : '#f87171'};
-  transition: filter 0.15s, transform 0.08s;
-  &:hover { filter: brightness(1.08); }
-  &:active { transform: translateY(1px); }
-  ${media.mobile} { padding: 10px 12px; font-size: 14px; }
+  ${p => btn(p.$dir === 'up' ? 'green' : 'red')}
+  ${pixelBold}
+  display: flex; align-items: center; justify-content: center; gap: ${SP.xs};
+  padding: ${SP.sm} ${SP.md};
+  font-size: ${FONT.sm}; color: ${C.text};
+  &:focus, &:focus-visible { outline: none; }
 `;
 const VsBadge = styled.div`
+  ${pixelBold}
   position: absolute; left: 50%; top: 50%; transform: translate(-50%, -50%); z-index: 3;
-  width: 44px; height: 44px; border-radius: 50%;
+  width: 40px; height: 40px;
   display: flex; align-items: center; justify-content: center;
-  font-size: 14px; font-weight: 900; color: #3a2a05; background: #f5c451;
-  box-shadow: 0 4px 16px rgba(0,0,0,0.55);
-  ${media.mobile} { width: 36px; height: 36px; font-size: 12px; }
+  font-size: ${FONT.sm}; color: ${C.ink}; background: ${C.gold};
+  border: ${SCALE}px solid ${C.ink};
+  text-shadow: none;
+  ${media.mobile} { width: 32px; height: 32px; }
 `;
 
 const MediaWrap = styled.div<{ $zoom?: boolean }>`
+  ${sunken()}
   display: flex; align-items: center; justify-content: center;
-  background: ${SURFACE}; border: 1px solid ${BORDER};
-  border-radius: 16px; padding: 12px; overflow: hidden;
+  padding: ${SP.sm}; overflow: hidden;
   /* 확대 퀴즈는 크롭 창을 이미지와 같은 정사각형으로(가로로 퍼지지 않게). */
-  ${p => p.$zoom ? 'width: fit-content; margin: 0 auto;' : ''}
+  ${p => (p.$zoom ? 'width: fit-content; margin: 0 auto;' : '')}
 `;
 const MediaImg = styled.img<{ $silhouette: boolean; $zoom?: { x: number; y: number } }>`
   width: 210px; height: 210px; object-fit: contain;
-  filter: ${p => p.$silhouette ? 'brightness(0)' : 'none'};
-  transform: ${p => p.$zoom ? 'scale(15)' : 'scale(1)'};
-  transform-origin: ${p => p.$zoom ? `${p.$zoom.x}% ${p.$zoom.y}%` : 'center'};
-  transition: filter 0.35s ease, transform 0.4s ease;
+  filter: ${p => (p.$silhouette ? 'brightness(0)' : 'none')};
+  transform: ${p => (p.$zoom ? 'scale(15)' : 'scale(1)')};
+  transform-origin: ${p => (p.$zoom ? `${p.$zoom.x}% ${p.$zoom.y}%` : 'center')};
   ${media.mobile} { width: 160px; height: 160px; }
 `;
 
-const AudioWrap = styled.div`display: flex; align-items: center; justify-content: center; padding: 24px 0;`;
+const AudioWrap = styled.div`display: flex; align-items: center; justify-content: center; padding: ${SP.lg} 0;`;
 const SpeakerBtn = styled.button`
-  display: flex; flex-direction: column; align-items: center; gap: 10px;
-  padding: 28px 44px; border-radius: 16px; cursor: pointer;
-  background: ${SURFACE}; border: 1px solid rgba(34,211,238,0.3); color: ${ACCENT};
-  font-size: 14px; font-weight: 700; transition: background 0.15s;
-  &:hover { background: rgba(34,211,238,0.1); }
+  ${btn('cyan')}
+  ${pixelBold}
+  display: flex; flex-direction: column; align-items: center; gap: ${SP.sm};
+  padding: ${SP.xl} ${SP.xxl};
+  color: ${C.cyan}; font-size: ${FONT.sm};
+  &:focus, &:focus-visible { outline: none; }
 `;
 
 const Options = styled.div`
-  display: grid; grid-template-columns: repeat(2, 1fr); gap: 12px;
-  ${media.mobile} { gap: 9px; }
+  display: grid; grid-template-columns: repeat(2, 1fr); gap: ${SP.sm};
 `;
+/** 보기 — 정답/오답이 밝혀지면 창틀 색이 바뀐다. */
 const OptBtn = styled.button<{ $state: 'idle' | 'correct' | 'wrong' | 'dim'; $img: boolean }>`
-  position: relative; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 8px;
-  padding: ${p => p.$img ? '14px 10px' : '16px 14px'};
-  min-height: ${p => p.$img ? '150px' : '56px'};
-  border-radius: 12px; cursor: pointer; font-size: 15px; font-weight: 700;
-  border: 1px solid ${p =>
-    p.$state === 'correct' ? 'rgba(52,211,153,0.6)'
-    : p.$state === 'wrong' ? 'rgba(248,113,113,0.55)'
-    : BORDER};
-  background: ${p =>
-    p.$state === 'correct' ? 'rgba(52,211,153,0.12)'
-    : p.$state === 'wrong' ? 'rgba(248,113,113,0.1)'
-    : p.$state === 'dim' ? 'rgba(255,255,255,0.02)'
-    : SURFACE};
-  color: #f1f5f9; opacity: ${p => p.$state === 'dim' ? 0.45 : 1};
-  transition: background 0.15s, border-color 0.15s;
-  &:not(:disabled):hover { border-color: rgba(34,211,238,0.5); background: ${SURFACE_HI}; }
+  ${p => btn(p.$state === 'correct' ? 'green' : p.$state === 'wrong' ? 'red' : 'plain')}
+  ${pixelBold}
+  position: relative; display: flex; flex-direction: column;
+  align-items: center; justify-content: center; gap: ${SP.sm};
+  padding: ${SP.md} ${SP.sm};
+  min-height: ${p => (p.$img ? '150px' : '56px')};
+  font-size: ${FONT.sm};
+  color: ${C.text};
+  opacity: ${p => (p.$state === 'dim' ? 0.45 : 1)};
   &:disabled { cursor: default; }
-  ${media.mobile} { font-size: 14px; min-height: ${p => p.$img ? '124px' : '50px'}; }
+  &:focus, &:focus-visible { outline: none; }
+  ${media.mobile} { min-height: ${p => (p.$img ? '124px' : '50px')}; }
 `;
 const OptImg = styled.img`
   width: 108px; height: 108px; object-fit: contain; pointer-events: none;
   ${media.mobile} { width: 84px; height: 84px; }
 `;
-const OptLabel = styled.span`text-align: center; line-height: 1.25; word-break: keep-all;`;
+const OptLabel = styled.span`text-align: center; word-break: keep-all;`;
+/** 정오 표시 — 원이 아니라 네모. */
 const Mark = styled.span<{ $ok?: boolean }>`
-  position: absolute; top: 6px; right: 6px;
-  display: flex; align-items: center; justify-content: center; width: 24px; height: 24px; border-radius: 50%;
-  background: ${p => p.$ok ? '#34d399' : '#f87171'}; color: #06202a;
+  ${pixelBold}
+  position: absolute; top: 2px; right: 2px;
+  display: flex; align-items: center; justify-content: center;
+  width: 22px; height: 22px;
+  background: ${p => (p.$ok ? C.green : C.red)};
+  border: 2px solid ${C.ink};
+  color: ${C.ink};
+  text-shadow: none;
 `;
 
 // ─── 주관식 입력 ───────────────────────────────────────────────────────────────
-const TextAnswer = styled.div`display: flex; flex-direction: column; gap: 12px;`;
+const TextAnswer = styled.div`display: flex; flex-direction: column; gap: ${SP.sm};`;
 const TextInput = styled.input<{ $state: 'idle' | 'correct' | 'wrong' }>`
-  width: 100%; padding: 16px 18px; border-radius: 12px; font-size: 18px; font-weight: 700;
-  text-align: center; color: #f1f5f9; outline: none;
-  background: rgba(255,255,255,0.05);
-  border: 1.5px solid ${p =>
-    p.$state === 'correct' ? '#34d399'
-    : p.$state === 'wrong' ? '#f87171'
-    : 'rgba(34,211,238,0.4)'};
-  transition: border-color 0.15s;
-  &::placeholder { color: rgba(255,255,255,0.3); font-weight: 500; }
-  &:focus { border-color: ${ACCENT}; }
-  ${media.mobile} { font-size: 16px; padding: 14px 16px; }
+  ${sunken()}
+  ${pixelBold}
+  width: 100%; padding: ${SP.md}; font-size: ${FONT.sm};
+  text-align: center; color: ${C.text}; outline: none; box-sizing: border-box;
+  box-shadow: inset 0 0 0 ${SCALE}px ${p =>
+    p.$state === 'correct' ? C.green : p.$state === 'wrong' ? C.red : C.cyan};
+  &::placeholder { color: ${C.textDim}; font-weight: 400; }
+  &:focus { outline: none; }
 `;
-const TextBtns = styled.div`display: flex; gap: 10px;`;
+const TextBtns = styled.div`display: flex; gap: ${SP.sm};`;
 const SubmitBtn = styled.button`
-  flex: 1; padding: 14px; border-radius: 12px; border: none; cursor: pointer;
-  background: ${ACCENT}; color: #04222b; font-size: 15px; font-weight: 800;
-  &:disabled { opacity: 0.4; cursor: not-allowed; }
-  &:not(:disabled):hover { filter: brightness(1.08); }
+  ${btn('cyan')}
+  ${pixelBold}
+  flex: 1; padding: ${SP.sm};
+  color: ${C.text}; font-size: ${FONT.sm};
+  &:focus, &:focus-visible { outline: none; }
 `;
 const GiveUpBtn = styled.button`
-  flex: 0 0 auto; padding: 14px 20px; border-radius: 12px; cursor: pointer; font-size: 14px; font-weight: 700;
-  background: rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.12); color: rgba(255,255,255,0.6);
-  &:hover { background: rgba(255,255,255,0.1); }
+  ${btn('plain')}
+  ${pixelBold}
+  flex: 0 0 auto; padding: ${SP.sm} ${SP.md};
+  font-size: ${FONT.sm}; color: ${C.textSub};
+  &:focus, &:focus-visible { outline: none; }
 `;
 
 const RevealCard = styled.div<{ $correct: boolean }>`
-  animation: ${pop} 0.18s ease both;
-  display: flex; flex-direction: column; gap: 12px; padding: 16px;
-  border-radius: 14px;
-  border: 1px solid ${p => p.$correct ? 'rgba(52,211,153,0.3)' : 'rgba(248,113,113,0.28)'};
-  background: ${p => p.$correct ? 'rgba(52,211,153,0.07)' : 'rgba(248,113,113,0.06)'};
+  ${p => win(p.$correct ? 'green' : 'red')}
+  animation: ${pop} 0.18s steps(2, end) both;
+  display: flex; flex-direction: column; gap: ${SP.sm};
+  padding: ${SP.md};
 `;
 const RevealVerdict = styled.div<{ $correct: boolean }>`
-  display: flex; align-items: center; gap: 6px; font-size: 15px; font-weight: 800;
-  color: ${p => p.$correct ? '#34d399' : '#f87171'};
+  ${pixelBold}
+  display: flex; align-items: center; gap: ${SP.xs};
+  font-size: ${FONT.sm};
+  color: ${p => (p.$correct ? C.green : C.red)};
 `;
-const RevealBody = styled.div`display: flex; align-items: center; gap: 14px;`;
+const RevealBody = styled.div`display: flex; align-items: center; gap: ${SP.md};`;
 const RevealImg = styled.img`width: 76px; height: 76px; object-fit: contain; flex: 0 0 auto;`;
-const RevealTitle = styled.div`font-size: 18px; font-weight: 800; color: #f8fafc;`;
-const RevealSub = styled.div`font-size: 13px; color: rgba(255,255,255,0.6); margin-top: 3px;`;
+const RevealTitle = styled.div`
+  ${pixelBold}
+  font-size: ${FONT.sm}; color: ${C.text};
+`;
+const RevealSub = styled.div`font-size: ${FONT.sm}; color: ${C.textSub};`;
 const NextBtn = styled.button`
-  margin-top: 2px; padding: 12px; border-radius: 10px; border: none; cursor: pointer;
-  background: ${ACCENT}; color: #04222b; font-size: 15px; font-weight: 800;
-  &:hover { filter: brightness(1.08); }
+  ${btn('cyan')}
+  ${pixelBold}
+  padding: ${SP.sm};
+  color: ${C.text}; font-size: ${FONT.sm};
+  &:focus, &:focus-visible { outline: none; }
 `;
 
 const CenterMsg = styled.div`
-  flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 16px; padding: 40px;
+  flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: center;
+  gap: ${SP.md}; padding: ${SP.xxl};
 `;
 const Spinner = styled.div`
-  width: 30px; height: 30px; border: 3px solid rgba(255,255,255,0.2); border-top-color: ${ACCENT};
-  border-radius: 50%; animation: ${spin} 0.8s linear infinite;
+  width: 16px; height: 16px; background: ${C.cyan};
+  animation: ${blockBlink} 0.7s steps(1, end) infinite;
 `;
-const DimText = styled.div`font-size: 14px; color: rgba(255,255,255,0.45);`;
-const ErrText = styled.div`font-size: 14px; color: rgba(255,255,255,0.6); text-align: center; line-height: 1.6;`;
+const DimText = styled.div`font-size: ${FONT.sm}; color: ${C.textDim};`;
+const ErrText = styled.div`font-size: ${FONT.sm}; color: ${C.textSub}; text-align: center;`;
 
 const ResultWrap = styled.div`
-  flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 12px; padding: 40px 20px;
+  flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: center;
+  gap: ${SP.md}; padding: ${SP.xxl} ${SP.lg};
 `;
 const GradeBadge = styled.div<{ $g: number }>`
-  font-size: 20px; font-weight: 900; padding: 8px 22px; border-radius: 100px;
-  color: ${p => p.$g <= 2 ? '#fbbf24' : p.$g <= 4 ? '#34d399' : p.$g <= 6 ? '#38bdf8' : 'rgba(255,255,255,0.7)'};
-  background: ${p => p.$g <= 2 ? 'rgba(251,191,36,0.12)' : 'rgba(255,255,255,0.06)'};
-  border: 1px solid ${p => p.$g <= 2 ? 'rgba(251,191,36,0.35)' : 'rgba(255,255,255,0.12)'};
+  ${pixelBold}
+  font-size: ${FONT.sm}; padding: ${SP.xs} ${SP.md};
+  background: ${C.panelSunk};
+  border: ${SCALE}px solid ${C.ink};
+  color: ${p => (p.$g <= 2 ? C.gold : p.$g <= 4 ? C.green : p.$g <= 6 ? C.blue : C.textSub)};
 `;
 const ResultScore = styled.div`
-  font-size: 44px; font-weight: 900; color: ${ACCENT};
-  ${media.mobile} { font-size: 36px; }
+  ${pixelBold}
+  font-size: ${FONT.display}; color: ${C.cyan};
+  ${shadowLg}
 `;
 const NewBest = styled.div`
-  display: flex; align-items: center; gap: 6px; font-size: 14px; font-weight: 800; color: #fbbf24;
-  background: rgba(251,191,36,0.12); border: 1px solid rgba(251,191,36,0.3); padding: 6px 14px; border-radius: 100px;
+  ${winThin('gold')}
+  ${pixelBold}
+  display: flex; align-items: center; gap: ${SP.xs};
+  font-size: ${FONT.sm}; color: ${C.gold};
 `;
-const ResultStat = styled.div`font-size: 14px; color: rgba(255,255,255,0.6); font-weight: 600;`;
+const ResultStat = styled.div`font-size: ${FONT.sm}; color: ${C.textSub};`;
+/** 연습 판(10·30문항)에 붙는 안내 — 기록은 남지만 보드에는 올라가지 않는다. */
+const RankNote = styled.div`
+  ${winThin('plain')}
+  font-size: ${FONT.sm}; color: ${C.textDim};
+  max-width: 320px; text-align: center; word-break: keep-all;
+`;
 const MilestoneBox = styled.div`
-  display: flex; flex-direction: column; gap: 6px; align-items: center;
-  background: rgba(192,132,252,0.08); border: 1px solid rgba(192,132,252,0.25);
-  border-radius: 12px; padding: 12px 20px; margin: 4px 0;
+  ${winThin('purple')}
+  display: flex; flex-direction: column; gap: ${SP.xs}; align-items: center;
+  padding: ${SP.sm} ${SP.md}; margin: ${SP.xs} 0;
 `;
-const MilestoneTitle = styled.div`font-size: 13px; font-weight: 800; color: #c084fc;`;
+const MilestoneTitle = styled.div`
+  ${pixelBold}
+  font-size: ${FONT.sm}; color: ${C.purple};
+`;
 const MilestoneRow = styled.div`
-  display: flex; align-items: center; gap: 10px;
-  font-size: 13px; font-weight: 600; color: rgba(255,255,255,0.7);
+  display: flex; align-items: center; gap: ${SP.sm};
+  font-size: ${FONT.sm}; color: ${C.textSub};
 `;
-const MilestoneRw = styled.span<{ $c: string }>`font-weight: 800; color: ${p => p.$c};`;
-const ResultBtns = styled.div`display: flex; gap: 10px; margin-top: 16px;`;
+const MilestoneRw = styled.span<{ $c: string }>`
+  ${pixelBold}
+  color: ${p => p.$c};
+`;
+const ResultBtns = styled.div`display: flex; gap: ${SP.sm}; margin-top: ${SP.md};`;
 const PrimaryBtn = styled.button`
-  display: flex; align-items: center; gap: 6px; padding: 12px 22px; border-radius: 10px; border: none; cursor: pointer;
-  background: ${ACCENT}; color: #04222b; font-size: 15px; font-weight: 800;
-  &:hover { filter: brightness(1.08); }
+  ${btn('cyan')}
+  ${pixelBold}
+  display: flex; align-items: center; gap: ${SP.xs};
+  padding: ${SP.sm} ${SP.lg};
+  color: ${C.text}; font-size: ${FONT.sm};
+  &:focus, &:focus-visible { outline: none; }
 `;
 const GhostBtn = styled.button`
-  padding: 12px 22px; border-radius: 10px; cursor: pointer; font-size: 15px; font-weight: 700;
-  background: rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.12); color: rgba(255,255,255,0.75);
-  &:hover { background: rgba(255,255,255,0.1); }
+  ${btn('plain')}
+  ${pixelBold}
+  padding: ${SP.sm} ${SP.lg};
+  font-size: ${FONT.sm}; color: ${C.textSub};
+  &:focus, &:focus-visible { outline: none; }
 `;

@@ -1,6 +1,6 @@
 // src/components/ui/MapSelector.tsx
 import { useState } from "react";
-import styled, { keyframes } from "styled-components";
+import styled from "styled-components";
 import { media, lMedia } from "../../utils/responsive.utils";
 import { useTranslation } from "../../i18n";
 import { MAPS, mapThumbnail } from "../../data/maps";
@@ -8,15 +8,18 @@ import { useGameStore } from "../../store/gameStore";
 import { Difficulty, MapData } from "../../types/game";
 import { useNavigate } from "react-router-dom";
 import { Emoji } from "../shared/Emoji";
+import { Screen } from "../shared/screen";
+import { C, FONT, SP, SCALE } from "../../styles/tokens";
+import { btnThin, winThin, hudBar, pixelBold, shadowLg, type WinColor } from "../../styles/pixel";
 
 type DifficultyFilter = "easiest" | "easy" | "medium" | "hard" | "expert";
 
-const DIFF_META: Record<DifficultyFilter, { label: string; color: string; dot: string }> = {
-  easiest: { label: "EASIEST", color: "#94a3b8", dot: "⬜" },
-  easy:    { label: "EASY",    color: "#4ade80", dot: "🟢" },
-  medium:  { label: "MEDIUM",  color: "#60a5fa", dot: "🔵" },
-  hard:    { label: "HARD",    color: "#fb923c", dot: "🟠" },
-  expert:  { label: "EXPERT",  color: "#f87171", dot: "🔴" },
+const DIFF_META: Record<DifficultyFilter, { color: string; win: WinColor; dot: string }> = {
+  easiest: { color: C.plain,  win: 'plain',  dot: "⬜" },
+  easy:    { color: C.green,  win: 'green',  dot: "🟢" },
+  medium:  { color: C.blue,   win: 'blue',   dot: "🔵" },
+  hard:    { color: C.gold,   win: 'gold',   dot: "🟠" },
+  expert:  { color: C.red,    win: 'red',    dot: "🔴" },
 };
 
 export const MapSelector: React.FC<{ onSelect: (mapId: string) => void }> = ({ onSelect }) => {
@@ -57,7 +60,6 @@ export const MapSelector: React.FC<{ onSelect: (mapId: string) => void }> = ({ o
       <Header>
         <BackBtn onClick={() => navigate('/')}>←<span className="back-text"> {t('common.back')}</span></BackBtn>
         <HeaderCenter>
-          <HeaderEyebrow>POKEMON AEGIS</HeaderEyebrow>
           <HeaderTitle>{t('mapSelector.subtitle')}</HeaderTitle>
         </HeaderCenter>
         <HeaderRight />
@@ -65,13 +67,14 @@ export const MapSelector: React.FC<{ onSelect: (mapId: string) => void }> = ({ o
 
       {/* ── Filter pills ── */}
       <FilterBar>
-        <FilterPill $active={filter === null} $color="#f8fafc" onClick={() => setFilter(null)}>
+        <FilterPill $active={filter === null} $win="plain" $color={C.text} onClick={() => setFilter(null)}>
           {t('mapSelector.filterAll')}
         </FilterPill>
         {(Object.keys(DIFF_META) as DifficultyFilter[]).map(d => (
           <FilterPill
             key={d}
             $active={filter === d}
+            $win={DIFF_META[d].win}
             $color={DIFF_META[d].color}
             onClick={() => handleFilter(d)}
           >
@@ -86,14 +89,13 @@ export const MapSelector: React.FC<{ onSelect: (mapId: string) => void }> = ({ o
           <Empty>{t('mapSelector.noMaps')}</Empty>
         ) : (
           <Grid>
-            {shown.map((map, i) => {
+            {shown.map(map => {
               const meta = DIFF_META[map.difficulty as DifficultyFilter];
               return (
                 <Card
                   key={map.id}
                   $img={mapThumbnail(map)}
-                  $color={meta?.color ?? '#fff'}
-                  $delay={i * 40}
+                  $color={meta?.color ?? C.plain}
                   onMouseEnter={() => setHovered(map.id)}
                   onMouseLeave={() => setHovered(null)}
                   onClick={() => handleSelect(map)}
@@ -102,8 +104,9 @@ export const MapSelector: React.FC<{ onSelect: (mapId: string) => void }> = ({ o
                   <CardHoverOverlay $active={hovered === map.id} />
 
                   <CardTop>
-                    <DiffBadge $color={meta?.color ?? '#fff'}>
-                      <Emoji glyph={meta?.dot} size={11} color={meta?.color} /> {meta?.label ?? map.difficulty.toUpperCase()}
+                    <DiffBadge $win={meta?.win ?? 'plain'} $color={meta?.color ?? C.plain}>
+                      <Emoji glyph={meta?.dot} size={12} color={meta?.color} />
+                      {t(`mapSelector.${map.difficulty}`)}
                     </DiffBadge>
                   </CardTop>
 
@@ -111,7 +114,7 @@ export const MapSelector: React.FC<{ onSelect: (mapId: string) => void }> = ({ o
                     <CardTitle>{mapName(map)}</CardTitle>
                     <CardDesc>{mapDesc(map)}</CardDesc>
                     <SelectHint $active={hovered === map.id}>
-                      {t('mapSelector.clickToSelect')}
+                      ▶ {t('mapSelector.clickToSelect')}
                     </SelectHint>
                   </CardBottom>
                 </Card>
@@ -123,196 +126,186 @@ export const MapSelector: React.FC<{ onSelect: (mapId: string) => void }> = ({ o
     </Root>
   );
 };
-
-// ─── Animations ───────────────────────────────────────────────────────────────
-
-const fadeUp = keyframes`from{opacity:0;transform:translateY(14px)}to{opacity:1;transform:translateY(0)}`;
+// ─── Styled Components ────────────────────────────────────────────────────────
+// docs/DESIGN.md 의 디자인 시스템을 따른다.
+//
+// 걷어낸 것: eyebrow(POKEMON AEGIS, letter-spacing 0.3em), 대문자 영문 난이도
+//           배지(EASIEST/HARD), 알약 필터, backdrop-filter, hover 떠오름+글로우,
+//           둥근 모서리, 스태거 fadeUp, Tailwind 팔레트.
 
 // ─── Root ─────────────────────────────────────────────────────────────────────
 
-const Root = styled.div`
-  min-height:100vh;
-  background:radial-gradient(ellipse at top,#111827 0%,#070b14 60%,#000 100%);
-  display:flex; flex-direction:column;
-  color:#f8fafc;
-`;
+const Root = Screen;
 
 // ─── Header ───────────────────────────────────────────────────────────────────
 
 const Header = styled.header`
-  display:flex; align-items:center; justify-content:space-between;
-  padding:0 32px; height:64px;
-  background:rgba(255,255,255,0.025);
-  border-bottom:1px solid rgba(255,255,255,0.07);
-  backdrop-filter:blur(12px);
-  flex-shrink:0;
-  ${media.mobile} { padding:0 16px; height:52px; }
-  ${lMedia.phoneSm} { height:44px; padding:0 12px; }
+  ${hudBar}
+  display: flex; align-items: center; justify-content: space-between;
+  gap: ${SP.md};
+  padding: 0 ${SP.lg}; height: 60px;
+  flex-shrink: 0;
+  ${media.mobile}   { padding: 0 ${SP.md}; height: 52px; }
+  ${lMedia.phoneSm} { padding: 0 ${SP.sm}; height: 44px; }
 `;
 
 const BackBtn = styled.button`
-  background:rgba(255,255,255,0.05); border:1px solid rgba(255,255,255,0.1);
-  border-radius:8px; color:rgba(255,255,255,0.55); padding:8px 14px;
-  font-size:13px; cursor:pointer; transition:all 0.2s; white-space:nowrap;
-  &:hover { background:rgba(255,255,255,0.1); color:#fff; }
+  ${btnThin('plain')}
+  ${pixelBold}
+  padding: ${SP.xs} ${SP.sm};
+  font-size: ${FONT.sm};
+  color: ${C.text};
+  white-space: nowrap; flex-shrink: 0;
+  &:focus, &:focus-visible { outline: none; }
 
   .back-text {
     ${media.mobile} { display: none; }
   }
-
-  ${media.mobile} { padding:6px 10px; font-size:12px; }
 `;
 
 const HeaderCenter = styled.div`
-  text-align:center;
-  flex:1;
-  min-width:0;
-`;
-
-const HeaderEyebrow = styled.div`
-  font-size:10px; font-weight:700; letter-spacing:0.3em;
-  color:rgba(245,158,11,0.55);
-  ${media.mobile} { display:none; }
+  text-align: center;
+  flex: 1;
+  min-width: 0;
 `;
 
 const HeaderTitle = styled.h1`
-  font-size:18px; font-weight:800; color:#f8fafc;
-  margin:0; letter-spacing:-0.01em;
-  white-space:nowrap;
-  overflow:hidden;
-  text-overflow:ellipsis;
-  
-  ${media.mobile} { font-size:14px; }
-  ${lMedia.phoneSm} { font-size:12px; }
+  ${pixelBold}
+  font-size: ${FONT.sm}; color: ${C.gold};
+  margin: 0;
+  white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
 `;
 
 const HeaderRight = styled.div`
-  width:100px;
-  ${media.mobile} { width:32px; }
+  width: 88px;
+  ${media.mobile} { width: 32px; }
 `;
 
 // ─── Filter bar ───────────────────────────────────────────────────────────────
 
 const FilterBar = styled.div`
-  display:flex; align-items:center; gap:8px; flex-wrap:wrap;
-  padding:16px 32px;
-  border-bottom:1px solid rgba(255,255,255,0.06);
-  ${media.mobile} { padding:12px 16px; gap:6px; }
-  ${lMedia.phoneSm} { padding:8px 12px; gap:5px; }
+  display: flex; align-items: center; gap: ${SP.sm}; flex-wrap: wrap;
+  padding: ${SP.md} ${SP.lg};
+  border-bottom: ${SCALE}px solid ${C.ink};
+  ${media.mobile}   { padding: ${SP.sm} ${SP.md}; gap: ${SP.xs}; }
+  ${lMedia.phoneSm} { padding: ${SP.xs} ${SP.sm}; gap: ${SP.xs}; }
 `;
 
-const FilterPill = styled.button<{ $active: boolean; $color: string }>`
-  padding:7px 14px; border-radius:100px; font-size:13px; font-weight:600;
-  cursor:pointer; transition:all 0.2s; white-space:nowrap;
-  background:${p => p.$active ? `${p.$color}18` : 'rgba(255,255,255,0.04)'};
-  border:1px solid ${p => p.$active ? `${p.$color}55` : 'rgba(255,255,255,0.08)'};
-  color:${p => p.$active ? p.$color : 'rgba(255,255,255,0.45)'};
-  &:hover { background:${p => `${p.$color}12`}; border-color:${p=>`${p.$color}44`}; color:${p=>p.$color}; }
-  ${media.mobile} { padding:5px 10px; font-size:12px; }
-  ${lMedia.phoneSm} { padding:4px 8px; font-size:11px; }
+/** 알약이 아니라 얇은 창틀 버튼. 선택된 쪽만 난이도 색 창틀을 쓴다. */
+const FilterPill = styled.button<{ $active: boolean; $win: WinColor; $color: string }>`
+  ${p => btnThin(p.$active ? p.$win : 'plain')}
+  ${pixelBold}
+  padding: ${SP.xs} ${SP.sm};
+  font-size: ${FONT.sm};
+  color: ${p => (p.$active ? p.$color : C.textSub)};
+  white-space: nowrap;
+  display: inline-flex; align-items: center; gap: ${SP.xs};
+  &:focus, &:focus-visible { outline: none; }
 `;
 
 // ─── Grid area ────────────────────────────────────────────────────────────────
 
 const GridArea = styled.div`
-  flex:1; padding:28px 32px 40px; overflow-y:auto;
+  flex: 1; padding: ${SP.xl} ${SP.lg} ${SP.xxl}; overflow-y: auto;
   display: flex; flex-direction: column; align-items: center;
-  ${media.mobile} { padding:20px 16px 32px; }
-  ${lMedia.phoneSm} { padding:12px 12px 24px; }
+  ${media.mobile}   { padding: ${SP.lg} ${SP.md} ${SP.xl}; }
+  ${lMedia.phoneSm} { padding: ${SP.md} ${SP.md} ${SP.lg}; }
 `;
 
 const Grid = styled.div`
-  display:grid;
-  grid-template-columns:repeat(4, minmax(0, 280px));
-  gap:16px;
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 280px));
+  gap: ${SP.lg};
   width: 100%;
   max-width: 1200px;
   justify-content: center;
-  ${media.tablet} { grid-template-columns:repeat(2,1fr); gap:12px; max-width: 640px; }
-  ${media.mobile} { grid-template-columns:1fr; gap:10px; max-width: 400px; }
-  ${lMedia.tablet} { grid-template-columns:repeat(4, minmax(0,220px)); gap:12px; }
-  ${lMedia.phoneSm} { grid-template-columns:repeat(2,1fr); gap:8px; max-width: 600px; }
+  ${media.tablet}   { grid-template-columns: repeat(2,1fr); gap: ${SP.md}; max-width: 640px; }
+  ${media.mobile}   { grid-template-columns: 1fr; gap: ${SP.sm}; max-width: 400px; }
+  ${lMedia.tablet}  { grid-template-columns: repeat(4, minmax(0,220px)); gap: ${SP.md}; }
+  ${lMedia.phoneSm} { grid-template-columns: repeat(2,1fr); gap: ${SP.sm}; max-width: 600px; }
 `;
 
-const Card = styled.div<{ $img: string; $color: string; $delay: number }>`
-  position:relative; border-radius:16px; overflow:hidden;
-  height:220px; cursor:pointer;
-  background-image:url(${p=>p.$img});
-  background-size:cover; background-position:center;
-  background-color:#111827;
-  border:1px solid rgba(255,255,255,0.08);
-  display:flex; flex-direction:column; justify-content:space-between;
-  transition:transform 0.25s ease, box-shadow 0.25s ease, border-color 0.25s ease;
-  animation:${fadeUp} 0.45s ease both;
-  animation-delay:${p=>p.$delay}ms;
+/**
+ * 맵 카드 — 창틀 PNG를 쓸 수 없다. border-image의 fill이 가운데까지 덮어
+ * 썸네일이 가려지기 때문이다. 대신 같은 문법(검은 외곽선 + 액센트 띠)을
+ * 두 겹의 하드 테두리로 직접 그린다. 블러 없는 inset이라 창틀과 붙여 놔도
+ * 이질감이 없다.
+ */
+const Card = styled.div<{ $img: string; $color: string }>`
+  position: relative; overflow: hidden;
+  height: 220px; cursor: pointer;
+  background-image: url(${p => p.$img});
+  background-size: cover; background-position: center;
+  background-color: ${C.ink};
+  image-rendering: pixelated;
+  border: ${SCALE}px solid ${C.ink};
+  box-shadow: inset 0 0 0 ${SCALE}px ${p => p.$color};
+  display: flex; flex-direction: column; justify-content: space-between;
 
-  &:hover {
-    transform:translateY(-4px) scale(1.01);
-    border-color:${p=>p.$color}55;
-    box-shadow:0 20px 48px rgba(0,0,0,0.6), 0 0 0 1px ${p=>p.$color}22;
-  }
-  &:active { transform:scale(0.99); }
-
-  ${media.mobile} { height:180px; border-radius:12px; }
-  ${lMedia.phoneSm} { height:150px; border-radius:10px; }
+  ${media.mobile}   { height: 180px; }
+  ${lMedia.phoneSm} { height: 150px; }
 `;
 
+/** 썸네일 위 스크림 — 글자가 어떤 맵 위에서도 읽히게. */
 const CardOverlay = styled.div`
-  position:absolute; inset:0;
-  background:linear-gradient(180deg, rgba(0,0,0,0.2) 0%, rgba(0,0,0,0.75) 100%);
-  pointer-events:none;
+  position: absolute; inset: 0;
+  background: linear-gradient(180deg, rgba(22,27,40,0.25) 0%, rgba(22,27,40,0.86) 100%);
+  pointer-events: none;
 `;
 
-const CardHoverOverlay = styled.div<{$active:boolean}>`
-  position:absolute; inset:0;
-  background:rgba(255,255,255,0.03);
-  opacity:${p=>p.$active?1:0}; transition:opacity 0.2s;
-  pointer-events:none;
+const CardHoverOverlay = styled.div<{ $active: boolean }>`
+  position: absolute; inset: 0;
+  background: rgba(255,255,255,0.06);
+  opacity: ${p => (p.$active ? 1 : 0)};
+  pointer-events: none;
 `;
 
 const CardTop = styled.div`
-  position:relative; z-index:2; padding:14px 16px;
-  ${lMedia.phoneSm} { padding:10px 12px; }
+  position: relative; z-index: 2; padding: ${SP.md};
+  ${lMedia.phoneSm} { padding: ${SP.sm}; }
 `;
 
-const DiffBadge = styled.div<{$color:string}>`
-  display:inline-flex; align-items:center; gap:5px;
-  padding:4px 10px; border-radius:100px;
-  background:rgba(0,0,0,0.5); backdrop-filter:blur(4px);
-  border:1px solid ${p=>p.$color}44;
-  font-size:11px; font-weight:800; letter-spacing:0.1em;
-  color:${p=>p.$color};
-  ${lMedia.phoneSm} { font-size:10px; padding:3px 8px; }
+/** 난이도 배지 — 대문자 영문(EASIEST)이 아니라 번역된 난이도 이름. */
+const DiffBadge = styled.div<{ $win: WinColor; $color: string }>`
+  ${p => winThin(p.$win)}
+  ${pixelBold}
+  display: inline-flex; align-items: center; gap: ${SP.xs};
+  padding: ${SP.xs} ${SP.sm};
+  font-size: ${FONT.sm};
+  color: ${p => p.$color};
 `;
 
 const CardBottom = styled.div`
-  position:relative; z-index:2; padding:14px 16px;
-  ${lMedia.phoneSm} { padding:10px 12px; }
+  position: relative; z-index: 2; padding: ${SP.md};
+  ${lMedia.phoneSm} { padding: ${SP.sm}; }
 `;
 
 const CardTitle = styled.h3`
-  font-size:20px; font-weight:800; color:#fff;
-  margin:0 0 6px; text-shadow:0 2px 4px rgba(0,0,0,0.5);
-  ${media.mobile} { font-size:17px; }
-  ${lMedia.phoneSm} { font-size:14px; margin-bottom:3px; }
+  ${pixelBold}
+  ${shadowLg}
+  font-size: ${FONT.xl}; color: ${C.text};
+  margin: 0 0 ${SP.xs};
+  ${media.mobile}   { font-size: ${FONT.sm}; }
+  ${lMedia.phoneSm} { font-size: ${FONT.sm}; }
 `;
 
 const CardDesc = styled.p`
-  font-size:13px; color:rgba(255,255,255,0.6);
-  line-height:1.4; margin:0 0 10px;
-  ${media.mobile} { font-size:12px; }
-  ${lMedia.phoneSm} { font-size:11px; display:none; }
+  font-size: ${FONT.sm}; color: ${C.textSub};
+  margin: 0 0 ${SP.sm};
+  word-break: keep-all;
+  ${lMedia.phoneSm} { display: none; }
 `;
 
-const SelectHint = styled.div<{$active:boolean}>`
-  font-size:12px; font-weight:700; color:#f59e0b;
-  letter-spacing:0.04em;
-  opacity:${p=>p.$active?1:0}; transform:${p=>p.$active?'translateX(0)':'translateX(-8px)'};
-  transition:all 0.2s;
-  ${lMedia.phoneSm} { display:none; }
+/** hover 안내 — 글로우 대신 ▶ 커서. */
+const SelectHint = styled.div<{ $active: boolean }>`
+  ${pixelBold}
+  font-size: ${FONT.sm}; color: ${C.gold};
+  opacity: ${p => (p.$active ? 1 : 0)};
+  ${lMedia.phoneSm} { display: none; }
 `;
 
 const Empty = styled.div`
-  text-align:center; padding:80px 20px;
-  font-size:18px; color:rgba(255,255,255,0.3); font-weight:600;
+  ${pixelBold}
+  text-align: center; padding: ${SP.xxl} ${SP.lg};
+  font-size: ${FONT.sm}; color: ${C.textDim};
 `;

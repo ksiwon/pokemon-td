@@ -3,9 +3,10 @@
 // Design: Dark epic fantasy · Amber/cyan accent · Animated chapter cards
 
 import React, { useState, useEffect, useCallback } from 'react';
-import styled, { keyframes } from 'styled-components';
+import styled, { css, keyframes } from 'styled-components';
 import { useNavigate } from 'react-router-dom';
 import { AEGIS_STORY_CHAPTERS, StoryChapter } from '../../data/storyChapters';
+import { Screen, ScreenBackBtn, SectionLabel } from '../shared/screen';
 import {
   storyProgressService,
   ChapterProgress,
@@ -15,6 +16,8 @@ import { Emoji } from '../shared/Emoji';
 import { media, lMedia } from '../../utils/responsive.utils';
 import { StoryOpening } from './StoryOpening';
 import { useTranslation } from '../../i18n';
+import { C, FONT, SP, SCALE, TYPE_COLOR, ICON } from '../../styles/tokens';
+import { winThin, btn, sunken, hudBar, backdrop, pixelBold, shadowLg } from '../../styles/pixel';
 
 export interface StoryStartData {
   mapId: string;
@@ -241,17 +244,9 @@ export const StorySelector: React.FC<StorySelectorProps> = ({ onStart }) => {
 
   return (
     <Root>
-      {/* Animated background particles */}
-      <ParticleLayer aria-hidden="true">
-        {Array.from({ length: 24 }).map((_, i) => (
-          <Particle key={i} $i={i} />
-        ))}
-      </ParticleLayer>
-
       <Header $visible={!showIntro}>
         <BackBtn onClick={() => navigate('/')}>←<span className="back-text"> {t('common.back')}</span></BackBtn>
         <HeaderCenter>
-          <AegisLabel>POKEMON AEGIS</AegisLabel>
           <PageTitle>{t('storyUI.worldTitle')}</PageTitle>
           <PageSubtitle>{t('storyUI.worldSub')}</PageSubtitle>
         </HeaderCenter>
@@ -292,7 +287,6 @@ export const StorySelector: React.FC<StorySelectorProps> = ({ onStart }) => {
                 $selected={isSelected}
                 $suggested={isSuggested && !cp.cleared}
                 $accent={ch.theme.primary}
-                $delay={idx * 60}
                 onClick={() => handleSelect(idx)}
                 
                 
@@ -312,10 +306,10 @@ export const StorySelector: React.FC<StorySelectorProps> = ({ onStart }) => {
                   $unlocked={unlocked}
                 >
                   {!unlocked && <LockIcon><Emoji glyph="🔒" size={16} /></LockIcon>}
-                  {cp.cleared && <ClearedBadge>CLEAR</ClearedBadge>}
+                  {cp.cleared && <ClearedBadge>{t('storyUI.badgeClear')}</ClearedBadge>}
                   {isSuggested && !cp.cleared && (
                     <SuggestedBadge $accent={ch.theme.primary}>
-                      NEXT
+                      {t('storyUI.badgeNext')}
                     </SuggestedBadge>
                   )}
                 </CardThumb>
@@ -324,7 +318,7 @@ export const StorySelector: React.FC<StorySelectorProps> = ({ onStart }) => {
                 <CardBody>
                   <CardMeta>
                     <ChapterNum $accent={ch.theme.primary}>
-                      CH.{String(ch.chapterNumber).padStart(2, '0')}
+                      {t('storyUI.chapterShort', { n: ch.chapterNumber })}
                     </ChapterNum>
                     <LocationTag>{chLoc(ch).split('·')[0].trim()}</LocationTag>
                   </CardMeta>
@@ -344,8 +338,6 @@ export const StorySelector: React.FC<StorySelectorProps> = ({ onStart }) => {
                   )}
                 </CardBody>
 
-                {/* Selection glow */}
-                {isSelected && <SelectGlow $accent={ch.theme.primary} />}
               </ChapterCard>
               {/* 스택 모드: 누른 카드 바로 밑에 상세패널 인라인 삽입 */}
               {isStacked && isSelected && (
@@ -376,7 +368,6 @@ export const StorySelector: React.FC<StorySelectorProps> = ({ onStart }) => {
       {/* Intro overlay */}
       {showIntro && (
         <IntroOverlay>
-          <IntroAegis>POKEMON AEGIS</IntroAegis>
           <IntroTitle>{t('storyUI.worldTitle')}</IntroTitle>
           <IntroSub>{t('storyUI.worldSubShort')}</IntroSub>
         </IntroOverlay>
@@ -385,136 +376,72 @@ export const StorySelector: React.FC<StorySelectorProps> = ({ onStart }) => {
   );
 };
 
-// ─── Type color map ───────────────────────────────────────────────────────────
-
-const TYPE_COLORS: Record<string, string> = {
-  normal: '#A8A878',
-  fire: '#F08030',
-  water: '#6890F0',
-  grass: '#78C850',
-  electric: '#F8D030',
-  ice: '#98D8D8',
-  fighting: '#C03028',
-  poison: '#A040A0',
-  ground: '#E0C068',
-  flying: '#A890F0',
-  psychic: '#F85888',
-  bug: '#A8B820',
-  rock: '#B8A038',
-  ghost: '#705898',
-  dragon: '#7038F8',
-  dark: '#705848',
-  steel: '#B8B8D0',
-  fairy: '#EE99AC',
-};
-
 // ─── Animations ───────────────────────────────────────────────────────────────
-
-const fadeUp = keyframes`
-  from { opacity: 0; transform: translateY(24px) }
-  to   { opacity: 1; transform: translateY(0) }
-`;
-
-const shimmer = keyframes`
-  0%   { background-position: -200% center }
-  100% { background-position: 200% center }
-`;
-
-const particleFloat = keyframes`
-  0%   { transform: translateY(0);    opacity: 0.3; }
-  50%  { transform: translateY(-40px); opacity: 0.7; }
-  100% { transform: translateY(-80px); opacity: 0; }
-`;
+//
+// 걷어낸 것: 떠다니는 입자(particleFloat), 진행바 무지개 흐름(shimmer),
+//           선택 카드 글로우(glowPulse), 스태거 fadeUp.
+// 남긴 것: 인트로 타이틀 카드. 화면 전환 연출은 게임에서도 쓰는 문법이다.
 
 const introPulse = keyframes`
-  0%   { opacity: 0; transform: scale(0.9) }
-  40%  { opacity: 1; transform: scale(1) }
-  80%  { opacity: 1; transform: scale(1) }
-  100% { opacity: 0; transform: scale(1.02) }
+  0%   { opacity: 0; }
+  20%  { opacity: 1; }
+  80%  { opacity: 1; }
+  100% { opacity: 0; }
 `;
 
-const glowPulse = keyframes`
-  0%, 100% { opacity: 0.6 }
-  50%       { opacity: 1 }
-`;
-
-// ─── Styled Components ────────────────────────────────────────────────────────
-
-const Root = styled.div`
-  min-height: 100vh;
-  background: #050810;
-  color: #fff;
-  display: flex;
-  flex-direction: column;
-  overflow: hidden;
-  position: relative;
-  font-family: 'Segoe UI', system-ui, sans-serif;
-`;
-
-const ParticleLayer = styled.div`
-  position: fixed;
-  inset: 0;
-  pointer-events: none;
-  z-index: 0;
-  overflow: hidden;
-`;
-
-const Particle = styled.div<{ $i: number }>`
-  position: absolute;
-  width: ${(p) => 2 + (p.$i % 3)}px;
-  height: ${(p) => 2 + (p.$i % 3)}px;
-  border-radius: 50%;
-  background: ${(p) =>
-    p.$i % 3 === 0
-      ? 'rgba(200,160,32,0.5)'
-      : p.$i % 3 === 1
-      ? 'rgba(76,201,240,0.4)'
-      : 'rgba(255,255,255,0.25)'};
-  left: ${(p) => (p.$i * 4.17) % 100}%;
-  top: ${(p) => 20 + ((p.$i * 7.3) % 70)}%;
-  animation: ${particleFloat} ${(p) => 4 + (p.$i % 5)}s
-    ${(p) => (p.$i * 0.4) % 3}s ease-in-out infinite alternate;
-`;
-
-const Header = styled.header<{ $visible: boolean }>`
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  padding: 20px 32px 16px;
-  border-bottom: 1px solid rgba(255, 255, 255, 0.06);
-  position: relative;
-  z-index: 10;
-  opacity: ${(p) => (p.$visible ? 1 : 0)};
-  transition: opacity 0.6s ease 0.4s;
-
-  ${media.mobile} { padding: 12px 16px; gap: 8px; }
-  ${lMedia.tablet} { padding: 10px 20px 8px; }
-  ${lMedia.phoneSm} { padding: 8px 12px; gap: 6px; }
-`;
-
-const BackBtn = styled.button`
-  background: rgba(255, 255, 255, 0.05);
-  border: 1px solid rgba(255, 255, 255, 0.1);
-  color: rgba(255, 255, 255, 0.6);
-  padding: 8px 16px;
-  border-radius: 8px;
-  cursor: pointer;
-  font-size: 13px;
-  font-weight: 600;
-  transition: all 0.2s;
-  white-space: nowrap;
-
-  &:hover {
-    background: rgba(255, 255, 255, 0.1);
-    color: #fff;
-  }
-
+/** 카드 위에 얹는 배지(클리어·추천) 공통 바탕. */
+/** 좁은 화면에서는 글자를 접고 화살표만 남긴다. */
+const BackBtn = styled(ScreenBackBtn)`
   .back-text {
     ${media.mobile} { display: none; }
   }
+`;
 
-  ${media.mobile} { font-size: 12px; padding: 6px 10px; }
-  ${lMedia.phoneSm} { font-size: 11px; padding: 5px 8px; }
+const badgeBase = css`
+  ${pixelBold}
+  position: absolute;
+  top: ${SP.xs};
+  left: ${SP.xs};
+  border: 2px solid ${C.ink};
+  font-size: ${FONT.sm};
+  line-height: 1.3;
+  padding: ${SP.xs} ${SP.sm};
+  z-index: 2;
+  text-shadow: none;
+`;
+
+/** 도트 스크롤바 — 기본 스크롤바는 이 화면에서 유일한 '웹' 요소가 된다. */
+const scrollArea = css`
+  &::-webkit-scrollbar { width: 10px; }
+  &::-webkit-scrollbar-track { background: ${C.panelSunk}; border: ${SCALE}px solid ${C.ink}; }
+  &::-webkit-scrollbar-thumb { background: ${C.divider}; border: ${SCALE}px solid ${C.ink}; }
+`;
+
+const suggestPulse = keyframes`
+  0%,  49%  { opacity: 1;    }
+  50%, 100% { opacity: 0.45; }
+`;
+
+const Root = styled(Screen)`
+  ${backdrop('medium_multi_s')}
+  overflow: hidden;
+  position: relative;
+`;
+
+const Header = styled.header<{ $visible: boolean }>`
+  ${hudBar}
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: ${SP.md};
+  padding: ${SP.sm} ${SP.lg};
+  position: relative;
+  z-index: 10;
+  opacity: ${p => (p.$visible ? 1 : 0)};
+
+  ${media.mobile}   { padding: ${SP.xs} ${SP.sm}; gap: ${SP.sm}; }
+  ${lMedia.tablet}  { padding: ${SP.xs} ${SP.md}; }
+  ${lMedia.phoneSm} { padding: ${SP.xs} ${SP.sm}; gap: ${SP.xs}; }
 `;
 
 const HeaderCenter = styled.div`
@@ -523,192 +450,107 @@ const HeaderCenter = styled.div`
   min-width: 0;
 `;
 
-const AegisLabel = styled.div`
-  font-size: 10px;
-  font-weight: 700;
-  letter-spacing: 0.3em;
-  color: #c8a020;
-  margin-bottom: 4px;
-  ${media.mobile} { font-size: 9px; letter-spacing: 0.2em; margin-bottom: 2px; }
-`;
-
 const PageTitle = styled.h1`
-  font-size: 26px;
-  font-weight: 700;
-  background: linear-gradient(135deg, #fff 30%, #c8a020 100%);
-  -webkit-background-clip: text;
-  -webkit-text-fill-color: transparent;
-  background-clip: text;
+  ${pixelBold}
+  font-size: ${FONT.sm};
+  color: ${C.gold};
   margin: 0;
-  line-height: 1.2;
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
-
-  ${media.tablet} { font-size: 22px; }
-  ${media.mobile} { font-size: 16px; }
-  ${lMedia.tablet} { font-size: 20px; }
-  ${lMedia.phoneSm} { font-size: 14px; }
+  white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
 `;
 
 const PageSubtitle = styled.div`
-  font-size: 12px;
-  color: rgba(255, 255, 255, 0.35);
-  letter-spacing: 0.12em;
-  margin-top: 3px;
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
-
-  ${media.mobile} { font-size: 10px; letter-spacing: 0.04em; }
+  font-size: ${FONT.sm};
+  color: ${C.textSub};
+  white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+  ${media.mobile} { display: none; }
 `;
 
 const ProgressSummary = styled.div`
   display: flex;
-  gap: 20px;
+  gap: ${SP.md};
   text-align: right;
   flex-shrink: 0;
-
-  ${media.mobile} { gap: 10px; }
 `;
 
+/** 숫자와 라벨을 세로로 묶기만 하는 칸. */
 const ProgressStat = styled.div``;
 
 const ProgressNum = styled.div`
-  font-size: 22px;
-  font-weight: 700;
-  color: #c8a020;
-  line-height: 1;
-
-  ${media.mobile} { font-size: 16px; }
-  ${lMedia.phoneSm} { font-size: 14px; }
+  ${pixelBold}
+  font-size: ${FONT.sm};
+  color: ${C.gold};
+  line-height: 1.3;
 `;
 
 const ProgressLabel = styled.div`
-  font-size: 11px;
-  color: rgba(255, 255, 255, 0.4);
-  margin-top: 2px;
-  ${media.mobile} { font-size: 9px; }
+  font-size: ${FONT.sm};
+  color: ${C.textDim};
 `;
 
 const GlobalProgressBar = styled.div<{ $visible: boolean }>`
-  height: 2px;
-  background: rgba(255, 255, 255, 0.06);
+  height: ${SCALE * 2}px;
+  background: ${C.panelSunk};
+  border-bottom: ${SCALE}px solid ${C.ink};
   position: relative;
   z-index: 10;
-  opacity: ${(p) => (p.$visible ? 1 : 0)};
-  transition: opacity 0.6s ease 0.5s;
+  opacity: ${p => (p.$visible ? 1 : 0)};
 `;
 
 const GlobalProgressFill = styled.div<{ $pct: number }>`
   height: 100%;
-  width: ${(p) => p.$pct}%;
-  background: linear-gradient(90deg, #c8a020, #f59e0b, #4cc9f0);
-  background-size: 200%;
-  animation: ${shimmer} 3s linear infinite;
-  transition: width 1s ease;
+  width: ${p => p.$pct}%;
+  background: ${C.gold};
 `;
 
 const MainLayout = styled.div<{ $visible: boolean }>`
   flex: 1;
   display: grid;
   grid-template-columns: 1fr 360px;
-  gap: 0;
   overflow: hidden;
   position: relative;
   z-index: 5;
-  opacity: ${(p) => (p.$visible ? 1 : 0)};
-  transition: opacity 0.6s ease 0.6s;
+  opacity: ${p => (p.$visible ? 1 : 0)};
 
   @media (max-width: 900px) {
     grid-template-columns: 1fr;
     overflow-y: auto;
   }
-
-  /* 태블릿 가로(landscape): 오른쪽 패널을 좀 더 좁게 */
-  ${lMedia.tablet} {
-    grid-template-columns: 1fr 300px;
-    overflow: hidden;
-  }
-  /* 폰 가로(landscape): 단일 열로 전환하되 스크롤 허용 */
-  ${lMedia.phoneSm} {
-    grid-template-columns: 1fr;
-    overflow-y: auto;
-  }
+  ${lMedia.tablet}  { grid-template-columns: 1fr 300px; overflow: hidden; }
+  ${lMedia.phoneSm} { grid-template-columns: 1fr; overflow-y: auto; }
 `;
 
 const ChapterList = styled.div`
   display: flex;
   flex-direction: column;
-  gap: 0;
   overflow-y: auto;
-  padding: 20px 24px;
+  padding: ${SP.lg};
+  ${scrollArea}
 
-  /* Custom scrollbar */
-  &::-webkit-scrollbar { width: 4px; }
-  &::-webkit-scrollbar-track { background: transparent; }
-  &::-webkit-scrollbar-thumb {
-    background: rgba(200, 160, 32, 0.3);
-    border-radius: 2px;
-  }
-
-  @media (max-width: 900px) {
-    padding: 16px;
-    overflow-y: visible;
-  }
-
-  ${lMedia.tablet} {
-    padding: 12px 16px;
-    overflow-y: auto;
-  }
-  ${lMedia.phoneSm} {
-    padding: 10px 12px;
-    overflow-y: visible;
-  }
+  @media (max-width: 900px) { padding: ${SP.md}; overflow-y: visible; }
+  ${lMedia.tablet}  { padding: ${SP.md}; overflow-y: auto; }
+  ${lMedia.phoneSm} { padding: ${SP.sm}; overflow-y: visible; }
 `;
 
 const ChapterCard = styled.div<{
-  $unlocked: boolean;
-  $cleared: boolean;
-  $selected: boolean;
-  $suggested: boolean;
-  $accent: string;
-  $delay: number;
+  $unlocked: boolean; $cleared: boolean; $selected: boolean; $suggested: boolean; $accent: string;
 }>`
   display: flex;
   align-items: stretch;
-  gap: 0;
-  border-radius: 12px;
-  margin-bottom: 10px;
+  margin-bottom: ${SP.sm};
   overflow: hidden;
-  cursor: ${(p) => (p.$unlocked ? 'pointer' : 'not-allowed')};
-  opacity: ${(p) => (p.$unlocked ? 1 : 0.45)};
+  cursor: ${p => (p.$unlocked ? 'pointer' : 'not-allowed')};
+  opacity: ${p => (p.$unlocked ? 1 : 0.45)};
   position: relative;
-  border: 1.5px solid
-    ${(p) =>
-      p.$selected
-        ? p.$accent
-        : p.$suggested
-        ? `${p.$accent}66`
-        : 'rgba(255,255,255,0.07)'};
-  background: ${(p) =>
-    p.$selected
-      ? `rgba(255,255,255,0.05)`
-      : 'rgba(255,255,255,0.025)'};
-  transition: border-color 0.25s, background 0.25s, transform 0.2s, opacity 0.25s;
-  animation: ${fadeUp} 0.5s ease both;
-  animation-delay: ${(p) => p.$delay}ms;
+  background: ${C.panel};
+  border: ${SCALE}px solid ${C.ink};
+  box-shadow: inset 0 0 0 ${SCALE}px
+    ${p => (p.$selected || p.$suggested ? p.$accent : C.divider)};
 
-  &:hover {
-    transform: ${(p) => (p.$unlocked ? 'translateX(4px)' : 'none')};
-    border-color: ${(p) =>
-      p.$unlocked ? `${p.$accent}aa` : 'rgba(255,255,255,0.07)'};
-    background: ${(p) =>
-      p.$unlocked ? 'rgba(255,255,255,0.06)' : 'rgba(255,255,255,0.025)'};
+  @media (hover: hover) {
+    &:hover { box-shadow: inset 0 0 0 ${SCALE}px ${p => (p.$unlocked ? p.$accent : C.divider)}; }
   }
 
-  ${media.mobile} { margin-bottom: 8px; }
-  ${lMedia.phoneSm} { margin-bottom: 6px; }
+  &:focus-visible { outline: none; box-shadow: inset 0 0 0 ${SCALE}px ${p => p.$accent}; }
 `;
 
 const CardThumb = styled.div<{ $unlocked: boolean }>`
@@ -716,22 +558,22 @@ const CardThumb = styled.div<{ $unlocked: boolean }>`
   flex-shrink: 0;
   background-size: cover;
   background-position: center;
+  background-color: ${C.ink};
+  image-rendering: pixelated;
   position: relative;
   overflow: hidden;
 
-  /* dim overlay on thumbnail */
   &::after {
     content: '';
     position: absolute;
     inset: 0;
-    background: ${(p) =>
-      p.$unlocked
-        ? 'linear-gradient(90deg, transparent 50%, rgba(5,8,16,0.9) 100%)'
-        : 'rgba(5,8,16,0.7)'};
+    background: ${p => (p.$unlocked
+      ? 'linear-gradient(90deg, transparent 50%, rgba(22,27,40,0.9) 100%)'
+      : 'rgba(22,27,40,0.75)')};
   }
 
-  ${media.mobile} { width: 90px; }
-  ${lMedia.tablet} { width: 100px; }
+  ${media.mobile}   { width: 90px; }
+  ${lMedia.tablet}  { width: 100px; }
   ${lMedia.phoneSm} { width: 72px; }
 `;
 
@@ -741,100 +583,64 @@ const LockIcon = styled.div`
   display: flex;
   align-items: center;
   justify-content: center;
-  font-size: 24px;
+  font-size: ${ICON.lg}px;
   z-index: 1;
 `;
 
 const ClearedBadge = styled.div`
-  position: absolute;
-  top: 8px;
-  left: 8px;
-  background: rgba(74, 222, 128, 0.9);
-  color: #052e16;
-  font-size: 9px;
-  font-weight: 800;
-  letter-spacing: 0.12em;
-  padding: 3px 6px;
-  border-radius: 4px;
-  z-index: 2;
+  ${badgeBase}
+  background: ${C.green};
+  color: ${C.ink};
 `;
 
 const SuggestedBadge = styled.div<{ $accent: string }>`
-  position: absolute;
-  top: 8px;
-  left: 8px;
-  background: ${(p) => p.$accent};
-  color: #000;
-  font-size: 9px;
-  font-weight: 800;
-  letter-spacing: 0.12em;
-  padding: 3px 6px;
-  border-radius: 4px;
-  z-index: 2;
-  animation: ${glowPulse} 1.5s ease-in-out infinite;
+  ${badgeBase}
+  background: ${p => p.$accent};
+  color: ${C.ink};
+  animation: ${suggestPulse} 1s steps(1, end) infinite;
 `;
 
 const CardBody = styled.div`
   flex: 1;
-  padding: 12px 16px;
+  min-width: 0;
+  padding: ${SP.sm} ${SP.md};
   display: flex;
   flex-direction: column;
-  gap: 3px;
 
-  ${media.mobile} { padding: 10px 12px; }
-  ${lMedia.phoneSm} { padding: 8px 10px; }
+  ${lMedia.phoneSm} { padding: ${SP.xs} ${SP.sm}; }
 `;
 
 const CardMeta = styled.div`
   display: flex;
   align-items: center;
-  gap: 8px;
-  margin-bottom: 2px;
+  gap: ${SP.sm};
 `;
 
 const ChapterNum = styled.div<{ $accent: string }>`
-  font-size: 11px;
-  font-weight: 800;
-  color: ${(p) => p.$accent};
-  letter-spacing: 0.1em;
+  ${pixelBold}
+  font-size: ${FONT.sm};
+  color: ${p => p.$accent};
 `;
 
 const LocationTag = styled.div`
-  font-size: 11px;
-  color: rgba(255, 255, 255, 0.35);
+  font-size: ${FONT.sm};
+  color: ${C.textDim};
 `;
 
 const CardTitle = styled.div<{ $unlocked: boolean }>`
-  font-size: 16px;
-  font-weight: 700;
-  color: ${(p) => (p.$unlocked ? '#fff' : 'rgba(255,255,255,0.4)')};
-  line-height: 1.2;
-
-  ${media.mobile} { font-size: 14px; }
-  ${lMedia.phoneSm} { font-size: 13px; }
+  ${pixelBold}
+  font-size: ${FONT.md};
+  color: ${p => (p.$unlocked ? C.text : C.textDim)};
 `;
 
 const CardSubtitle = styled.div<{ $unlocked: boolean }>`
-  font-size: 12px;
-  color: ${(p) =>
-    p.$unlocked ? 'rgba(255,255,255,0.5)' : 'rgba(255,255,255,0.25)'};
-  margin-bottom: 4px;
+  font-size: ${FONT.sm};
+  color: ${p => (p.$unlocked ? C.textSub : C.textDim)};
 `;
 
 const LockedText = styled.div`
-  font-size: 11px;
-  color: rgba(255, 255, 255, 0.25);
-  font-style: italic;
-`;
-
-const SelectGlow = styled.div<{ $accent: string }>`
-  position: absolute;
-  inset: -1px;
-  border-radius: 12px;
-  border: 1.5px solid ${(p) => p.$accent};
-  pointer-events: none;
-  box-shadow: 0 0 12px ${(p) => p.$accent}44, inset 0 0 12px ${(p) => p.$accent}11;
-  animation: ${glowPulse} 1.8s ease-in-out infinite;
+  font-size: ${FONT.sm};
+  color: ${C.textDim};
 `;
 
 const StarRow = styled.div`
@@ -843,58 +649,52 @@ const StarRow = styled.div`
 `;
 
 const Star = styled.span<{ $filled: boolean }>`
-  font-size: 14px;
-  color: ${(p) => (p.$filled ? '#f59e0b' : 'rgba(255,255,255,0.15)')};
-  line-height: 1;
+  font-size: ${ICON.md}px;
+  color: ${p => (p.$filled ? C.gold : C.divider)};
+  line-height: 1.3;
 `;
 
-// ─── Detail panel ─────────────────────────────────────────────────────────────
-
-// 스택(단일 열) 레이아웃에서 선택한 카드 바로 밑에 끼워넣는 인라인 상세패널
+/** 좁은 화면에서 카드 아래에 접혀 들어가는 상세. */
 const InlineDetail = styled.div<{ $accent: string }>`
   display: flex;
   flex-direction: column;
-  border-radius: 12px;
   overflow: hidden;
-  margin: -2px 0 12px;
-  border: 1.5px solid ${(p) => p.$accent}66;
-  background: rgba(255, 255, 255, 0.02);
-  animation: ${fadeUp} 0.35s ease both;
+  margin: 0 0 ${SP.md};
+  background: ${C.panel};
+  border: ${SCALE}px solid ${C.ink};
+  box-shadow: inset 0 0 0 ${SCALE}px ${p => p.$accent};
 `;
 
 const DetailPanel = styled.div<{ $visible: boolean }>`
-  border-left: 1px solid rgba(255, 255, 255, 0.07);
+  background: ${C.panel};
+  border-left: ${SCALE}px solid ${C.ink};
   display: flex;
   flex-direction: column;
   overflow: hidden;
-  transform: ${(p) => (p.$visible ? 'translateX(0)' : 'translateX(20px)')};
-  opacity: ${(p) => (p.$visible ? 1 : 0.6)};
-  transition: transform 0.3s ease, opacity 0.3s ease;
+  opacity: ${p => (p.$visible ? 1 : 0.6)};
 
   @media (max-width: 900px) {
     border-left: none;
-    border-top: 1px solid rgba(255, 255, 255, 0.07);
-    display: ${(p) => (p.$visible ? 'flex' : 'none')};
+    border-top: ${SCALE}px solid ${C.ink};
+    display: ${p => (p.$visible ? 'flex' : 'none')};
   }
-
-  /* 태블릿 가로: 사이드 패널로 표시 */
   ${lMedia.tablet} {
     display: flex;
-    border-left: 1px solid rgba(255, 255, 255, 0.07);
+    border-left: ${SCALE}px solid ${C.ink};
     border-top: none;
     overflow: hidden;
   }
-  /* 폰 가로: 세로 쌓기 (900px 이하와 동일) */
   ${lMedia.phoneSm} {
     border-left: none;
-    border-top: 1px solid rgba(255, 255, 255, 0.07);
-    display: ${(p) => (p.$visible ? 'flex' : 'none')};
+    border-top: ${SCALE}px solid ${C.ink};
+    display: ${p => (p.$visible ? 'flex' : 'none')};
   }
 `;
 
 const DetailHeader = styled.div<{ $bg: string }>`
-  background: ${(p) => p.$bg};
-  padding: 24px 24px 20px;
+  background: ${p => p.$bg};
+  border-bottom: ${SCALE}px solid ${C.ink};
+  padding: ${SP.lg};
   position: relative;
   overflow: hidden;
 
@@ -902,115 +702,98 @@ const DetailHeader = styled.div<{ $bg: string }>`
     content: '';
     position: absolute;
     inset: 0;
-    background: linear-gradient(
-      180deg,
-      transparent 0%,
-      rgba(5, 8, 16, 0.6) 100%
-    );
+    background: linear-gradient(180deg, transparent 0%, rgba(22,27,40,0.7) 100%);
     pointer-events: none;
   }
 
-  ${lMedia.tablet} { padding: 16px 18px 14px; }
-  ${lMedia.phoneSm} { padding: 12px 14px 10px; }
+  ${lMedia.tablet}  { padding: ${SP.md}; }
+  ${lMedia.phoneSm} { padding: ${SP.sm}; }
 `;
 
 const DetailChNum = styled.div<{ $accent: string }>`
-  font-size: 11px;
-  font-weight: 800;
-  letter-spacing: 0.2em;
-  color: ${(p) => p.$accent};
-  margin-bottom: 6px;
+  ${pixelBold}
+  position: relative; z-index: 1;
+  font-size: ${FONT.sm};
+  color: ${p => p.$accent};
+  text-shadow: 1px 1px 0 ${C.ink};
 `;
 
 const DetailTitle = styled.h2`
-  font-size: 24px;
-  font-weight: 700;
-  color: #fff;
-  margin: 0 0 4px;
+  ${pixelBold}
+  font-size: ${FONT.xl};
+  color: ${C.text};
+  margin: 0;
   position: relative;
   z-index: 1;
-
-  ${lMedia.tablet} { font-size: 20px; }
-  ${lMedia.phoneSm} { font-size: 17px; }
+  text-shadow: ${SCALE}px ${SCALE}px 0 ${C.ink};
+  ${lMedia.phoneSm} { font-size: ${FONT.sm}; }
 `;
 
 const DetailSubtitle = styled.div`
-  font-size: 14px;
-  color: rgba(255, 255, 255, 0.6);
-  margin-bottom: 8px;
+  font-size: ${FONT.sm};
+  color: ${C.textSub};
   position: relative;
   z-index: 1;
+  text-shadow: 1px 1px 0 ${C.ink};
 `;
 
 const DetailLocation = styled.div`
-  font-size: 12px;
-  color: rgba(255, 255, 255, 0.4);
+  font-size: ${FONT.sm};
+  color: ${C.textDim};
   position: relative;
   z-index: 1;
+  text-shadow: 1px 1px 0 ${C.ink};
 `;
 
 const DetailBody = styled.div`
   /* flex:1 이면 본문이 패널 높이만큼 늘어나 시작 버튼이 맨 아래로 밀림.
-     0 1 auto + min-height:0 → 본문은 내용 높이만, 길면 스크롤. 버튼이 내용 바로 밑에 붙음. */
+     0 1 auto + min-height:0 → 본문은 내용 높이만, 길면 스크롤. */
   flex: 0 1 auto;
   min-height: 0;
   overflow-y: auto;
-  padding: 20px 24px;
+  padding: ${SP.md} ${SP.lg};
   display: flex;
   flex-direction: column;
-  gap: 18px;
+  gap: ${SP.md};
+  ${scrollArea}
 
-  &::-webkit-scrollbar { width: 3px; }
-  &::-webkit-scrollbar-thumb {
-    background: rgba(255, 255, 255, 0.15);
-    border-radius: 2px;
-  }
-
-  ${lMedia.tablet} { padding: 14px 16px; gap: 12px; }
-  ${lMedia.phoneSm} { padding: 10px 12px; gap: 10px; }
+  ${lMedia.tablet}  { padding: ${SP.sm} ${SP.md}; gap: ${SP.sm}; }
+  ${lMedia.phoneSm} { padding: ${SP.sm}; gap: ${SP.sm}; }
 `;
 
 const RecordBox = styled.div`
-  background: rgba(255, 255, 255, 0.04);
-  border: 1px solid rgba(255, 255, 255, 0.08);
-  border-radius: 10px;
-  padding: 12px 16px;
+  ${sunken()}
+  padding: ${SP.sm} ${SP.md};
   display: flex;
   flex-direction: column;
-  gap: 8px;
+  gap: ${SP.xs};
 `;
 
 const RecordRow = styled.div`
   display: flex;
   align-items: center;
   justify-content: space-between;
+  gap: ${SP.sm};
 `;
 
 const RecordLabel = styled.div`
-  font-size: 12px;
-  color: rgba(255, 255, 255, 0.45);
+  font-size: ${FONT.sm};
+  color: ${C.textDim};
 `;
 
 const RecordVal = styled.div`
-  font-size: 13px;
-  font-weight: 600;
-  color: #fff;
+  ${pixelBold}
+  font-size: ${FONT.sm};
+  color: ${C.text};
 `;
 
+/** 상세 본문 안의 묶음. 간격은 부모(DetailBody)의 gap 이 준다. */
 const Section = styled.div``;
 
-const SectionLabel = styled.div`
-  font-size: 11px;
-  font-weight: 700;
-  letter-spacing: 0.1em;
-  color: rgba(255, 255, 255, 0.35);
-  text-transform: uppercase;
-  margin-bottom: 8px;
-`;
 
 const SpriteRow = styled.div`
   display: flex;
-  gap: 6px;
+  gap: ${SP.xs};
   flex-wrap: wrap;
 `;
 
@@ -1019,93 +802,65 @@ const HeroSprite = styled.img`
   height: 48px;
   object-fit: contain;
   image-rendering: pixelated;
-  background: rgba(255, 255, 255, 0.05);
-  border-radius: 8px;
-  border: 1px solid rgba(255, 255, 255, 0.08);
-  transition: transform 0.2s;
-
-  &:hover { transform: scale(1.15); }
+  background: ${C.panelSunk};
+  border: 2px solid ${C.ink};
 `;
 
 const TypeBadgeRow = styled.div`
   display: flex;
   flex-wrap: wrap;
-  gap: 6px;
+  gap: ${SP.xs};
 `;
 
+/** 타입 배지 — 타입 색은 정체성이라 면으로 칠한다. 색은 TYPE_COLOR 단일 출처. */
 const TypeBadge = styled.div<{ $type: string }>`
-  background: ${(p) => TYPE_COLORS[p.$type] ?? '#888'}33;
-  border: 1px solid ${(p) => TYPE_COLORS[p.$type] ?? '#888'}66;
-  color: ${(p) => TYPE_COLORS[p.$type] ?? '#aaa'};
-  padding: 4px 10px;
-  border-radius: 6px;
-  font-size: 12px;
-  font-weight: 600;
-  text-transform: capitalize;
+  ${pixelBold}
+  background: ${(p) => TYPE_COLOR[p.$type] ?? C.plain};
+  border: 2px solid ${C.ink};
+  color: ${C.text};
+  padding: ${SP.xs} ${SP.sm};
+  font-size: ${FONT.sm};
+  line-height: 1.5;
 `;
 
 const BossName = styled.div`
-  font-size: 13px;
-  color: #f87171;
-  font-weight: 600;
-  background: rgba(248, 113, 113, 0.08);
-  border: 1px solid rgba(248, 113, 113, 0.2);
-  border-radius: 8px;
-  padding: 8px 12px;
+  ${winThin('red')}
+  ${pixelBold}
+  font-size: ${FONT.sm};
+  color: ${C.red};
+  padding: ${SP.xs} ${SP.sm};
 `;
 
 const PreviewDialogue = styled.div`
-  background: rgba(255, 255, 255, 0.03);
-  border-left: 2px solid rgba(99, 179, 237, 0.4);
-  border-radius: 0 8px 8px 0;
-  padding: 10px 14px;
+  ${sunken()}
+  padding: ${SP.sm};
 `;
 
 const PreviewSpeaker = styled.div`
-  font-size: 11px;
-  color: #63b3ed;
-  font-weight: 700;
-  letter-spacing: 0.06em;
-  text-transform: uppercase;
-  margin-bottom: 4px;
+  ${pixelBold}
+  font-size: ${FONT.sm};
+  color: ${C.blue};
 `;
 
 const PreviewText = styled.div`
-  font-size: 13px;
-  color: rgba(255, 255, 255, 0.65);
-  line-height: 1.5;
-  font-style: italic;
+  font-size: ${FONT.sm};
+  color: ${C.textSub};
 `;
 
 const DetailFooter = styled.div`
-  padding: 16px 24px 20px;
-  border-top: 1px solid rgba(255, 255, 255, 0.07);
-
-  ${lMedia.tablet} { padding: 12px 16px 14px; }
-  ${lMedia.phoneSm} { padding: 10px 12px 12px; }
+  padding: ${SP.md} ${SP.lg};
+  border-top: ${SCALE}px solid ${C.ink};
+  ${lMedia.phoneSm} { padding: ${SP.sm}; }
 `;
 
 const StartBtn = styled.button<{ $accent: string }>`
+  ${btn('gold')}
+  ${pixelBold}
   width: 100%;
-  padding: 14px;
-  background: ${(p) => p.$accent}22;
-  border: 1.5px solid ${(p) => p.$accent}88;
-  color: ${(p) => p.$accent};
-  font-size: 15px;
-  font-weight: 700;
-  letter-spacing: 0.08em;
-  border-radius: 10px;
-  cursor: pointer;
-  transition: all 0.2s;
-
-  &:hover {
-    background: ${(p) => p.$accent}33;
-    border-color: ${(p) => p.$accent};
-    transform: translateY(-1px);
-    box-shadow: 0 8px 24px ${(p) => p.$accent}33;
-  }
-
-  &:active { transform: translateY(0); }
+  padding: ${SP.sm};
+  color: ${C.text};
+  font-size: ${FONT.sm};
+  &:focus, &:focus-visible { outline: none; }
 `;
 
 const EmptyDetail = styled.div`
@@ -1114,25 +869,23 @@ const EmptyDetail = styled.div`
   flex-direction: column;
   align-items: center;
   justify-content: center;
-  gap: 12px;
-  padding: 40px;
+  gap: ${SP.sm};
+  padding: ${SP.xxl};
 `;
 
 const EmptyIcon = styled.div`
-  font-size: 48px;
-  opacity: 0.2;
+  font-size: 48px; line-height: 1;
 `;
 
 const EmptyText = styled.div`
-  font-size: 16px;
-  color: rgba(255, 255, 255, 0.3);
-  font-weight: 600;
+  ${pixelBold}
+  font-size: ${FONT.sm};
+  color: ${C.textSub};
 `;
 
 const EmptyHint = styled.div`
-  font-size: 12px;
-  color: rgba(200, 160, 32, 0.4);
-  letter-spacing: 0.08em;
+  font-size: ${FONT.sm};
+  color: ${C.textDim};
 `;
 
 // ─── Intro overlay ────────────────────────────────────────────────────────────
@@ -1140,35 +893,26 @@ const EmptyHint = styled.div`
 const IntroOverlay = styled.div`
   position: fixed;
   inset: 0;
-  background: #050810;
+  background: ${C.ink};
   display: flex;
   flex-direction: column;
   align-items: center;
   justify-content: center;
   z-index: 100;
-  animation: ${introPulse} 1.8s ease forwards;
+  animation: ${introPulse} 1.8s steps(6, end) forwards;
   pointer-events: none;
 `;
 
-const IntroAegis = styled.div`
-  font-size: 12px;
-  font-weight: 800;
-  letter-spacing: 0.4em;
-  color: #c8a020;
-  margin-bottom: 16px;
-`;
-
 const IntroTitle = styled.div`
-  font-size: 48px;
-  font-weight: 700;
-  color: #fff;
+  ${pixelBold}
+  font-size: ${FONT.display};
+  color: ${C.gold};
   text-align: center;
-  line-height: 1.1;
+  ${shadowLg}
 `;
 
 const IntroSub = styled.div`
-  font-size: 16px;
-  color: rgba(255, 255, 255, 0.4);
-  letter-spacing: 0.15em;
-  margin-top: 12px;
+  font-size: ${FONT.sm};
+  color: ${C.textSub};
+  margin-top: ${SP.md};
 `;

@@ -2,6 +2,8 @@
 import React, { useState } from 'react';
 import styled from 'styled-components';
 import { useTranslation } from '../../i18n';
+import { C, FONT, SP } from '../../styles/tokens';
+import { btn, sunken, pixelText, pixelBold } from '../../styles/pixel';
 import { Emoji } from '../shared/Emoji';
 import { showToast } from '../shared/Toast';
 import {
@@ -61,7 +63,7 @@ export const BugReport: React.FC<BugReportProps> = ({ onClose }) => {
       <ModalBox $size="sm" $accent={MODAL_ACCENT.cyan} onClick={(e) => e.stopPropagation()}>
         <ModalHeader>
           <ModalTitle><Emoji glyph="🐛" size={16} /> {t('settings.bugReportTitle')}</ModalTitle>
-          <ModalCloseBtn onClick={onClose}><Emoji glyph="❌" size={14} /></ModalCloseBtn>
+          <ModalCloseBtn onClick={onClose}>✕</ModalCloseBtn>
         </ModalHeader>
 
         <ModalScrollBody>
@@ -103,93 +105,64 @@ export const BugReport: React.FC<BugReportProps> = ({ onClose }) => {
 };
 
 // ─── Styled Components ────────────────────────────────────────────────────────
+// docs/DESIGN.md 의 디자인 시스템을 따른다.
 
 const Form = styled.form`
   display: flex;
   flex-direction: column;
-  gap: 12px;
-  padding: 8px 4px;
+  gap: ${SP.md};
+  padding: ${SP.sm} ${SP.xs};
 `;
 
 const FormGroup = styled.div`
   display: flex;
   flex-direction: column;
-  gap: 6px;
+  gap: ${SP.xs};
 `;
 
 const Label = styled.label`
-  font-size: 0.85rem;
-  font-weight: 700;
-  color: rgba(255, 255, 255, 0.85);
+  ${pixelBold}
+  font-size: ${FONT.sm};
+  color: ${C.text};
 `;
 
+/** 입력칸 — 한 단 파인 면. 유리 인풋을 걷어냈다. */
 const Input = styled.input`
+  ${sunken()}
+  ${pixelText}
   width: 100%;
-  padding: 10px 12px;
-  font-size: 0.9rem;
-  border-radius: 8px;
-  border: 1px solid rgba(255, 255, 255, 0.12);
-  background: rgba(255, 255, 255, 0.06);
-  color: #fff;
+  padding: ${SP.sm} ${SP.md};
+  font-size: ${FONT.sm};
+  color: ${C.text};
   outline: none;
-  transition: border-color 0.2s, background 0.2s;
+  box-sizing: border-box;
 
-  &:focus {
-    border-color: rgba(79, 195, 247, 0.5);
-    background: rgba(79, 195, 247, 0.08);
-  }
-
-  &::placeholder {
-    color: rgba(255, 255, 255, 0.3);
-  }
+  &:focus { outline: none; }
+  &::placeholder { color: ${C.textDim}; }
 `;
 
 const TextArea = styled.textarea`
+  ${sunken()}
+  ${pixelText}
   width: 100%;
-  padding: 10px 12px;
-  font-size: 0.9rem;
-  border-radius: 8px;
-  border: 1px solid rgba(255, 255, 255, 0.12);
-  background: rgba(255, 255, 255, 0.06);
-  color: #fff;
+  padding: ${SP.sm} ${SP.md};
+  font-size: ${FONT.sm};
+  color: ${C.text};
   outline: none;
-  font-family: inherit;
   resize: vertical;
-  transition: border-color 0.2s, background 0.2s;
+  box-sizing: border-box;
 
-  &:focus {
-    border-color: rgba(79, 195, 247, 0.5);
-    background: rgba(79, 195, 247, 0.08);
-  }
-
-  &::placeholder {
-    color: rgba(255, 255, 255, 0.3);
-  }
+  &:focus { outline: none; }
+  &::placeholder { color: ${C.textDim}; }
 `;
 
 const SubmitButton = styled.button`
+  ${btn('blue')}
+  ${pixelBold}
   width: 100%;
-  padding: 12px;
-  background: #4fc3f7;
-  color: #121824;
-  font-weight: 700;
-  font-size: 14px;
-  border: none;
-  border-radius: 8px;
-  cursor: pointer;
-  transition: opacity 0.2s, transform 0.1s;
-  margin-top: 8px;
-
-  &:disabled {
-    opacity: 0.6;
-    cursor: not-allowed;
-  }
-
-  &:not(:disabled):hover {
-    opacity: 0.9;
-  }
-
-  &:not(:disabled):active {
-    transform: scale(0.98);
-  }
+  padding: ${SP.sm};
+  color: ${C.text};
+  font-size: ${FONT.sm};
+  margin-top: ${SP.sm};
+  &:focus, &:focus-visible { outline: none; }
 `;
