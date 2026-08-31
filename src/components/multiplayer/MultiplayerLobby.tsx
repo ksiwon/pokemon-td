@@ -13,7 +13,7 @@ import { MAPS, mapThumbnailById } from '../../data/maps';
 import { authService } from '../../services/AuthService';
 import { useTranslation } from '../../i18n';
 import { C, FONT, SP, SCALE } from '../../styles/tokens';
-import { win, winThin, btn, btnThin, sunken, hudBar, pixelText, pixelBold } from '../../styles/pixel';
+import { win, winThin, btn, btnThin, sunken, hudBar, pixelText, pixelBold, focusRing } from '../../styles/pixel';
 import { AchievementsPanel } from '../modals/Achievements';
 import { HallOfFame } from '../modals/HallOfFame';
 import { Rankings } from '../modals/Rankings';
@@ -564,7 +564,7 @@ const ActionBtn = styled.button`
   width: 36px; height: 36px; padding: 0;
   color: ${C.textSub};
   display: flex; align-items: center; justify-content: center;
-  &:focus, &:focus-visible { outline: none; }
+  ${focusRing}
   ${media.mobile} { display: none; }
 `;
 
@@ -575,7 +575,7 @@ const RefreshBtn = styled.button`
   width: 36px; height: 36px; padding: 0;
   color: ${C.textSub};
   display: flex; align-items: center; justify-content: center; flex: 0 0 auto;
-  &:focus, &:focus-visible { outline: none; }
+  ${focusRing}
   ${media.mobile} { width: 40px; height: 40px; }
 `;
 
@@ -585,7 +585,7 @@ const CreateRoomBtn = styled.button`
   padding: ${SP.xs} ${SP.md};
   color: ${C.blue}; font-size: ${FONT.sm};
   white-space: nowrap;
-  &:focus, &:focus-visible { outline: none; }
+  ${focusRing}
 `;
 
 const Content = styled(ScreenBody)`
@@ -614,7 +614,7 @@ const EmptyCreateBtn = styled.button`
   ${pixelBold}
   margin-top: ${SP.md}; padding: ${SP.sm} ${SP.lg};
   color: ${C.text}; font-size: ${FONT.sm};
-  &:focus, &:focus-visible { outline: none; }
+  ${focusRing}
 `;
 
 const RoomTable = styled.div`display: flex; flex-direction: column;`;
@@ -680,7 +680,7 @@ const JoinBtn = styled.button`
   padding: ${SP.xs} ${SP.md};
   color: ${C.blue}; font-size: ${FONT.sm};
   white-space: nowrap;
-  &:focus, &:focus-visible { outline: none; }
+  ${focusRing}
 `;
 
 // ─── Create room ──────────────────────────────────────────────────────────────
@@ -748,7 +748,7 @@ const ConfirmCreateBtn = styled.button`
   ${pixelBold}
   width: 100%; padding: ${SP.sm};
   color: ${C.text}; font-size: ${FONT.sm};
-  &:focus, &:focus-visible { outline: none; }
+  ${focusRing}
 `;
 
 // ─── Room view ────────────────────────────────────────────────────────────────
@@ -853,7 +853,7 @@ const KickBtn = styled.button`
   color: ${C.red};
   font-size: ${FONT.sm};
   display: flex; align-items: center; justify-content: center;
-  &:focus, &:focus-visible { outline: none; }
+  ${focusRing}
 `;
 
 const ReadyIndicator = styled.div<{ $ready: boolean }>`
@@ -882,7 +882,7 @@ const AIAddBtn = styled.button`
   color: ${C.textSub};
   font-size: ${FONT.sm};
   min-width: 90px;
-  &:focus, &:focus-visible { outline: none; }
+  ${focusRing}
 `;
 
 const ActionRow = styled.div`display: flex; gap: ${SP.sm};`;
@@ -893,7 +893,7 @@ const ToggleReadyBtn = styled.button<{ $ready: boolean }>`
   flex: 1; padding: ${SP.sm};
   color: ${p => (p.$ready ? C.gold : C.green)};
   font-size: ${FONT.sm};
-  &:focus, &:focus-visible { outline: none; }
+  ${focusRing}
 `;
 
 const StartGameBtn = styled.button`
@@ -901,7 +901,7 @@ const StartGameBtn = styled.button`
   ${pixelBold}
   flex: 1; padding: ${SP.sm};
   color: ${C.text}; font-size: ${FONT.sm};
-  &:focus, &:focus-visible { outline: none; }
+  ${focusRing}
 `;
 
 // ─── Confirm modal ────────────────────────────────────────────────────────────
@@ -937,7 +937,7 @@ const CancelModalBtn = styled.button`
   ${pixelBold}
   flex: 1; padding: ${SP.sm};
   color: ${C.textSub}; font-size: ${FONT.sm};
-  &:focus, &:focus-visible { outline: none; }
+  ${focusRing}
 `;
 
 const LeaveModalBtn = styled.button`
@@ -945,7 +945,7 @@ const LeaveModalBtn = styled.button`
   ${pixelBold}
   flex: 1; padding: ${SP.sm};
   color: ${C.red}; font-size: ${FONT.sm};
-  &:focus, &:focus-visible { outline: none; }
+  ${focusRing}
 `;
 
 // ─── Rejoin Prompt ────────────────────────────────────────────────────────────

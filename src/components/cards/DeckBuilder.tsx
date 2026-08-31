@@ -18,7 +18,7 @@ import { CardView } from './CardView';
 import { CardControls } from './CardControls';
 import { CardDetailModal } from './CardDetailModal';
 import { C, FONT, SP, SCALE } from '../../styles/tokens';
-import { btnThin, sunken, pixelBold } from '../../styles/pixel';
+import { btnThin, sunken, pixelBold, focusRing } from '../../styles/pixel';
 
 type SlotState = { pokemonId: number; stars: number } | null;
 const EMPTY: SlotState[] = [null, null, null, null, null, null]; // [front0,1,2, back0,1,2]
@@ -246,7 +246,7 @@ const SaveBtn = styled.button<{ $on: boolean }>`
   font-size: ${FONT.sm};
   cursor: ${p => (p.$on ? 'pointer' : 'not-allowed')};
   white-space: nowrap;
-  &:focus, &:focus-visible { outline: none; }
+  ${focusRing}
 `;
 
 const Field = styled.div`
@@ -341,5 +341,5 @@ const InfoBtn = styled.button`
   color: ${C.textSub}; padding: 2px; cursor: pointer;
   transition: none;
   @media (hover: hover) { &:hover { color: ${C.text}; } }
-  &:focus, &:focus-visible { outline: none; }
+  ${focusRing}
 `;

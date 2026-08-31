@@ -7,7 +7,7 @@ import { useTranslation } from '../../i18n';
 import { Rarity } from '../../data/evolution';
 import { CardFilterState, CARD_SORT_KEYS, isFilterActive } from '../../utils/cardCatalog';
 import { C, FONT, SP } from '../../styles/tokens';
-import { btnThin, sunken, pixelText, pixelBold } from '../../styles/pixel';
+import { btnThin, sunken, pixelText, pixelBold, focusRing } from '../../styles/pixel';
 
 const TYPE_SLUGS = [
   'normal', 'fire', 'water', 'electric', 'grass', 'ice', 'fighting', 'poison', 'ground',
@@ -93,6 +93,7 @@ const SearchBox = styled.div`
 const SearchInput = styled.input`
   ${pixelText}
   flex: 1; min-width: 0; background: transparent; border: none; outline: none;
+  ${focusRing}
   color: ${C.text}; font-size: ${FONT.sm}; padding: ${SP.xs} 0;
   &::placeholder { color: ${C.textDim}; }
 `;
@@ -101,13 +102,13 @@ const ClearInline = styled.button`
   color: ${C.textDim}; cursor: pointer;
   transition: none;
   @media (hover: hover) { &:hover { color: ${C.text}; } }
-  &:focus, &:focus-visible { outline: none; }
+  ${focusRing}
 `;
 const Sel = styled.select`
   ${sunken()}
   ${pixelText}
   color: ${C.text}; font-size: ${FONT.sm}; padding: ${SP.xs} ${SP.sm}; cursor: pointer;
-  &:focus { outline: none; }
+  ${focusRing}
   /* 네이티브 드롭다운 목록은 OS가 그리므로 색만 맞춘다 */
   option { background: ${C.panelSunk}; color: ${C.text}; }
 `;
@@ -120,5 +121,5 @@ const ResetBtn = styled.button`
   display: flex; align-items: center; gap: ${SP.xs};
   color: ${C.text}; font-size: ${FONT.sm};
   padding: ${SP.xs} ${SP.sm};
-  &:focus, &:focus-visible { outline: none; }
+  ${focusRing}
 `;

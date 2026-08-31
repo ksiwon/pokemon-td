@@ -2,7 +2,7 @@ import React from 'react';
 import styled from 'styled-components';
 import { useTranslation } from '../../i18n';
 import { C, FONT, SP } from '../../styles/tokens';
-import { winThin, btn, pixelBold } from '../../styles/pixel';
+import { winThin, btn, pixelBold, focusRing } from '../../styles/pixel';
 import { useGameStore } from '../../store/gameStore';
 import {
   ModalOverlay, ModalBox, ModalHeader, ModalTitle,
@@ -105,7 +105,7 @@ const ActionBtn = styled.button<{ $primary?: boolean }>`
   align-items: center;
   justify-content: center;
   gap: ${SP.xs};
-  &:focus, &:focus-visible { outline: none; }
+  ${focusRing}
 
   ${media.mobile} { flex: 1; }
 `;

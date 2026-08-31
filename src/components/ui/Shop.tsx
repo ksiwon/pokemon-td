@@ -11,7 +11,7 @@ import { canEvolveWithItem, getEvolvableWithItem } from "../../data/evolution";
 import { Emoji } from "../shared/Emoji";
 import { showToast } from "../shared/Toast";
 import { C, FONT, SP, SCALE } from "../../styles/tokens";
-import { win, btn, btnThin, sunken, pixelText, pixelBold, cursorMark, cursorOn, CURSOR_GUTTER, shadowLg } from "../../styles/pixel";
+import { win, btn, btnThin, sunken, pixelText, pixelBold, cursorMark, cursorOn, CURSOR_GUTTER, shadowLg, focusRing } from "../../styles/pixel";
 import {
   EVOLUTION_ITEMS_BY_CATEGORY,
   EVOLUTION_ITEMS,
@@ -450,7 +450,7 @@ const TabButton = styled.button<{ $isActive: boolean }>`
   color: ${p => p.$isActive ? C.gold : C.textSub};
   display: flex; align-items: center; justify-content: center; gap: ${SP.xs};
   white-space: nowrap;
-  &:focus, &:focus-visible { outline: none; }
+  ${focusRing}
 `;
 
 const ItemsContainer = styled.div`

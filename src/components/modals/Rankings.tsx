@@ -16,7 +16,7 @@ import { quizService } from '../../services/QuizService';
 import { daysUntilSeasonReset } from '../../utils/season';
 import { useTranslation } from '../../i18n';
 import { C, FONT, SP, SCALE } from '../../styles/tokens';
-import { winThin, btnThin, sunken, pixelBold } from '../../styles/pixel';
+import { winThin, btnThin, sunken, pixelBold, focusRing } from '../../styles/pixel';
 import {
   ModalOverlay, ModalBox, ModalHeader, ModalTitle, ModalCloseBtn,
   modalPadX, MODAL_PAD_X, MODAL_PAD_X_M, ModalTabBtn, ModalChipBtn,
@@ -419,7 +419,7 @@ const PageBtn = styled.button`
   padding: ${SP.xs} ${SP.sm};
   color: ${C.text}; font-size: ${FONT.sm};
   display: flex; align-items: center; justify-content: center;
-  &:focus, &:focus-visible { outline: none; }
+  ${focusRing}
 `;
 
 const PageInfo = styled.span`
@@ -473,7 +473,8 @@ const BoardSelect = styled.select`
   ${pixelBold}
   width: 100%; padding: ${SP.sm} ${SP.md}; cursor: pointer;
   font-size: ${FONT.sm}; color: ${C.text}; outline: none;
-  &:focus { outline: none; }
+  ${focusRing}
+  ${focusRing}
   /* 네이티브 드롭다운은 OS 배경을 쓰므로 옵션 색을 명시하지 않으면 흰 배경에 흰 글씨가 된다. */
   & option { background: ${C.panelSunk}; color: ${C.text}; }
 `;

@@ -24,9 +24,7 @@
 import styled, { keyframes, css } from 'styled-components';
 import { lMedia, media } from '../../utils/responsive.utils';
 import { C, FONT, SCALE, SP } from '../../styles/tokens';
-import {
-  win, btn, btnThin, pixelText, pixelBold, WinColor, BtnColor, FRAME_W, shadowLg,
-} from '../../styles/pixel';
+import { win, btn, btnThin, pixelText, pixelBold, WinColor, BtnColor, FRAME_W, shadowLg, focusRing } from '../../styles/pixel';
 
 // ═══════════════════════════════════════════════════════════════════════════════
 // ① 애니메이션 — DS UI의 움직임은 짧고 딱 끊긴다
@@ -217,7 +215,7 @@ export const ModalCloseBtn = styled.button`
   transition: none;
   @media (hover: hover) { &:hover { color: ${C.text}; } }
   &:active { color: ${C.text}; }
-  &:focus, &:focus-visible { outline: none; }
+  ${focusRing}
 `;
 
 // ═══════════════════════════════════════════════════════════════════════════════
@@ -279,7 +277,7 @@ export const ModalTabBtn = styled.button<{ $c?: BtnColor; $on?: boolean; $grow?:
   font-size: ${FONT.md};
   color: ${p => (p.$on ? C.text : C.textSub)};
   white-space: nowrap;
-  &:focus, &:focus-visible { outline: none; }
+  ${focusRing}
 
   ${media.mobile}  { font-size: ${FONT.sm}; }
   ${lMedia.phoneSm}{ font-size: ${FONT.sm}; }
@@ -295,7 +293,7 @@ export const ModalChipBtn = styled.button<{ $c?: BtnColor; $on?: boolean }>`
   font-size: ${FONT.sm};
   color: ${p => (p.$on ? C.text : C.textSub)};
   white-space: nowrap;
-  &:focus, &:focus-visible { outline: none; }
+  ${focusRing}
 `;
 
 /**
@@ -315,9 +313,16 @@ export const ModalScrollRowPad = styled.div`
 // ⑦ 레이아웃 보조
 // ═══════════════════════════════════════════════════════════════════════════════
 
-/** 스크롤 영역 공통 — 각진 도트 스크롤바 */
+/**
+ * 스크롤 영역 공통 — 각진 도트 스크롤바.
+ *
+ * 크롬은 스크롤되는 컨테이너를 키보드로 잡을 수 있게 해 준다(스크롤 영역 포커스).
+ * 좋은 동작이지만 그때 그리는 링이 브라우저 기본값이라, 여기도 우리 링을 준다.
+ * 이 자리가 빠져 있으면 자료실 본문에서만 둥근 파란 링이 뜬다.
+ */
 const scrollArea = css`
   flex: 1; overflow-y: auto; min-height: 0;
+  ${focusRing}
 
   &::-webkit-scrollbar { width: 10px; }
   &::-webkit-scrollbar-track { background: ${C.panelSunk}; border: 3px solid ${C.ink}; }

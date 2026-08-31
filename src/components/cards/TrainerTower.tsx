@@ -17,7 +17,7 @@ import {
 import { BattleLogPanel, nextStatusMap, UnitStatusMap, UnitStatusBadge } from './BattleLogPanel';
 import { showToast } from '../shared/Toast';
 import { C, FONT, SP, SCALE, ICON } from '../../styles/tokens';
-import { win, winThin, btn, btnThin, pixelText, pixelBold, shadowLg } from '../../styles/pixel';
+import { win, winThin, btn, btnThin, pixelText, pixelBold, shadowLg, focusRing } from '../../styles/pixel';
 
 type Phase = 'idle' | 'loading' | 'battle' | 'result';
 type Reward = {
@@ -340,7 +340,7 @@ const StartBtn = styled.button<{ $on: boolean }>`
   color: ${p => (p.$on ? C.text : C.textDim)};
   font-size: ${FONT.sm};
   cursor: ${p => (p.$on ? 'pointer' : 'not-allowed')};
-  &:focus, &:focus-visible { outline: none; }
+  ${focusRing}
 `;
 const Hint = styled.div`font-size: ${FONT.sm}; color: ${C.textDim};`;
 
@@ -394,7 +394,7 @@ const CtrlBtn = styled.button`
   display: flex; align-items: center; gap: ${SP.xs};
   color: ${C.text}; padding: ${SP.xs} ${SP.sm};
   font-size: ${FONT.sm};
-  &:focus, &:focus-visible { outline: none; }
+  ${focusRing}
 `;
 
 const ResultVeil = styled.div`
@@ -436,12 +436,12 @@ const PrimaryBtn = styled.button`
   ${pixelBold}
   padding: ${SP.sm} ${SP.xl};
   color: ${C.text}; font-size: ${FONT.sm};
-  &:focus, &:focus-visible { outline: none; }
+  ${focusRing}
 `;
 const GhostBtn = styled.button`
   ${btnThin('plain')}
   ${pixelBold}
   padding: ${SP.sm} ${SP.lg};
   color: ${C.textSub}; font-size: ${FONT.sm};
-  &:focus, &:focus-visible { outline: none; }
+  ${focusRing}
 `;

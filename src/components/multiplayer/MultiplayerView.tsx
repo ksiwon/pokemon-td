@@ -17,7 +17,7 @@ import { PlayerGameState, TowerDetail } from '../../types/multiplayer';
 import { authService } from '../../services/AuthService';
 import { useTranslation } from '../../i18n';
 import { C, FONT, SP, SCALE } from '../../styles/tokens';
-import { winThin, btnThin, pixelBold } from '../../styles/pixel';
+import { winThin, btnThin, pixelBold, focusRing } from '../../styles/pixel';
 import { lMedia } from '../../utils/responsive.utils';
 import { ModalOverlay, ModalBox, ModalCloseBtn, MODAL_ACCENT } from '../shared/modal.styles';
 
@@ -224,7 +224,7 @@ const ManualRefreshBtn = styled.button`
   color: ${C.text}; width: 32px; height: 32px; padding: 0;
   font-size: ${FONT.sm};
   display: flex; align-items: center; justify-content: center;
-  &:focus, &:focus-visible { outline: none; }
+  ${focusRing}
 `;
 
 const PlayerList = styled.div`

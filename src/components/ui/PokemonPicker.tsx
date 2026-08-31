@@ -5,7 +5,7 @@ import styled from 'styled-components';
 import { media, lMedia } from '../../utils/responsive.utils';
 import { useTranslation } from '../../i18n';
 import { C, FONT, SP, SCALE } from '../../styles/tokens';
-import { win, btn, pixelText, pixelBold, cursorMark, cursorOn, shadowLg } from '../../styles/pixel';
+import { win, btn, pixelText, pixelBold, cursorMark, cursorOn, shadowLg, focusRing } from '../../styles/pixel';
 import { pokeAPI, PokemonData } from '../../api/pokeapi';
 import { useGameStore } from '../../store/gameStore';
 import { GameMove, Gender } from '../../types/game';
@@ -359,7 +359,7 @@ const AllPlacedCloseBtn = styled.button`
   padding: ${SP.sm} ${SP.xl};
   font-size: ${FONT.sm};
   color: ${C.text};
-  &:focus, &:focus-visible { outline: none; }
+  ${focusRing}
 `;
 
 const AllPlacedSub = styled.p`
@@ -511,7 +511,7 @@ const RerollBtn = styled.button`
   padding: ${SP.sm} ${SP.xl};
   font-size: ${FONT.sm};
   color: ${C.text};
-  &:focus, &:focus-visible { outline: none; }
+  ${focusRing}
 `;
 
 const InnerPad = styled.div`

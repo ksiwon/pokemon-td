@@ -12,7 +12,7 @@ import { saveService } from '../../services/SaveService';
 import { soundService } from '../../services/SoundService';
 import { BugReport } from './BugReport';
 import { C, FONT, SP, SCALE, ICON } from '../../styles/tokens';
-import { winThin, btnThin, sunken, pixelText, pixelBold } from '../../styles/pixel';
+import { winThin, btnThin, sunken, pixelText, pixelBold, focusRing } from '../../styles/pixel';
 
 export const Settings: React.FC<{ onClose: () => void }> = ({ onClose }) => {
   const { t, language, setLanguage } = useTranslation();
@@ -252,10 +252,11 @@ const Select = styled.select`
   font-size: ${FONT.sm};
   cursor: pointer;
   outline: none;
+  ${focusRing}
 
   option { background: ${C.panelSunk}; color: ${C.text}; }
 
-  &:focus { outline: none; }
+  ${focusRing}
 
   ${media.mobile} { width: 100%; }
 `;
@@ -284,7 +285,7 @@ const DangerButton = styled.button`
   padding: ${SP.sm};
   color: ${C.red};
   font-size: ${FONT.sm};
-  &:focus, &:focus-visible { outline: none; }
+  ${focusRing}
 `;
 
 const CloseButton = styled.button`
@@ -294,7 +295,7 @@ const CloseButton = styled.button`
   padding: ${SP.sm};
   color: ${C.text};
   font-size: ${FONT.sm};
-  &:focus, &:focus-visible { outline: none; }
+  ${focusRing}
 `;
 
 const BugReportButton = styled.button`
@@ -305,5 +306,5 @@ const BugReportButton = styled.button`
   color: ${C.blue};
   font-size: ${FONT.sm};
   margin-bottom: ${SP.md};
-  &:focus, &:focus-visible { outline: none; }
+  ${focusRing}
 `;

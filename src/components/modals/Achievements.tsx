@@ -18,7 +18,7 @@ import { Achievement, AchievementTier, TIER_POINTS } from '../../types/game';
 import { useTranslation } from '../../i18n';
 
 import { C, FONT, SP, SCALE, ICON } from '../../styles/tokens';
-import { winThin, btnThin, sunken, pixelBold, FRAME_W } from '../../styles/pixel';
+import { winThin, btnThin, sunken, pixelBold, FRAME_W, focusRing } from '../../styles/pixel';
 import {
   ModalOverlay, ModalBox, MODAL_ACCENT, modalPadX, ModalTitle, ModalCloseBtn,
   ModalTabBtn, ModalScrollRowPad,
@@ -301,7 +301,7 @@ const HiddenToggle = styled.button`
   font-size: ${FONT.sm};
   color: ${C.textSub};
   white-space: nowrap;
-  &:focus, &:focus-visible { outline: none; }
+  ${focusRing}
 `;
 
 // ── 진행 바

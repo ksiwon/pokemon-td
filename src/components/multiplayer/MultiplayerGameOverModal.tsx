@@ -6,7 +6,7 @@ import { lMedia} from '../../utils/responsive.utils';
 import { PlayerGameState } from '../../types/multiplayer';
 import { useTranslation } from '../../i18n';
 import { C, FONT, SP, SCALE } from '../../styles/tokens';
-import { winThin, btn, sunken, pixelBold, shadowLg } from '../../styles/pixel';
+import { winThin, btn, sunken, pixelBold, shadowLg, focusRing } from '../../styles/pixel';
 import { ModalOverlay, MODAL_ACCENT, ModalPlainBox, ModalPlainHeader } from '../shared/modal.styles';
 import { cardService } from '../../services/CardService';
 
@@ -320,5 +320,5 @@ const BackButton = styled.button`
   padding: ${SP.sm} ${SP.xxl};
   font-size: ${FONT.sm};
   color: ${C.text};
-  &:focus, &:focus-visible { outline: none; }
+  ${focusRing}
 `;

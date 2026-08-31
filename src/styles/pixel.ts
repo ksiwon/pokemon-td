@@ -48,6 +48,31 @@ export const win = (color: WinColor = 'plain') => css`
 `;
 
 /**
+ * 키보드 포커스 표시.
+ *
+ * 브라우저 기본 링은 둥근 파란 테두리라 도트 창틀과 충돌한다. 그래서 예전에는
+ * 호출부마다 `outline: none` 만 쓰고 끝냈는데(130곳), **지운 자리에 아무것도
+ * 넣지 않아** 키보드로 도는 사람이 자기 위치를 볼 수 없었다. 지우는 건 맞고,
+ * 바꿔 끼우는 게 빠져 있었다.
+ *
+ * `outline` 을 그대로 쓰되 색과 모양만 우리 것으로 바꾼다. box-shadow 가 아니라
+ * outline 인 이유는 호출부가 이미 box-shadow 를 쓰는 곳이 많아 충돌하기 때문이고,
+ * `border-radius: 0` 이라 outline 도 각진 사각형으로 그려진다.
+ *
+ * `-SCALE` 오프셋으로 안쪽에 붙여 창틀 PNG를 덮지 않게 한다.
+ *
+ * `:focus` 가 아니라 `:focus-visible` 에 건다 — `:focus` 에 걸면 마우스로 누른
+ * 뒤에도 표시가 남아 눌린 버튼이 계속 선택된 것처럼 보인다.
+ */
+export const focusRing = css`
+  &:focus { outline: none; }
+  &:focus-visible {
+    outline: ${SCALE}px solid ${C.gold};
+    outline-offset: -${SCALE}px;
+  }
+`;
+
+/**
  * 버튼 — 창과 같은 띠에 한 톤 밝은 채움.
  *
  * 게임 버튼은 눌리지, 떠오르지 않는다. 기존 전역 규칙(index.css)은 모든 버튼을
@@ -76,6 +101,10 @@ export const btn = (color: BtnColor = 'plain') => css`
     cursor: not-allowed;
     filter: grayscale(0.75) brightness(0.7);
   }
+
+  /* 창틀 버튼은 전부 여기서 포커스 표시를 받는다. 호출부에서 다시 쓸 필요가
+     없고, 호출부가 outline 을 손대지 않아도 브라우저 기본 링이 뜨지 않는다. */
+  ${focusRing}
 `;
 
 /**
@@ -103,6 +132,10 @@ export const btnThin = (color: BtnColor = 'plain') => css`
     cursor: not-allowed;
     filter: grayscale(0.75) brightness(0.7);
   }
+
+  /* 창틀 버튼은 전부 여기서 포커스 표시를 받는다. 호출부에서 다시 쓸 필요가
+     없고, 호출부가 outline 을 손대지 않아도 브라우저 기본 링이 뜨지 않는다. */
+  ${focusRing}
 `;
 
 /** 얇은 창 — 배지, 작은 정보 칸용. */
@@ -237,4 +270,21 @@ export const cursorMark = css`
 /** 위 커서를 드러내는 상태. 부모에서 &:hover, &[data-on] 등으로 조합한다. */
 export const cursorOn = css`
   &::before { opacity: 1; }
+`;
+
+
+/**
+ * 모션 축소 요청을 존중하는 애니메이션 래퍼.
+ *
+ * 팩 개봉 섬광·보스 컷인·스토리 전환은 전정기관 문제가 있는 사람에게 실제로
+ * 어지럼을 유발한다. `prefers-reduced-motion: reduce` 는 "연출을 보기 싫다"가
+ * 아니라 "움직임이 몸에 영향을 준다"는 신호다.
+ *
+ * **중요**: 축소 시 애니메이션만 빠지므로, 감싸지 않은 기본 상태가 곧
+ * **최종 상태**여야 한다. 시작 상태(opacity: 0 등)를 기본값으로 두고 애니메이션
+ * 으로만 드러내면, 축소 요청한 사람에게는 화면이 비어 버린다. 개봉 결과나 컷인
+ * 정보가 사라지면 게임이 안 돌아간다.
+ */
+export const motionSafe = (styles: ReturnType<typeof css>) => css`
+  @media (prefers-reduced-motion: no-preference) { ${styles} }
 `;

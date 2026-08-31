@@ -14,7 +14,7 @@ import {
   ModalOverlay, ModalPlainBox, ModalPlainHeader, modalSlideUp, modalFadeIn,
 } from '../shared/modal.styles';
 import { C, FONT, SP, SCALE, ICON } from '../../styles/tokens';
-import { WinColor, btn, sunken, pixelBold, shadowLg } from '../../styles/pixel';
+import { WinColor, btn, sunken, pixelBold, shadowLg, focusRing } from '../../styles/pixel';
 import { ChevronLeft, ChevronRight } from 'lucide-react';
 import { Emoji } from '../shared/Emoji';
 import { lMedia, media } from '../../utils/responsive.utils';
@@ -447,7 +447,7 @@ const CloseX = styled.button`
   display: flex; align-items: center; justify-content: center;
   transition: none;
   @media (hover: hover) { &:hover { color: ${C.text}; } }
-  &:focus, &:focus-visible { outline: none; }
+  ${focusRing}
 `;
 
 const SlideArea = styled.div<{ $dir: 'fwd' | 'bck' }>`
@@ -524,7 +524,7 @@ const Dot = styled.button<{ $active: boolean; $accent: string }>`
   border: 2px solid ${C.ink}; cursor: pointer; padding: 0;
   background: ${p => (p.$active ? p.$accent : C.divider)};
   transition: none;
-  &:focus, &:focus-visible { outline: none; }
+  ${focusRing}
 `;
 
 const Footer = styled.div`
@@ -549,7 +549,7 @@ const DocsLink = styled.button`
   align-self: flex-start;
   font-size: ${FONT.sm}; color: ${C.gold};
   cursor: pointer;
-  &:focus, &:focus-visible { outline: none; }
+  ${focusRing}
 `;
 
 const Checkbox = styled.input`
@@ -568,7 +568,7 @@ const PrevBtn = styled.button`
   padding: ${SP.sm} ${SP.md};
   color: ${C.textSub};
   font-size: ${FONT.sm};
-  &:focus, &:focus-visible { outline: none; }
+  ${focusRing}
 `;
 
 /** 마지막 장에서만 강조 — 그라디언트+글로우 대신 골드 창틀. */
@@ -579,7 +579,7 @@ const NextBtn = styled.button<{ $grad: string; $shadow: string; $isLast: boolean
   padding: ${SP.sm} ${SP.md};
   color: ${p => (p.$isLast ? C.text : C.textSub)};
   font-size: ${FONT.sm};
-  &:focus, &:focus-visible { outline: none; }
+  ${focusRing}
 `;
 
 const AnimatedModalBox = styled(ModalPlainBox)<{ $exiting: boolean }>`

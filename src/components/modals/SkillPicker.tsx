@@ -8,7 +8,7 @@ import { useTranslation } from '../../i18n';
 import { useGameStore } from '../../store/gameStore';
 import { modalBoxCss, MODAL_ACCENT } from '../shared/modal.styles';
 import { C, FONT, SP, SCALE } from '../../styles/tokens';
-import { winThin, btn, sunken, pixelText, pixelBold } from '../../styles/pixel';
+import { winThin, btn, sunken, pixelText, pixelBold, focusRing } from '../../styles/pixel';
 
 const TYPE_ICON_API_BASE = 'https://www.serebii.net/pokedex-bw/type/';
 
@@ -304,7 +304,7 @@ const KeepBtn = styled.button`
   padding: ${SP.sm};
   font-size: ${FONT.sm};
   color: ${C.text};
-  &:focus, &:focus-visible { outline: none; }
+  ${focusRing}
 `;
 
 const LearnBtn = styled.button`
@@ -314,7 +314,7 @@ const LearnBtn = styled.button`
   padding: ${SP.sm};
   font-size: ${FONT.sm};
   color: ${C.text};
-  &:focus, &:focus-visible { outline: none; }
+  ${focusRing}
 `;
 
 /** 기존→신규 방향 표시. 웹 화살표(→) 대신 포켓몬 메뉴의 ▼. */

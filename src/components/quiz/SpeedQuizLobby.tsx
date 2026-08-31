@@ -10,7 +10,7 @@ import { media } from '../../utils/responsive.utils';
 import { Screen as Root, ScreenBackBtn as BackBtn, ScreenBody, ScreenTitle as Title, ScreenTopBar as TopBar, SectionLabel } from '../shared/screen';
 import { useTranslation, translateIn } from '../../i18n';
 import { C, FONT, SP } from '../../styles/tokens';
-import { win, winThin, btn, btnThin, sunken, pixelText, pixelBold } from '../../styles/pixel';
+import { win, winThin, btn, btnThin, sunken, pixelText, pixelBold, focusRing } from '../../styles/pixel';
 import { quizRoomService, QUIZ_ROOM_ERROR, QUIZ_RTDB_TIMEOUT_MS } from '../../services/QuizRoomService';
 import { QUIZ_MAX_PLAYERS_PER_ROOM, QUIZ_MAX_ACTIVE_ROOMS } from '../../config/rtdbBudget';
 import { QuizRoomSummary, QuizRoomLang } from '../../types/quizRoom';
@@ -332,7 +332,7 @@ const IconBtn = styled.button`
   width: 36px; height: 36px; padding: 0;
   color: ${C.textSub};
   ${media.mobile} { width: 40px; height: 40px; }
-  &:focus, &:focus-visible { outline: none; }
+  ${focusRing}
 `;
 
 /** 읽는 화면이라 좁은 폭. 여백은 공용 껍데기가 정한다. */
@@ -364,7 +364,7 @@ const SegBtn = styled.button<{ $active: boolean }>`
   padding: ${SP.xs} ${SP.sm};
   font-size: ${FONT.sm};
   color: ${p => (p.$active ? C.cyan : C.textSub)};
-  &:focus, &:focus-visible { outline: none; }
+  ${focusRing}
 `;
 
 const StepBlock = styled.div`display: flex; flex-direction: column; gap: ${SP.sm};`;
@@ -391,7 +391,7 @@ const LangBtn = styled.button<{ $active: boolean }>`
   flex: 1 1 120px; padding: ${SP.sm} ${SP.md};
   font-size: ${FONT.sm};
   color: ${p => (p.$active ? C.cyan : C.textSub)};
-  &:focus, &:focus-visible { outline: none; }
+  ${focusRing}
 `;
 
 const TextField = styled.input`
@@ -399,8 +399,9 @@ const TextField = styled.input`
   ${pixelText}
   flex: 1; min-width: 0; padding: ${SP.sm} ${SP.md};
   font-size: ${FONT.sm}; color: ${C.text}; outline: none; box-sizing: border-box;
+  ${focusRing}
   &::placeholder { color: ${C.textDim}; }
-  &:focus { outline: none; }
+  ${focusRing}
 `;
 
 const LockTag = styled.span`
@@ -426,7 +427,7 @@ const PassBtn = styled.button`
   ${pixelBold}
   flex: 0 0 auto; padding: ${SP.xs} ${SP.md};
   color: ${C.cyan}; font-size: ${FONT.sm};
-  &:focus, &:focus-visible { outline: none; }
+  ${focusRing}
 `;
 
 const GhostBtn = styled.button`
@@ -434,7 +435,7 @@ const GhostBtn = styled.button`
   ${pixelBold}
   flex: 0 0 auto; padding: ${SP.xs} ${SP.md};
   color: ${C.textSub}; font-size: ${FONT.sm};
-  &:focus, &:focus-visible { outline: none; }
+  ${focusRing}
 `;
 
 const KindGrid = styled.div`display: flex; flex-wrap: wrap; gap: ${SP.xs};`;
@@ -445,7 +446,7 @@ const KindChip = styled.button<{ $active: boolean }>`
   flex: 0 1 auto; padding: ${SP.xs} ${SP.sm};
   font-size: ${FONT.sm}; white-space: nowrap;
   color: ${p => (p.$active ? C.cyan : C.textSub)};
-  &:focus, &:focus-visible { outline: none; }
+  ${focusRing}
 `;
 
 const PrimaryBtn = styled.button`
@@ -453,7 +454,7 @@ const PrimaryBtn = styled.button`
   ${pixelBold}
   padding: ${SP.sm};
   color: ${C.text}; font-size: ${FONT.sm};
-  &:focus, &:focus-visible { outline: none; }
+  ${focusRing}
 `;
 
 const Hint = styled.div`font-size: ${FONT.sm}; color: ${C.textDim}; word-break: keep-all;`;
@@ -467,7 +468,7 @@ const RoomRow = styled.button<{ $full?: boolean }>`
   padding: ${SP.sm} ${SP.md};
   /* 정원이 찬 방은 흐리게 두되 있다는 건 보인다 — 빈 목록으로 숨기면 왜 못 들어가는지 모른다. */
   &:disabled { opacity: ${p => (p.$full ? 0.55 : 0.5)}; cursor: default; }
-  &:focus, &:focus-visible { outline: none; }
+  ${focusRing}
 `;
 const FullTag = styled.span`
   ${pixelBold}

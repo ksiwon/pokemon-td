@@ -8,7 +8,7 @@
 import React, { useState, useEffect, useCallback, useRef } from 'react';
 import styled, { keyframes } from 'styled-components';
 import { C, FONT, SP, SCALE } from '../../styles/tokens';
-import { btnThin, sunken, pixelText, pixelBold, shadowLg } from '../../styles/pixel';
+import { btnThin, sunken, pixelText, pixelBold, shadowLg, focusRing } from '../../styles/pixel';
 import { StoryChapter, DialogueLine } from '../../data/storyChapters';
 import { useTranslation } from '../../i18n';
 
@@ -369,7 +369,7 @@ const SkipBtn = styled.button`
   color:${C.textSub};
   padding:${SP.xs} ${SP.sm};font-size:${FONT.sm};
   text-shadow:1px 1px 0 ${C.textShadow};
-  &:focus, &:focus-visible { outline: none; }
+  ${focusRing}
 `;
 
 const TitleScreen = styled.div`

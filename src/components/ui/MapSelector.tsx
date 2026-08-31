@@ -10,7 +10,7 @@ import { useNavigate } from "react-router-dom";
 import { Emoji } from "../shared/Emoji";
 import { Screen } from "../shared/screen";
 import { C, FONT, SP, SCALE } from "../../styles/tokens";
-import { btnThin, winThin, hudBar, pixelBold, shadowLg, type WinColor } from "../../styles/pixel";
+import { btnThin, winThin, hudBar, pixelBold, shadowLg, focusRing, type WinColor } from "../../styles/pixel";
 
 type DifficultyFilter = "easiest" | "easy" | "medium" | "hard" | "expert";
 
@@ -156,7 +156,7 @@ const BackBtn = styled.button`
   font-size: ${FONT.sm};
   color: ${C.text};
   white-space: nowrap; flex-shrink: 0;
-  &:focus, &:focus-visible { outline: none; }
+  ${focusRing}
 
   .back-text {
     ${media.mobile} { display: none; }
@@ -200,7 +200,7 @@ const FilterPill = styled.button<{ $active: boolean; $win: WinColor; $color: str
   color: ${p => (p.$active ? p.$color : C.textSub)};
   white-space: nowrap;
   display: inline-flex; align-items: center; gap: ${SP.xs};
-  &:focus, &:focus-visible { outline: none; }
+  ${focusRing}
 `;
 
 // ─── Grid area ────────────────────────────────────────────────────────────────

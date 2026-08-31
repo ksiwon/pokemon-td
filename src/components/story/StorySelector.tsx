@@ -17,7 +17,7 @@ import { media, lMedia } from '../../utils/responsive.utils';
 import { StoryOpening } from './StoryOpening';
 import { useTranslation } from '../../i18n';
 import { C, FONT, SP, SCALE, TYPE_COLOR, ICON } from '../../styles/tokens';
-import { winThin, btn, sunken, hudBar, backdrop, pixelBold, shadowLg } from '../../styles/pixel';
+import { winThin, btn, sunken, hudBar, backdrop, pixelBold, shadowLg, focusRing } from '../../styles/pixel';
 
 export interface StoryStartData {
   mapId: string;
@@ -860,7 +860,7 @@ const StartBtn = styled.button<{ $accent: string }>`
   padding: ${SP.sm};
   color: ${C.text};
   font-size: ${FONT.sm};
-  &:focus, &:focus-visible { outline: none; }
+  ${focusRing}
 `;
 
 const EmptyDetail = styled.div`

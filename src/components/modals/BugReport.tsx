@@ -3,7 +3,7 @@ import React, { useState } from 'react';
 import styled from 'styled-components';
 import { useTranslation } from '../../i18n';
 import { C, FONT, SP } from '../../styles/tokens';
-import { btn, sunken, pixelText, pixelBold } from '../../styles/pixel';
+import { btn, sunken, pixelText, pixelBold, focusRing } from '../../styles/pixel';
 import { Emoji } from '../shared/Emoji';
 import { showToast } from '../shared/Toast';
 import {
@@ -135,9 +135,10 @@ const Input = styled.input`
   font-size: ${FONT.sm};
   color: ${C.text};
   outline: none;
+  ${focusRing}
   box-sizing: border-box;
 
-  &:focus { outline: none; }
+  ${focusRing}
   &::placeholder { color: ${C.textDim}; }
 `;
 
@@ -149,10 +150,11 @@ const TextArea = styled.textarea`
   font-size: ${FONT.sm};
   color: ${C.text};
   outline: none;
+  ${focusRing}
   resize: vertical;
   box-sizing: border-box;
 
-  &:focus { outline: none; }
+  ${focusRing}
   &::placeholder { color: ${C.textDim}; }
 `;
 
@@ -164,5 +166,5 @@ const SubmitButton = styled.button`
   color: ${C.text};
   font-size: ${FONT.sm};
   margin-top: ${SP.sm};
-  &:focus, &:focus-visible { outline: none; }
+  ${focusRing}
 `;

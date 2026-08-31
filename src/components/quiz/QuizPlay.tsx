@@ -9,7 +9,7 @@ import { media } from '../../utils/responsive.utils';
 import { Screen as Root, ScreenBackBtn as BackBtn, ScreenBody, ScreenTitle as TopTitle, ScreenTopBar as TopBar } from '../shared/screen';
 import { useTranslation } from '../../i18n';
 import { C, FONT, SP, SCALE } from '../../styles/tokens';
-import { win, winThin, btn, sunken, pixelBold, shadowLg } from '../../styles/pixel';
+import { win, winThin, btn, sunken, pixelBold, shadowLg, focusRing } from '../../styles/pixel';
 import { QuizKind, QuizMode, QuizQuestion, KO_ONLY_QUIZ_KINDS, RANKED_ROUND_SIZE } from '../../types/quiz';
 import { createQuizSession, createExamSession, normalizeAnswer } from '../../services/QuizEngine';
 import { quizService, ExamMilestoneReward } from '../../services/QuizService';
@@ -561,7 +561,7 @@ const DuelBtn = styled.button<{ $dir: 'up' | 'down' }>`
   display: flex; align-items: center; justify-content: center; gap: ${SP.xs};
   padding: ${SP.sm} ${SP.md};
   font-size: ${FONT.sm}; color: ${C.text};
-  &:focus, &:focus-visible { outline: none; }
+  ${focusRing}
 `;
 const VsBadge = styled.div`
   ${pixelBold}
@@ -596,7 +596,7 @@ const SpeakerBtn = styled.button`
   display: flex; flex-direction: column; align-items: center; gap: ${SP.sm};
   padding: ${SP.xl} ${SP.xxl};
   color: ${C.cyan}; font-size: ${FONT.sm};
-  &:focus, &:focus-visible { outline: none; }
+  ${focusRing}
 `;
 
 const Options = styled.div`
@@ -614,7 +614,7 @@ const OptBtn = styled.button<{ $state: 'idle' | 'correct' | 'wrong' | 'dim'; $im
   color: ${C.text};
   opacity: ${p => (p.$state === 'dim' ? 0.45 : 1)};
   &:disabled { cursor: default; }
-  &:focus, &:focus-visible { outline: none; }
+  ${focusRing}
   ${media.mobile} { min-height: ${p => (p.$img ? '124px' : '50px')}; }
 `;
 const OptImg = styled.img`
@@ -641,10 +641,11 @@ const TextInput = styled.input<{ $state: 'idle' | 'correct' | 'wrong' }>`
   ${pixelBold}
   width: 100%; padding: ${SP.md}; font-size: ${FONT.sm};
   text-align: center; color: ${C.text}; outline: none; box-sizing: border-box;
+  ${focusRing}
   box-shadow: inset 0 0 0 ${SCALE}px ${p =>
     p.$state === 'correct' ? C.green : p.$state === 'wrong' ? C.red : C.cyan};
   &::placeholder { color: ${C.textDim}; font-weight: 400; }
-  &:focus { outline: none; }
+  ${focusRing}
 `;
 const TextBtns = styled.div`display: flex; gap: ${SP.sm};`;
 const SubmitBtn = styled.button`
@@ -652,14 +653,14 @@ const SubmitBtn = styled.button`
   ${pixelBold}
   flex: 1; padding: ${SP.sm};
   color: ${C.text}; font-size: ${FONT.sm};
-  &:focus, &:focus-visible { outline: none; }
+  ${focusRing}
 `;
 const GiveUpBtn = styled.button`
   ${btn('plain')}
   ${pixelBold}
   flex: 0 0 auto; padding: ${SP.sm} ${SP.md};
   font-size: ${FONT.sm}; color: ${C.textSub};
-  &:focus, &:focus-visible { outline: none; }
+  ${focusRing}
 `;
 
 const RevealCard = styled.div<{ $correct: boolean }>`
@@ -686,7 +687,7 @@ const NextBtn = styled.button`
   ${pixelBold}
   padding: ${SP.sm};
   color: ${C.text}; font-size: ${FONT.sm};
-  &:focus, &:focus-visible { outline: none; }
+  ${focusRing}
 `;
 
 const CenterMsg = styled.div`
@@ -753,12 +754,12 @@ const PrimaryBtn = styled.button`
   display: flex; align-items: center; gap: ${SP.xs};
   padding: ${SP.sm} ${SP.lg};
   color: ${C.text}; font-size: ${FONT.sm};
-  &:focus, &:focus-visible { outline: none; }
+  ${focusRing}
 `;
 const GhostBtn = styled.button`
   ${btn('plain')}
   ${pixelBold}
   padding: ${SP.sm} ${SP.lg};
   font-size: ${FONT.sm}; color: ${C.textSub};
-  &:focus, &:focus-visible { outline: none; }
+  ${focusRing}
 `;

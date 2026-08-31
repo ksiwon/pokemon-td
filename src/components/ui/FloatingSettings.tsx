@@ -5,7 +5,7 @@ import { Settings } from '../modals/Settings';
 import { Emoji } from '../shared/Emoji';
 import { useTranslation } from '../../i18n';
 import { C, ICON } from '../../styles/tokens';
-import { btnThin } from '../../styles/pixel';
+import { btnThin, focusRing } from '../../styles/pixel';
 
 /**
  * 화면 오른쪽 아래에 늘 떠 있는 설정 버튼.
@@ -26,7 +26,7 @@ const FloatingBtn = styled.button`
   align-items: center;
   z-index: 1000;
   touch-action: manipulation;
-  &:focus, &:focus-visible { outline: none; }
+  ${focusRing}
 
   ${lMedia.phoneSm} {
     width: 32px;

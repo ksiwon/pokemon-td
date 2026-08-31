@@ -9,6 +9,7 @@
     "preview": "vite preview",
     "ui:frames": "node scripts/genUiFrames.mjs",
     "ui:check": "node scripts/checkUiTokens.mjs",
+    "ui:contrast": "node scripts/checkContrast.mjs",
     "ui:lint": "node scripts/checkDesign.mjs",
     "shots": "node scripts/shots.mjs",
     "quiz:data": "node scripts/genQuizData.mjs",

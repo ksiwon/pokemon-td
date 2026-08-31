@@ -27,7 +27,7 @@ import { getAchievementById, resolveAchievementText } from "../../data/achieveme
 import { Emoji } from "../shared/Emoji";
 import { showToast } from "../shared/Toast";
 import { C, FONT, SP, SCALE, TYPE_COLOR, ICON } from "../../styles/tokens";
-import { win, winThin, btnThin, sunken, pixelText, pixelBold } from "../../styles/pixel";
+import { win, winThin, btnThin, sunken, pixelText, pixelBold, focusRing } from "../../styles/pixel";
 
 const TILE_SIZE = 64;
 const MAP_WIDTH = 15;
@@ -1358,7 +1358,7 @@ const EvolutionToastButton = styled.button`
   display: flex; align-items: center; justify-content: center;
   transition: none;
   @media (hover: hover) { &:hover { color: ${C.text}; } }
-  &:focus, &:focus-visible { outline: none; }
+  ${focusRing}
 `;
 
 /**
@@ -1457,7 +1457,7 @@ const ShopBuyBtn = styled.button<{ $disabled?: boolean }>`
   cursor: ${p => (p.$disabled ? 'not-allowed' : 'pointer')};
   color: ${p => (p.$disabled ? C.textDim : C.gold)};
   white-space: nowrap;
-  &:focus, &:focus-visible { outline: none; }
+  ${focusRing}
 `;
 /* 닫기 — 창틀도 배경도 없이 글리프만. 공유 ModalCloseBtn과 같은 룩. */
 const ShopCloseBtn = styled.button`
@@ -1467,7 +1467,7 @@ const ShopCloseBtn = styled.button`
   display: flex; align-items: center; justify-content: center;
   transition: none;
   @media (hover: hover) { &:hover { color: #fff; } }
-  &:focus, &:focus-visible { outline: none; }
+  ${focusRing}
 `;
 const ShopGradeNote = styled.div`
   font-size: ${FONT.sm}; color: ${C.textDim}; margin: ${SP.xs} 0 ${SP.sm};
@@ -1483,7 +1483,7 @@ const ShopGhostBtn = styled.button`
   color: ${C.textSub};
   padding: ${SP.xs} ${SP.sm}; font-size: ${FONT.sm};
   white-space: nowrap;
-  &:focus, &:focus-visible { outline: none; }
+  ${focusRing}
 `;
 const ShopLockNote = styled.div`
   ${winThin('red')}
@@ -1508,7 +1508,7 @@ const WithdrawBtn = styled.button<{ disabled?: boolean }>`
   white-space: nowrap;
   opacity: ${p => p.disabled ? 0.45 : 1};
   display: flex; align-items: center; gap: ${SP.xs};
-  &:focus, &:focus-visible { outline: none; }
+  ${focusRing}
 `;
 
 const StageWrapper = styled.div`

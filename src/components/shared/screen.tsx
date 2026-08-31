@@ -19,7 +19,7 @@
 
 import styled from 'styled-components';
 import { C, FONT, SP, SCALE } from '../../styles/tokens';
-import { hudBar, btnThin, pixelText, pixelBold } from '../../styles/pixel';
+import { hudBar, btnThin, pixelText, pixelBold, focusRing } from '../../styles/pixel';
 import { media } from '../../utils/responsive.utils';
 
 /** 화면 바깥 틀. 배경·글꼴·세로 배치만 책임진다. */
@@ -81,7 +81,7 @@ export const ScreenBackBtn = styled.button`
   font-size: ${FONT.sm};
   color: ${C.text};
   white-space: nowrap;
-  &:focus, &:focus-visible { outline: none; }
+  ${focusRing}
 `;
 
 /**

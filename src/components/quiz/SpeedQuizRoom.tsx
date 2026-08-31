@@ -17,7 +17,7 @@ import { media } from '../../utils/responsive.utils';
 import { Screen as Root, ScreenBackBtn as BackBtn, ScreenBody, ScreenSpacer as Spacer, ScreenTitle as Title, ScreenTopBar as TopBar } from '../shared/screen';
 import { useTranslation, translateIn } from '../../i18n';
 import { C, FONT, SP, SCALE } from '../../styles/tokens';
-import { win, winThin, btn, sunken, pixelBold, shadowLg } from '../../styles/pixel';
+import { win, winThin, btn, sunken, pixelBold, shadowLg, focusRing } from '../../styles/pixel';
 import { createSpeedSession, normalizeAnswer } from '../../services/QuizEngine';
 import { quizRoomService, speedPoints, normalizeKinds, QUIZ_RTDB_TIMEOUT_MS } from '../../services/QuizRoomService';
 import { quizService } from '../../services/QuizService';
@@ -539,7 +539,7 @@ const SpeakerBtn = styled.button`
   display: flex; flex-direction: column; align-items: center; gap: ${SP.sm};
   padding: ${SP.lg} ${SP.xl};
   color: ${C.cyan}; font-size: ${FONT.sm};
-  &:focus, &:focus-visible { outline: none; }
+  ${focusRing}
 `;
 const AnswerRow = styled.div`display: flex; gap: ${SP.sm};`;
 const TextInput = styled.input`
@@ -547,10 +547,11 @@ const TextInput = styled.input`
   ${pixelBold}
   flex: 1; min-width: 0; padding: ${SP.sm} ${SP.md};
   font-size: ${FONT.sm}; text-align: center; color: ${C.text}; outline: none;
+  ${focusRing}
   box-sizing: border-box;
   box-shadow: inset 0 0 0 ${SCALE}px ${C.cyan};
   &::placeholder { color: ${C.textDim}; font-weight: 400; }
-  &:focus { outline: none; }
+  ${focusRing}
   &:disabled { opacity: 0.55; }
 `;
 const SubmitBtn = styled.button`
@@ -558,7 +559,7 @@ const SubmitBtn = styled.button`
   ${pixelBold}
   flex: 0 0 auto; padding: ${SP.sm} ${SP.md};
   color: ${C.text}; font-size: ${FONT.sm};
-  &:focus, &:focus-visible { outline: none; }
+  ${focusRing}
 `;
 const PrimaryBtn = styled.button`
   ${btn('cyan')}
@@ -566,7 +567,7 @@ const PrimaryBtn = styled.button`
   display: flex; align-items: center; justify-content: center; gap: ${SP.xs};
   padding: ${SP.sm} ${SP.lg};
   color: ${C.text}; font-size: ${FONT.sm};
-  &:focus, &:focus-visible { outline: none; }
+  ${focusRing}
 `;
 const RevealCard = styled.div<{ $correct: boolean }>`
   ${p => win(p.$correct ? 'green' : 'red')}

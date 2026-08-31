@@ -37,6 +37,15 @@ const FX_EXEMPT = ['CardView', 'PackOpening', 'BossCutIn', 'StoryOpening', 'Stor
  * 구조 규칙(유리 카드·둥근 모서리 등)은 이 예외와 무관하게 전부 적용된다.
  */
 const NON_CSS_PATH = /^src\/(data|game|utils|services)\/|^src\/main\.tsx$/;
+/**
+ * 포커스 링을 지운 자리에 대체 표시가 있는지 본다.
+ *
+ * `outline: none` 자체가 잘못은 아니다 — 브라우저 기본 링은 둥근 파란 테두리라
+ * 도트 창틀과 충돌한다. 잘못은 지우고 아무것도 안 넣는 것이다. 한때 130곳 중
+ * 대체가 있는 건 2곳뿐이었고, 키보드로 도는 사람은 자기 위치를 볼 수 없었다.
+ */
+const FOCUS_ALT = /(focusRing|cursorOn|outline: [^n;]|inset 0 0 0)/;
+
 const CANVAS_PAINT = /(fillStyle|strokeStyle|shadowColor|addColorStop|create(Linear|Radial)Gradient|[ {](fill|stroke)=)/;
 
 const RULES = [
@@ -56,6 +65,10 @@ const RULES = [
   { id: 'Tailwind 팔레트',  re: /#(3b82f6|10b981|f59e0b|c084fc|22d3ee|ef4444|8b5cf6|22c55e|84cc16|eab308|f97316|60a5fa|34d399|fbbf24|a855f7|38bdf8|94a3b8|64748b|4ade80|f87171|fb923c|a3e635)(?![0-9a-fA-F])/i, fx: false, cssOnly: true },
   { id: 'border-radius',   re: /border-radius\s*:\s*(?!0)/i, fx: true },
   { id: '번지는 그림자',   re: /box-shadow:[^;]*[0-9]+px\s+[0-9]+px\s+[1-9][0-9]*px/i, fx: true },
+  // 대체 없이 지운 포커스 링. focusRing / cursorOn / inset 테두리가 근처에 있으면
+  // 대체가 있는 것으로 본다. 인라인 `outline: none`(input 선언 안)도 잡는다 —
+  // 그쪽이 오히려 링이 늘 없다.
+  { id: '맨 outline:none', re: /outline: *none/i, fx: true, needsFocusAlt: true },
   { id: '색 리터럴',       re: /#[0-9a-fA-F]{3,8}(?![0-9a-fA-F])|rgba?\(/, fx: false, cssOnly: true },
 ];
 
@@ -79,11 +92,14 @@ for (const f of files) {
     if (!code.trim()) return;
     if (/console\.(log|warn|error)/.test(code)) return;       // 로그 문자열
     const near = lines.slice(Math.max(0, i - 4), i + 1).join(' ');
+    // 포커스 대체는 같은 줄이나 바로 다음 줄에 온다(`outline: none;` 다음 줄의 focusRing)
+    const nearAfter = lines.slice(Math.max(0, i - 1), i + 3).join(' ');
     for (const r of RULES) {
       if (exempt && r.fx) continue;
       if (r.needsHover && !/hover/i.test(near)) continue;
       if (r.jsxOnly && !/<|\{/.test(code)) continue;
       if (r.cssOnly && (NON_CSS_PATH.test(f) || CANVAS_PAINT.test(code))) continue;
+      if (r.needsFocusAlt && FOCUS_ALT.test(nearAfter)) continue;
       if (r.re.test(code)) hits.get(r.id).push(`${f}:${i + 1}  ${code.trim().slice(0, 88)}`);
     }
   });}

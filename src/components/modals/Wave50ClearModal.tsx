@@ -7,7 +7,7 @@ import { Emoji } from '../shared/Emoji';
 import { lMedia } from '../../utils/responsive.utils';
 import { useTranslation } from '../../i18n';
 import { C, FONT, SP } from '../../styles/tokens';
-import { btn, pixelBold, shadowLg } from '../../styles/pixel';
+import { btn, pixelBold, shadowLg, focusRing } from '../../styles/pixel';
 
 // ─── 반응형 헬퍼 ──────────────────────────────────────────────────────────────
 const LSm   = lMedia.phoneSm;  // landscape + max-height ≤520px
@@ -113,7 +113,7 @@ const BaseButton = styled.button`
   padding: ${SP.md} ${SP.lg};
   font-size: ${FONT.sm};
   color: ${C.text};
-  &:focus, &:focus-visible { outline: none; }
+  ${focusRing}
 
   ${lMedia.phone} { max-width: 320px; padding: ${SP.sm} ${SP.md}; }
   ${LSm}  { max-width: 300px; padding: ${SP.sm}; }

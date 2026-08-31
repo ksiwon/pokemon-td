@@ -34,7 +34,7 @@ import { PatchNotes, hasUnreadPatchNotes } from '../modals/PatchNotes';
 import { GameDocs, DocsTab } from '../modals/GameDocs';
 import { showToast } from '../shared/Toast';
 import { C, FONT, SP } from '../../styles/tokens';
-import { win, btn, btnThin, backdrop, pixelBold, cursorMark, cursorOn, CURSOR_GUTTER, BtnColor, pixelText, shadowLg } from '../../styles/pixel';
+import { win, btn, btnThin, backdrop, pixelBold, cursorMark, cursorOn, CURSOR_GUTTER, BtnColor, pixelText, shadowLg, focusRing } from '../../styles/pixel';
 
 export const MainMenu = () => {
   const navigate = useNavigate();
@@ -290,7 +290,7 @@ const SignOutBtn = styled.button`
   white-space: nowrap; flex-shrink: 0;
   transition: none;
   @media (hover: hover) { &:hover { color: ${C.text}; } }
-  &:focus, &:focus-visible { outline: none; }
+  ${focusRing}
   ${lMedia.phoneSm} { display: none; }
 `;
 

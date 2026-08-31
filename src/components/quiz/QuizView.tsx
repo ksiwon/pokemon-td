@@ -9,7 +9,7 @@ import { media } from '../../utils/responsive.utils';
 import { Screen as Root, ScreenBackBtn as BackBtn, ScreenBody as Body, ScreenTitle as Title, ScreenTopBar as TopBar, SectionLabel } from '../shared/screen';
 import { useTranslation } from '../../i18n';
 import { C, FONT, SP, SCALE, ICON } from '../../styles/tokens';
-import { winThin, btn, btnThin, pixelText, pixelBold } from '../../styles/pixel';
+import { winThin, btn, btnThin, pixelText, pixelBold, focusRing } from '../../styles/pixel';
 import { QuizKind, QuizMode, availableQuizKinds, ROUND_SIZES, RANKED_ROUND_SIZE } from '../../types/quiz';
 import { quizService } from '../../services/QuizService';
 import { databaseService } from '../../services/DatabaseService';
@@ -165,7 +165,7 @@ const ExamCard = styled.button`
   display: flex; align-items: center; gap: ${SP.md};
   text-align: left; color: ${C.text};
   padding: ${SP.md};
-  &:focus, &:focus-visible { outline: none; }
+  ${focusRing}
 `;
 
 const ExamIcon = styled.div`
@@ -242,7 +242,7 @@ const SegBtn = styled.button<{ $active: boolean }>`
   padding: ${SP.xs} ${SP.md};
   font-size: ${FONT.sm};
   color: ${p => (p.$active ? C.cyan : C.textSub)};
-  &:focus, &:focus-visible { outline: none; }
+  ${focusRing}
 `;
 
 
@@ -257,7 +257,7 @@ const QuizCard = styled.button`
   display: flex; align-items: center; gap: ${SP.sm};
   text-align: left; color: ${C.text};
   padding: ${SP.sm};
-  &:focus, &:focus-visible { outline: none; }
+  ${focusRing}
 `;
 const IconTile = styled.div`
   flex: 0 0 auto; width: 40px; height: 40px;

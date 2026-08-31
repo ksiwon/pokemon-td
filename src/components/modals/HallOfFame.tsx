@@ -14,7 +14,7 @@ import { quotaGuard } from '../../services/QuotaGuard';
 import { useTranslation } from '../../i18n';
 
 import { C, FONT, SP, SCALE } from '../../styles/tokens';
-import { winThin, btnThin, pixelBold, FRAME_W, shadowLg } from '../../styles/pixel';
+import { winThin, btnThin, pixelBold, FRAME_W, shadowLg, focusRing } from '../../styles/pixel';
 import { Emoji } from '../shared/Emoji';
 
 type ViewTab = 'global_clear' | 'global_wave' | 'mine';
@@ -559,7 +559,7 @@ const PageBtn = styled.button`
   padding: ${SP.xs} ${SP.sm};
   color: ${C.text}; font-size: ${FONT.sm};
   display: flex; align-items: center; justify-content: center;
-  &:focus, &:focus-visible { outline: none; }
+  ${focusRing}
 `;
 
 const PageInfo = styled.span`

@@ -9,7 +9,7 @@ import { Rarity } from '../../data/evolution';
 import { useTranslation } from '../../i18n';
 import { CardView } from './CardView';
 import { C, FONT, SP, SCALE } from '../../styles/tokens';
-import { btn, btnThin, pixelText, pixelBold, shadowLg } from '../../styles/pixel';
+import { btn, btnThin, pixelText, pixelBold, shadowLg, focusRing } from '../../styles/pixel';
 
 const rarityRank = (r: Rarity): number =>
   ['Bronze', 'Silver', 'Gold', 'Diamond', 'Master', 'Legend'].indexOf(r);
@@ -256,7 +256,7 @@ const SkipBtn = styled.button`
   position: absolute; top: 20px; right: 20px;
   color: ${C.text}; font-size: ${FONT.sm};
   padding: ${SP.xs} ${SP.sm};
-  &:focus, &:focus-visible { outline: none; }
+  ${focusRing}
 `;
 
 const SummaryWrap = styled.div`
@@ -284,5 +284,5 @@ const CloseBtn = styled.button<{ $color: string }>`
   ${pixelBold}
   margin-top: ${SP.sm}; padding: ${SP.sm} ${SP.xxl};
   color: ${C.text}; font-size: ${FONT.sm};
-  &:focus, &:focus-visible { outline: none; }
+  ${focusRing}
 `;

@@ -41,7 +41,7 @@ import { pvpBattleService, deriveBattleSeed, buildMatchId } from '../../services
 import { TFTBattleArena, TFTBattleResult } from './TFTBattleArena';
 import { useTranslation } from '../../i18n';
 import { C, FONT, SP, SCALE, ICON } from '../../styles/tokens';
-import { win, winThin, btn, sunken, pixelText, pixelBold, shadowLg } from '../../styles/pixel';
+import { win, winThin, btn, sunken, pixelText, pixelBold, shadowLg, focusRing } from '../../styles/pixel';
 
 interface BattlePhaseUIProps {
   roomId: string;
@@ -269,7 +269,7 @@ const SummaryCloseBtn = styled.button`
   ${pixelBold}
   width: 100%; padding: ${SP.sm};
   font-size: ${FONT.sm}; color: ${C.text};
-  &:focus, &:focus-visible { outline: none; }
+  ${focusRing}
 `;
 
 const MyResultBanner = styled.div<{ $win: boolean }>`

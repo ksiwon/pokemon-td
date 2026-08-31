@@ -28,7 +28,7 @@ import { TrainerTower } from './TrainerTower';
 import { RandomBattle } from './RandomBattle';
 import { showToast } from '../shared/Toast';
 import { C, FONT, SP, SCALE, ICON } from '../../styles/tokens';
-import { win, winThin, btn, btnThin, sunken, pixelText, pixelBold } from '../../styles/pixel';
+import { win, winThin, btn, btnThin, sunken, pixelText, pixelBold, focusRing } from '../../styles/pixel';
 
 type SubView = 'hub' | 'deck' | 'tower' | 'pvp';
 
@@ -465,7 +465,7 @@ const TypeChip = styled.button<{ $c: string }>`
   color: ${C.text};
   font-size: ${FONT.sm};
   transition: none;
-  &:focus, &:focus-visible { outline: none; }
+  ${focusRing}
 `;
 
 // ─── 랭킹 위젯 ────────────────────────────────────────────────────────────────
@@ -497,7 +497,7 @@ const ViewAllBtn = styled.button`
   padding: ${SP.xs};
   transition: none;
   @media (hover: hover) { &:hover { color: ${C.text}; } }
-  &:focus, &:focus-visible { outline: none; }
+  ${focusRing}
 `;
 const MyRankRow = styled.div`
   display: grid; grid-template-columns: repeat(2, 1fr); gap: ${SP.sm};
@@ -576,7 +576,7 @@ const PackCard = styled.button<{ $disabled: boolean }>`
   color: ${C.text};
   opacity: ${p => (p.$disabled ? 0.5 : 1)};
   pointer-events: ${p => (p.$disabled ? 'none' : 'auto')};
-  &:focus, &:focus-visible { outline: none; }
+  ${focusRing}
 `;
 const PackName = styled.div`
   ${pixelBold}
@@ -600,7 +600,7 @@ const ModeBtn = styled.button<{ $disabled?: boolean }>`
   padding: ${SP.md};
   font-size: ${FONT.sm};
   color: ${C.text};
-  &:focus, &:focus-visible { outline: none; }
+  ${focusRing}
 `;
 const FloorBadge = styled.span`
   ${winThin('purple')}
@@ -632,7 +632,7 @@ const NoticeClose = styled.button`
   color: ${C.textDim};
   transition: none;
   @media (hover: hover) { &:hover { color: ${C.text}; } }
-  &:focus, &:focus-visible { outline: none; }
+  ${focusRing}
 `;
 
 const BackupBar = styled.div`
@@ -650,7 +650,7 @@ const BackupBtn = styled.button`
   display: flex; align-items: center; gap: ${SP.xs};
   color: ${C.text}; font-size: ${FONT.sm};
   padding: ${SP.xs} ${SP.sm};
-  &:focus, &:focus-visible { outline: none; }
+  ${focusRing}
 `;
 
 const DevBar = styled.div`display: flex; justify-content: center;`;
@@ -658,7 +658,7 @@ const DevBtn = styled.button`
   ${btnThin('plain')}
   font-size: ${FONT.sm}; color: ${C.textDim};
   padding: ${SP.xs} ${SP.sm};
-  &:focus, &:focus-visible { outline: none; }
+  ${focusRing}
 `;
 
 const BusyVeil = styled.div`

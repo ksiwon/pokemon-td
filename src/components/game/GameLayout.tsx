@@ -64,7 +64,7 @@ import { buildTowerDetails } from "../../game/towerFactory";
 import { fromWireAbility } from "../../utils/abilities";
 import { lMedia } from "../../utils/responsive.utils";
 import { C, FONT, SP, SCALE, ICON } from "../../styles/tokens";
-import { win, btn, btnThin, sunken, crisp, pixelText, pixelBold, cursorMark, cursorOn, CURSOR_GUTTER, shadowLg, type BtnColor } from "../../styles/pixel";
+import { win, btn, btnThin, sunken, crisp, pixelText, pixelBold, cursorMark, cursorOn, CURSOR_GUTTER, shadowLg, focusRing, type BtnColor } from "../../styles/pixel";
 import { Emoji } from "../shared/Emoji";
 import { showToast } from "../shared/Toast";
 import { Store, Award } from "lucide-react";
@@ -1451,7 +1451,8 @@ const DsBtn = styled.button<{ $v: keyof typeof BTN_COLOR; $pulse?: boolean }>`
   overflow: hidden;
   touch-action: manipulation;
   outline: none; appearance: none; -webkit-appearance: none;
-  &:focus, &:focus-visible { outline: none; }
+  ${focusRing}
+  ${focusRing}
 
   ${p => p.$pulse && css`
     & > * { animation: ${attn} 0.9s steps(1, end) infinite; }
@@ -1507,7 +1508,8 @@ const utilBase = css`
   color: ${C.text};
   touch-action: manipulation;
   outline: none; appearance: none; -webkit-appearance: none;
-  &:focus, &:focus-visible { outline: none; }
+  ${focusRing}
+  ${focusRing}
   ${lMedia.phone} { min-height: 36px; }
 `;
 
@@ -1569,7 +1571,7 @@ const HamClose = styled.button`
   display: flex; align-items: center; justify-content: center;
   transition: none;
   @media (hover: hover) { &:hover { color: ${C.text}; } }
-  &:focus, &:focus-visible { outline: none; }
+  ${focusRing}
 `;
 
 /** 목록 항목 — hover 배경 대신 ▶ 커서로 선택을 표시한다. */

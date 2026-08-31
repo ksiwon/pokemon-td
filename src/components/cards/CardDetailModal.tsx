@@ -12,7 +12,7 @@ import { useTranslation } from '../../i18n';
 import { MAX_STARS, MERGE_COPIES } from '../../services/CardService';
 import { CardView } from './CardView';
 import { C, FONT, SP, SCALE, STAT_RAMP } from '../../styles/tokens';
-import { win, sunken, pixelText, pixelBold, shadowLg } from '../../styles/pixel';
+import { win, sunken, pixelText, pixelBold, shadowLg, focusRing } from '../../styles/pixel';
 
 interface Props {
   pokemonId: number;
@@ -195,7 +195,7 @@ const CloseBtn = styled.button`
   color: ${C.textDim};
   transition: none;
   @media (hover: hover) { &:hover { color: ${C.text}; } }
-  &:focus, &:focus-visible { outline: none; }
+  ${focusRing}
 `;
 const Loading = styled.div`
   padding: ${SP.xxl}; text-align: center; color: ${C.textDim}; font-size: ${FONT.sm};

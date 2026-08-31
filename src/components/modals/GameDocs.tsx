@@ -23,7 +23,7 @@ import { useState } from 'react';
 import styled from 'styled-components';
 import { useTranslation } from '../../i18n';
 import { C, FONT, SP, SCALE } from '../../styles/tokens';
-import { winThin, sunken, pixelText, pixelBold, BtnColor, FRAME_W_THIN } from '../../styles/pixel';
+import { winThin, sunken, pixelText, pixelBold, BtnColor, FRAME_W_THIN, focusRing } from '../../styles/pixel';
 import {
   ModalOverlay, ModalBox, ModalHeader, ModalTitle, ModalCloseBtn,
   modalPadX, ModalTabBtn,
@@ -376,9 +376,16 @@ const TabBtn = styled(ModalTabBtn).attrs({ $grow: true })`
   justify-content: center;
 `;
 
-/** 좌우 여백은 공용 토큰에서. 아래도 같은 만큼 비워 마지막 줄이 창틀에 붙지 않게 한다. */
+/**
+ * 좌우 여백은 공용 토큰에서. 아래도 같은 만큼 비워 마지막 줄이 창틀에 붙지 않게 한다.
+ *
+ * 공용 `ModalScrollBody` 를 안 쓰고 자체 스크롤을 두고 있어서 포커스 링을 직접
+ * 붙인다(크롬은 스크롤 컨테이너를 키보드로 잡게 해 주고, 그때 기본 링을 그린다).
+ * 언젠가 공용 껍데기로 합치는 게 맞다 — 그러면 이 줄도 필요 없다.
+ */
 const Body = styled.div`
   ${modalPadX}
+  ${focusRing}
   overflow-y: auto;
   padding-bottom: ${SP.lg};
   display: flex; flex-direction: column; gap: ${SP.md};

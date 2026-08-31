@@ -6,7 +6,7 @@ import { lMedia } from '../../utils/responsive.utils';
 import { Emoji } from '../shared/Emoji';
 import { useTranslation } from '../../i18n';
 import { C, FONT, SP } from '../../styles/tokens';
-import { btn, pixelBold, shadowLg } from '../../styles/pixel';
+import { btn, pixelBold, shadowLg, focusRing } from '../../styles/pixel';
 import { useGameStore } from '../../store/gameStore';
 import { ModalOverlay, MODAL_ACCENT, ModalPlainBox, ModalPlainHeader } from '../shared/modal.styles';
 
@@ -122,7 +122,7 @@ const EvolveBtn = styled.button`
   padding: ${SP.sm} ${SP.md};
   font-size: ${FONT.sm};
   color: ${C.text};
-  &:focus, &:focus-visible { outline: none; }
+  ${focusRing}
 `;
 
 const EvolveBtnContent = styled.div`
@@ -148,5 +148,5 @@ const CancelBtn = styled.button`
   padding: ${SP.sm} ${SP.md};
   font-size: ${FONT.sm};
   color: ${C.text};
-  &:focus, &:focus-visible { outline: none; }
+  ${focusRing}
 `;

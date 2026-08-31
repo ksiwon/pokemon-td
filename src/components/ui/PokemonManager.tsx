@@ -8,7 +8,7 @@ import {
 import { lMedia } from '../../utils/responsive.utils';
 import { useTranslation } from '../../i18n';
 import { C, FONT, SP, ICON } from '../../styles/tokens';
-import { win, winThin, btn, btnThin, pixelBold, shadowLg } from '../../styles/pixel';
+import { win, winThin, btn, btnThin, pixelBold, shadowLg, focusRing } from '../../styles/pixel';
 import { useGameStore } from '../../store/gameStore';
 import { isWorkLocked } from '../../utils/facility.utils';
 import { Gender } from '../../types/game';
@@ -323,7 +323,7 @@ const FusionBtn = styled.button<{ $fusionMode: boolean }>`
   font-size: ${FONT.sm};
   padding: ${SP.xs} ${SP.md};
   color: ${p => (p.$fusionMode ? C.red : C.blue)};
-  &:focus, &:focus-visible { outline: none; }
+  ${focusRing}
 `;
 
 const FusionInfo = styled.div`
@@ -474,7 +474,7 @@ const ManageItemsBtn = styled.button`
   padding: ${SP.sm};
   font-size: ${FONT.sm};
   color: ${C.text};
-  &:focus, &:focus-visible { outline: none; }
+  ${focusRing}
 `;
 
 const SellBtn = styled.button`
@@ -484,7 +484,7 @@ const SellBtn = styled.button`
   padding: ${SP.sm};
   font-size: ${FONT.sm};
   color: ${C.text};
-  &:focus, &:focus-visible { outline: none; }
+  ${focusRing}
 `;
 
 const InnerPad = styled.div`

@@ -7,7 +7,7 @@ import { Settings } from '../modals/Settings';
 import { useTranslation } from '../../i18n';
 import { Emoji } from '../shared/Emoji';
 import { C, FONT, SP, SCALE, ICON } from '../../styles/tokens';
-import { win, winThin, btn, btnThin, sunken, backdrop, pixelText, pixelBold, shadowLg } from '../../styles/pixel';
+import { win, winThin, btn, btnThin, sunken, backdrop, pixelText, pixelBold, shadowLg, focusRing } from '../../styles/pixel';
 
 export const LoginScreen = () => {
   const { t } = useTranslation();
@@ -169,7 +169,7 @@ const SettingsBtn = styled.button`
   display: flex; align-items: center; gap: ${SP.xs};
   color: ${C.text}; padding: ${SP.xs} ${SP.sm};
   font-size: ${FONT.sm};
-  &:focus, &:focus-visible { outline: none; }
+  ${focusRing}
   ${media.mobile}   { top: ${SP.md}; right: ${SP.md}; }
   ${lMedia.phoneSm} { top: ${SP.sm}; right: ${SP.sm}; }
 `;
@@ -268,7 +268,7 @@ const GoogleBtn = styled.button`
   padding: ${SP.sm} ${SP.md};
   color: ${C.text}; font-size: ${FONT.sm};
   margin-bottom: ${SP.md};
-  &:focus, &:focus-visible { outline: none; }
+  ${focusRing}
 `;
 
 const GoogleLetter = styled.div`
@@ -299,7 +299,8 @@ const GuestInput = styled.input`
   ${pixelText}
   width: 100%; padding: ${SP.sm} ${SP.md};
   color: ${C.text}; font-size: ${FONT.sm}; outline: none; box-sizing: border-box;
-  &:focus { outline: none; }
+  ${focusRing}
+  ${focusRing}
   &::placeholder { color: ${C.textDim}; }
 `;
 
@@ -312,7 +313,7 @@ const ConfirmBtn = styled.button`
   ${pixelBold}
   width: 100%; padding: ${SP.sm};
   color: ${C.text}; font-size: ${FONT.sm};
-  &:focus, &:focus-visible { outline: none; }
+  ${focusRing}
 `;
 
 const CancelLink = styled.span`
@@ -350,7 +351,7 @@ const OfflineBtn = styled.button<{ $highlight?: boolean }>`
   width: 100%; margin-top: ${SP.md}; padding: ${SP.sm} ${SP.md};
   font-size: ${FONT.sm};
   color: ${p => (p.$highlight ? C.gold : C.text)};
-  &:focus, &:focus-visible { outline: none; }
+  ${focusRing}
 `;
 
 const Notice = styled.div`

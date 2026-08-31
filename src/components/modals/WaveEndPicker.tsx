@@ -12,7 +12,7 @@ import { Item } from '../../types/game';
 import { multiplayerService } from '../../services/MultiplayerService';
 import { showToast } from '../shared/Toast';
 import { C, FONT, SP } from '../../styles/tokens';
-import { win, btn, pixelBold, cursorMark, cursorOn, shadowLg } from '../../styles/pixel';
+import { win, btn, pixelBold, cursorMark, cursorOn, shadowLg, focusRing } from '../../styles/pixel';
 
 // 싱글플레이에서만 isPaused:false 해제 (멀티플레이는 BattlePhaseUI가 관리)
 function resumeSingleOnly() {
@@ -262,5 +262,5 @@ const CancelBtn = styled.button`
   padding: ${SP.sm};
   font-size: ${FONT.sm}; color: ${C.text};
   ${lMedia.phone} { width: 100%; margin: ${SP.sm} 0; }
-  &:focus, &:focus-visible { outline: none; }
+  ${focusRing}
 `;

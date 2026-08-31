@@ -104,3 +104,20 @@ button:disabled {
 ::-webkit-scrollbar-thumb:hover {
   background: #c5cbd8;
 }
+
+/*
+ * 모션 축소 요청 — 전역 바닥.
+ *
+ * 개별 연출은 pixel.ts 의 motionSafe() 로 감싸는 게 원칙이지만, 새 화면에서
+ * 빠뜨리기 쉬워 여기에 바닥을 깐다. 지속시간을 0으로 만드는 방식이라
+ * **애니메이션을 없애는 게 아니라 즉시 끝낸다** — 개봉 결과나 컷인 정보가
+ * 사라지면 게임이 안 돌아가므로, 최종 상태는 그대로 남아야 한다.
+ */
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+}
