@@ -324,8 +324,20 @@ public/images/
     ├── *.webp                # 맵 배경 1920px — 게임 캔버스·스토리 오프닝용
     └── thumbs/*.webp         # 맵 썸네일 480px — 맵 선택·스토리 챕터·멀티 로비 카드용
 
-assets-src/                   # 원본 PNG 보관 (public 밖 = 배포 제외). 재인코딩 방법은 assets-src/README.md
+public/sounds/
+└── dj-pikachu-00..11.m4a     # BGM 5분 청크 12개 (원본 57분을 -c copy 로 분할 — 음질 동일)
+
+public/fonts/
+└── Galmuri11(-Bold).woff2    # 도트 폰트. SIL OFL 1.1, 전문은 같은 폴더의 라이선스 파일
+
+assets-src/                   # 원본 PNG·BGM 보관 (public 밖 = 배포 제외). 재인코딩 방법은 assets-src/README.md
 ```
+
+> ⚠️ BGM은 **한 덩어리로 두면 안 됩니다.** 57분·36.8MB짜리 단일 파일이던 시절, 브라우저는
+> 재생이 시작되자마자 파일 전체를 당겼고 그 크기는 브라우저 디스크 캐시 상한을 넘어
+> 캐시에 얹히지도 않았습니다 — **재방문마다 처음부터 다시** 받아 세션당 약 70MB
+> (range 재요청까지 겹쳐 파일 크기의 2배)가 나갔습니다. 5분 청크로 나눈 뒤
+> 첫 방문 40초 기준 42.8MB → 6.0MB, 재방문 29.0MB → **0MB** 로 떨어졌습니다.
 
 > ⚠️ 화면에서 `` `/images/maps/${id}.png` `` 처럼 경로를 직접 조립하지 말 것.
 > `maps.ts`의 `mapThumbnailById()` / `MapData.backgroundImage`를 쓴다.
@@ -423,8 +435,8 @@ npm run quiz:data   # PokeAPI 전수 조사 → pokedexSpecialIndex.json + signa
 ### 1. 프론트엔드 — Netlify
 `netlify.toml`에 SPA 리다이렉트, 팝업 로그인용 COOP 헤더, **캐시 정책**이 포함되어 있습니다.
 - `/assets/*` — 해시 파일명이라 `immutable` 1년
-- `/images/*`, `/sounds/*` — 30일 + `stale-while-revalidate`
-  > ⚠️ 이미지·사운드는 파일명이 고정입니다. 교체할 땐 **파일명을 바꾸거나** Netlify 캐시를
+- `/images/*`, `/sounds/*`, `/fonts/*` — 30일 + `stale-while-revalidate`
+  > ⚠️ 이미지·사운드·폰트는 파일명이 고정입니다. 교체할 땐 **파일명을 바꾸거나** Netlify 캐시를
   > 비워야 유저에게 반영됩니다.
 - **Git 연동(자동 배포)**: Netlify가 자체 빌드하므로 `VITE_FIREBASE_*` 변수를
   **Site configuration → Environment variables**에 등록해야 합니다(미등록 시 로그인 깨짐).
