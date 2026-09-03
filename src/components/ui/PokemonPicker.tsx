@@ -4,6 +4,8 @@ import React, { useState, useEffect } from 'react';
 import styled from 'styled-components';
 import { media, lMedia } from '../../utils/responsive.utils';
 import { useTranslation } from '../../i18n';
+import { C, FONT, SP, SCALE } from '../../styles/tokens';
+import { win, btn, pixelText, pixelBold, cursorMark, cursorOn, shadowLg, focusRing } from '../../styles/pixel';
 import { pokeAPI, PokemonData } from '../../api/pokeapi';
 import { useGameStore } from '../../store/gameStore';
 import { GameMove, Gender } from '../../types/game';
@@ -241,7 +243,7 @@ export const PokemonPicker: React.FC<{ onClose: () => void; storyHeroPool?: numb
           <AllPlacedSub>
             {t('picker.allPlacedDesc2L1')}<br />{t('picker.allPlacedDesc2L2')}
           </AllPlacedSub>
-          <ModalCloseBtn onClick={onClose} style={{ fontSize: '16px', padding: '10px 28px', background: 'rgba(255,255,255,0.08)', border: '1px solid rgba(255,255,255,0.2)', borderRadius: '10px', cursor: 'pointer', color: '#fff', marginTop: '8px' }}>{t('common.close')}</ModalCloseBtn>
+          <AllPlacedCloseBtn onClick={onClose}>{t('common.close')}</AllPlacedCloseBtn>
         </AllPlacedModal>
       </ModalOverlay>
     );
@@ -320,143 +322,142 @@ export const PokemonPicker: React.FC<{ onClose: () => void; storyHeroPool?: numb
 };
 
 // ── 반응형 헬퍼 (landscape 전용) ─────────────────────────────────
-const L1024 = lMedia.tablet;
-const L768  = lMedia.phone;
 
-// ── AllPlaced 전용 스타일 ─────────────────────────────────────────────────────
+// ─── Styled Components ────────────────────────────────────────────────────────
+// docs/DESIGN.md 의 디자인 시스템을 따른다.
+// 걷어낸 것: 유리 카드, 그라디언트 버튼, hover 떠오름+글로우, 둥근 모서리,
+//           번지는 그림자, 10~13px 미만 글자.
+
+// ── AllPlaced 전용 스타일
 const AllPlacedModal = styled.div`
-  background: linear-gradient(160deg, #0d1117 0%, #080c14 100%);
-  border-radius: 20px;
-  padding: 48px 40px 36px;
+  ${win('green')}
+  ${pixelText}
+  padding: ${SP.xl};
   max-width: 420px;
   width: 90%;
   text-align: center;
-  box-shadow: 0 32px 80px rgba(0,0,0,0.85), inset 0 1px 0 rgba(255,255,255,0.06);
-  border: 1px solid rgba(255,255,255,0.10);
-  border-top: 3px solid #2ecc71;
+  color: ${C.text};
   display: flex;
   flex-direction: column;
   align-items: center;
-  gap: 14px;
-  animation: fadeIn 0.3s ease-out;
+  gap: ${SP.md};
 `;
-const AllPlacedIcon = styled.div`font-size: 52px; line-height: 1;`;
+const AllPlacedIcon = styled.div`font-size: 48px; line-height: 1;`;
 const AllPlacedTitle = styled.h2`
-  font-size: 22px; font-weight: 800; color: #7effa0; margin: 0;
+  ${pixelBold}
+  font-size: ${FONT.xl}; color: ${C.green}; margin: 0;
+  ${shadowLg}
 `;
 const AllPlacedDesc = styled.p`
-  font-size: 15px; color: #d0e8d8; line-height: 1.7; margin: 0;
+  font-size: ${FONT.sm}; color: ${C.text}; margin: 0;
 `;
+/** 전원 배치 안내창의 닫기 — 여기서는 유일한 동작이라 온전한 버튼으로 둔다. */
+const AllPlacedCloseBtn = styled.button`
+  ${btn('plain')}
+  ${pixelBold}
+  margin-top: ${SP.sm};
+  padding: ${SP.sm} ${SP.xl};
+  font-size: ${FONT.sm};
+  color: ${C.text};
+  ${focusRing}
+`;
+
 const AllPlacedSub = styled.p`
-  font-size: 13px; color: rgba(255,255,255,0.35); line-height: 1.6; margin: 0;
+  font-size: ${FONT.sm}; color: ${C.textDim}; margin: 0;
 `;
-
-
 
 const Header = styled.div`
   display: flex;
   justify-content: space-between;
   align-items: center;
-  margin-bottom: 15px;
-  ${L768} { margin-bottom: 8px; }
+  margin-bottom: ${SP.md};
+  ${lMedia.phone} { margin-bottom: ${SP.sm}; }
 `;
 
 const Title = styled.h2`
-  font-size: 24px;
-  font-weight: 800;
-  color: #fff;
-  margin-bottom: 4px;
-  ${L1024} { font-size: 20px; }
-  ${L768}  { font-size: 16px; }
-  ${media.mobile} { font-size: 20px; }
+  ${pixelBold}
+  font-size: ${FONT.xl};
+  color: ${C.text};
+  margin: 0 0 ${SP.xs};
+  ${shadowLg}
+  ${lMedia.phone} { font-size: ${FONT.sm}; }
 `;
 
-
 const Subtitle = styled.p`
-  font-size: 16px;
-  color: #aaa;
-  margin-bottom: 20px;
+  font-size: ${FONT.sm};
+  color: ${C.textSub};
+  margin: 0 0 ${SP.lg};
   text-align: center;
-  ${L768} { font-size: 12px; margin-bottom: 8px; }
+  ${lMedia.phone} { margin-bottom: ${SP.sm}; }
 `;
 
 const CardGrid = styled.div`
   /* [FIX] 항상 3장 고정 → repeat(3, 1fr) + 중앙 정렬 */
   display: grid;
   grid-template-columns: repeat(3, 1fr);
-  gap: 20px;
-  margin-bottom: 20px;
+  gap: ${SP.md};
+  margin-bottom: ${SP.lg};
   justify-items: center;
-  ${L1024} { gap: 14px; margin-bottom: 12px; }
-  ${L768}  { gap: 10px; margin-bottom: 8px; }
-  ${media.mobile} { gap: 10px; }
+  ${lMedia.phone} { gap: ${SP.sm}; margin-bottom: ${SP.sm}; }
 `;
 
+/** 후보 카드 — 레어도 색이 안쪽 띠로 들어간다. hover에서 떠오르지 않는다. */
 const Card = styled.div<{ $rarityColor: string }>`
-  background: rgba(255, 255, 255, 0.05);
-  border-radius: 15px;
-  /* [FIX] 카드 너비 고정 — 모달 1/3 을 꽉 채우되 최대폭 제한 */
+  ${win('plain')}
+  ${cursorMark}
   width: 100%;
   max-width: 260px;
-  padding: 20px 18px;
+  padding: ${SP.md};
   cursor: pointer;
-  transition: all 0.3s ease;
-  border: 4px solid ${props => props.$rarityColor};
-  @media (hover: hover) {
-    &:hover {
-      transform: translateY(-4px);
-      box-shadow: 0 8px 20px ${props => props.$rarityColor}60;
-    }
-  }
-  ${L1024} { padding: 14px 12px; border-width: 3px; border-radius: 10px; max-width: 220px; }
-  ${L768}  { padding: 10px 8px;  border-width: 2px; border-radius: 8px;  max-width: 180px; }
-  ${media.mobile} { padding: 8px; border-width: 3px; border-radius: 10px; }
+  box-shadow: inset 0 0 0 ${SCALE}px ${props => props.$rarityColor};
+  @media (hover: hover) { &:hover { ${cursorOn} } }
+  ${lMedia.tablet} { max-width: 220px; padding: ${SP.sm}; }
+  ${lMedia.phone}  { max-width: 180px; padding: ${SP.sm}; }
 `;
 
 const Sprite = styled.img`
   width: 120px;
   height: 120px;
-  margin: 0 auto 8px;
+  margin: 0 auto ${SP.sm};
   display: block;
   image-rendering: pixelated;
-  ${L1024} { width: 90px;  height: 90px; }
-  ${L768}  { width: 70px;  height: 70px; }
+  ${lMedia.tablet} { width: 90px; height: 90px; }
+  ${lMedia.phone}  { width: 70px; height: 70px; }
   ${media.mobile} { width: 72px; height: 72px; }
 `;
 
 const Info = styled.div`
-  margin-top: 10px;
+  margin-top: ${SP.sm};
 `;
 
 const NameRow = styled.div`
   display: flex;
   align-items: center;
   justify-content: center;
-  gap: 8px;
-  margin-bottom: 8px;
+  gap: ${SP.sm};
+  margin-bottom: ${SP.sm};
   flex-wrap: wrap;
 `;
 
 const Name = styled.h3`
-  font-size: 20px;
-  font-weight: bold;
+  ${pixelBold}
+  font-size: ${FONT.sm};
   margin: 0;
-  color: #fff;
+  color: ${C.text};
 `;
 
 const GenderIcon = styled.span<{ $gender: Gender }>`
-  font-size: 16px;
-  font-weight: bold;
+  font-size: ${FONT.sm};
   color: ${props => getGenderColor(props.$gender)};
 `;
 
 const Types = styled.div`
   display: flex;
-  gap: 5px;
+  gap: ${SP.xs};
   justify-content: center;
-  margin-bottom: 10px;
+  margin-bottom: ${SP.sm};
   flex-wrap: wrap;
-  height: 24px;
+  min-height: 20px;
   align-items: center;
 `;
 
@@ -466,68 +467,54 @@ const TypeImage = styled.img`
 `;
 
 const Stats = styled.div`
-  font-size: 13px;
-  /* [FIX] 스탯 레이블+값이 한 줄에 표시되도록 nowrap */
+  font-size: ${FONT.sm};
   display: grid;
   grid-template-columns: repeat(2, 1fr);
-  gap: 3px 8px;
-  margin-bottom: 10px;
-  color: #ddd;
-  /* 각 셀이 줄바꿈 없이 표시되도록 */
+  gap: ${SP.xs} ${SP.sm};
+  margin-bottom: ${SP.sm};
+  color: ${C.textSub};
   & > div { white-space: nowrap; }
-  ${L1024} { font-size: 11px; }
-  ${L768}  { font-size: 10px; gap: 2px 4px; margin-bottom: 6px; }
-  ${media.mobile} { font-size: 10px; gap: 3px; margin-bottom: 6px; }
 `;
 
 const TotalStats = styled.div`
-  font-weight: bold;
-  color: #FFD700;
-  margin-bottom: 6px;
+  ${pixelBold}
+  color: ${C.gold};
+  margin-bottom: ${SP.xs};
 `;
 
 const Cost = styled.div`
-  font-size: 20px;
-  font-weight: bold;
+  ${pixelBold}
+  font-size: ${FONT.sm};
   text-align: center;
-  color: #FFD700;
-  padding-top: 6px;
-  border-top: 1px solid rgba(255,255,255,0.08);
-  ${L768} { font-size: 16px; }
+  color: ${C.gold};
+  padding-top: ${SP.sm};
+  border-top: ${SCALE}px solid ${C.ink};
 `;
 
 const Actions = styled.div`
   display: flex;
   justify-content: center;
   align-items: center;
-  gap: 15px;
-  padding-top: 4px;
+  gap: ${SP.md};
+  padding-top: ${SP.xs};
 `;
 
 const MoneyDisplay = styled.div`
-  font-size: 16px;
-  color: #FFD700;
-  font-weight: bold;
+  ${pixelBold}
+  font-size: ${FONT.sm};
+  color: ${C.gold};
 `;
 
 const RerollBtn = styled.button`
-  padding: 12px 30px;
-  font-size: 16px;
-  font-weight: bold;
-  background: linear-gradient(135deg, #2980b9 0%, #1a6ea8 100%);
-  color: white;
-  border: none;
-  border-radius: 12px;
-  cursor: pointer;
-  transition: all 0.3s ease;
-  ${L768} { padding: 8px 20px; font-size: 13px; }
-  &:hover { background: linear-gradient(135deg, #3498db, #2980b9); }
-  &:disabled { opacity: 0.5; cursor: not-allowed; }
+  ${btn('blue')}
+  ${pixelBold}
+  padding: ${SP.sm} ${SP.xl};
+  font-size: ${FONT.sm};
+  color: ${C.text};
+  ${focusRing}
 `;
 
 const InnerPad = styled.div`
-  padding: 20px 24px 24px;
-  ${L1024} { padding: 16px 18px 20px; }
-  ${L768}  { padding: 12px 14px 16px; }
-  ${media.mobile} { padding: 16px 16px 20px; }
+  padding: ${SP.lg};
+  ${lMedia.phone} { padding: ${SP.sm} ${SP.md} ${SP.md}; }
 `;

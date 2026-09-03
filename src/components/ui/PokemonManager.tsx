@@ -1,12 +1,14 @@
 // src/components/ui/PokemonManager.tsx
 
 import React, { useState } from 'react';
-import styled from 'styled-components';
+import styled, { css } from 'styled-components';
 import {
   ModalOverlay, ModalBox, ModalCloseBtn, MODAL_ACCENT,
 } from '../shared/modal.styles';
 import { lMedia } from '../../utils/responsive.utils';
 import { useTranslation } from '../../i18n';
+import { C, FONT, SP, ICON } from '../../styles/tokens';
+import { win, winThin, btn, btnThin, pixelBold, shadowLg, focusRing } from '../../styles/pixel';
 import { useGameStore } from '../../store/gameStore';
 import { isWorkLocked } from '../../utils/facility.utils';
 import { Gender } from '../../types/game';
@@ -15,8 +17,6 @@ import { Emoji } from '../shared/Emoji';
 import { showToast } from '../shared/Toast';
 
 // ─── 반응형 헬퍼 → lMedia 사용 ───────────────────────────────────────────────
-const L1024 = lMedia.tablet;   // ≤1024px landscape (iPad 등)
-const L768  = lMedia.phone;    // ≤768px  landscape
 const LSm   = lMedia.phoneSm;  // landscape + max-height ≤520px
 
 const getGenderIcon = (gender: Gender) => {
@@ -175,7 +175,7 @@ export const PokemonManager: React.FC<{ onClose: () => void }> = ({ onClose }) =
                 ? <><Emoji glyph="❌" size={13} /> {t('common.cancel')}</>
                 : <><Emoji glyph="🧬" size={13} /> {t('manager.fusion')}</>}
             </FusionBtn>
-            <ModalCloseBtn onClick={onClose}><Emoji glyph="❌" size={14} /></ModalCloseBtn>
+            <ModalCloseBtn onClick={onClose}>✕</ModalCloseBtn>
           </HeaderButtons>
         </Header>
 
@@ -280,134 +280,98 @@ export const PokemonManager: React.FC<{ onClose: () => void }> = ({ onClose }) =
 
 
 
+// ─── Styled Components ────────────────────────────────────────────────────────
+// docs/DESIGN.md 의 디자인 시스템을 따른다.
+// 걷어낸 것: 유리 카드, 그라디언트 버튼, 알약 배지, hover 확대, 둥근 모서리.
+
 const Header = styled.div`
   display: flex;
   justify-content: space-between;
   align-items: center;
-  margin-bottom: 20px;
+  gap: ${SP.md};
+  margin-bottom: ${SP.lg};
 
-  ${L1024} { margin-bottom: 14px; }
-  ${L768}  { flex-wrap: wrap; gap: 8px; margin-bottom: 10px; }
-  ${LSm}   { flex-wrap: wrap; gap: 6px; margin-bottom: 8px; }
+  ${lMedia.phone} { flex-wrap: wrap; gap: ${SP.sm}; margin-bottom: ${SP.sm}; }
+  ${LSm}  { flex-wrap: wrap; gap: ${SP.sm}; margin-bottom: ${SP.sm}; }
 `;
 
 const Title = styled.h2`
-  font-size: 28px;
-  font-weight: bold;
-  color: #e8edf3;
-  margin-bottom: 5px;
+  ${pixelBold}
+  font-size: ${FONT.xl};
+  color: ${C.text};
+  margin: 0;
+  ${shadowLg}
 
-  ${L1024} { font-size: 22px; }
-  ${L768}  { font-size: 18px; margin-bottom: 3px; }
-  ${LSm}   { font-size: 16px; }
+  ${lMedia.phone} { font-size: ${FONT.sm}; }
+  ${LSm}  { font-size: ${FONT.sm}; }
 `;
 
 const MoneyDisplay = styled.div`
-  font-size: 16px;
-  color: #FFD700;
-  font-weight: bold;
-
-  ${L1024} { font-size: 14px; }
-  ${L768}  { font-size: 13px; }
-  ${LSm}   { font-size: 12px; }
+  ${pixelBold}
+  font-size: ${FONT.sm};
+  color: ${C.gold};
 `;
 
 const HeaderButtons = styled.div`
   display: flex;
-  gap: 10px;
-
-  ${L1024} { gap: 8px; }
-  ${LSm}   { gap: 6px; }
+  gap: ${SP.sm};
 `;
 
 const FusionBtn = styled.button<{ $fusionMode: boolean }>`
-  font-size: 16px;
-  font-weight: bold;
-  padding: 8px 16px;
-  border: none;
-  border-radius: 8px;
-  color: #fff;
-  cursor: pointer;
-  transition: filter 0.2s;
-  background: ${props => props.$fusionMode ? '#c0392b' : 'linear-gradient(135deg, #1565c0 0%, #0d47a1 100%)'};
-
-  @media (hover: hover) { &:hover { filter: brightness(1.2); } }
-
-  ${L1024} { font-size: 14px; padding: 7px 13px; }
-  ${L768}  { font-size: 13px; padding: 6px 10px; }
-  ${LSm}   { font-size: 12px; padding: 5px 9px; }
+  ${p => btnThin(p.$fusionMode ? 'red' : 'blue')}
+  ${pixelBold}
+  font-size: ${FONT.sm};
+  padding: ${SP.xs} ${SP.md};
+  color: ${p => (p.$fusionMode ? C.red : C.blue)};
+  ${focusRing}
 `;
 
-
 const FusionInfo = styled.div`
-  background: rgba(102, 126, 234, 0.2);
-  padding: 15px;
-  border-radius: 10px;
-  margin-bottom: 20px;
+  ${winThin('purple')}
+  ${pixelBold}
+  padding: ${SP.sm} ${SP.md};
+  margin-bottom: ${SP.md};
   text-align: center;
-  font-size: 16px;
-  font-weight: bold;
-  color: #fff;
-
-  ${L1024} { padding: 10px; margin-bottom: 14px; font-size: 14px; }
-  ${L768}  { padding: 8px;  margin-bottom: 10px; font-size: 13px; border-radius: 8px; }
-  ${LSm}   { padding: 7px;  margin-bottom: 8px;  font-size: 12px; }
+  font-size: ${FONT.sm};
+  color: ${C.purple};
 `;
 
 const EmptyMessage = styled.p`
-  font-size: 18px;
-  color: #999;
+  font-size: ${FONT.sm};
+  color: ${C.textDim};
   text-align: center;
-  padding: 40px;
-
-  ${L1024} { font-size: 16px; padding: 28px; }
-  ${L768}  { font-size: 14px; padding: 20px; }
+  padding: ${SP.xxl};
 `;
 
 const Grid = styled.div`
   display: grid;
   grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
-  gap: 20px;
+  gap: ${SP.md};
 
-  /* 태블릿 가로 — 카드 약간 좁게 */
-  ${L1024} {
-    grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
-    gap: 14px;
-  }
-  /* 폰 가로 — 2열 고정 */
-  ${L768} {
-    grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
-    gap: 10px;
-  }
-  /* 소형 폰 가로 — 1열 */
-  ${LSm} {
-    grid-template-columns: 1fr;
-    gap: 8px;
-  }
+  ${lMedia.tablet} { grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)); gap: ${SP.sm}; }
+  ${lMedia.phone}  { grid-template-columns: repeat(auto-fill, minmax(180px, 1fr)); gap: ${SP.sm}; }
+  ${LSm}   { grid-template-columns: 1fr; gap: ${SP.sm}; }
 `;
 
-const Card = styled.div<{ $isSelected: boolean, $fusionMode: boolean }>`
-  background: rgba(255, 255, 255, 0.05);
-  border-radius: 15px;
-  padding: 15px;
-  border: 2px solid ${props => props.$isSelected ? '#667eea' : 'rgba(255, 255, 255, 0.1)'};
-  transition: border-color 0.2s ease, transform 0.2s ease;
-  cursor: ${props => props.$fusionMode ? 'pointer' : 'default'};
-  transform: ${props => props.$isSelected ? 'scale(1.02)' : 'scale(1)'};
+/** 포켓몬 카드 — 합체 모드에서 고른 카드만 보라 창틀. 확대 대신 창틀 색이 진다. */
+const Card = styled.div<{ $isSelected: boolean; $fusionMode: boolean }>`
+  ${p => win(p.$isSelected ? 'purple' : 'plain')}
+  padding: ${SP.md};
+  cursor: ${props => (props.$fusionMode ? 'pointer' : 'default')};
+  display: flex;
+  flex-direction: column;
 
-  ${L1024} { padding: 12px; border-radius: 12px; }
-  ${L768}  { padding: 10px; border-radius: 10px; }
-  ${LSm}   { padding: 8px;  border-radius: 8px; }
+  ${lMedia.phone} { padding: ${SP.sm}; }
+  ${LSm}  { padding: ${SP.sm}; }
 `;
 
 const CardHeader = styled.div`
   position: relative;
   text-align: center;
-  margin-bottom: 15px;
+  margin-bottom: ${SP.md};
 
-  ${L1024} { margin-bottom: 10px; }
-  ${L768}  { margin-bottom: 8px; }
-  ${LSm}   { margin-bottom: 6px; }
+  ${lMedia.phone} { margin-bottom: ${SP.sm}; }
+  ${LSm}  { margin-bottom: ${SP.sm}; }
 `;
 
 const Sprite = styled.img`
@@ -415,159 +379,116 @@ const Sprite = styled.img`
   height: 100px;
   image-rendering: pixelated;
 
-  ${L1024} { width: 80px;  height: 80px; }
-  ${L768}  { width: 64px;  height: 64px; }
-  ${LSm}   { width: 56px;  height: 56px; }
+  ${lMedia.tablet} { width: 80px; height: 80px; }
+  ${lMedia.phone}  { width: 64px; height: 64px; }
+  ${LSm}   { width: 56px; height: 56px; }
+`;
+
+const badgeBase = css`
+  ${pixelBold}
+  position: absolute;
+  top: 0;
+  border: 2px solid ${C.ink};
+  color: ${C.text};
+  font-size: ${FONT.sm};
+  line-height: 1.3;
+  padding: 0 ${SP.xs};
+  text-shadow: 1px 1px 0 ${C.textShadow};
 `;
 
 const FaintedBadge = styled.div`
-  position: absolute;
-  top: 5px; right: 5px;
-  background: #e74c3c;
-  color: white;
-  font-size: 12px;
-  font-weight: bold;
-  padding: 4px 8px;
-  border-radius: 8px;
-
-  ${L768} { font-size: 10px; padding: 3px 6px; }
-  ${LSm}  { font-size: 9px;  padding: 2px 5px; }
+  ${badgeBase}
+  right: 0;
+  background: ${C.red};
 `;
 
 const WorkBadge = styled.div`
-  position: absolute;
-  top: 5px; left: 5px;
-  background: #f39c12;
-  color: white;
-  font-size: 11px;
-  font-weight: bold;
-  padding: 4px 8px;
-  border-radius: 8px;
-
-  ${L768} { font-size: 9px; padding: 3px 6px; }
-  ${LSm}  { font-size: 8px;  padding: 2px 5px; }
+  ${badgeBase}
+  left: 0;
+  background: ${C.gold};
+  color: ${C.ink};
+  text-shadow: none;
 `;
 
 const FusionBadge = styled.div`
   position: absolute;
-  top: 5px; left: 5px;
-  font-size: 24px;
-
-  ${L768} { font-size: 18px; }
-  ${LSm}  { font-size: 16px; }
+  top: 0; left: 0;
+  font-size: ${ICON.xl}px;
+  line-height: 1;
 `;
 
 const CardBody = styled.div`
-  margin-bottom: 15px;
+  margin-bottom: ${SP.md};
 
-  ${L768} { margin-bottom: 10px; }
-  ${LSm}  { margin-bottom: 8px; }
+  ${lMedia.phone} { margin-bottom: ${SP.sm}; }
+  ${LSm}  { margin-bottom: ${SP.sm}; }
 `;
 
 const NameRow = styled.div`
   display: flex;
   align-items: center;
   justify-content: center;
-  gap: 8px;
-  margin-bottom: 12px;
-
-  ${L1024} { margin-bottom: 8px; }
-  ${L768}  { gap: 6px; margin-bottom: 6px; }
+  gap: ${SP.sm};
+  margin-bottom: ${SP.sm};
 `;
 
 const PokeName = styled.h3`
-  font-size: 20px;
-  font-weight: bold;
+  ${pixelBold}
+  font-size: ${FONT.sm};
   margin: 0;
-  color: #fff;
-
-  ${L1024} { font-size: 17px; }
-  ${L768}  { font-size: 15px; }
-  ${LSm}   { font-size: 14px; }
+  color: ${C.text};
 `;
 
 const GenderIcon = styled.span<{ $gender: Gender }>`
-  font-size: 18px;
-  font-weight: bold;
+  font-size: ${FONT.sm};
   color: ${props => getGenderColor(props.$gender)};
-
-  ${L768} { font-size: 15px; }
-  ${LSm}  { font-size: 13px; }
 `;
 
 const InfoRow = styled.div`
   display: flex;
   justify-content: space-between;
-  padding: 8px 0;
-  border-bottom: 1px solid rgba(255, 255, 255, 0.1);
-  font-size: 14px;
-  color: #ddd;
-
-  ${L1024} { font-size: 13px; padding: 6px 0; }
-  ${L768}  { font-size: 12px; padding: 5px 0; }
-  ${LSm}   { font-size: 11px; padding: 4px 0; }
+  gap: ${SP.sm};
+  padding: ${SP.xs} 0;
+  border-bottom: 2px solid ${C.ink};
+  font-size: ${FONT.sm};
+  color: ${C.textSub};
 `;
 
 const InfoValue = styled.span`
-  font-weight: bold;
-  color: #FFD700;
+  ${pixelBold}
+  color: ${C.gold};
 `;
 
 const ActionButtons = styled.div`
   display: flex;
   flex-direction: column;
-  gap: 8px;
+  gap: ${SP.sm};
   margin-top: auto;
   width: 100%;
 `;
 
 const ManageItemsBtn = styled.button`
+  ${btn('blue')}
+  ${pixelBold}
   width: 100%;
-  padding: 12px;
-  font-size: 16px;
-  font-weight: bold;
-  background: linear-gradient(135deg, #3498db, #2980b9);
-  color: white;
-  border: none;
-  border-radius: 12px;
-  cursor: pointer;
-  transition: background 0.2s ease;
-
-  @media (hover: hover) {
-    &:hover:not(:disabled) { background: linear-gradient(135deg, #2980b9, #2471a3); }
-  }
-
-  &:disabled { opacity: 0.4; cursor: not-allowed; }
-
-  ${L1024} { padding: 10px; font-size: 14px; border-radius: 10px; }
-  ${L768}  { padding: 8px;  font-size: 13px; border-radius: 8px; }
-  ${LSm}   { padding: 7px;  font-size: 12px; }
+  padding: ${SP.sm};
+  font-size: ${FONT.sm};
+  color: ${C.text};
+  ${focusRing}
 `;
 
 const SellBtn = styled.button`
+  ${btn('red')}
+  ${pixelBold}
   width: 100%;
-  padding: 12px;
-  font-size: 16px;
-  font-weight: bold;
-  background: linear-gradient(135deg, #e74c3c, #c0392b);
-  color: white;
-  border: none;
-  border-radius: 12px;
-  cursor: pointer;
-  transition: background 0.2s ease;
-
-  @media (hover: hover) {
-    &:hover { background: linear-gradient(135deg, #c0392b, #a93226); }
-  }
-
-  ${L1024} { padding: 10px; font-size: 14px; border-radius: 10px; }
-  ${L768}  { padding: 8px;  font-size: 13px; border-radius: 8px; }
-  ${LSm}   { padding: 7px;  font-size: 12px; }
+  padding: ${SP.sm};
+  font-size: ${FONT.sm};
+  color: ${C.text};
+  ${focusRing}
 `;
 
 const InnerPad = styled.div`
-  padding: 24px;
-  ${L1024} { padding: 18px; }
-  ${L768}  { padding: 14px; }
-  ${LSm}   { padding: 12px; }
+  padding: ${SP.lg};
+  ${lMedia.phone} { padding: ${SP.md}; }
+  ${LSm}  { padding: ${SP.sm}; }
 `;

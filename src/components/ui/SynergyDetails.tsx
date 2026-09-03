@@ -2,6 +2,8 @@
 import React from 'react';
 import styled from 'styled-components';
 import { lMedia } from '../../utils/responsive.utils';
+import { C, FONT, SP, SCALE } from '../../styles/tokens';
+import { win, sunken, pixelText, pixelBold } from '../../styles/pixel';
 import { useTranslation } from '../../i18n';
 import { useGameStore } from '../../store/gameStore';
 import { getGenerationById, SPECIAL_SYNERGY_DEFS, getSpecialSynergyName } from '../../utils/synergyManager';
@@ -65,86 +67,54 @@ export const SynergyDetails: React.FC = () => {
 //   L768     (≤768px  landscape) : LeftPanel = 128px  →  left: 142px (128 + 14)
 //   phoneSm  (landscape h≤520px) : LeftPanel = 128px  →  left: 136px (축소 패딩)
 
+// ─── Styled Components ────────────────────────────────────────────────────────
+// docs/DESIGN.md 의 디자인 시스템을 따른다.
+// 걷어낸 것: 유리 카드, backdrop-filter, 둥근 모서리, 번지는 그림자, 10~11px 글자.
+//
+// 좌측 패널(216/180/152px) 바로 옆에 떠야 하므로 left 값은 패널 폭을 따라간다.
+
 const Container = styled.div`
+  ${win('blue')}
+  ${pixelText}
   position: fixed;
   left: 224px;
   top: 10px;
-  width: 200px;
+  width: 220px;
   max-height: 40vh;
   overflow-y: auto;
-  background: linear-gradient(160deg, #0d1117 0%, #080c14 100%);
-  border: 1px solid rgba(255,255,255,0.12);
-  border-top: 2px solid rgba(79,195,247,0.6);
-  border-radius: 14px;
-  padding: 10px 12px;
-  box-shadow: 0 12px 32px rgba(0,0,0,0.7);
-  backdrop-filter: blur(10px);
+  color: ${C.text};
   z-index: 2999;
-  animation: fadeIn 0.15s ease-out;
 
-  &::-webkit-scrollbar { width: 3px; }
-  &::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.12); border-radius: 2px; }
+  &::-webkit-scrollbar { width: 10px; }
+  &::-webkit-scrollbar-track { background: ${C.panelSunk}; border: ${SCALE}px solid ${C.ink}; }
+  &::-webkit-scrollbar-thumb { background: ${C.divider}; border: ${SCALE}px solid ${C.ink}; }
 
-  ${lMedia.tablet} {
-    left: 186px;
-    width: 180px;
-    padding: 8px 10px;
-    border-radius: 12px;
-  }
-
-  ${lMedia.phone} {
-    left: 142px;
-    width: calc(100vw - 148px);
-    max-width: 170px;
-    max-height: 38vh;
-    padding: 7px 9px;
-    border-radius: 10px;
-  }
-
-  ${lMedia.phoneSm} {
-    left: 136px;
-    top: 4px;
-    width: calc(100vw - 142px);
-    max-width: 160px;
-    max-height: 36vh;
-    padding: 6px 8px;
-    border-radius: 8px;
-  }
+  ${lMedia.tablet}  { left: 188px; width: 200px; }
+  ${lMedia.phone}   { left: 160px; width: calc(100vw - 168px); max-width: 190px; max-height: 38vh; }
+  ${lMedia.phoneSm} { left: 160px; top: 4px; width: calc(100vw - 168px); max-width: 180px; max-height: 36vh; }
 `;
 
 const Title = styled.h4`
-  font-size: 13px;
-  font-weight: 700;
-  color: #4fc3f7;
+  ${pixelBold}
+  font-size: ${FONT.sm};
+  color: ${C.blue};
   text-align: center;
-  margin-bottom: 8px;
-  padding-bottom: 6px;
-  border-bottom: 1px solid rgba(79,195,247,0.2);
-
-  ${lMedia.tablet} { font-size: 12px; margin-bottom: 6px; padding-bottom: 4px; }
-  ${lMedia.phone}  { font-size: 12px; margin-bottom: 5px; padding-bottom: 4px; }
-  ${lMedia.phoneSm}{ font-size: 11px; margin-bottom: 4px; padding-bottom: 3px; }
+  margin: 0 0 ${SP.sm};
+  padding-bottom: ${SP.xs};
+  border-bottom: ${SCALE}px solid ${C.ink};
 `;
 
 const List = styled.div`
   display: flex;
   flex-direction: column;
-  gap: 5px;
-
-  ${lMedia.phone}  { gap: 4px; }
-  ${lMedia.phoneSm}{ gap: 3px; }
+  gap: ${SP.xs};
 `;
 
 const PokemonItem = styled.div`
+  ${sunken()}
   display: flex;
   align-items: center;
-  gap: 6px;
-  background: rgba(255,255,255,0.04);
-  padding: 3px 6px;
-  border-radius: 6px;
-
-  ${lMedia.phone}  { padding: 2px 5px; gap: 5px; }
-  ${lMedia.phoneSm}{ padding: 2px 4px; gap: 4px; }
+  gap: ${SP.xs};
 `;
 
 const Sprite = styled.img`
@@ -153,30 +123,23 @@ const Sprite = styled.img`
   image-rendering: pixelated;
   flex-shrink: 0;
 
-  ${lMedia.tablet} { width: 28px; height: 28px; }
-  ${lMedia.phone}  { width: 24px; height: 24px; }
-  ${lMedia.phoneSm}{ width: 22px; height: 22px; }
+  ${lMedia.phone}   { width: 24px; height: 24px; }
+  ${lMedia.phoneSm} { width: 24px; height: 24px; }
 `;
 
 const Name = styled.span`
-  font-size: 11px;
-  font-weight: 600;
-  color: #e8edf3;
+  ${pixelBold}
+  font-size: ${FONT.sm};
+  color: ${C.text};
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
-
-  ${lMedia.tablet} { font-size: 11px; }
-  ${lMedia.phone}  { font-size: 10px; }
-  ${lMedia.phoneSm}{ font-size: 10px; }
 `;
 
 const Empty = styled.p`
-  font-size: 13px;
-  color: #a8b8c8;
+  font-size: ${FONT.sm};
+  color: ${C.textSub};
   text-align: center;
-  padding: 10px 0;
-
-  ${lMedia.phone}  { font-size: 11px; padding: 6px 0; }
-  ${lMedia.phoneSm}{ font-size: 10px; padding: 4px 0; }
+  padding: ${SP.sm} 0;
+  margin: 0;
 `;

@@ -43,6 +43,20 @@ export const availableQuizKinds = (language: string): QuizKind[] =>
 /** 퀴즈 진행 모드: 개별 종목 또는 수능 모의고사(전 종목 혼합). */
 export type QuizMode = QuizKind | 'exam';
 
+/** 고를 수 있는 문항 수. 마지막 값이 랭킹 기준이다. */
+export const ROUND_SIZES = [10, 30, 50] as const;
+
+/**
+ * **랭킹에 반영되는 문항 수.**
+ *
+ * 점수가 '맞힌 개수'라서 문항 수를 섞으면 보드가 무의미해진다 — 10문항 만점(10점)과
+ * 50문항 40점이 같은 줄에 서고, 50문항만 도는 쪽이 언제나 이긴다. 그래서 랭킹은
+ * 50문항 완주만 집계한다. 10·30문항은 연습용으로 남기고 개인 기록에만 남는다.
+ * (재화 마일스톤은 문항 수를 가리지 않는다 — 10문항으로는 10점이 상한이라
+ *  자연히 첫 구간까지만 열린다.)
+ */
+export const RANKED_ROUND_SIZE = 50;
+
 // ─── 랭킹 보드 ────────────────────────────────────────────────────────────────
 /** 주간 랭킹 보드 키 — 종목 15개 + 모의고사 + 속도 퀴즈. 시즌 문서 `scores` 맵의 키. */
 export type QuizBoardKey = QuizKind | 'exam' | 'speed';
@@ -185,6 +199,14 @@ export interface QuizSaveState {
   bestStreak: number;
   /** 수령한 모의고사 마일스톤(점수 threshold 목록). 1회성 보상 중복 방지. */
   claimedExamMilestones?: number[];
+  /** 수령한 **종목별** 마일스톤. 종목 → threshold 목록. 모의고사와 같은 1회성 규칙. */
+  claimedKindMilestones?: Partial<Record<QuizKind, number[]>>;
+  /**
+   * 랭킹에 올린 보드별 최고 기록 — **50문항 완주분만**. best/examBest(문항 수 무관
+   * 개인 기록)와 일부러 분리한다. 섞으면 30문항으로 세운 기록이 50문항 보드에
+   * 올라가 버린다(RANKED_ROUND_SIZE 주석 참고).
+   */
+  rankedBest?: Partial<Record<QuizBoardKey, number>>;
   /** 주간 랭킹용 — 이 기록이 속한 시즌(ISO 주차). 주가 바뀌면 weeklyBest를 통째로 비운다. */
   weeklySeason?: string;
   /**

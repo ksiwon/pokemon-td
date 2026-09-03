@@ -2,8 +2,9 @@
 // 6칸 덱 편성(전열3/후열3) + 보유 카드 배치 + 실시간 타입 시너지 표시.
 
 import { useEffect, useMemo, useState } from 'react';
-import styled from 'styled-components';
+import styled, { css } from 'styled-components';
 import { media } from '../../utils/responsive.utils';
+import { Screen, ScreenBackBtn as BackBtn, ScreenTopBar as TopBar } from '../shared/screen';
 import { ArrowLeft, Shield, Crosshair, Save, Info } from 'lucide-react';
 import { useTranslation } from '../../i18n';
 import { cardService } from '../../services/CardService';
@@ -16,6 +17,8 @@ import { CardFilterState, DEFAULT_CARD_FILTER, applyCardFilter } from '../../uti
 import { CardView } from './CardView';
 import { CardControls } from './CardControls';
 import { CardDetailModal } from './CardDetailModal';
+import { C, FONT, SP, SCALE } from '../../styles/tokens';
+import { btnThin, sunken, pixelBold, focusRing } from '../../styles/pixel';
 
 type SlotState = { pokemonId: number; stars: number } | null;
 const EMPTY: SlotState[] = [null, null, null, null, null, null]; // [front0,1,2, back0,1,2]
@@ -215,95 +218,128 @@ export const DeckBuilder = ({ onBack }: { onBack: () => void }) => {
 };
 
 // ─── styled ──────────────────────────────────────────────────────────────────
-const Root = styled.div`min-height: 100vh; background: radial-gradient(circle at top, #11162a, #070910); color: #e8edf5; padding-bottom: 40px;`;
-const TopBar = styled.header`
-  display: flex; align-items: center; justify-content: space-between; gap: 12px;
-  padding: 14px 22px; border-bottom: 1px solid rgba(255,255,255,0.07); position: sticky; top: 0;
-  background: rgba(10,12,22,0.85); backdrop-filter: blur(10px); z-index: 20;
-  ${media.tablet} { padding: 12px 16px; gap: 8px; }
-  ${media.mobile} { padding: 10px 12px; gap: 6px; }
-`;
-const BackBtn = styled.button`
-  flex: 0 0 auto;
-  display: flex; align-items: center; gap: 5px; background: transparent;
-  border: 1px solid rgba(255,255,255,0.12); color: rgba(255,255,255,0.7);
-  padding: 7px 12px; border-radius: 8px; cursor: pointer; font-size: 14px; white-space: nowrap;
-  &:hover { background: rgba(255,255,255,0.07); }
-  ${media.mobile} { padding: 6px 9px; font-size: 12px; }
+// docs/DESIGN.md 의 디자인 시스템을 따른다.
+// 걷어낸 것: 유리 패널, 점선 슬롯, 알약 시너지 칩, backdrop-filter,
+//           hover 떠오름, letter-spacing eyebrow, Tailwind 팔레트.
+
+/** 하단 고정 바에 내용이 가리지 않게 아래만 더 비운다. */
+const Root = styled(Screen)`
+  padding-bottom: ${SP.xxl};
 `;
 const Title = styled.h1`
-  font-size: 17px; font-weight: 800; margin: 0; display: flex; align-items: center; gap: 8px;
+  ${pixelBold}
+  font-size: ${FONT.md}; margin: 0; color: ${C.gold};
+  display: flex; align-items: center; gap: ${SP.sm};
   min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
-  ${media.mobile} { font-size: 14px; gap: 5px; }
 `;
-const Count = styled.span`font-size: 13px; color: rgba(255,255,255,0.45); font-weight: 600; ${media.mobile} { display: none; }`;
+const Count = styled.span`
+  font-size: ${FONT.sm}; color: ${C.textSub}; font-weight: 400;
+  ${media.mobile} { display: none; }
+`;
 const SaveBtn = styled.button<{ $on: boolean }>`
+  ${p => btnThin(p.$on ? 'green' : 'plain')}
+  ${pixelBold}
   flex: 0 0 auto;
-  display: flex; align-items: center; gap: 6px; padding: 8px 16px; border-radius: 8px; border: none;
-  background: ${p => (p.$on ? '#34d399' : 'rgba(255,255,255,0.08)')}; color: ${p => (p.$on ? '#07090f' : 'rgba(255,255,255,0.4)')};
-  font-weight: 800; font-size: 14px; cursor: ${p => (p.$on ? 'pointer' : 'not-allowed')}; white-space: nowrap;
-  ${media.mobile} { padding: 7px 12px; font-size: 12px; }
+  display: flex; align-items: center; gap: ${SP.xs};
+  padding: ${SP.xs} ${SP.md};
+  color: ${p => (p.$on ? C.green : C.textDim)};
+  font-size: ${FONT.sm};
+  cursor: ${p => (p.$on ? 'pointer' : 'not-allowed')};
+  white-space: nowrap;
+  ${focusRing}
 `;
 
 const Field = styled.div`
-  max-width: 720px; margin: 0 auto; padding: 24px 16px 8px; display: flex; flex-direction: column; gap: 16px;
-  ${media.mobile} { padding: 16px 12px 8px; gap: 12px; }
+  max-width: 720px; margin: 0 auto; padding: ${SP.xl} ${SP.md} ${SP.sm};
+  display: flex; flex-direction: column; gap: ${SP.md};
+  ${media.mobile} { padding: ${SP.md} ${SP.sm} ${SP.sm}; gap: ${SP.sm}; }
 `;
-const RowWrap = styled.div`display: flex; flex-direction: column; gap: 8px;`;
-const RowLabel = styled.div`display: flex; align-items: center; gap: 6px; font-size: 12px; font-weight: 700; color: rgba(255,255,255,0.5); letter-spacing: 0.08em;`;
-const RowSlots = styled.div`display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px; ${media.mobile} { gap: 8px; }`;
+const RowWrap = styled.div`display: flex; flex-direction: column; gap: ${SP.sm};`;
+const RowLabel = styled.div`
+  ${pixelBold}
+  display: flex; align-items: center; gap: ${SP.xs};
+  font-size: ${FONT.sm}; color: ${C.gold};
+`;
+const RowSlots = styled.div`
+  display: grid; grid-template-columns: repeat(3, 1fr); gap: ${SP.md};
+  ${media.mobile} { gap: ${SP.sm}; }
+`;
+/** 빈 슬롯 — 점선 대신 한 단 파인 면. 선택된 슬롯만 골드 테두리. */
 const Slot = styled.div<{ $selected: boolean; $filled: boolean }>`
-  aspect-ratio: 1 / 1.3; border-radius: 12px; cursor: pointer;
+  ${sunken()}
+  aspect-ratio: 1 / 1.3; cursor: pointer;
   display: flex; align-items: center; justify-content: center;
-  border: 2px ${p => (p.$filled ? 'solid' : 'dashed')} ${p => (p.$selected ? '#fbbf24' : 'rgba(255,255,255,0.15)')};
-  background: ${p => (p.$selected ? 'rgba(251,191,36,0.08)' : 'rgba(255,255,255,0.02)')};
-  transition: all 0.15s;
-  &:hover { border-color: rgba(255,255,255,0.35); }
+  ${p => p.$selected && css`box-shadow: inset 0 0 0 ${SCALE}px ${C.gold};`}
 `;
-const SlotEmpty = styled.div`font-size: 24px; color: rgba(255,255,255,0.25); font-weight: 300;`;
+const SlotEmpty = styled.div`
+  ${pixelBold}
+  font-size: ${FONT.xl}; color: ${C.textDim}; text-shadow: none;
+`;
 
 const SynergyPanel = styled.div`
-  margin-top: 8px; padding: 14px 16px; border-radius: 12px;
-  background: rgba(255,255,255,0.03); border: 1px solid rgba(255,255,255,0.07);
+  ${sunken()}
+  margin-top: ${SP.sm}; padding: ${SP.md};
 `;
-const SynTitle = styled.div`font-size: 12px; font-weight: 700; color: rgba(255,255,255,0.5); margin-bottom: 8px; letter-spacing: 0.08em;`;
-const SynEmpty = styled.div`font-size: 13px; color: rgba(255,255,255,0.35);`;
-const SynList = styled.div`display: flex; flex-wrap: wrap; gap: 8px;`;
+const SynTitle = styled.div`
+  ${pixelBold}
+  font-size: ${FONT.md}; color: ${C.gold}; margin-bottom: ${SP.sm};
+`;
+const SynEmpty = styled.div`font-size: ${FONT.sm}; color: ${C.textDim};`;
+const SynList = styled.div`display: flex; flex-wrap: wrap; gap: ${SP.sm};`;
+/** 시너지 칩 — 알약이 아니라 타입 색 면 + 검은 외곽선. */
 const SynChip = styled.div<{ $c: string }>`
-  display: flex; align-items: center; gap: 5px; font-size: 12px; font-weight: 700;
-  padding: 4px 10px; border-radius: 20px; color: #fff;
-  background: ${p => p.$c}22; border: 1px solid ${p => p.$c}66; text-transform: capitalize;
+  ${pixelBold}
+  display: flex; align-items: center; gap: ${SP.xs};
+  font-size: ${FONT.sm}; color: ${C.text};
+  padding: ${SP.xs} ${SP.sm};
+  background: ${C.panelSunk};
+  border: ${SCALE}px solid ${C.ink};
+  box-shadow: inset 0 0 0 ${SCALE}px ${p => p.$c};
 `;
-const SynDot = styled.span<{ $c: string }>`width: 8px; height: 8px; border-radius: 50%; background: ${p => p.$c};`;
-const SynTier = styled.span`color: rgba(255,255,255,0.6); font-weight: 600;`;
+const SynDot = styled.span<{ $c: string }>`width: 8px; height: 8px; background: ${p => p.$c}; border: 2px solid ${C.ink};`;
+const SynTier = styled.span`color: ${C.textSub}; font-weight: 400;`;
 const PenNote = styled.div`
-  display: flex; align-items: center; gap: 6px; margin-top: 10px; font-size: 12px; color: #fca5a5; font-weight: 600;
+  ${pixelBold}
+  display: flex; align-items: center; gap: ${SP.xs}; margin-top: ${SP.sm};
+  font-size: ${FONT.sm}; color: ${C.red};
 `;
 
 const EffectLegend = styled.div`
-  margin-top: 10px; font-size: 11px; line-height: 1.6; color: rgba(255,255,255,0.4);
+  margin-top: ${SP.sm}; font-size: ${FONT.sm}; color: ${C.textDim};
 `;
 
-const PoolLabel = styled.div`max-width: 720px; margin: 16px auto 8px; padding: 0 16px; font-size: 12px; font-weight: 700; color: rgba(255,255,255,0.4); letter-spacing: 0.08em;`;
-const PoolControls = styled.div`max-width: 720px; margin: 0 auto 12px; padding: 0 16px;`;
-const Pool = styled.div`
-  max-width: 720px; margin: 0 auto; padding: 0 16px;
-  display: grid; grid-template-columns: repeat(auto-fill, minmax(84px, 1fr)); gap: 12px;
+const PoolLabel = styled.div`
+  ${pixelBold}
+  max-width: 720px; margin: ${SP.md} auto ${SP.sm}; padding: 0 ${SP.md};
+  font-size: ${FONT.sm}; color: ${C.gold};
 `;
-const PoolEmpty = styled.div`grid-column: 1/-1; padding: 30px; text-align: center; color: rgba(255,255,255,0.35); font-size: 13px;`;
+const PoolControls = styled.div`max-width: 720px; margin: 0 auto ${SP.md}; padding: 0 ${SP.md};`;
+const Pool = styled.div`
+  max-width: 720px; margin: 0 auto; padding: 0 ${SP.md};
+  display: grid; grid-template-columns: repeat(auto-fill, minmax(84px, 1fr)); gap: ${SP.md};
+`;
+const PoolEmpty = styled.div`
+  grid-column: 1/-1; padding: ${SP.xxl}; text-align: center;
+  color: ${C.textDim}; font-size: ${FONT.sm};
+`;
 const PoolCard = styled.div<{ $placed: boolean }>`
-  position: relative; cursor: pointer; border-radius: 12px;
-  opacity: ${p => (p.$placed ? 0.45 : 1)}; transition: transform 0.12s;
-  &:hover { transform: translateY(-3px); }
+  position: relative; cursor: pointer;
+  opacity: ${p => (p.$placed ? 0.45 : 1)};
 `;
 const PlacedMark = styled.div`
-  position: absolute; top: 4px; right: 4px; background: #34d399; color: #07090f;
-  font-size: 9px; font-weight: 800; padding: 2px 6px; border-radius: 6px;
+  ${pixelBold}
+  position: absolute; top: 4px; right: 4px;
+  background: ${C.green}; color: ${C.ink};
+  border: 2px solid ${C.ink};
+  font-size: ${FONT.sm}; line-height: 1; padding: ${SP.xs} ${SP.sm};
+  text-shadow: none;
 `;
 const InfoBtn = styled.button`
   position: absolute; top: 4px; left: 4px; display: flex; z-index: 2;
-  background: rgba(8,12,20,0.72); border: 1px solid rgba(255,255,255,0.18);
-  border-radius: 50%; color: rgba(255,255,255,0.75); padding: 3px; cursor: pointer;
-  transition: background 0.12s, color 0.12s;
-  &:hover { background: rgba(96,176,255,0.35); color: #fff; }
+  background: ${C.panelSunk};
+  border: 2px solid ${C.ink};
+  color: ${C.textSub}; padding: 2px; cursor: pointer;
+  transition: none;
+  @media (hover: hover) { &:hover { color: ${C.text}; } }
+  ${focusRing}
 `;

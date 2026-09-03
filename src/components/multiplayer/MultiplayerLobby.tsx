@@ -3,14 +3,17 @@
 // [V5-FIX-LB-2] AI가 호스트가 되는 경우에 대한 안전 장치
 
 import { useState, useEffect, useRef, Fragment } from 'react';
-import styled, { keyframes } from 'styled-components';
+import styled, { css } from 'styled-components';
 import { Emoji } from '../shared/Emoji';
+import { Screen as Root, ScreenBackBtn as BackBtn, ScreenBody, SectionLabel } from '../shared/screen';
 import { media, lMedia } from '../../utils/responsive.utils';
 import { multiplayerService, MP_ERROR } from '../../services/MultiplayerService';
 import { Room, AIDifficulty } from '../../types/multiplayer';
 import { MAPS, mapThumbnailById } from '../../data/maps';
 import { authService } from '../../services/AuthService';
 import { useTranslation } from '../../i18n';
+import { C, FONT, SP, SCALE } from '../../styles/tokens';
+import { win, winThin, btn, btnThin, sunken, hudBar, pixelText, pixelBold, focusRing } from '../../styles/pixel';
 import { AchievementsPanel } from '../modals/Achievements';
 import { HallOfFame } from '../modals/HallOfFame';
 import { Rankings } from '../modals/Rankings';
@@ -22,11 +25,11 @@ interface MultiplayerLobbyProps {
 }
 
 const DIFF_META: Record<string, { label: string; color: string }> = {
-  easiest: { label: 'EASIEST', color: '#94a3b8' },
-  easy:    { label: 'EASY',    color: '#4ade80' },
-  medium:  { label: 'MEDIUM',  color: '#60a5fa' },
-  hard:    { label: 'HARD',    color: '#fb923c' },
-  expert:  { label: 'EXPERT',  color: '#f87171' },
+  easiest: { label: 'EASIEST', color: C.plain },
+  easy:    { label: 'EASY',    color: C.green },
+  medium:  { label: 'MEDIUM',  color: C.blue },
+  hard:    { label: 'HARD',    color: C.orange },
+  expert:  { label: 'EXPERT',  color: C.red },
 };
 
 export const MultiplayerLobby = ({ onBack, onStartGame }: MultiplayerLobbyProps) => {
@@ -495,8 +498,8 @@ export const MultiplayerLobby = ({ onBack, onStartGame }: MultiplayerLobbyProps)
         {kickConfirm.open && kickConfirm.player && (
           <ModalOverlay onClick={() => setKickConfirm({ open: false, player: null })}>
             <ConfirmModal onClick={e => e.stopPropagation()}>
-              <ConfirmIcon style={{ color: '#f87171' }}><Emoji glyph="🚫" size={24} /></ConfirmIcon>
-              <ConfirmTitle style={{ color: '#f87171' }}>{t('lobby.kickConfirmTitle')}</ConfirmTitle>
+              <ConfirmIcon style={{ color: C.red }}><Emoji glyph="🚫" size={24} /></ConfirmIcon>
+              <ConfirmTitle style={{ color: C.red }}>{t('lobby.kickConfirmTitle')}</ConfirmTitle>
               <ConfirmText>
                 {t('lobby.kickConfirmMsg', { name: kickConfirm.player.userName })}
               </ConfirmText>
@@ -505,7 +508,7 @@ export const MultiplayerLobby = ({ onBack, onStartGame }: MultiplayerLobbyProps)
                   {t('lobby.kickConfirmNo')}
                 </CancelModalBtn>
                 <LeaveModalBtn
-                  style={{ background: 'rgba(239,68,68,0.15)', borderColor: 'rgba(239,68,68,0.4)', color: '#f87171' }}
+                  style={{ background: `${C.red}26`, borderColor: `${C.red}66`, color: C.red }}
                   onClick={handleKickPlayer}
                 >
                   {t('lobby.kickConfirmYes')}
@@ -525,421 +528,424 @@ export const MultiplayerLobby = ({ onBack, onStartGame }: MultiplayerLobbyProps)
   return null;
 };
 
-// ─── Animations ───────────────────────────────────────────────────────────────
+// ─── Styled Components ────────────────────────────────────────────────────────
+// docs/DESIGN.md 의 디자인 시스템을 따른다.
+// 걷어낸 것: 유리 카드, 알약 배지, 원형 아바타/체크, uppercase eyebrow,
+//           점선 슬롯, backdrop-filter, hover 떠오름+글로우, 그라디언트 버튼,
+//           스태거 fadeUp, Tailwind 팔레트.
 
-const fadeUp = keyframes`from{opacity:0;transform:translateY(12px)}to{opacity:1;transform:translateY(0)}`;
-
-// ─── Shared ───────────────────────────────────────────────────────────────────
-
-const Root = styled.div`
-  min-height:100vh;
-  background:radial-gradient(ellipse at top,#111827 0%,#070b14 60%,#000 100%);
-  display:flex; flex-direction:column; color:#f8fafc;
-`;
 
 const LoadingScreen = styled.div`
-  flex:1; display:flex; align-items:center; justify-content:center;
-  font-size:20px; color:rgba(255,255,255,0.4);
-  min-height:100vh;
+  flex: 1; display: flex; align-items: center; justify-content: center;
+  font-size: ${FONT.sm}; color: ${C.textSub};
+  min-height: 100vh;
 `;
 
 const PageHeader = styled.header`
-  display:flex; align-items:center; justify-content:space-between;
-  padding:0 32px; height:64px;
-  background:rgba(255,255,255,0.025);
-  border-bottom:1px solid rgba(255,255,255,0.07);
-  backdrop-filter:blur(12px); flex-shrink:0;
-  ${media.mobile} { padding:0 16px; height:52px; }
-  ${lMedia.phoneSm} { height:44px; padding:0 12px; }
+  ${hudBar}
+  display: flex; align-items: center; justify-content: space-between;
+  gap: ${SP.md};
+  padding: 0 ${SP.lg}; height: 60px;
+  flex-shrink: 0;
+  ${media.mobile}   { padding: 0 ${SP.md}; height: 52px; }
+  ${lMedia.phoneSm} { height: 44px; padding: 0 ${SP.sm}; }
 `;
 
-const BackBtn = styled.button`
-  background:rgba(255,255,255,0.05); border:1px solid rgba(255,255,255,0.1);
-  border-radius:8px; color:rgba(255,255,255,0.55); padding:8px 14px;
-  font-size:13px; cursor:pointer; transition:all 0.2s; white-space:nowrap;
-  &:hover { background:rgba(255,255,255,0.1); color:#fff; }
-
-  .back-text {
-    ${media.mobile} { display: none; }
-  }
-
-  ${media.mobile} { padding:6px 10px; font-size:12px; }
-`;
 
 const PageTitle = styled.h1`
-  font-size:18px; font-weight:800; color:#f8fafc; margin:0; letter-spacing:-0.01em;
-  ${media.mobile} { font-size:16px; }
-  ${lMedia.phoneSm} { font-size:14px; }
+  ${pixelBold}
+  font-size: ${FONT.sm}; color: ${C.gold}; margin: 0;
 `;
 
-const HeaderActions = styled.div`display:flex; align-items:center; gap:8px;`;
+const HeaderActions = styled.div`display: flex; align-items: center; gap: ${SP.sm};`;
 
 const ActionBtn = styled.button`
-  width:36px; height:36px; background:rgba(255,255,255,0.05);
-  border:1px solid rgba(255,255,255,0.08); border-radius:8px;
-  font-size:16px; cursor:pointer; transition:all 0.2s;
-  display:flex; align-items:center; justify-content:center;
-  &:hover { background:rgba(255,255,255,0.1); }
-  ${media.mobile} { display:none; }
+  ${btnThin('plain')}
+  width: 36px; height: 36px; padding: 0;
+  color: ${C.textSub};
+  display: flex; align-items: center; justify-content: center;
+  ${focusRing}
+  ${media.mobile} { display: none; }
 `;
 
-// 방 목록 새로고침 — ActionBtn과 달리 모바일에서도 보여야 한다(실시간 구독을 없앤 대가).
+/* 방 목록 새로고침 — ActionBtn과 달리 모바일에서도 보여야 한다(실시간 구독을 없앤 대가).
+   손가락으로 확실히 눌려야 하므로 모바일에서 오히려 키운다(권장 터치 영역 40px 이상). */
 const RefreshBtn = styled.button`
-  width:36px; height:36px; background:rgba(255,255,255,0.05);
-  border:1px solid rgba(255,255,255,0.08); border-radius:8px;
-  font-size:16px; cursor:pointer; transition:all 0.2s;
-  display:flex; align-items:center; justify-content:center; flex:0 0 auto;
-  &:hover:not(:disabled) { background:rgba(255,255,255,0.1); }
-  &:disabled { opacity:0.4; cursor:default; }
-  /* 실시간 구독을 걷어낸 뒤로 방 목록을 갱신하는 유일한 수단이라 손가락으로 확실히
-     눌려야 한다 — 모바일에서 줄이지 않고 오히려 키운다(권장 터치 영역 40px 이상). */
-  ${media.mobile} { width:40px; height:40px; }
+  ${btnThin('plain')}
+  width: 36px; height: 36px; padding: 0;
+  color: ${C.textSub};
+  display: flex; align-items: center; justify-content: center; flex: 0 0 auto;
+  ${focusRing}
+  ${media.mobile} { width: 40px; height: 40px; }
 `;
 
 const CreateRoomBtn = styled.button`
-  padding:8px 16px; background:#3b82f6; border:none; border-radius:8px;
-  color:#fff; font-size:14px; font-weight:700; cursor:pointer; transition:all 0.2s;
-  white-space:nowrap;
-  &:hover { background:#2563eb; transform:translateY(-1px); box-shadow:0 6px 16px rgba(59,130,246,0.3); }
-  ${media.mobile} { padding:7px 12px; font-size:13px; }
+  ${btnThin('blue')}
+  ${pixelBold}
+  padding: ${SP.xs} ${SP.md};
+  color: ${C.blue}; font-size: ${FONT.sm};
+  white-space: nowrap;
+  ${focusRing}
 `;
 
-const Content = styled.main`
-  flex:1; padding:28px 32px; overflow-y:auto;
-  animation:${fadeUp} 0.4s ease both;
-  ${media.mobile} { padding:20px 16px; }
-  ${lMedia.phoneSm} { padding:12px; }
+const Content = styled(ScreenBody)`
+  overflow-y: auto;
+  ${media.mobile}   { padding: ${SP.md} ${SP.sm}; }
+  ${lMedia.phoneSm} { padding: ${SP.sm}; }
 `;
 
-const SectionLabel = styled.div`
-  font-size:11px; font-weight:700; letter-spacing:0.2em;
-  color:rgba(255,255,255,0.3); text-transform:uppercase; margin-bottom:12px;
-`;
 
 // ─── Room list ────────────────────────────────────────────────────────────────
 
 const EmptyState = styled.div`
-  display:flex; flex-direction:column; align-items:center; justify-content:center;
-  padding:80px 20px; gap:12px;
+  display: flex; flex-direction: column; align-items: center; justify-content: center;
+  padding: ${SP.xxl} ${SP.lg}; gap: ${SP.md};
 `;
 
-const EmptyIcon = styled.div`font-size:48px; opacity:0.3;`;
-const EmptyTitle = styled.div`font-size:18px; font-weight:600; color:rgba(255,255,255,0.35);`;
-const EmptyHint = styled.div`font-size:14px; color:rgba(255,255,255,0.2);`;
+const EmptyIcon = styled.div`font-size: 48px; line-height: 1;`;
+const EmptyTitle = styled.div`
+  ${pixelBold}
+  font-size: ${FONT.sm}; color: ${C.textSub};
+`;
+const EmptyHint = styled.div`font-size: ${FONT.sm}; color: ${C.textDim};`;
 
 const EmptyCreateBtn = styled.button`
-  margin-top:12px; padding:12px 24px; background:#3b82f6; border:none;
-  border-radius:10px; color:#fff; font-size:15px; font-weight:700;
-  cursor:pointer; transition:all 0.2s;
-  &:hover { background:#2563eb; transform:translateY(-1px); }
+  ${btn('blue')}
+  ${pixelBold}
+  margin-top: ${SP.md}; padding: ${SP.sm} ${SP.lg};
+  color: ${C.text}; font-size: ${FONT.sm};
+  ${focusRing}
 `;
 
-const RoomTable = styled.div`display:flex; flex-direction:column; gap:0;`;
+const RoomTable = styled.div`display: flex; flex-direction: column;`;
 
 const RoomTableHead = styled.div`
-  display:flex; align-items:center; gap:16px;
-  padding:8px 16px;
-  font-size:11px; font-weight:700; letter-spacing:0.12em;
-  color:rgba(255,255,255,0.28); text-transform:uppercase;
-  border-bottom:1px solid rgba(255,255,255,0.06);
-  ${media.mobile} { display:none; }
+  ${pixelBold}
+  display: flex; align-items: center; gap: ${SP.md};
+  padding: ${SP.xs} ${SP.md};
+  font-size: ${FONT.sm};
+  color: ${C.gold};
+  background: ${C.panelSunk};
+  border-bottom: ${SCALE}px solid ${C.ink};
+  ${media.mobile} { display: none; }
 `;
 
-const RTH = styled.div`flex:1;`;
+const RTH = styled.div`flex: 1;`;
 
 const RoomRow = styled.div`
-  display:flex; align-items:center; gap:16px; padding:12px 16px;
-  border-bottom:1px solid rgba(255,255,255,0.05);
-  transition:background 0.15s;
-  &:hover { background:rgba(255,255,255,0.03); }
-  ${media.mobile} { flex-wrap:wrap; gap:10px; padding:12px; }
+  display: flex; align-items: center; gap: ${SP.md}; padding: ${SP.sm} ${SP.md};
+  border-bottom: 2px solid ${C.ink};
+  ${media.mobile} { flex-wrap: wrap; gap: ${SP.sm}; }
 `;
 
 const RoomCell = styled.div`
-  flex:1; font-size:14px; color:rgba(255,255,255,0.65);
-  ${media.mobile} { font-size:13px; }
+  flex: 1; font-size: ${FONT.sm}; color: ${C.textSub};
 `;
 
 const RoomMapCell = styled.div`
-  flex:2; display:flex; align-items:center; gap:12px;
-  min-width:0;
+  flex: 2; display: flex; align-items: center; gap: ${SP.md};
+  min-width: 0;
 `;
 
 const RoomMapThumb = styled.img`
-  width:60px; height:40px; border-radius:6px;
-  object-fit:cover; border:1px solid rgba(255,255,255,0.08); flex-shrink:0;
-  ${media.mobile} { width:48px; height:32px; }
+  width: 60px; height: 40px;
+  object-fit: cover; border: 2px solid ${C.ink}; flex-shrink: 0;
+  image-rendering: pixelated;
+  ${media.mobile} { width: 48px; height: 32px; }
 `;
 
-const RoomMapInfo = styled.div`min-width:0;`;
+const RoomMapInfo = styled.div`min-width: 0;`;
 
 const RoomName = styled.div`
-  font-size:15px; font-weight:700; color:#f8fafc;
-  overflow:hidden; text-overflow:ellipsis; white-space:nowrap;
-  ${media.mobile} { font-size:14px; }
+  ${pixelBold}
+  font-size: ${FONT.sm}; color: ${C.text};
+  overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
 `;
 
-const RoomMapName = styled.div`font-size:12px; color:rgba(255,255,255,0.4);`;
+const RoomMapName = styled.div`font-size: ${FONT.sm}; color: ${C.textDim};`;
 
-const PlayerCount = styled.div<{$full:boolean}>`
-  font-size:15px; font-weight:700;
-  color:${p=>p.$full?'#f87171':'#4ade80'};
-  display:inline-block;
-  background:${p=>p.$full?'rgba(248,113,113,0.1)':'rgba(74,222,128,0.1)'};
-  padding:3px 10px; border-radius:100px;
+const PlayerCount = styled.div<{ $full: boolean }>`
+  ${pixelBold}
+  font-size: ${FONT.sm};
+  color: ${p => (p.$full ? C.red : C.green)};
+  background: ${C.panelSunk};
+  border: 2px solid ${C.ink};
+  padding: 0 ${SP.xs};
+  display: inline-block;
 `;
 
 const JoinBtn = styled.button`
-  padding:7px 16px; background:#3b82f6; border:none;
-  border-radius:8px; color:#fff; font-size:13px; font-weight:600;
-  cursor:pointer; transition:all 0.2s; white-space:nowrap;
-  &:hover:not(:disabled) { background:#2563eb; }
-  &:disabled { background:rgba(255,255,255,0.07); color:rgba(255,255,255,0.2); cursor:not-allowed; }
+  ${btnThin('blue')}
+  ${pixelBold}
+  padding: ${SP.xs} ${SP.md};
+  color: ${C.blue}; font-size: ${FONT.sm};
+  white-space: nowrap;
+  ${focusRing}
 `;
 
 // ─── Create room ──────────────────────────────────────────────────────────────
 
-const CreateSection = styled.div`max-width:860px; margin: 0 auto;`;
+const CreateSection = styled.div`max-width: 860px; margin: 0 auto;`;
 
 const MapPickGrid = styled.div`
-  display:grid; grid-template-columns:repeat(auto-fill,minmax(200px,1fr));
-  gap:10px; margin: 0 auto 24px auto; justify-content: center;
-  ${media.tablet} { grid-template-columns:repeat(2,1fr); }
-  ${media.mobile} { grid-template-columns:repeat(2,1fr); gap:8px; }
-  ${lMedia.phoneSm} { grid-template-columns:repeat(3,1fr); gap:6px; }
+  display: grid; grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+  gap: ${SP.sm}; margin: 0 auto ${SP.lg}; justify-content: center;
+  ${media.tablet}   { grid-template-columns: repeat(2,1fr); }
+  ${media.mobile}   { grid-template-columns: repeat(2,1fr); }
+  ${lMedia.phoneSm} { grid-template-columns: repeat(3,1fr); gap: ${SP.xs}; }
 `;
 
-const MapPickCard = styled.div<{ $selected:boolean; $color:string; $img:string }>`
-  position:relative; border-radius:10px; overflow:hidden;
-  height:120px; cursor:pointer;
-  background-image:url(${p=>p.$img}); background-size:cover; background-position:center;
-  background-color:#1f2937;
-  border:2px solid ${p=>p.$selected ? p.$color : 'rgba(255,255,255,0.08)'};
-  transition:all 0.2s;
-  &:hover { border-color:${p=>p.$color}88; transform:translateY(-2px); }
-  ${media.mobile} { height:90px; }
-  ${lMedia.phoneSm} { height:80px; }
+/** 맵 카드 — 썸네일 위라 창틀 PNG를 못 쓴다. 맵 선택 화면과 같은 하드 2겹 테두리. */
+const MapPickCard = styled.div<{ $selected: boolean; $color: string; $img: string }>`
+  position: relative; overflow: hidden;
+  height: 120px; cursor: pointer;
+  background-image: url(${p => p.$img}); background-size: cover; background-position: center;
+  background-color: ${C.ink};
+  image-rendering: pixelated;
+  border: ${SCALE}px solid ${C.ink};
+  box-shadow: inset 0 0 0 ${SCALE}px ${p => (p.$selected ? p.$color : C.divider)};
+  @media (hover: hover) { &:hover { box-shadow: inset 0 0 0 ${SCALE}px ${p => p.$color}; } }
+  ${media.mobile}   { height: 90px; }
+  ${lMedia.phoneSm} { height: 80px; }
 `;
 
-const MapPickOverlay = styled.div<{$selected:boolean; $color:string}>`
-  position:absolute; inset:0;
-  background:${p=>p.$selected
-    ? `linear-gradient(180deg,${p.$color}22 0%,rgba(0,0,0,0.7) 100%)`
-    : 'linear-gradient(180deg,rgba(0,0,0,0.1) 0%,rgba(0,0,0,0.65) 100%)'};
+const MapPickOverlay = styled.div<{ $selected: boolean; $color: string }>`
+  position: absolute; inset: 0;
+  background: linear-gradient(180deg, rgba(22,27,40,0.15) 0%, rgba(22,27,40,0.8) 100%);
 `;
 
-const MapPickBadge = styled.div<{$color:string}>`
-  position:absolute; top:8px; left:8px;
-  background:rgba(0,0,0,0.6); backdrop-filter:blur(4px);
-  border:1px solid ${p=>p.$color}44;
-  color:${p=>p.$color}; font-size:10px; font-weight:800;
-  padding:2px 7px; border-radius:100px; letter-spacing:0.08em;
+const MapPickBadge = styled.div<{ $color: string }>`
+  ${pixelBold}
+  position: absolute; top: ${SP.xs}; left: ${SP.xs};
+  background: ${C.panelSunk};
+  border: 2px solid ${C.ink};
+  color: ${p => p.$color}; font-size: ${FONT.sm}; line-height: 1.3;
+  padding: 0 ${SP.xs};
 `;
 
 const MapPickName = styled.div`
-  position:absolute; bottom:8px; left:10px; right:10px;
-  font-size:13px; font-weight:700; color:#fff;
-  text-shadow:0 1px 3px rgba(0,0,0,0.7);
-  overflow:hidden; text-overflow:ellipsis; white-space:nowrap;
-  ${lMedia.phoneSm} { font-size:11px; }
+  ${pixelBold}
+  position: absolute; bottom: ${SP.xs}; left: ${SP.sm}; right: ${SP.sm};
+  font-size: ${FONT.sm}; color: ${C.text};
+  text-shadow: 1px 1px 0 ${C.ink};
+  overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
 `;
 
+/** 선택 표시 — 원이 아니라 네모. */
 const MapPickCheck = styled.div`
-  position:absolute; top:8px; right:8px;
-  width:22px; height:22px; border-radius:50%;
-  background:#10b981; display:flex; align-items:center; justify-content:center;
-  font-size:13px; font-weight:900; color:#fff;
+  ${pixelBold}
+  position: absolute; top: ${SP.xs}; right: ${SP.xs};
+  width: 20px; height: 20px;
+  background: ${C.green};
+  border: 2px solid ${C.ink};
+  display: flex; align-items: center; justify-content: center;
+  font-size: ${FONT.sm}; color: ${C.ink};
+  text-shadow: none;
 `;
 
 const ConfirmCreateBtn = styled.button`
-  width:100%; padding:14px;
-  background:linear-gradient(135deg,#3b82f6,#2563eb); border:none;
-  border-radius:10px; color:#fff; font-size:16px; font-weight:700;
-  cursor:pointer; transition:all 0.2s;
-  &:hover { transform:translateY(-1px); box-shadow:0 8px 24px rgba(59,130,246,0.35); }
+  ${btn('blue')}
+  ${pixelBold}
+  width: 100%; padding: ${SP.sm};
+  color: ${C.text}; font-size: ${FONT.sm};
+  ${focusRing}
 `;
 
 // ─── Room view ────────────────────────────────────────────────────────────────
 
 const RoomLayout = styled.div`
-  display:grid; grid-template-columns:280px 1fr; gap:24px;
-  ${media.tablet} { grid-template-columns:1fr; }
-  ${lMedia.phoneSm} { grid-template-columns:1fr; gap:16px; }
+  display: grid; grid-template-columns: 280px 1fr; gap: ${SP.lg};
+  ${media.tablet}   { grid-template-columns: 1fr; }
+  ${lMedia.phoneSm} { grid-template-columns: 1fr; gap: ${SP.md}; }
 `;
 
 const RoomMapPanel = styled.div`
-  border-radius:12px; overflow:hidden;
-  border:1px solid rgba(255,255,255,0.08);
-  background:rgba(255,255,255,0.03);
-  ${media.tablet} { display:flex; align-items:center; gap:16px; }
+  ${winThin('plain')}
+  overflow: hidden;
+  padding: 0;
+  ${media.tablet} { display: flex; align-items: center; gap: ${SP.md}; }
 `;
 
 const RoomMapBig = styled.img`
-  width:100%; height:160px; object-fit:cover; display:block;
-  ${media.tablet} { width:120px; height:80px; border-radius:8px; flex-shrink:0; }
-  ${media.mobile} { width:90px; height:60px; }
+  width: 100%; height: 160px; object-fit: cover; display: block;
+  image-rendering: pixelated;
+  ${media.tablet} { width: 120px; height: 80px; flex-shrink: 0; }
+  ${media.mobile} { width: 90px; height: 60px; }
 `;
 
-const RoomMapDetails = styled.div`padding:16px; ${media.tablet}{flex:1; padding:12px;}`;
+const RoomMapDetails = styled.div`padding: ${SP.md}; ${media.tablet}{ flex: 1; padding: ${SP.sm}; }`;
 
-const RoomMapBadge = styled.div<{$color:string}>`
-  display:inline-block; padding:3px 10px; border-radius:100px;
-  background:${p=>p.$color}18; border:1px solid ${p=>p.$color}44;
-  color:${p=>p.$color}; font-size:11px; font-weight:800; letter-spacing:0.1em;
-  margin-bottom:8px;
+const RoomMapBadge = styled.div<{ $color: string }>`
+  ${pixelBold}
+  display: inline-block; padding: 0 ${SP.xs};
+  background: ${C.panelSunk};
+  border: 2px solid ${C.ink};
+  color: ${p => p.$color}; font-size: ${FONT.sm}; line-height: 1.4;
+  margin-bottom: ${SP.sm};
 `;
 
-const RoomMapTitle = styled.div`font-size:16px; font-weight:700; color:#f8fafc; margin-bottom:6px;`;
+const RoomMapTitle = styled.div`
+  ${pixelBold}
+  font-size: ${FONT.sm}; color: ${C.text}; margin-bottom: ${SP.xs};
+`;
 
-const PlayerCountBig = styled.div`font-size:13px; color:rgba(255,255,255,0.45);`;
+const PlayerCountBig = styled.div`font-size: ${FONT.sm}; color: ${C.textDim};`;
 
 const RoomPlayersArea = styled.div``;
 
 const PlayerGrid = styled.div`
-  display:grid; grid-template-columns:repeat(auto-fill,minmax(220px,1fr));
-  gap:10px; margin-bottom:20px;
-  ${media.mobile} { grid-template-columns:1fr; gap:8px; }
-  ${lMedia.phoneSm} { grid-template-columns:repeat(2,1fr); gap:6px; }
+  display: grid; grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+  gap: ${SP.sm}; margin-bottom: ${SP.lg};
+  ${media.mobile}   { grid-template-columns: 1fr; }
+  ${lMedia.phoneSm} { grid-template-columns: repeat(2,1fr); }
 `;
 
-const PlayerCard = styled.div<{$ready:boolean}>`
-  display:flex; align-items:center; gap:12px; padding:12px 16px;
-  background:${p=>p.$ready?'rgba(16,185,129,0.06)':'rgba(255,255,255,0.04)'};
-  border:1px solid ${p=>p.$ready?'rgba(16,185,129,0.2)':'rgba(255,255,255,0.07)'};
-  border-radius:10px; transition:all 0.2s;
-  ${lMedia.phoneSm} { padding:10px 12px; gap:8px; }
+const PlayerCard = styled.div<{ $ready: boolean }>`
+  ${p => winThin(p.$ready ? 'green' : 'plain')}
+  display: flex; align-items: center; gap: ${SP.sm}; padding: ${SP.sm} ${SP.md};
 `;
 
+/** 아바타 — 원이 아니라 네모. */
 const PlayerAvatar = styled.div`
-  width:36px; height:36px; border-radius:50%;
-  background:linear-gradient(135deg,#3b82f6,#1d4ed8);
-  display:flex; align-items:center; justify-content:center;
-  font-size:15px; font-weight:700; color:#fff; flex-shrink:0;
-  ${lMedia.phoneSm} { width:30px; height:30px; font-size:13px; }
+  ${pixelBold}
+  width: 32px; height: 32px;
+  background: ${C.blue};
+  border: 2px solid ${C.ink};
+  display: flex; align-items: center; justify-content: center;
+  font-size: ${FONT.sm}; color: ${C.ink}; flex-shrink: 0;
+  text-shadow: none;
 `;
 
-const PlayerInfo = styled.div`flex:1; min-width:0;`;
+const PlayerInfo = styled.div`flex: 1; min-width: 0;`;
 
 const PlayerNameRow = styled.div`
-  display:flex; align-items:center; gap:6px; flex-wrap:wrap;
-  font-size:14px; font-weight:700; color:#f8fafc; margin-bottom:2px;
-  ${lMedia.phoneSm} { font-size:12px; }
+  ${pixelBold}
+  display: flex; align-items: center; gap: ${SP.xs}; flex-wrap: wrap;
+  font-size: ${FONT.sm}; color: ${C.text};
+`;
+
+const roleBadge = css`
+  ${pixelBold}
+  font-size: ${FONT.sm}; line-height: 1.3;
+  padding: 0 ${SP.xs};
+  background: ${C.panelSunk};
+  border: 2px solid ${C.ink};
+  text-shadow: 1px 1px 0 ${C.textShadow};
 `;
 
 const HostBadge = styled.span`
-  font-size:10px; font-weight:800; color:#f59e0b;
-  background:rgba(245,158,11,0.1); padding:1px 6px; border-radius:4px;
+  ${roleBadge}
+  color: ${C.gold};
 `;
 
 const AIBadge = styled.span`
-  font-size:10px; font-weight:800; color:#a78bfa;
-  background:rgba(167,139,250,0.1); padding:1px 6px; border-radius:4px;
+  ${roleBadge}
+  color: ${C.purple};
 `;
 
-const PlayerRatingRow = styled.div`font-size:12px; color:rgba(255,255,255,0.35);`;
+const PlayerRatingRow = styled.div`font-size: ${FONT.sm}; color: ${C.textDim};`;
 
 const KickBtn = styled.button`
+  ${btnThin('red')}
+  ${pixelBold}
   flex-shrink: 0;
-  width: 24px; height: 24px;
-  border-radius: 50%;
-  border: 1px solid rgba(239,68,68,0.35);
-  background: rgba(239,68,68,0.08);
-  color: rgba(239,68,68,0.7);
-  font-size: 12px; font-weight: 700;
-  cursor: pointer; line-height: 1;
+  width: 24px; height: 24px; padding: 0;
+  color: ${C.red};
+  font-size: ${FONT.sm};
   display: flex; align-items: center; justify-content: center;
-  transition: background 0.15s, border-color 0.15s, color 0.15s;
-  @media (hover: hover) {
-    &:hover {
-      background: rgba(239,68,68,0.22);
-      border-color: rgba(239,68,68,0.6);
-      color: #f87171;
-    }
-  }
-  ${lMedia.phoneSm} { width: 22px; height: 22px; font-size: 11px; }
+  ${focusRing}
 `;
 
-const ReadyIndicator = styled.div<{$ready:boolean}>`
-  font-size:12px; font-weight:700;
-  color:${p=>p.$ready?'#4ade80':'rgba(255,255,255,0.3)'};
-  flex-shrink:0;
+const ReadyIndicator = styled.div<{ $ready: boolean }>`
+  ${pixelBold}
+  font-size: ${FONT.sm};
+  color: ${p => (p.$ready ? C.green : C.textDim)};
+  flex-shrink: 0;
 `;
 
+/** 빈 자리 — 점선을 걷어내고 한 단 파인 면으로. */
 const EmptySlot = styled.div`
-  display:flex; align-items:center; justify-content:center;
-  padding:12px 16px; border-radius:10px;
-  border:1px dashed rgba(255,255,255,0.1);
-  font-size:13px; color:rgba(255,255,255,0.2);
-  font-style:italic;
+  ${sunken()}
+  display: flex; align-items: center; justify-content: center;
+  padding: ${SP.sm} ${SP.md};
+  font-size: ${FONT.sm}; color: ${C.textDim};
 `;
 
-const AISection = styled.div`margin-bottom:20px;`;
+const AISection = styled.div`margin-bottom: ${SP.lg};`;
 
-const AIBtnRow = styled.div`display:flex; gap:8px; flex-wrap:wrap;`;
+const AIBtnRow = styled.div`display: flex; gap: ${SP.sm}; flex-wrap: wrap;`;
 
 const AIAddBtn = styled.button`
-  flex:1; padding:9px 16px;
-  background:rgba(255,255,255,0.04); border:1px solid rgba(255,255,255,0.1);
-  border-radius:8px; color:rgba(255,255,255,0.6);
-  font-size:13px; font-weight:600; cursor:pointer; transition:all 0.2s;
-  min-width:90px;
-  &:hover { background:rgba(255,255,255,0.08); color:#fff; border-color:rgba(255,255,255,0.2); }
+  ${btnThin('plain')}
+  ${pixelBold}
+  flex: 1; padding: ${SP.xs} ${SP.md};
+  color: ${C.textSub};
+  font-size: ${FONT.sm};
+  min-width: 90px;
+  ${focusRing}
 `;
 
-const ActionRow = styled.div`display:flex; gap:10px;`;
+const ActionRow = styled.div`display: flex; gap: ${SP.sm};`;
 
-const ToggleReadyBtn = styled.button<{$ready:boolean}>`
-  flex:1; padding:13px;
-  background:${p=>p.$ready?'rgba(245,158,11,0.15)':'rgba(16,185,129,0.15)'};
-  border:1px solid ${p=>p.$ready?'rgba(245,158,11,0.3)':'rgba(16,185,129,0.3)'};
-  border-radius:10px; color:${p=>p.$ready?'#fbbf24':'#34d399'};
-  font-size:15px; font-weight:700; cursor:pointer; transition:all 0.2s;
-  &:hover { filter:brightness(1.1); transform:translateY(-1px); }
+const ToggleReadyBtn = styled.button<{ $ready: boolean }>`
+  ${p => btn(p.$ready ? 'gold' : 'green')}
+  ${pixelBold}
+  flex: 1; padding: ${SP.sm};
+  color: ${p => (p.$ready ? C.gold : C.green)};
+  font-size: ${FONT.sm};
+  ${focusRing}
 `;
 
 const StartGameBtn = styled.button`
-  flex:1; padding:13px;
-  background:linear-gradient(135deg,#10b981,#059669); border:none;
-  border-radius:10px; color:#fff; font-size:15px; font-weight:700;
-  cursor:pointer; transition:all 0.2s;
-  &:hover:not(:disabled) { transform:translateY(-1px); box-shadow:0 8px 24px rgba(16,185,129,0.3); }
-  &:disabled { background:rgba(255,255,255,0.07); color:rgba(255,255,255,0.25); cursor:not-allowed; transform:none; }
+  ${btn('green')}
+  ${pixelBold}
+  flex: 1; padding: ${SP.sm};
+  color: ${C.text}; font-size: ${FONT.sm};
+  ${focusRing}
 `;
 
 // ─── Confirm modal ────────────────────────────────────────────────────────────
 
 const ModalOverlay = styled.div`
-  position:fixed; inset:0; background:rgba(0,0,0,0.85);
-  display:flex; align-items:center; justify-content:center; z-index:3000;
-  backdrop-filter:blur(4px); padding:16px;
+  position: fixed; inset: 0;
+  background: rgba(20, 16, 26, 0.86);
+  display: flex; align-items: center; justify-content: center; z-index: 3000;
+  padding: ${SP.md};
 `;
 
 const ConfirmModal = styled.div`
-  background:#0f1419; border:1px solid rgba(239,68,68,0.25);
-  border-radius:16px; padding:32px; max-width:420px; width:100%;
-  text-align:center; box-shadow:0 32px 64px rgba(0,0,0,0.6);
+  ${win('red')}
+  ${pixelText}
+  padding: ${SP.xl}; max-width: 420px; width: 100%;
+  text-align: center; color: ${C.text};
 `;
 
-const ConfirmIcon = styled.div`font-size:32px; margin-bottom:16px; color:#f87171;`;
-const ConfirmTitle = styled.h3`font-size:20px; font-weight:800; color:#f87171; margin:0 0 12px;`;
-const ConfirmText = styled.p`font-size:14px; color:rgba(255,255,255,0.55); line-height:1.6; margin:0 0 24px;`;
+const ConfirmIcon = styled.div`font-size: 32px; line-height: 1; margin-bottom: ${SP.md}; color: ${C.red};`;
+const ConfirmTitle = styled.h3`
+  ${pixelBold}
+  font-size: ${FONT.sm}; color: ${C.red}; margin: 0 0 ${SP.sm};
+`;
+const ConfirmText = styled.p`
+  font-size: ${FONT.sm}; color: ${C.textSub}; margin: 0 0 ${SP.lg};
+  word-break: keep-all;
+`;
 
-const ConfirmBtns = styled.div`display:flex; gap:10px;`;
+const ConfirmBtns = styled.div`display: flex; gap: ${SP.sm};`;
 
 const CancelModalBtn = styled.button`
-  flex:1; padding:12px; background:rgba(255,255,255,0.06);
-  border:1px solid rgba(255,255,255,0.1); border-radius:10px;
-  color:rgba(255,255,255,0.7); font-size:14px; font-weight:600;
-  cursor:pointer; transition:all 0.2s;
-  &:hover { background:rgba(255,255,255,0.1); color:#fff; }
+  ${btn('plain')}
+  ${pixelBold}
+  flex: 1; padding: ${SP.sm};
+  color: ${C.textSub}; font-size: ${FONT.sm};
+  ${focusRing}
 `;
 
 const LeaveModalBtn = styled.button`
-  flex:1; padding:12px; background:rgba(239,68,68,0.15);
-  border:1px solid rgba(239,68,68,0.3); border-radius:10px;
-  color:#f87171; font-size:14px; font-weight:700;
-  cursor:pointer; transition:all 0.2s;
-  &:hover { background:rgba(239,68,68,0.25); }
+  ${btn('red')}
+  ${pixelBold}
+  flex: 1; padding: ${SP.sm};
+  color: ${C.red}; font-size: ${FONT.sm};
+  ${focusRing}
 `;
 
 // ─── Rejoin Prompt ────────────────────────────────────────────────────────────
@@ -951,9 +957,9 @@ function RejoinPrompt({ roomName, onRejoin, onAbandon }: RejoinPromptProps) {
   return (
     <Root>
       <ModalOverlay>
-        <ConfirmModal style={{borderColor:'rgba(59,130,246,0.25)'}}>
-          <ConfirmIcon style={{color:'#60a5fa'}}><Emoji glyph="🎮" size={24} /></ConfirmIcon>
-          <ConfirmTitle style={{color:'#60a5fa'}}>{t('lobby.rejoinTitle')}</ConfirmTitle>
+        <ConfirmModal>
+          <ConfirmIcon style={{color:C.blue}}><Emoji glyph="🎮" size={24} /></ConfirmIcon>
+          <ConfirmTitle style={{color:C.blue}}>{t('lobby.rejoinTitle')}</ConfirmTitle>
           <ConfirmText>
             {t('lobby.rejoinMsg', { name: roomName }).split('\n').map((line, i) => (
               <Fragment key={i}>{line}{i === 0 && <br />}</Fragment>
@@ -962,7 +968,6 @@ function RejoinPrompt({ roomName, onRejoin, onAbandon }: RejoinPromptProps) {
           <ConfirmBtns>
             <CancelModalBtn onClick={onAbandon}>{t('lobby.rejoinNo')}</CancelModalBtn>
             <LeaveModalBtn
-              style={{background:'rgba(59,130,246,0.15)',borderColor:'rgba(59,130,246,0.3)',color:'#60a5fa'}}
               onClick={onRejoin}
             >
               {t('lobby.rejoinYes')}

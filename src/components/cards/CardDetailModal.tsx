@@ -2,7 +2,7 @@
 // 진짜 포켓몬 도감 느낌의 카드 상세 — 아트/이름/번호/분류/타입/설명/종족값/전투스탯/신체.
 
 import { useEffect, useMemo, useState } from 'react';
-import styled, { keyframes } from 'styled-components';
+import styled from 'styled-components';
 import { X } from 'lucide-react';
 import { pokeAPI, PokemonData } from '../../api/pokeapi';
 import { buildBattleCard } from '../../services/CardBattleService';
@@ -11,6 +11,8 @@ import { getTypeColor } from '../../utils/typeEffectiveness';
 import { useTranslation } from '../../i18n';
 import { MAX_STARS, MERGE_COPIES } from '../../services/CardService';
 import { CardView } from './CardView';
+import { C, FONT, SP, SCALE, STAT_RAMP } from '../../styles/tokens';
+import { win, sunken, pixelText, pixelBold, shadowLg, focusRing } from '../../styles/pixel';
 
 interface Props {
   pokemonId: number;
@@ -32,7 +34,8 @@ const STAT_ROWS: Array<{ key: keyof PokemonData['stats']; label: string }> = [
 
 // 종족값 → 막대 색(낮음 빨강 → 높음 초록)
 const statBarColor = (v: number): string =>
-  v >= 120 ? '#22c55e' : v >= 90 ? '#84cc16' : v >= 60 ? '#eab308' : v >= 40 ? '#f97316' : '#ef4444';
+  v >= 120 ? STAT_RAMP.best : v >= 90 ? STAT_RAMP.high
+  : v >= 60 ? STAT_RAMP.mid : v >= 40 ? STAT_RAMP.low : STAT_RAMP.worst;
 
 export const CardDetailModal = ({ pokemonId, stars, copies = 0, rarity, onClose }: Props) => {
   const { t } = useTranslation();
@@ -161,103 +164,154 @@ export const CardDetailModal = ({ pokemonId, stars, copies = 0, rarity, onClose 
 };
 
 // ─── styled ──────────────────────────────────────────────────────────────────
-const fadeIn = keyframes`from{opacity:0}to{opacity:1}`;
-const slideUp = keyframes`from{opacity:0;transform:translateY(16px) scale(.98)}to{opacity:1;transform:translateY(0) scale(1)}`;
+// docs/DESIGN.md 의 디자인 시스템을 따른다.
+// 걷어낸 것: 유리 카드, 알약 배지, uppercase eyebrow, backdrop-filter, 둥근 모서리,
+//           번지는 그림자, 10~11px 글자.
 
 const Overlay = styled.div`
-  position: fixed; inset: 0; z-index: 4000; display: flex; align-items: center; justify-content: center;
-  background: rgba(4,6,12,0.72); backdrop-filter: blur(4px); padding: 20px;
-  animation: ${fadeIn} 0.18s ease;
+  position: fixed; inset: 0; z-index: 4000;
+  display: flex; align-items: center; justify-content: center;
+  background: rgba(20, 16, 26, 0.82);
+  padding: ${SP.lg};
 `;
 const Box = styled.div`
+  ${win('purple')}
+  ${pixelText}
   position: relative; width: 100%; max-width: 640px; max-height: 88vh; overflow-y: auto;
-  background: radial-gradient(circle at top, #161d33, #0b0f1a);
-  border: 1px solid rgba(255,255,255,0.1); border-radius: 18px;
-  box-shadow: 0 24px 60px rgba(0,0,0,0.6); animation: ${slideUp} 0.24s ease;
+  color: ${C.text};
+
+  &::-webkit-scrollbar { width: 10px; }
+  &::-webkit-scrollbar-track { background: ${C.panelSunk}; border: ${SCALE}px solid ${C.ink}; }
+  &::-webkit-scrollbar-thumb { background: ${C.divider}; border: ${SCALE}px solid ${C.ink}; }
 `;
+/** 레어도 띠 — 창 맨 위에 한 줄. 그라디언트가 아니라 단색 면. */
 const TopStripe = styled.div<{ $c: string }>`
-  height: 5px; border-radius: 18px 18px 0 0;
-  background: linear-gradient(90deg, transparent, ${p => p.$c}, transparent);
+  height: ${SCALE * 2}px;
+  background: ${p => p.$c};
 `;
 const CloseBtn = styled.button`
-  position: absolute; top: 12px; right: 12px; z-index: 2;
-  display: flex; background: rgba(255,255,255,0.08); border: none; border-radius: 8px;
-  color: rgba(255,255,255,0.6); padding: 6px; cursor: pointer;
-  &:hover { background: rgba(255,255,255,0.16); color: #fff; }
+  position: absolute; top: ${SP.sm}; right: ${SP.sm}; z-index: 2;
+  display: flex; background: none; border: none; padding: ${SP.xs}; cursor: pointer;
+  color: ${C.textDim};
+  transition: none;
+  @media (hover: hover) { &:hover { color: ${C.text}; } }
+  ${focusRing}
 `;
-const Loading = styled.div`padding: 60px; text-align: center; color: rgba(255,255,255,0.5); font-size: 14px;`;
+const Loading = styled.div`
+  padding: ${SP.xxl}; text-align: center; color: ${C.textDim}; font-size: ${FONT.sm};
+`;
 
 const Body = styled.div`
-  display: flex; gap: 22px; padding: 22px;
-  @media (max-width: 560px) { flex-direction: column; align-items: center; gap: 16px; }
+  display: flex; gap: ${SP.xl}; padding: ${SP.lg};
+  @media (max-width: 560px) { flex-direction: column; align-items: center; gap: ${SP.md}; }
 `;
 const Left = styled.div`
-  flex-shrink: 0; display: flex; flex-direction: column; align-items: center; gap: 10px;
+  flex-shrink: 0; display: flex; flex-direction: column; align-items: center; gap: ${SP.sm};
 `;
 const RarityTag = styled.div<{ $c: string }>`
-  font-size: 12px; font-weight: 800; letter-spacing: 0.05em; color: ${p => p.$c};
-  border: 1px solid ${p => p.$c}66; background: ${p => p.$c}18; padding: 3px 12px; border-radius: 20px;
+  ${pixelBold}
+  font-size: ${FONT.sm}; color: ${p => p.$c};
+  background: ${C.panelSunk};
+  border: ${SCALE}px solid ${C.ink};
+  box-shadow: inset 0 0 0 ${SCALE}px ${p => p.$c};
+  padding: ${SP.xs} ${SP.sm};
 `;
 const MergeBox = styled.div`
-  display: flex; flex-direction: column; align-items: center; gap: 5px; margin-top: 2px;
+  display: flex; flex-direction: column; align-items: center; gap: ${SP.xs}; margin-top: 2px;
 `;
-const MergeLbl = styled.div`font-size: 11px; font-weight: 700; color: rgba(255,255,255,0.5); letter-spacing: 0.02em;`;
-const MergePips = styled.div`display: flex; gap: 4px;`;
+const MergeLbl = styled.div`font-size: ${FONT.sm}; color: ${C.textDim};`;
+const MergePips = styled.div`display: flex; gap: ${SP.xs};`;
 const Pip = styled.span<{ $on: boolean }>`
-  width: 18px; height: 5px; border-radius: 3px;
-  background: ${p => (p.$on ? '#c084fc' : 'rgba(255,255,255,0.12)')};
-  box-shadow: ${p => (p.$on ? '0 0 6px #c084fc88' : 'none')};
+  width: 18px; height: 6px;
+  background: ${p => (p.$on ? C.purple : C.panelSunk)};
+  border: 2px solid ${C.ink};
 `;
-const MergeNote = styled.div`font-size: 11px; font-weight: 700; color: #fbbf24; letter-spacing: 0.02em; margin-top: 2px;`;
+const MergeNote = styled.div`
+  ${pixelBold}
+  font-size: ${FONT.sm}; color: ${C.gold}; margin-top: 2px;
+`;
 const Right = styled.div`flex: 1; min-width: 0; width: 100%;`;
-const DexNo = styled.div`font-size: 12px; font-weight: 700; color: rgba(255,255,255,0.4); letter-spacing: 0.08em;`;
-const Name = styled.h2`font-size: 24px; font-weight: 900; color: #f8fafc; margin: 2px 0 3px; letter-spacing: -0.02em;`;
-const Genus = styled.div`font-size: 13px; color: rgba(255,255,255,0.5); margin-bottom: 10px;`;
+const DexNo = styled.div`font-size: ${FONT.sm}; color: ${C.textDim};`;
+const Name = styled.h2`
+  ${pixelBold}
+  ${shadowLg}
+  font-size: ${FONT.xl}; color: ${C.text}; margin: 2px 0 ${SP.xs};
+`;
+const Genus = styled.div`font-size: ${FONT.sm}; color: ${C.textSub}; margin-bottom: ${SP.sm};`;
 
-const TypeRow = styled.div`display: flex; gap: 8px; margin-bottom: 12px;`;
+const TypeRow = styled.div`display: flex; gap: ${SP.sm}; margin-bottom: ${SP.md};`;
+/** 타입 배지 — 타입 색은 정체성이라 면으로 칠하고 검은 외곽선을 두른다. */
 const TypeBadge = styled.span<{ $c: string }>`
-  font-size: 12px; font-weight: 800; color: #fff; padding: 4px 14px; border-radius: 20px;
-  background: ${p => p.$c}; box-shadow: 0 2px 6px ${p => p.$c}55;
+  ${pixelBold}
+  font-size: ${FONT.sm}; color: ${C.text};
+  padding: ${SP.xs} ${SP.md};
+  background: ${p => p.$c};
+  border: ${SCALE}px solid ${C.ink};
 `;
 
 const Flavor = styled.p`
-  font-size: 13px; line-height: 1.6; color: rgba(255,255,255,0.68);
-  margin: 0 0 12px; padding: 10px 12px; border-radius: 10px;
-  background: rgba(255,255,255,0.03); border: 1px solid rgba(255,255,255,0.06);
+  ${sunken()}
+  font-size: ${FONT.sm}; color: ${C.textSub};
+  margin: 0 0 ${SP.md}; padding: ${SP.sm};
+  word-break: keep-all;
 `;
-const Physical = styled.div`display: flex; gap: 10px; margin-bottom: 14px;`;
+const Physical = styled.div`display: flex; gap: ${SP.sm}; margin-bottom: ${SP.md};`;
 const PhysItem = styled.div`
-  flex: 1; display: flex; flex-direction: column; gap: 2px; padding: 8px 12px;
-  border-radius: 10px; background: rgba(255,255,255,0.03); border: 1px solid rgba(255,255,255,0.06);
+  ${sunken()}
+  flex: 1; display: flex; flex-direction: column; padding: ${SP.xs} ${SP.sm};
 `;
-const PhysLbl = styled.span`font-size: 10px; color: rgba(255,255,255,0.4); text-transform: uppercase; letter-spacing: 0.06em;`;
-const PhysVal = styled.span`font-size: 15px; font-weight: 700; color: #e8edf5;`;
+/** uppercase eyebrow를 걷어낸 자리 — 그냥 작은 회색 라벨. */
+const PhysLbl = styled.span`font-size: ${FONT.sm}; color: ${C.textDim};`;
+const PhysVal = styled.span`
+  ${pixelBold}
+  font-size: ${FONT.sm}; color: ${C.text};
+`;
 
+/** 목록 머리글 — 골드 라벨 + 가로선. MainMenu·미니포켓 허브와 같은 문법. */
 const SectionLbl = styled.div`
-  display: flex; align-items: center; gap: 8px; font-size: 12px; font-weight: 700;
-  color: rgba(255,255,255,0.5); text-transform: uppercase; letter-spacing: 0.1em; margin: 4px 0 8px;
-`;
-const SubLbl = styled.span`font-size: 11px; font-weight: 700; color: #fbbf24; letter-spacing: 0; text-transform: none;`;
+  ${pixelBold}
+  display: flex; align-items: center; gap: ${SP.sm};
+  font-size: ${FONT.sm}; color: ${C.gold};
+  margin: ${SP.xs} 0 ${SP.sm};
 
-const Stats = styled.div`display: flex; flex-direction: column; gap: 6px; margin-bottom: 14px;`;
-const StatRow = styled.div`display: grid; grid-template-columns: 52px 34px 1fr; align-items: center; gap: 8px;`;
+  &::after { content: ''; flex: 1; height: ${SCALE}px; background: ${C.divider}; }
+`;
+const SubLbl = styled.span`
+  ${pixelBold}
+  order: 99;
+  font-size: ${FONT.sm}; color: ${C.textSub};
+`;
+
+const Stats = styled.div`display: flex; flex-direction: column; gap: ${SP.xs}; margin-bottom: ${SP.md};`;
+const StatRow = styled.div`display: grid; grid-template-columns: 64px 40px 1fr; align-items: center; gap: ${SP.sm};`;
 const StatName = styled.span<{ $bold?: boolean }>`
-  font-size: 11px; color: ${p => (p.$bold ? '#cdd6e4' : 'rgba(255,255,255,0.55)')}; font-weight: ${p => (p.$bold ? 800 : 600)};
+  font-size: ${FONT.sm};
+  color: ${p => (p.$bold ? C.text : C.textSub)};
+  font-weight: ${p => (p.$bold ? 700 : 400)};
 `;
 const StatNum = styled.span<{ $bold?: boolean }>`
-  font-size: 12px; font-weight: ${p => (p.$bold ? 800 : 700)}; color: #e8edf5; text-align: right;
+  font-size: ${FONT.sm}; font-weight: 700; color: ${C.text}; text-align: right;
+  text-shadow: 1px 1px 0 ${C.textShadow};
 `;
-const BarTrack = styled.div`height: 7px; border-radius: 4px; background: rgba(255,255,255,0.08); overflow: hidden;`;
+/** 게이지 — 한 단 파인 트랙에 각진 막대. */
+const BarTrack = styled.div`
+  ${sunken()}
+  height: 12px; overflow: hidden;
+`;
 const BarFill = styled.div<{ $w: number; $c: string }>`
-  height: 100%; width: ${p => p.$w}%; background: ${p => p.$c}; border-radius: 4px; transition: width 0.4s ease;
+  height: 100%; width: ${p => p.$w}%; background: ${p => p.$c};
 `;
 
 const BattleGrid = styled.div`
-  display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px;
+  display: grid; grid-template-columns: repeat(3, 1fr); gap: ${SP.sm};
 `;
 const BStat = styled.div`
-  display: flex; flex-direction: column; align-items: center; gap: 2px; padding: 8px 4px;
-  border-radius: 10px; background: rgba(96,176,255,0.06); border: 1px solid rgba(96,176,255,0.16);
+  ${sunken()}
+  display: flex; flex-direction: column; align-items: center;
+  padding: ${SP.xs};
 `;
-const BLbl = styled.span`font-size: 10px; color: rgba(255,255,255,0.5); text-transform: uppercase; letter-spacing: 0.04em;`;
-const BVal = styled.span`font-size: 16px; font-weight: 800; color: #cfe4ff;`;
+const BLbl = styled.span`font-size: ${FONT.sm}; color: ${C.textDim};`;
+const BVal = styled.span`
+  ${pixelBold}
+  font-size: ${FONT.sm}; color: ${C.blue};
+`;

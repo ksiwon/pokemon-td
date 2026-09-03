@@ -26,6 +26,8 @@ import { buyableHeldItems, shopTier, wavesToNextTier, getHeldItem } from "../../
 import { getAchievementById, resolveAchievementText } from "../../data/achievements";
 import { Emoji } from "../shared/Emoji";
 import { showToast } from "../shared/Toast";
+import { C, FONT, SP, SCALE, TYPE_COLOR, ICON } from "../../styles/tokens";
+import { win, winThin, btnThin, sunken, pixelText, pixelBold, focusRing } from "../../styles/pixel";
 
 const TILE_SIZE = 64;
 const MAP_WIDTH = 15;
@@ -72,14 +74,10 @@ const getTileTheme = (bgType?: string): TileTheme =>
   TILE_THEMES[(bgType as BackgroundType) ?? 'grass'] ?? TILE_THEMES.grass;
 
 // ─── 포켓몬 타입 색상 (테라스탈 타일·뱃지용) ────────────────────────────────
-const TYPE_COLORS: Record<string, string> = {
-  normal: '#A8A878', fire: '#F08030', water: '#6890F0', electric: '#F8D030',
-  grass: '#78C850', ice: '#98D8D8', fighting: '#C03028', poison: '#A040A0',
-  ground: '#E0C068', flying: '#A890F0', psychic: '#F85888', bug: '#A8B820',
-  rock: '#B8A038', ghost: '#705898', dragon: '#7038F8', dark: '#705848',
-  steel: '#B8B8D0', fairy: '#EE99AC',
-};
-const typeColor = (t?: string) => (t && TYPE_COLORS[t]) || '#dddddd';
+// 단일 출처는 tokens.ts 의 TYPE_COLOR. 여기 자체 팔레트(3세대풍 웹 색)를 들고 있어서
+// **같은 '불꽃'이 캔버스에선 #F08030, 시너지 패널에선 #ff9d55** 로 갈라져 있었다.
+// 테라 타일과 그 타일을 설명하는 툴팁이 서로 다른 색이던 셈이라 특히 눈에 띈다.
+const typeColor = (t?: string) => (t && TYPE_COLOR[t]) || C.plain;
 // 타입 한글/영문 라벨은 i18n(types.*)으로 처리한다 → 컴포넌트 내 typeLabel() 헬퍼 사용.
 
 // ─── 포켓몬 이미지 렌더링 헬퍼 ───────────────────────────────────────────────
@@ -645,6 +643,11 @@ export const GameCanvas: React.FC = () => {
     setTouchStartPos(null);
   };
 
+  const handleMouseLeave = () => {
+    setHoveredTower(null);
+    setHoveredTile(null);
+  };
+
   const handleMouseMove = (e: any) => {
     const pos = e.target.getStage().getPointerPosition();
     if (pos) setRawMousePos({ x: pos.x, y: pos.y });
@@ -966,7 +969,7 @@ export const GameCanvas: React.FC = () => {
   }, [map, towers]);
 
   return (
-    <CanvasContainer ref={containerRef}>
+    <CanvasContainer ref={containerRef} onMouseLeave={handleMouseLeave}>
       {evolutionToast && (
         <EvolutionToast>
           <span><Emoji glyph="✨" size={14} /> {t('game.evoToast', { fromName: evolutionToast.fromName, toName: evolutionToast.toName })}</span>
@@ -977,7 +980,7 @@ export const GameCanvas: React.FC = () => {
 
 
       {hoveredTower && !pokemonToPlace && !selectedTowerForReposition && (
-        <Tooltip style={{ left: `${mousePos.x * canvasScale + 80}px`, top: `${mousePos.y * canvasScale - 20}px` }}>
+        <Tooltip style={tooltipPos(mousePos, canvasScale)}>
           <TooltipTitle>{hoveredTower.displayName} (Lv.{hoveredTower.level})</TooltipTitle>
           <TooltipTypes>
             {hoveredTower.types.map(type => <TooltipTypeIcon key={type} src={`${TYPE_ICON_API_BASE}${type}.gif`} alt={type} />)}
@@ -997,7 +1000,7 @@ export const GameCanvas: React.FC = () => {
               </TooltipMove>
             )}
             {hoveredTower.heldItem && getHeldItem(hoveredTower.heldItem) && (
-              <TooltipMove style={{ color: '#f0b840' }}>
+              <TooltipMove style={{ color: C.gold }}>
                 <Emoji glyph={getHeldItem(hoveredTower.heldItem)!.icon} size={12} /> {heldName(hoveredTower.heldItem)}
               </TooltipMove>
             )}
@@ -1007,34 +1010,32 @@ export const GameCanvas: React.FC = () => {
 
       {/* 특수 타일 호버 힌트 (테라/숍) — 타워가 없을 때만. 우측 타일은 툴팁을 왼쪽으로 띄워 패널에 안 가리게. */}
       {hoveredTile && !hoveredTower && !pokemonToPlace && !selectedTowerForReposition && (
-        <Tooltip style={mousePos.x > MAP_WIDTH * TILE_SIZE * 0.6
-          ? { right: `${(MAP_WIDTH * TILE_SIZE - mousePos.x) * canvasScale + 80}px`, top: `${mousePos.y * canvasScale - 20}px` }
-          : { left: `${mousePos.x * canvasScale + 80}px`, top: `${mousePos.y * canvasScale - 20}px` }}>
+        <Tooltip style={tooltipPos(mousePos, canvasScale)}>
           {hoveredTile.kind === 'tera' ? (
             <>
               <TooltipTitle style={{ color: typeColor(hoveredTile.type) }}><Emoji glyph="💎" size={13} /> {t('facility.teraTileTitle')}</TooltipTitle>
               <TooltipStats>
                 <TooltipStatRow>{t('facility.teraTileL1', { type: typeLabel(hoveredTile.type) })}</TooltipStatRow>
                 <TooltipStatRow>{t('facility.teraTileL2')}</TooltipStatRow>
-                <TooltipStatRow style={{ color: '#9fb0c4' }}>{t('facility.teraTileL3')}</TooltipStatRow>
+                <TooltipStatRow style={{ color: C.textDim }}>{t('facility.teraTileL3')}</TooltipStatRow>
               </TooltipStats>
             </>
           ) : hoveredTile.kind === 'shop' ? (
             <>
-              <TooltipTitle style={{ color: '#f0b840' }}><Emoji glyph="🏪" size={13} /> {t('facility.shopTileTitle')}</TooltipTitle>
+              <TooltipTitle style={{ color: C.gold }}><Emoji glyph="🏪" size={13} /> {t('facility.shopTileTitle')}</TooltipTitle>
               <TooltipStats>
                 <TooltipStatRow>{t('facility.shopTileL1')}</TooltipStatRow>
                 <TooltipStatRow>{t('facility.shopTileL2')}</TooltipStatRow>
-                <TooltipStatRow style={{ color: '#9fb0c4' }}>{t('facility.shopTileL3')}</TooltipStatRow>
+                <TooltipStatRow style={{ color: C.textDim }}>{t('facility.shopTileL3')}</TooltipStatRow>
               </TooltipStats>
             </>
           ) : (
             <>
-              <TooltipTitle style={{ color: '#f0a0d0' }}><Emoji glyph="🎀" size={13} /> {t('facility.contestTileTitle')}</TooltipTitle>
+              <TooltipTitle style={{ color: C.purple }}><Emoji glyph="🎀" size={13} /> {t('facility.contestTileTitle')}</TooltipTitle>
               <TooltipStats>
                 <TooltipStatRow>{t('facility.contestTileL1')}</TooltipStatRow>
                 <TooltipStatRow>{t('facility.contestTileL2')}</TooltipStatRow>
-                <TooltipStatRow style={{ color: '#9fb0c4' }}>{t('facility.contestTileL3')}</TooltipStatRow>
+                <TooltipStatRow style={{ color: C.textDim }}>{t('facility.contestTileL3')}</TooltipStatRow>
               </TooltipStats>
             </>
           )}
@@ -1341,133 +1342,173 @@ const CanvasContainer = styled.div`
 `;
 
 const EvolutionToast = styled.div`
+  ${winThin('purple')}
+  ${pixelBold}
   position: absolute; top: 20px; left: 50%; transform: translateX(-50%);
-  background: linear-gradient(135deg, rgba(155,89,182,0.95), rgba(142,68,173,0.95));
-  padding: 8px 16px; border-radius: 12px; border: 2px solid rgba(155,89,182,0.6);
-  box-shadow: 0 8px 24px rgba(155,89,182,0.6); z-index: 1000;
-  animation: slideInDown 0.3s ease-out; color: #fff; font-size: 14px; font-weight: bold;
-  text-shadow: 0 2px 4px rgba(0,0,0,0.5); display: flex; align-items: center; gap: 8px;
-  ${lMedia.phoneSm} { font-size: 12px; padding: 6px 12px; }
+  z-index: 1000;
+  animation: slideInDown 0.3s ease-out;
+  color: ${C.purple}; font-size: ${FONT.sm};
+  display: flex; align-items: center; gap: ${SP.sm};
 `;
 
+/** 닫기 — 배경도 테두리도 없이 글리프만. */
 const EvolutionToastButton = styled.button`
-  background: rgba(255,255,255,0.2); border: none; border-radius: 50%;
-  width: 20px; height: 20px; color: #fff; cursor: pointer;
+  background: none; border: none; padding: 0;
+  width: 20px; height: 20px; color: ${C.textDim}; cursor: pointer;
   display: flex; align-items: center; justify-content: center;
-  font-size: 12px; font-weight: bold; padding: 0; transition: background 0.2s;
-  @media (hover: hover) { &:hover { background: rgba(255,255,255,0.3); } }
-  ${lMedia.phoneSm} { width: 18px; height: 18px; font-size: 10px; }
+  transition: none;
+  @media (hover: hover) { &:hover { color: ${C.text}; } }
+  ${focusRing}
 `;
 
+/**
+ * 툴팁 위치 — 맵 패널(overflow:hidden) 안에 머물게 네 방향으로 뒤집는다.
+ * 커서가 오른쪽 60% 밖이면 왼쪽으로, 아래 절반이면 위쪽으로 편다.
+ */
+const tooltipPos = (m: { x: number; y: number }, scale: number): React.CSSProperties => {
+  const w = MAP_WIDTH  * TILE_SIZE;
+  const h = MAP_HEIGHT * TILE_SIZE;
+  const horiz = m.x > w * 0.6
+    ? { right: `${(w - m.x) * scale + 80}px` }
+    : { left:  `${m.x * scale + 80}px` };
+  const vert = m.y > h * 0.5
+    ? { bottom: `${(h - m.y) * scale - 20}px` }
+    : { top:    `${m.y * scale - 20}px` };
+  return { ...horiz, ...vert };
+};
+
+/* 창틀 안에 담는다. 예전에는 반투명 유리 카드 + 둥근 모서리 + 번지는 그림자였고,
+   글자도 8~10px이라 도트 폰트가 뭉개졌다. 12px이 하한이므로 그 아래로 내리지 않는다. */
 const Tooltip = styled.div`
+  ${winThin('plain')}
+  ${pixelText}
   position: absolute;
-  background: rgba(22,28,42,0.92);
-  border: 1px solid rgba(120,150,190,0.28); border-radius: 10px; padding: 7px 11px;
-  color: #e8edf3; font-size: 10px; font-weight: 400;
-  box-shadow: 0 6px 16px rgba(0,0,0,0.35); pointer-events: none; z-index: 1001;
-  min-width: 160px; max-width: 200px;
-  ${lMedia.phoneSm} { font-size: 9px; padding: 5px 9px; min-width: 140px; }
+  padding: ${SP.sm};
+  color: ${C.text};
+  font-size: ${FONT.sm};
+  pointer-events: none; z-index: 1001;
+  min-width: 180px; max-width: 260px;
+  ${lMedia.phone} { min-width: 156px; max-width: 200px; padding: ${SP.xs}; }
 `;
 
 const TooltipTitle = styled.div`
-  margin-bottom: 3px; color: #4cafff; font-size: 11px;
-  ${lMedia.phoneSm} { font-size: 10px; }
+  ${pixelBold}
+  margin-bottom: ${SP.xs};
+  color: ${C.blue};
+  font-size: ${FONT.sm};
 `;
 const TooltipTypes = styled.div`
-  font-size: 9px; color: #a8b8c8; margin-bottom: 3px; display: flex; gap: 3px; align-items: center;
-  ${lMedia.phoneSm} { font-size: 8px; }
+  color: ${C.textSub}; margin-bottom: ${SP.xs};
+  display: flex; gap: ${SP.xs}; align-items: center;
 `;
-const TooltipTypeIcon = styled.img`height: 10px; object-fit: contain; ${lMedia.phoneSm} { height: 9px; }`;
-const TooltipStats = styled.div`font-size: 9px; line-height: 1.4; ${lMedia.phoneSm} { font-size: 8px; }`;
+const TooltipTypeIcon = styled.img`height: 12px; object-fit: contain;`;
+const TooltipStats = styled.div``;
 const TooltipStatRow = styled.div``;
-const TooltipMove = styled.div`margin-top: 3px; color: #f39c12; ${lMedia.phoneSm} { font-size: 8px; }`;
+const TooltipMove = styled.div`margin-top: ${SP.xs}; color: ${C.gold};`;
 
 // ─── 프렌들리숍(지닌 도구) 모달 ──────────────────────────────────────────────
 const ShopOverlay = styled.div`
   position: absolute; inset: 0; background: rgba(0,0,0,0.4);
   display: flex; align-items: center; justify-content: center; z-index: 1200;
 `;
+/* 프렌들리숍 창 — 공유 modal.styles 를 쓰지 못하는 자리(캔버스 안 오버레이)라
+   같은 문법을 창틀 믹스인으로 직접 적용한다. */
 const ShopModal = styled.div`
+  ${win('gold')}
+  ${pixelText}
   width: min(440px, 92%); max-height: 86%; overflow-y: auto;
-  /* 공유 modal.styles 디자인 토큰에 맞춤 (배경 그라디언트 + 상단 골드 액센트 바) */
-  background: linear-gradient(160deg, #0d1117 0%, #080c14 100%);
-  border: 1px solid rgba(255,255,255,0.10); border-top: 3px solid #FFD700;
-  border-radius: 16px;
-  padding: 16px 18px; color: #e8edf3;
-  box-shadow: 0 32px 80px rgba(0,0,0,0.85), inset 0 1px 0 rgba(255,255,255,0.06);
+  color: ${C.text};
 
-  &::-webkit-scrollbar { width: 4px; }
-  &::-webkit-scrollbar-track { background: transparent; }
-  &::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.12); border-radius: 2px; }
+  &::-webkit-scrollbar { width: 10px; }
+  &::-webkit-scrollbar-track { background: ${C.panelSunk}; border: ${SCALE}px solid ${C.ink}; }
+  &::-webkit-scrollbar-thumb { background: ${C.divider}; border: ${SCALE}px solid ${C.ink}; }
 `;
 const ShopHeader = styled.div`
-  display: flex; align-items: center; justify-content: space-between; margin-bottom: 4px;
-  h3 { margin: 0; font-size: 16px; color: #f0b840; }
-`;
-const ShopSub = styled.div`font-size: 11px; color: #9fb0c4; margin-bottom: 12px;`;
-const ShopGradeBadge = styled.span`
-  display: inline-block; margin-left: 8px; padding: 1px 8px; border-radius: 999px;
-  background: rgba(224,160,48,0.18); color: #f0b840; font-size: 11px; font-weight: bold;
-`;
-const ShopItemRow = styled.div<{ $owned?: boolean; $locked?: boolean }>`
-  display: flex; align-items: center; gap: 10px; padding: 8px 10px; margin-bottom: 7px;
-  border-radius: 10px; background: rgba(255,255,255,0.04);
-  border: 1px solid ${p => (p.$owned ? 'rgba(46,204,113,0.6)' : 'rgba(255,255,255,0.07)')};
-  opacity: ${p => (p.$locked ? 0.45 : 1)};
-  .icon { font-size: 22px; width: 28px; text-align: center; }
-  .info { flex: 1; }
-  .name { font-size: 13px; font-weight: bold; }
-  .desc { font-size: 10px; color: #9fb0c4; line-height: 1.3; }
-`;
-const ShopBuyBtn = styled.button<{ $disabled?: boolean }>`
-  border: none; border-radius: 8px; padding: 7px 12px; font-weight: bold; font-size: 12px;
-  cursor: ${p => (p.$disabled ? 'not-allowed' : 'pointer')};
-  background: ${p => (p.$disabled ? 'rgba(120,130,140,0.3)' : 'linear-gradient(135deg,#f0b840,#d4941f)')};
-  color: ${p => (p.$disabled ? '#8a96a4' : '#1a1206')};
-  white-space: nowrap;
-`;
-const ShopCloseBtn = styled.button`
-  /* 공유 ModalCloseBtn과 동일한 룩(hover 시 빨강 틴트) */
-  width: 32px; height: 32px; flex-shrink: 0;
-  background: rgba(255,255,255,0.06);
-  border: 1px solid rgba(255,255,255,0.10); border-radius: 8px;
-  color: rgba(255,255,255,0.45); font-size: 14px; cursor: pointer;
-  display: flex; align-items: center; justify-content: center;
-  transition: background 0.2s, color 0.2s, border-color 0.2s;
-  @media (hover: hover) {
-    &:hover { background: rgba(220,60,60,0.22); border-color: rgba(220,60,60,0.40); color: #fff; }
+  display: flex; align-items: center; justify-content: space-between;
+  gap: ${SP.sm};
+  h3 {
+    ${pixelBold}
+    margin: 0; font-size: ${FONT.sm}; color: ${C.gold};
   }
 `;
+const ShopSub = styled.div`font-size: ${FONT.sm}; color: ${C.textSub}; margin-bottom: ${SP.sm};`;
+const ShopGradeBadge = styled.span`
+  ${pixelBold}
+  display: inline-block; margin-left: ${SP.sm}; padding: 0 ${SP.xs};
+  background: ${C.panelSunk};
+  border: 2px solid ${C.ink};
+  color: ${C.gold}; font-size: ${FONT.sm};
+`;
+const ShopItemRow = styled.div<{ $owned?: boolean; $locked?: boolean }>`
+  ${sunken()}
+  display: flex; align-items: center; gap: ${SP.sm};
+  padding: ${SP.sm}; margin-bottom: ${SP.xs};
+  ${p => p.$owned && `box-shadow: inset 0 0 0 ${SCALE}px ${C.green};`}
+  opacity: ${p => (p.$locked ? 0.45 : 1)};
+  .icon { font-size: ${ICON.xl}px; width: 28px; text-align: center; }
+  .info { flex: 1; min-width: 0; }
+  .name { font-weight: 700; font-size: ${FONT.sm}; }
+  .desc { font-size: ${FONT.sm}; color: ${C.textSub}; }
+`;
+const ShopBuyBtn = styled.button<{ $disabled?: boolean }>`
+  ${btnThin('gold')}
+  ${pixelBold}
+  padding: ${SP.xs} ${SP.sm}; font-size: ${FONT.sm};
+  cursor: ${p => (p.$disabled ? 'not-allowed' : 'pointer')};
+  color: ${p => (p.$disabled ? C.textDim : C.gold)};
+  white-space: nowrap;
+  ${focusRing}
+`;
+/* 닫기 — 창틀도 배경도 없이 글리프만. 공유 ModalCloseBtn과 같은 룩. */
+const ShopCloseBtn = styled.button`
+  width: 32px; height: 32px; flex-shrink: 0;
+  background: none; border: none; padding: 0;
+  color: rgba(255,255,255,0.45); font-size: ${FONT.sm}; cursor: pointer;
+  display: flex; align-items: center; justify-content: center;
+  transition: none;
+  @media (hover: hover) { &:hover { color: #fff; } }
+  ${focusRing}
+`;
 const ShopGradeNote = styled.div`
-  font-size: 10px; color: #7e8da0; margin: 6px 0 12px; line-height: 1.4;
+  font-size: ${FONT.sm}; color: ${C.textDim}; margin: ${SP.xs} 0 ${SP.sm};
 `;
 const ShopSectionTitle = styled.div`
-  font-size: 12px; font-weight: bold; color: #cdd7e2; margin: 14px 0 8px;
-  border-top: 1px solid rgba(255,255,255,0.08); padding-top: 12px;
+  ${pixelBold}
+  font-size: ${FONT.sm}; color: ${C.gold}; margin: ${SP.md} 0 ${SP.sm};
+  border-top: ${SCALE}px solid ${C.ink}; padding-top: ${SP.sm};
 `;
 const ShopGhostBtn = styled.button`
-  border: 1px solid rgba(255,255,255,0.18); background: transparent; color: #cdd7e2;
-  border-radius: 8px; padding: 6px 10px; font-size: 11px; cursor: pointer; white-space: nowrap;
+  ${btnThin('plain')}
+  ${pixelBold}
+  color: ${C.textSub};
+  padding: ${SP.xs} ${SP.sm}; font-size: ${FONT.sm};
+  white-space: nowrap;
+  ${focusRing}
 `;
 const ShopLockNote = styled.div`
-  font-size: 12px; color: #ffb0b0; background: rgba(192,57,43,0.12);
-  border: 1px solid rgba(192,57,43,0.4); border-radius: 8px; padding: 8px 10px; margin-bottom: 10px;
+  ${winThin('red')}
+  font-size: ${FONT.sm}; color: ${C.red};
+  text-shadow: 1px 1px 0 ${C.textShadow};
+  margin-bottom: ${SP.sm};
 `;
 // 근무 회수(최고 등급 해금 후) 행
 const WithdrawRow = styled.div`
-  display: flex; align-items: center; justify-content: space-between; gap: 10px;
-  font-size: 11.5px; color: #cde6c0; line-height: 1.45;
-  background: rgba(46,204,113,0.10); border: 1px solid rgba(46,204,113,0.35);
-  border-radius: 8px; padding: 8px 10px; margin-bottom: 10px;
+  ${winThin('green')}
+  display: flex; align-items: center; justify-content: space-between; gap: ${SP.sm};
+  font-size: ${FONT.sm}; color: ${C.green};
+  text-shadow: 1px 1px 0 ${C.textShadow};
+  margin-bottom: ${SP.sm};
 `;
 const WithdrawBtn = styled.button<{ disabled?: boolean }>`
+  ${btnThin('green')}
+  ${pixelBold}
   flex-shrink: 0;
-  border: 1px solid rgba(46,204,113,0.55); background: rgba(46,204,113,0.18); color: #eafff0;
-  border-radius: 8px; padding: 7px 10px; font-size: 11px; font-weight: bold; white-space: nowrap;
-  cursor: ${p => p.disabled ? 'not-allowed' : 'pointer'};
+  color: ${C.green};
+  padding: ${SP.xs} ${SP.sm}; font-size: ${FONT.sm};
+  white-space: nowrap;
   opacity: ${p => p.disabled ? 0.45 : 1};
-  display: flex; align-items: center; gap: 5px;
-  @media (hover: hover) { &:hover { filter: ${p => p.disabled ? 'none' : 'brightness(1.15)'}; } }
+  display: flex; align-items: center; gap: ${SP.xs};
+  ${focusRing}
 `;
 
 const StageWrapper = styled.div`
@@ -1475,9 +1516,8 @@ const StageWrapper = styled.div`
   position: absolute;
   top: 16px; left: 50%;
   transform-origin: center top;
-  border: 2px solid #1a242f; border-radius: 8px; overflow: hidden;
-  box-shadow: 0 8px 16px rgba(0,0,0,0.2); transition: transform 0.3s ease;
-  ${lMedia.phoneSm} { border: 1px solid #1a242f; border-radius: 4px; }
+  border: ${SCALE}px solid ${C.ink}; overflow: hidden;
+  transition: transform 0.3s ease;
 `;
 
 // 최초 달성: 2.5s 슬라이드인→유지→페이드아웃 (작고 빠름)
@@ -1486,24 +1526,24 @@ const achSlideIn = keyframes`0%{opacity:0;transform:translateX(40px);}12%{opacit
 const achSlideInRepeat = keyframes`0%{opacity:0;transform:translateX(16px);}12%{opacity:0.6;transform:translateX(0);}72%{opacity:0.6;}100%{opacity:0;}`;
 
 const AchievementToastPill = styled.div<{ $color: string; $first: boolean }>`
-  position: absolute; top: 10px; right: 10px; z-index: 1002;
-  display: flex; align-items: center; gap: 6px;
-  padding: ${p => p.$first ? '7px 14px' : '5px 11px'};
-  border-radius: 20px;
-  background: rgba(55,55,70,0.92);
-  border: 1px solid ${p => p.$color}${p => p.$first ? '99' : '55'};
-  font-size: ${p => p.$first ? '12px' : '11px'};
-  font-weight: 700;
-  color: rgba(255,255,255,${p => p.$first ? '0.92' : '0.65'});
+  ${winThin('gold')}
+  ${pixelBold}
+  position: absolute; top: ${SP.sm}; right: ${SP.sm}; z-index: 1002;
+  display: flex; align-items: center; gap: ${SP.xs};
+  font-size: ${FONT.sm};
+  color: ${C.text};
   animation: ${p => p.$first ? achSlideIn : achSlideInRepeat} ${p => p.$first ? '2.5s' : '1.5s'} ease forwards;
   pointer-events: none;
   white-space: nowrap;
   max-width: 240px;
   overflow: hidden;
   text-overflow: ellipsis;
-  backdrop-filter: blur(6px);
-  box-shadow: 0 2px 12px rgba(0,0,0,0.5);
 `;
 
-const AchPillName = styled.span<{ $first: boolean }>`color:rgba(255,255,255,${p => p.$first ? '0.88' : '0.55'});overflow:hidden;text-overflow:ellipsis;`;
-const AchPillAP = styled.span<{ $color: string }>`color:${p => p.$color};font-size:10px;font-weight:700;flex-shrink:0;opacity:0.85;`;
+const AchPillName = styled.span<{ $first: boolean }>`
+  color: ${p => (p.$first ? C.text : C.textSub)};
+  overflow: hidden; text-overflow: ellipsis;
+`;
+const AchPillAP = styled.span<{ $color: string }>`
+  color: ${p => p.$color}; font-size: ${FONT.sm}; flex-shrink: 0;
+`;

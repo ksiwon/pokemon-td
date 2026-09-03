@@ -10,10 +10,16 @@
 
 import React, { useState } from 'react';
 import styled, { keyframes, css } from 'styled-components';
-import { ModalOverlay, ModalBox, modalSlideUp, modalFadeIn } from '../shared/modal.styles';
+import {
+  ModalOverlay, ModalPlainBox, ModalPlainHeader, modalSlideUp, modalFadeIn,
+} from '../shared/modal.styles';
+import { C, FONT, SP, SCALE, ICON } from '../../styles/tokens';
+import { WinColor, btn, sunken, pixelBold, shadowLg, focusRing } from '../../styles/pixel';
+import { ChevronLeft, ChevronRight } from 'lucide-react';
 import { Emoji } from '../shared/Emoji';
 import { lMedia, media } from '../../utils/responsive.utils';
 import { useTranslation } from '../../i18n';
+import type { DocsTab } from './GameDocs';
 
 // ─── localStorage 헬퍼 ───────────────────────────────────────────────────────
 const KEYS = {
@@ -229,31 +235,9 @@ const buildCardsSlides = (t: TFunc): Slide[] => [
       { icon: '🔁', text: t('tutorial.cards.slide3.d2') },
     ],
   },
-  // [문의 대응] "본편 2만 골드가 왜 900 코인이냐 / 비율식이 있냐"는 질문이 반복됐다.
-  //   환전이 아니라 별도 지급이라는 점과 실제 액수를 슬라이드로 명시.
-  //   동시에 '본편 > 타워' 수급 격차(의도된 설계)가 읽히게 한다.
-  {
-    icon: '💰',
-    title: t('tutorial.cards.slide4.title'),
-    desc:  t('tutorial.cards.slide4.desc'),
-    details: [
-      { icon: '🎮', text: t('tutorial.cards.slide4.d0') },
-      { icon: '🏆', text: t('tutorial.cards.slide4.d1') },
-      { icon: '🗼', text: t('tutorial.cards.slide4.d2') },
-    ],
-  },
-  // [문의 대응] 종족값·데미지·스피드 반영 방식을 안내해달라는 요청.
-  //   수치 출처는 CardBattleService(levelForStars / buildBattleCard / calcDamage).
-  {
-    icon: '📐',
-    title: t('tutorial.cards.slide5.title'),
-    desc:  t('tutorial.cards.slide5.desc'),
-    details: [
-      { icon: '⚔️', text: t('tutorial.cards.slide5.d0') },
-      { icon: '🔥', text: t('tutorial.cards.slide5.d1') },
-      { icon: '⚡', text: t('tutorial.cards.slide5.d2') },
-    ],
-  },
+  // [이관] 재화 수급표(구 slide4)와 전투 계산식(구 slide5)은 자료실(GameDocs)로 옮겼다.
+  //   슬라이드는 아이콘+한 줄 3개짜리 그릇이라 표를 담기에 나쁘고, 처음 들어온
+  //   사람에게 계산식부터 들이미는 순서도 아니었다. 각 화면의 '자료실' 버튼으로 간다.
 ];
 
 // ─── 메인 컴포넌트 ───────────────────────────────────────────────────────────
@@ -261,9 +245,16 @@ interface TutorialModalProps {
   mode: TutorialMode;
   onClose: () => void;
   onProceed?: () => void;
+  /** 자료실 열기. 이 모드에 해당하는 탭 이름을 넘겨준다. */
+  onOpenDocs?: (tab: DocsTab) => void;
 }
 
-export const TutorialModal: React.FC<TutorialModalProps> = ({ mode, onClose, onProceed }) => {
+/** 가이드 모드 → 자료실 탭. 스토리는 싱글과 같은 엔진이라 같은 탭을 본다. */
+const DOCS_TAB: Record<TutorialMode, DocsTab> = {
+  tower: 'single', story: 'single', multi: 'multi', cards: 'cards',
+};
+
+export const TutorialModal: React.FC<TutorialModalProps> = ({ mode, onClose, onProceed, onOpenDocs }) => {
   const { t } = useTranslation();
 
   // t를 받아 슬라이드 생성 — 언어 변경 시 자동 반영
@@ -280,10 +271,15 @@ export const TutorialModal: React.FC<TutorialModalProps> = ({ mode, onClose, onP
   const toggleDontShow = (v: boolean) => { setDontShow(v); setSeen(mode, v); };
 
   // 모드별 테마색 (tower=청록 / multi=보라 / story=주황 / cards=자홍)
-  const accent = mode === 'tower' ? '#4fc3f7'
-               : mode === 'multi' ? '#a78bfa'
-               : mode === 'cards' ? '#e879f9'
-               : '#f59e0b';
+  // 창틀 색(디자인 시스템의 이름)과 장식용 색(점·막대)을 나눠 쓴다.
+  const accentWin: WinColor = mode === 'tower' ? 'cyan'
+                            : mode === 'multi' ? 'purple'
+                            : mode === 'cards' ? 'purple'
+                            : 'gold';
+  const accent = mode === 'tower' ? C.cyan
+               : mode === 'multi' ? C.purple
+               : mode === 'cards' ? C.purple
+               : C.gold;
   const grad   = mode === 'tower'
     ? 'linear-gradient(135deg,#0284c7,#0369a1)'
     : mode === 'multi'
@@ -330,7 +326,7 @@ export const TutorialModal: React.FC<TutorialModalProps> = ({ mode, onClose, onP
 
   return (
     <AnimatedOverlay $exiting={exiting} onClick={() => close()}>
-      <AnimatedModalBox $exiting={exiting} $size="sm" $accent={accent} onClick={e => e.stopPropagation()}>
+      <AnimatedModalBox $exiting={exiting} $size="sm" $accent={accentWin} onClick={e => e.stopPropagation()}>
         <TopBar $accent={accent} />
 
         <Header>
@@ -342,7 +338,7 @@ export const TutorialModal: React.FC<TutorialModalProps> = ({ mode, onClose, onP
             {modeLabel}
           </ModeTag>
           <PageInfo $color={accent}>{page + 1} / {slides.length}</PageInfo>
-          <CloseX onClick={() => close()}><Emoji glyph="❌" size={14} /></CloseX>
+          <CloseX onClick={() => close()}>✕</CloseX>
         </Header>
 
         <SlideArea $dir={dir} key={page}>
@@ -366,6 +362,12 @@ export const TutorialModal: React.FC<TutorialModalProps> = ({ mode, onClose, onP
         </Dots>
 
         <Footer>
+          {onOpenDocs && (
+            <DocsLink onClick={() => onOpenDocs(DOCS_TAB[mode])}>
+              {t('tutorial.openDocs')}
+            </DocsLink>
+          )}
+
           <DontShowRow>
             <Checkbox
               type="checkbox"
@@ -378,7 +380,7 @@ export const TutorialModal: React.FC<TutorialModalProps> = ({ mode, onClose, onP
 
           <NavButtons>
             {page > 0 && (
-              <PrevBtn onClick={() => go(page - 1)}>{t('tutorial.prev')}</PrevBtn>
+              <PrevBtn onClick={() => go(page - 1)}><ChevronLeft size={ICON.md} /> {t('tutorial.prev')}</PrevBtn>
             )}
             <NextBtn
               $grad={grad}
@@ -388,7 +390,7 @@ export const TutorialModal: React.FC<TutorialModalProps> = ({ mode, onClose, onP
             >
               {isLast
                 ? (onProceed ? <>{t('tutorial.start')} <Emoji glyph="🚀" size={14} /></> : t('tutorial.next'))
-                : t('tutorial.next')}
+                : <>{t('tutorial.next')} <ChevronRight size={ICON.md} /></>}
             </NextBtn>
           </NavButtons>
         </Footer>
@@ -405,200 +407,182 @@ const iconFloat = keyframes`0%,100%{transform:translateY(0) scale(1)}45%{transfo
 const rowPop   = keyframes`from{opacity:0;transform:translateY(6px)}to{opacity:1;transform:translateY(0)}`;
 
 // ─── Styled Components ────────────────────────────────────────────────────────
+// docs/DESIGN.md 의 디자인 시스템을 따른다.
+// 걷어낸 것: 흐르는 상단 그라디언트 띠, uppercase 알약 태그, 유리 행,
+//           그라디언트 CTA + 글로우, hover 떠오름, 둥근 모서리, 11~13px 미만 글자.
 
+/** 상단 액센트 띠 — 흐르는 그라디언트 대신 단색 한 줄. */
 const TopBar = styled.div<{ $accent: string }>`
-  height: 3px;
-  background: linear-gradient(90deg, transparent, ${p => p.$accent}, transparent);
-  background-size: 200% 100%;
-  animation: sweep 2.4s linear infinite;
-  @keyframes sweep { 0%{background-position:200% 0} 100%{background-position:-200% 0} }
+  height: ${SCALE * 2}px;
+  background: ${p => p.$accent};
 `;
 
-const Header = styled.div`
-  display: flex; align-items: center; justify-content: space-between; gap: 8px;
-  padding: 14px 18px 0;
-
-  ${media.mobile}   { padding: 11px 14px 0; }
-  ${lMedia.phoneSm} { padding: 10px 12px 0; }
+const Header = styled(ModalPlainHeader)`
+  display: flex; align-items: center; justify-content: space-between; gap: ${SP.sm};
 `;
 
+/** 모드 태그 — 알약 + uppercase 를 걷어내고 각진 배지로. */
 const ModeTag = styled.span<{ $bg: string; $border: string; $color: string }>`
-  font-size: 11px; font-weight: 700; letter-spacing: .06em; text-transform: uppercase;
-  color: ${p => p.$color}; background: ${p => p.$bg}; border: 1px solid ${p => p.$border};
-  padding: 3px 10px; border-radius: 20px; white-space: nowrap;
-
-  ${media.mobile} { font-size: 10px; padding: 2px 8px; }
+  ${pixelBold}
+  font-size: ${FONT.sm};
+  color: ${p => p.$color};
+  background: ${C.panelSunk};
+  border: 2px solid ${C.ink};
+  box-shadow: inset 0 0 0 1px ${p => p.$border};
+  padding: 0 ${SP.xs}; white-space: nowrap;
 `;
 
 const PageInfo = styled.span<{ $color: string }>`
-  font-size: 12px; font-weight: 600; color: ${p => p.$color};
-  opacity: .7; margin-left: auto;
+  ${pixelBold}
+  font-size: ${FONT.sm}; color: ${p => p.$color};
+  margin-left: auto;
 `;
 
+/** 닫기 — 창틀도 배경도 없이 글리프만. */
 const CloseX = styled.button`
-  background: none; border: none; color: rgba(255,255,255,.3); font-size: 15px;
-  cursor: pointer; line-height: 1; padding: 4px 7px; border-radius: 7px;
-  transition: color .18s, background .18s;
-  &:hover { color: rgba(255,255,255,.75); background: rgba(255,255,255,.08) }
+  ${pixelBold}
+  background: none; border: none; cursor: pointer;
+  width: 32px; height: 32px; padding: 0;
+  font-size: ${FONT.sm}; color: ${C.textDim};
+  display: flex; align-items: center; justify-content: center;
+  transition: none;
+  @media (hover: hover) { &:hover { color: ${C.text}; } }
+  ${focusRing}
 `;
 
 const SlideArea = styled.div<{ $dir: 'fwd' | 'bck' }>`
-  padding: 18px 26px 6px;
+  padding: ${SP.md} 0 ${SP.xs};
   display: flex; flex-direction: column; align-items: center; text-align: center;
   overflow-y: auto;
   animation: ${p => p.$dir === 'fwd'
     ? css`${slideFwd} .22s ease`
     : css`${slideBck} .22s ease`};
 
-  ${media.tablet}   { padding: 16px 22px 6px; }
-  ${media.mobile}   { padding: 14px 16px 4px; }
-  ${lMedia.phoneSm} { padding: 12px 14px 4px; }
+  ${media.mobile}   { padding: ${SP.md} 0 ${SP.xs}; }
+  ${lMedia.phoneSm} { padding: ${SP.sm} 0 ${SP.xs}; }
 `;
 
 const SlideIcon = styled.div`
-  font-size: 50px; line-height: 1; margin-bottom: 13px;
+  font-size: 48px; line-height: 1; margin-bottom: ${SP.md};
   animation: ${iconFloat} 3s ease-in-out infinite;
 
-  ${media.tablet}   { font-size: 44px; margin-bottom: 10px; }
-  ${media.mobile}   { font-size: 38px; margin-bottom: 8px; }
-  ${lMedia.phoneSm} { font-size: 30px; margin-bottom: 6px; }
+  ${media.mobile}   { font-size: 36px; margin-bottom: ${SP.sm}; }
+  ${lMedia.phoneSm} { font-size: 28px; margin-bottom: ${SP.xs}; }
 `;
 
 const SlideTitle = styled.h2`
-  font-size: 19px; font-weight: 800; color: #f1f5f9;
-  margin: 0 0 9px; letter-spacing: -.025em;
+  ${pixelBold}
+  font-size: ${FONT.xl}; color: ${C.text};
+  margin: 0 0 ${SP.sm};
+  ${shadowLg}
 
-  ${media.tablet}   { font-size: 17px; }
-  ${media.mobile}   { font-size: 16px; margin: 0 0 7px; }
-  ${lMedia.phoneSm} { font-size: 14px; margin: 0 0 5px; }
+  ${media.mobile}   { font-size: ${FONT.sm}; }
+  ${lMedia.phoneSm} { font-size: ${FONT.sm}; }
 `;
 
 const SlideDesc = styled.p`
-  font-size: 13px; color: rgba(255,255,255,.55);
-  line-height: 1.7; margin: 0 0 16px; white-space: pre-line;
+  font-size: ${FONT.sm}; color: ${C.textSub};
+  margin: 0 0 ${SP.md}; white-space: pre-line;
+  word-break: keep-all;
 
-  ${media.tablet}   { font-size: 12.5px; }
-  ${media.mobile}   { font-size: 12px; margin: 0 0 12px; line-height: 1.6; }
-  ${lMedia.phoneSm} { font-size: 11px; margin: 0 0 8px; line-height: 1.5; }
+  ${lMedia.phoneSm} { margin: 0 0 ${SP.sm}; }
 `;
 
 const DetailList = styled.div`
-  width: 100%; display: flex; flex-direction: column; gap: 7px;
-
-  ${media.mobile}   { gap: 5px; }
-  ${lMedia.phoneSm} { gap: 4px; }
+  width: 100%; display: flex; flex-direction: column; gap: ${SP.xs};
 `;
 
 const DetailRow = styled.div<{ $delay: number }>`
-  display: flex; align-items: flex-start; gap: 10px;
-  background: rgba(255,255,255,.04); border: 1px solid rgba(255,255,255,.07);
-  border-radius: 10px; padding: 9px 13px; text-align: left;
+  ${sunken()}
+  display: flex; align-items: flex-start; gap: ${SP.sm};
+  padding: ${SP.sm} ${SP.md}; text-align: left;
   animation: ${rowPop} .28s ease both;
   animation-delay: ${p => p.$delay * .06}s;
 
-  ${media.mobile}   { padding: 7px 10px; gap: 8px; border-radius: 8px; }
-  ${lMedia.phoneSm} { padding: 6px 9px; gap: 7px; }
+  ${lMedia.phoneSm} { padding: ${SP.xs} ${SP.sm}; gap: ${SP.xs}; }
 `;
 
 const DetailIcon = styled.span`
-  font-size: 16px; flex-shrink: 0; line-height: 1.5;
-
-  ${media.mobile}   { font-size: 14px; }
-  ${lMedia.phoneSm} { font-size: 13px; }
+  font-size: ${ICON.md}px; flex-shrink: 0; line-height: 1.5;
+  ${lMedia.phoneSm} { font-size: ${ICON.sm}px; }
 `;
 
 const DetailText = styled.span`
-  font-size: 12.5px; color: rgba(255,255,255,.72); line-height: 1.55;
-
-  ${media.mobile}   { font-size: 11.5px; }
-  ${lMedia.phoneSm} { font-size: 11px; line-height: 1.4; }
+  font-size: ${FONT.sm}; color: ${C.text};
+  word-break: keep-all;
 `;
 
 const Dots = styled.div`
-  display: flex; justify-content: center; gap: 6px;
-  padding: 14px 0 2px;
-
-  ${media.mobile}   { padding: 10px 0 2px; }
-  ${lMedia.phoneSm} { padding: 7px 0 1px; }
+  display: flex; justify-content: center; gap: ${SP.xs};
+  padding: ${SP.md} 0 ${SP.xs};
+  ${lMedia.phoneSm} { padding: ${SP.sm} 0 0; }
 `;
 
+/** 페이지 표시 — 둥근 알약이 아니라 각진 칸. */
 const Dot = styled.button<{ $active: boolean; $accent: string }>`
-  width: ${p => p.$active ? '18px' : '6px'}; height: 6px;
-  border-radius: 3px; border: none; cursor: pointer; padding: 0;
-  background: ${p => p.$active ? p.$accent : 'rgba(255,255,255,.16)'};
-  transition: width .22s ease, background .22s ease;
-
-  ${media.mobile} {
-    width: ${p => p.$active ? '14px' : '5px'};
-    height: 5px;
-  }
+  width: ${p => (p.$active ? '18px' : '8px')}; height: 8px;
+  border: 2px solid ${C.ink}; cursor: pointer; padding: 0;
+  background: ${p => (p.$active ? p.$accent : C.divider)};
+  transition: none;
+  ${focusRing}
 `;
 
 const Footer = styled.div`
-  padding: 12px 22px 20px;
-  display: flex; flex-direction: column; gap: 10px;
+  padding: ${SP.sm} 0 ${SP.lg};
+  display: flex; flex-direction: column; gap: ${SP.sm};
 
-  ${media.tablet}   { padding: 10px 18px 16px; }
-  ${media.mobile}   { padding: 8px 14px 14px; gap: 8px; }
-  ${lMedia.phoneSm} { padding: 6px 12px 12px; gap: 6px; }
+  ${lMedia.phoneSm} { padding: ${SP.sm} 0 ${SP.md}; gap: ${SP.xs}; }
 `;
 
 const DontShowRow = styled.div`
-  display: flex; align-items: center; gap: 7px;
-  label { font-size: 11.5px; color: rgba(255,255,255,.35); cursor: pointer; user-select: none; }
+  display: flex; align-items: center; gap: ${SP.xs};
+  label { font-size: ${FONT.sm}; color: ${C.textDim}; cursor: pointer; user-select: none; }
+`;
 
-  ${media.mobile} { label { font-size: 11px; } }
+/**
+ * 자료실로 가는 줄. 창틀을 두르지 않는다 — 아래 '시작하기'와 같은 무게로 보이면
+ * 어느 쪽이 진행 버튼인지 헷갈린다. 밑줄 없는 글자 링크로 둔다.
+ */
+const DocsLink = styled.button`
+  ${pixelBold}
+  background: none; border: none; padding: 0;
+  align-self: flex-start;
+  font-size: ${FONT.sm}; color: ${C.gold};
+  cursor: pointer;
+  ${focusRing}
 `;
 
 const Checkbox = styled.input`
-  width: 14px; height: 14px; accent-color: #4fc3f7;
+  width: 14px; height: 14px; accent-color: ${C.blue};
   cursor: pointer; flex-shrink: 0;
 `;
 
 const NavButtons = styled.div`
-  display: flex; gap: 8px;
-
-  ${media.mobile} { gap: 6px; }
+  display: flex; gap: ${SP.sm};
 `;
 
 const PrevBtn = styled.button`
+  ${btn('plain')}
+  ${pixelBold}
   flex: 0 0 auto;
-  padding: 10px 16px;
-  background: rgba(255,255,255,.06); border: 1px solid rgba(255,255,255,.1);
-  border-radius: 11px; color: rgba(255,255,255,.55);
-  font-size: 13px; font-weight: 600; cursor: pointer;
-  transition: background .18s, color .18s;
-  @media (hover: hover) {
-    &:hover { background: rgba(255,255,255,.11); color: #fff; transform: translateY(-1px); }
-  }
-
-  ${media.mobile}   { padding: 8px 12px; font-size: 12px; border-radius: 9px; }
-  ${lMedia.phoneSm} { padding: 7px 10px; font-size: 11.5px; }
+  padding: ${SP.sm} ${SP.md};
+  color: ${C.textSub};
+  font-size: ${FONT.sm};
+  ${focusRing}
 `;
 
+/** 마지막 장에서만 강조 — 그라디언트+글로우 대신 골드 창틀. */
 const NextBtn = styled.button<{ $grad: string; $shadow: string; $isLast: boolean }>`
+  ${p => btn(p.$isLast ? 'gold' : 'plain')}
+  ${pixelBold}
   flex: 1;
-  padding: 11px 18px;
-  background: ${p => p.$isLast ? p.$grad : 'rgba(255,255,255,.08)'};
-  border: 1px solid ${p => p.$isLast ? 'transparent' : 'rgba(255,255,255,.1)'};
-  border-radius: 11px;
-  color: ${p => p.$isLast ? '#fff' : 'rgba(255,255,255,.75)'};
-  font-size: 13.5px; font-weight: 700; cursor: pointer;
-  box-shadow: ${p => p.$isLast ? `0 4px 18px ${p.$shadow}` : 'none'};
-  transition: box-shadow .18s, filter .18s;
-  @media (hover: hover) {
-    &:hover {
-      transform: translateY(-1px);
-      box-shadow: ${p => p.$isLast ? `0 6px 22px ${p.$shadow}` : '0 3px 10px rgba(0,0,0,.25)'};
-      filter: brightness(1.08);
-    }
-  }
-
-  ${media.mobile}   { padding: 9px 14px; font-size: 12.5px; border-radius: 9px; }
-  ${lMedia.phoneSm} { padding: 7px 12px; font-size: 12px; }
+  padding: ${SP.sm} ${SP.md};
+  color: ${p => (p.$isLast ? C.text : C.textSub)};
+  font-size: ${FONT.sm};
+  ${focusRing}
 `;
 
-const AnimatedModalBox = styled(ModalBox)<{ $exiting: boolean }>`
+const AnimatedModalBox = styled(ModalPlainBox)<{ $exiting: boolean }>`
   animation: ${p => p.$exiting
     ? css`${modalOut} .26s ease forwards`
     : css`${modalSlideUp} .28s ease forwards`};

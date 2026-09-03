@@ -5,7 +5,8 @@ import { useEffect, useMemo, useState } from 'react';
 import styled, { keyframes } from 'styled-components';
 import { useNavigate } from 'react-router-dom';
 import { media } from '../../utils/responsive.utils';
-import { Coins, Sparkles, Package, Layers, Swords, Trophy, ChevronRight, Users, CloudUpload, CloudDownload, X } from 'lucide-react';
+import { Screen as Root, ScreenBackBtn as BackBtn, ScreenBody as Body, ScreenTitle as Title, ScreenTopBar as TopBar } from '../shared/screen';
+import { Coins, Sparkles, Package, Layers, Swords, Trophy, ChevronRight, Users, CloudUpload, CloudDownload, X, ArrowLeft } from 'lucide-react';
 import { pokeAPI } from '../../api/pokeapi';
 import { useTranslation } from '../../i18n';
 import { cardService, PACK_DEFS, seasonRewardForRank } from '../../services/CardService';
@@ -26,6 +27,8 @@ import { DeckBuilder } from './DeckBuilder';
 import { TrainerTower } from './TrainerTower';
 import { RandomBattle } from './RandomBattle';
 import { showToast } from '../shared/Toast';
+import { C, FONT, SP, SCALE, ICON } from '../../styles/tokens';
+import { win, winThin, btn, btnThin, sunken, pixelText, pixelBold, focusRing } from '../../styles/pixel';
 
 type SubView = 'hub' | 'deck' | 'tower' | 'pvp';
 
@@ -217,11 +220,11 @@ export const CardLabView = () => {
   return (
     <Root>
       <TopBar>
-        <BackBtn onClick={() => navigate('/')}>{t('cards.lab.backToMenu')}</BackBtn>
+        <BackBtn onClick={() => navigate('/')}><ArrowLeft size={ICON.md} /> {t('cards.lab.backToMenu')}</BackBtn>
         <Title>{t('cards.menu.title')}</Title>
         <Wallet>
-          <WChip><Coins size={15} color="#fbbf24" /> {state.wallet.coins.toLocaleString()}</WChip>
-          <WChip><Sparkles size={15} color="#c084fc" /> {state.wallet.starShards.toLocaleString()}</WChip>
+          <WChip><Coins size={ICON.md} color={C.gold} /> {state.wallet.coins.toLocaleString()}</WChip>
+          <WChip><Sparkles size={ICON.md} color={C.purple} /> {state.wallet.starShards.toLocaleString()}</WChip>
         </Wallet>
       </TopBar>
 
@@ -253,11 +256,11 @@ export const CardLabView = () => {
             <>
               <MyRankRow>
                 <MyRankChip>
-                  <Swords size={13} color="#c084fc" /> {t('cards.rank.tower')}{' '}
+                  <Swords size={ICON.sm} color={C.purple} /> {t('cards.rank.tower')}{' '}
                   <b>{rankInfo.towerRank ? t('cards.rank.rankSuffix', { n: rankInfo.towerRank }) : t('cards.rank.unranked')}</b>
                 </MyRankChip>
                 <MyRankChip>
-                  <Layers size={13} color="#38bdf8" /> {t('cards.rank.coll')}{' '}
+                  <Layers size={ICON.sm} color={C.cyan} /> {t('cards.rank.coll')}{' '}
                   <b>{rankInfo.collRank ? t('cards.rank.rankSuffix', { n: rankInfo.collRank }) : t('cards.rank.unranked')}</b>
                 </MyRankChip>
               </MyRankRow>
@@ -291,7 +294,7 @@ export const CardLabView = () => {
                   <PackDesc>
                     {t(`cards.packDesc.${type}`)}
                   </PackDesc>
-                  <PackCost $c={def.currency === 'coins' ? '#fbbf24' : '#c084fc'}>
+                  <PackCost $c={def.currency === 'coins' ? C.gold : C.purple}>
                     {def.currency === 'coins' ? <Coins size={13} /> : <Sparkles size={13} />}
                     {def.cost}
                   </PackCost>
@@ -422,216 +425,250 @@ export const CardLabView = () => {
 };
 
 // ─── styled ──────────────────────────────────────────────────────────────────
-const spin = keyframes`to { transform: rotate(360deg); }`;
+// docs/DESIGN.md 의 디자인 시스템을 따른다.
+//
+// 걷어낸 것: 유리 카드(rgba 흰색 + 반투명 1px 테두리), 알약 배지, 점선 테두리,
+//           uppercase eyebrow, hover 떠오름+그림자, backdrop-filter, 원형 스피너,
+//           Tailwind 팔레트(#fbbf24 #c084fc #f8fafc …).
+
+/** 대기 표시 — 원이 돌지 않고 네모가 깜빡인다. */
+const blockBlink = keyframes`
+  0%,  49%  { opacity: 1;    }
+  50%, 100% { opacity: 0.25; }
+`;
 
 const TypePickVeil = styled.div`
-  position: fixed; inset: 0; z-index: 3600; display: flex; align-items: center; justify-content: center;
-  background: rgba(4,6,12,0.7); backdrop-filter: blur(4px); padding: 20px;
+  position: fixed; inset: 0; z-index: 3600;
+  display: flex; align-items: center; justify-content: center;
+  background: rgba(20, 16, 26, 0.86);
+  padding: ${SP.lg};
 `;
 const TypePickBox = styled.div`
-  width: 100%; max-width: 420px; background: radial-gradient(circle at top, #161d33, #0b0f1a);
-  border: 1px solid rgba(255,255,255,0.1); border-radius: 16px; padding: 22px;
-  box-shadow: 0 24px 60px rgba(0,0,0,0.6);
+  ${win('purple')}
+  ${pixelText}
+  width: 100%; max-width: 420px;
+  padding: ${SP.lg};
+  color: ${C.text};
 `;
-const TypePickTitle = styled.h3`font-size: 15px; font-weight: 800; margin: 0 0 14px; text-align: center; color: #f1f5f9;`;
-const TypeGrid = styled.div`display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px;`;
+const TypePickTitle = styled.h3`
+  ${pixelBold}
+  font-size: ${FONT.md}; margin: 0 0 ${SP.md}; text-align: center; color: ${C.text};
+`;
+const TypeGrid = styled.div`display: grid; grid-template-columns: repeat(3, 1fr); gap: ${SP.sm};`;
+
+/** 타입 칩 — 타입 색은 정체성이라 면으로 칠한다(본가 타입 배지와 같은 문법). */
 const TypeChip = styled.button<{ $c: string }>`
-  padding: 10px 6px; border-radius: 10px; border: 1px solid ${p => p.$c}; cursor: pointer;
-  background: ${p => p.$c}22; color: #fff; font-size: 13px; font-weight: 700;
-  transition: transform 0.12s, background 0.12s;
-  &:hover { background: ${p => p.$c}; transform: translateY(-2px); }
+  ${p => sunken(p.$c)}
+  ${pixelBold}
+  padding: ${SP.sm} ${SP.xs};
+  cursor: pointer;
+  color: ${C.text};
+  font-size: ${FONT.sm};
+  transition: none;
+  ${focusRing}
 `;
 
 // ─── 랭킹 위젯 ────────────────────────────────────────────────────────────────
 const RankWidget = styled.section`
-  display: flex; flex-direction: column; gap: 12px;
-  padding: 16px 18px; border-radius: 14px;
-  background: linear-gradient(160deg, rgba(251,191,36,0.08), rgba(192,132,252,0.05));
-  border: 1px solid rgba(251,191,36,0.18);
-  ${media.mobile} { padding: 13px 14px; gap: 10px; }
+  ${win('gold')}
+  display: flex; flex-direction: column; gap: ${SP.md};
+  padding: ${SP.md};
+  ${media.mobile} { padding: ${SP.sm}; gap: ${SP.sm}; }
 `;
 const RankHead = styled.div`
-  display: flex; align-items: center; gap: 10px; flex-wrap: wrap;
+  display: flex; align-items: center; gap: ${SP.sm}; flex-wrap: wrap;
 `;
 const RankTitle = styled.div`
-  display: flex; align-items: center; gap: 7px; font-size: 14px; font-weight: 800; color: #fbbf24;
+  ${pixelBold}
+  display: flex; align-items: center; gap: ${SP.xs};
+  font-size: ${FONT.sm}; color: ${C.gold};
 `;
 const SeasonTag = styled.span`
-  font-size: 11px; font-weight: 700; color: rgba(255,255,255,0.5);
-  background: rgba(255,255,255,0.06); padding: 3px 9px; border-radius: 100px;
+  ${winThin('plain')}
+  font-size: ${FONT.sm}; color: ${C.textSub};
+  padding: ${SP.xs} ${SP.sm};
 `;
 const ViewAllBtn = styled.button`
+  ${pixelBold}
   margin-left: auto; display: flex; align-items: center; gap: 2px;
-  background: transparent; border: none; color: #c084fc; cursor: pointer;
-  font-size: 12px; font-weight: 700; padding: 4px 6px; border-radius: 6px;
-  &:hover { background: rgba(192,132,252,0.12); }
+  background: none; border: none; cursor: pointer;
+  color: ${C.purple};
+  font-size: ${FONT.sm};
+  padding: ${SP.xs};
+  transition: none;
+  @media (hover: hover) { &:hover { color: ${C.text}; } }
+  ${focusRing}
 `;
 const MyRankRow = styled.div`
-  display: grid; grid-template-columns: repeat(2, 1fr); gap: 10px;
-  ${media.mobile} { gap: 8px; }
+  display: grid; grid-template-columns: repeat(2, 1fr); gap: ${SP.sm};
 `;
 const MyRankChip = styled.div`
-  display: flex; align-items: center; gap: 6px; font-size: 13px; font-weight: 600; color: rgba(255,255,255,0.75);
-  background: rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.08);
-  padding: 9px 12px; border-radius: 10px;
-  b { color: #f8fafc; font-weight: 800; margin-left: 2px; }
-  ${media.mobile} { font-size: 12px; padding: 8px 10px; }
+  ${sunken()}
+  display: flex; align-items: center; gap: ${SP.xs};
+  font-size: ${FONT.sm}; color: ${C.textSub};
+  padding: ${SP.sm};
+  b { color: ${C.text}; font-weight: 700; margin-left: 2px; }
 `;
 const Podium = styled.div`
-  display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px;
+  display: grid; grid-template-columns: repeat(3, 1fr); gap: ${SP.sm};
 `;
 const PodItem = styled.div`
-  display: flex; align-items: center; gap: 6px; min-width: 0;
-  background: rgba(255,255,255,0.04); border: 1px solid rgba(255,255,255,0.06);
-  padding: 7px 10px; border-radius: 9px;
-  ${media.mobile} { padding: 6px 8px; gap: 4px; }
+  ${sunken()}
+  display: flex; align-items: center; gap: ${SP.xs}; min-width: 0;
+  padding: ${SP.xs} ${SP.sm};
 `;
-const PodMedal = styled.span`font-size: 15px; flex: 0 0 auto;`;
+const PodMedal = styled.span`font-size: ${ICON.md}px; flex: 0 0 auto; line-height: 1;`;
 const PodName = styled.span`
-  font-size: 12px; font-weight: 700; color: #e8edf3;
+  ${pixelBold}
+  font-size: ${FONT.sm}; color: ${C.text};
   overflow: hidden; text-overflow: ellipsis; white-space: nowrap; min-width: 0;
-  ${media.mobile} { font-size: 11px; }
 `;
 const PodVal = styled.span`
-  margin-left: auto; flex: 0 0 auto; font-size: 11px; font-weight: 800; color: #c084fc;
+  ${pixelBold}
+  margin-left: auto; flex: 0 0 auto;
+  font-size: ${FONT.sm}; color: ${C.purple};
   font-variant-numeric: tabular-nums;
 `;
 const RankHint = styled.div`
-  font-size: 12.5px; color: rgba(255,255,255,0.45); text-align: center; padding: 6px 0;
+  font-size: ${FONT.sm}; color: ${C.textDim}; text-align: center; padding: ${SP.xs} 0;
 `;
 
-const Root = styled.div`
-  min-height: 100vh; background: radial-gradient(circle at top, #11162a, #070910);
-  color: #e8edf5; display: flex; flex-direction: column;
-`;
-const TopBar = styled.header`
-  display: flex; align-items: center; justify-content: space-between; gap: 12px;
-  padding: 14px 22px; border-bottom: 1px solid rgba(255,255,255,0.07);
-  background: rgba(255,255,255,0.02); position: sticky; top: 0; z-index: 20;
-  backdrop-filter: blur(10px);
-  ${media.tablet} { padding: 12px 16px; gap: 8px; }
-  ${media.mobile} { padding: 10px 12px; gap: 6px; }
-`;
-const BackBtn = styled.button`
-  flex: 0 0 auto;
-  background: transparent; border: 1px solid rgba(255,255,255,0.12); color: rgba(255,255,255,0.7);
-  padding: 7px 14px; border-radius: 8px; cursor: pointer; font-size: 14px;
-  white-space: nowrap;
-  &:hover { background: rgba(255,255,255,0.07); }
-  ${media.mobile} { padding: 6px 10px; font-size: 12px; }
-`;
-const Title = styled.h1`
-  font-size: 18px; font-weight: 800; margin: 0; letter-spacing: -0.01em;
-  /* 좌우(뒤로/지갑)를 밀어내 넘치지 않도록 필요 시 줄임표 처리. */
-  min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
-  ${media.tablet} { font-size: 16px; }
-  ${media.mobile} { font-size: 14px; }
-`;
-const Wallet = styled.div`display: flex; gap: 8px; flex: 0 0 auto; ${media.mobile} { gap: 5px; }`;
+const Wallet = styled.div`display: flex; gap: ${SP.sm}; flex: 0 0 auto; ${media.mobile} { gap: ${SP.xs}; }`;
 const WChip = styled.div`
-  display: flex; align-items: center; gap: 5px; font-size: 14px; font-weight: 700;
-  background: rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.08);
-  padding: 6px 12px; border-radius: 100px; white-space: nowrap;
-  ${media.mobile} { font-size: 12px; padding: 5px 9px; gap: 4px; }
+  ${winThin('gold')}
+  ${pixelBold}
+  display: flex; align-items: center; gap: ${SP.xs};
+  font-size: ${FONT.sm}; color: ${C.gold};
+  padding: ${SP.xs} ${SP.sm}; white-space: nowrap;
 `;
 
-const Body = styled.main`
-  flex: 1; width: 100%; max-width: 960px; margin: 0 auto; padding: 24px 20px 60px;
-  display: flex; flex-direction: column; gap: 28px;
-  ${media.tablet} { padding: 20px 16px 48px; gap: 22px; }
-  ${media.mobile} { padding: 16px 12px 40px; gap: 18px; }
-`;
-const Section = styled.section`display: flex; flex-direction: column; gap: 12px;`;
+const Section = styled.section`display: flex; flex-direction: column; gap: ${SP.md};`;
+
+/** 목록 머리글 — uppercase eyebrow 대신 골드 라벨 + 가로선. */
 const SecLabel = styled.div`
-  display: flex; align-items: center; gap: 8px; font-size: 13px; font-weight: 700;
-  color: rgba(255,255,255,0.45); text-transform: uppercase; letter-spacing: 0.1em;
+  ${pixelBold}
+  display: flex; align-items: center; gap: ${SP.sm};
+  font-size: ${FONT.sm}; color: ${C.gold};
+
+  &::after {
+    content: '';
+    flex: 1;
+    height: ${SCALE}px;
+    background: ${C.divider};
+  }
 `;
-const DexCount = styled.span`margin-left: auto; font-size: 12px; color: rgba(255,255,255,0.4); letter-spacing: 0;`;
+const DexCount = styled.span`
+  order: 99;
+  font-size: ${FONT.sm}; color: ${C.textDim};
+  text-shadow: 1px 1px 0 ${C.textShadow};
+  font-weight: 400;
+`;
 
 const PackRow = styled.div`
-  display: grid; grid-template-columns: repeat(3, 1fr); gap: 14px;
+  display: grid; grid-template-columns: repeat(3, 1fr); gap: ${SP.md};
   @media (max-width: 600px) { grid-template-columns: 1fr; }
 `;
 const PackCard = styled.button<{ $disabled: boolean }>`
-  position: relative; display: flex; flex-direction: column; align-items: center; gap: 6px;
-  padding: 22px 14px; border-radius: 14px; cursor: pointer; text-align: center;
-  background: linear-gradient(160deg, rgba(255,255,255,0.06), rgba(255,255,255,0.02));
-  border: 1px solid rgba(255,255,255,0.1); color: #fff; transition: all 0.18s;
-  opacity: ${p => (p.$disabled ? 0.45 : 1)};
+  ${btn('gold')}
+  ${pixelText}
+  position: relative; display: flex; flex-direction: column; align-items: center; gap: ${SP.xs};
+  padding: ${SP.lg} ${SP.sm}; text-align: center;
+  color: ${C.text};
+  opacity: ${p => (p.$disabled ? 0.5 : 1)};
   pointer-events: ${p => (p.$disabled ? 'none' : 'auto')};
-  &:hover { transform: translateY(-3px); border-color: rgba(255,255,255,0.25); box-shadow: 0 10px 28px rgba(0,0,0,0.4); }
+  ${focusRing}
 `;
-const PackName = styled.div`font-size: 16px; font-weight: 800;`;
-const PackDesc = styled.div`font-size: 12px; color: rgba(255,255,255,0.5);`;
+const PackName = styled.div`
+  ${pixelBold}
+  font-size: ${FONT.md};
+`;
+const PackDesc = styled.div`font-size: ${FONT.sm}; color: ${C.textSub};`;
 const PackCost = styled.div<{ $c: string }>`
-  display: flex; align-items: center; gap: 5px; margin-top: 4px;
-  font-size: 15px; font-weight: 800; color: ${p => p.$c};
+  ${pixelBold}
+  display: flex; align-items: center; gap: ${SP.xs}; margin-top: ${SP.xs};
+  font-size: ${FONT.sm}; color: ${p => p.$c};
 `;
 
-const ModeRow = styled.div`display: grid; grid-template-columns: repeat(2, 1fr); gap: 14px;
-  @media (max-width: 600px) { grid-template-columns: 1fr; }`;
+const ModeRow = styled.div`
+  display: grid; grid-template-columns: repeat(2, 1fr); gap: ${SP.md};
+  @media (max-width: 600px) { grid-template-columns: 1fr; }
+`;
 const ModeBtn = styled.button<{ $disabled?: boolean }>`
-  display: flex; align-items: center; justify-content: center; gap: 8px;
-  padding: 18px; border-radius: 12px; cursor: pointer; font-size: 15px; font-weight: 700;
-  background: rgba(255,255,255,0.03); border: 1px dashed rgba(255,255,255,0.15); color: rgba(255,255,255,0.7);
-  &:hover { background: rgba(255,255,255,0.06); }
+  ${btn('blue')}
+  ${pixelBold}
+  display: flex; align-items: center; justify-content: center; gap: ${SP.sm};
+  padding: ${SP.md};
+  font-size: ${FONT.sm};
+  color: ${C.text};
+  ${focusRing}
 `;
 const FloorBadge = styled.span`
-  font-size: 11px; font-weight: 800; background: rgba(192,132,252,0.18);
-  padding: 2px 9px; border-radius: 10px; color: #d8b4fe;
+  ${winThin('purple')}
+  ${pixelBold}
+  font-size: ${FONT.sm}; color: ${C.purple};
+  padding: ${SP.xs} ${SP.sm};
 `;
 
 const DexGrid = styled.div`
-  display: grid; grid-template-columns: repeat(auto-fill, minmax(108px, 1fr)); gap: 14px;
+  display: grid; grid-template-columns: repeat(auto-fill, minmax(108px, 1fr)); gap: ${SP.md};
 `;
 const Empty = styled.div`
-  padding: 40px; text-align: center; color: rgba(255,255,255,0.4); font-size: 14px;
-  border: 1px dashed rgba(255,255,255,0.12); border-radius: 12px;
+  ${sunken()}
+  padding: ${SP.xxl} ${SP.lg}; text-align: center;
+  color: ${C.textDim}; font-size: ${FONT.sm};
 `;
 
-const NoticeStack = styled.div`display: flex; flex-direction: column; gap: 8px;`;
+const NoticeStack = styled.div`display: flex; flex-direction: column; gap: ${SP.sm};`;
 const Notice = styled.div`
-  display: flex; align-items: center; justify-content: space-between; gap: 10px;
-  background: rgba(251,191,36,0.1); border: 1px solid rgba(251,191,36,0.3);
-  color: #fbbf24; font-size: 13px; font-weight: 700;
-  padding: 10px 14px; border-radius: 10px; line-height: 1.5;
-  ${media.mobile} { font-size: 12px; padding: 8px 12px; }
+  ${winThin('gold')}
+  display: flex; align-items: center; justify-content: space-between; gap: ${SP.sm};
+  color: ${C.gold}; font-size: ${FONT.sm};
+  text-shadow: 1px 1px 0 ${C.textShadow};
+  padding: ${SP.sm};
 `;
 const NoticeClose = styled.button`
   flex: 0 0 auto; display: flex; align-items: center; justify-content: center;
-  background: transparent; border: none; color: rgba(251,191,36,0.7); cursor: pointer;
-  padding: 2px; &:hover { color: #fbbf24; }
+  background: none; border: none; padding: 0; cursor: pointer;
+  color: ${C.textDim};
+  transition: none;
+  @media (hover: hover) { &:hover { color: ${C.text}; } }
+  ${focusRing}
 `;
 
 const BackupBar = styled.div`
-  display: flex; align-items: center; justify-content: center; gap: 10px; flex-wrap: wrap;
-  padding: 10px; border: 1px dashed rgba(255,255,255,0.12); border-radius: 10px;
+  ${sunken()}
+  display: flex; align-items: center; justify-content: center; gap: ${SP.sm}; flex-wrap: wrap;
+  padding: ${SP.sm};
 `;
 const BackupInfo = styled.div`
-  display: flex; align-items: center; gap: 6px;
-  font-size: 12px; color: rgba(255,255,255,0.45);
+  display: flex; align-items: center; gap: ${SP.xs};
+  font-size: ${FONT.sm}; color: ${C.textDim};
 `;
 const BackupBtn = styled.button`
-  display: flex; align-items: center; gap: 5px;
-  background: rgba(255,255,255,0.06); border: 1px solid rgba(255,255,255,0.14);
-  color: rgba(255,255,255,0.75); font-size: 12px; font-weight: 700;
-  padding: 6px 12px; border-radius: 8px; cursor: pointer;
-  &:hover { background: rgba(255,255,255,0.12); }
-  &:disabled { opacity: 0.4; cursor: not-allowed; }
+  ${btnThin('plain')}
+  ${pixelBold}
+  display: flex; align-items: center; gap: ${SP.xs};
+  color: ${C.text}; font-size: ${FONT.sm};
+  padding: ${SP.xs} ${SP.sm};
+  ${focusRing}
 `;
 
-const DevBar = styled.div`display: flex; justify-content: center; opacity: 0.4;`;
+const DevBar = styled.div`display: flex; justify-content: center;`;
 const DevBtn = styled.button`
-  background: transparent; border: 1px solid rgba(255,255,255,0.15); color: rgba(255,255,255,0.5);
-  font-size: 12px; padding: 6px 14px; border-radius: 8px; cursor: pointer;
-  &:hover { opacity: 1; }
+  ${btnThin('plain')}
+  font-size: ${FONT.sm}; color: ${C.textDim};
+  padding: ${SP.xs} ${SP.sm};
+  ${focusRing}
 `;
 
 const BusyVeil = styled.div`
-  position: fixed; inset: 0; z-index: 3500; display: flex; align-items: center; justify-content: center; gap: 12px;
-  background: rgba(5,6,12,0.6); color: #fff; font-size: 15px; font-weight: 600;
+  ${pixelBold}
+  position: fixed; inset: 0; z-index: 3500;
+  display: flex; align-items: center; justify-content: center; gap: ${SP.md};
+  background: rgba(20, 16, 26, 0.8);
+  color: ${C.text}; font-size: ${FONT.sm};
 `;
 const Spinner = styled.div`
-  width: 22px; height: 22px; border: 3px solid rgba(255,255,255,0.2); border-top-color: #fff;
-  border-radius: 50%; animation: ${spin} 0.8s linear infinite;
+  width: 16px; height: 16px; background: ${C.blue};
+  animation: ${blockBlink} 0.7s steps(1, end) infinite;
 `;

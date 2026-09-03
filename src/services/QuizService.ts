@@ -2,7 +2,7 @@
 // 퀴즈 로컬 영속(최고점수·통계). localStorage 단독, TD/카드 세이브와 분리.
 // [FREE-TIER] Firestore 리더보드는 P2. 지금은 완전 오프라인 동작.
 
-import { QuizKind, QuizBoardKey, QuizSaveState, QUIZ_KINDS } from '../types/quiz';
+import { QuizKind, QuizBoardKey, QuizSaveState, QUIZ_KINDS, RANKED_ROUND_SIZE } from '../types/quiz';
 import { cardService } from './CardService';
 import { seasonId } from '../utils/season';
 
@@ -26,6 +26,25 @@ const EXAM_MILESTONES: ExamMilestoneReward[] = [
   { threshold: 40, coins: 160, starShards: 15 },
   { threshold: 50, coins: 250, starShards: 25 },
 ];
+
+/**
+ * 종목별 마일스톤 = 모의고사의 **1/5**. 규칙(최고 정답 수 기준·1회성)은 동일하다.
+ *
+ * [경제] 종목 하나를 50문항 만점까지 밀면 132코인 + 11별조각. 한국어 15종목을 전부
+ * 만점 내면 1,980코인 + 165별조각이 되는데, 이건 '전 종목 만점'이라는 사실상의
+ * 도전과제 보상이고 반복은 불가능하다(구간마다 1회). 모의고사 하나만 파던 예전보다
+ * 총량은 늘지만, 종목 하나당 수급은 모의고사의 1/5로 눌러 두어 "쉬운 종목만 돌면
+ * 이득"이 되지 않게 했다.
+ */
+const KIND_MILESTONES: ExamMilestoneReward[] = EXAM_MILESTONES.map(m => ({
+  threshold: m.threshold,
+  coins: Math.round(m.coins / 5),
+  starShards: Math.round(m.starShards / 5),
+}));
+
+/** UI(문서 화면)에서 표로 보여주기 위한 읽기 전용 사본. */
+export const getExamMilestones = (): readonly ExamMilestoneReward[] => EXAM_MILESTONES;
+export const getKindMilestones = (): readonly ExamMilestoneReward[] => KIND_MILESTONES;
 
 class QuizService {
   private state: QuizSaveState;
@@ -111,6 +130,30 @@ class QuizService {
     return earned;
   }
 
+  /**
+   * 종목 최고점 기준으로 새로 도달한 마일스톤을 수령 처리하고 재화를 지급.
+   * recordRound 직후 호출. 모의고사와 완전히 같은 규칙이고 액수만 1/5다.
+   */
+  claimKindMilestones(kind: QuizKind): ExamMilestoneReward[] {
+    const best = this.state.best[kind] ?? 0;
+    const claimed = new Set(this.state.claimedKindMilestones?.[kind] ?? []);
+    const earned = KIND_MILESTONES.filter(m => best >= m.threshold && !claimed.has(m.threshold));
+    if (earned.length === 0) return [];
+
+    earned.forEach(m => claimed.add(m.threshold));
+    this.state.claimedKindMilestones = {
+      ...(this.state.claimedKindMilestones ?? {}),
+      [kind]: Array.from(claimed).sort((a, b) => a - b),
+    };
+    this.persist();
+
+    cardService.grantRewards({
+      coins: earned.reduce((s, m) => s + m.coins, 0),
+      starShards: earned.reduce((s, m) => s + m.starShards, 0),
+    });
+    return earned;
+  }
+
   // ─── 주간 랭킹(보드별) ─────────────────────────────────────────────────────
   /** 이번 주 기록이 아니면 비운다. 주차 경계(월요일 00:00 KST)를 넘으면 로컬도 리셋. */
   private ensureCurrentSeason(): void {
@@ -128,18 +171,49 @@ class QuizService {
     return this.state.weeklyBest?.[key] ?? 0;
   }
 
+  /** 통산 보드에 올린 내 기록(50문항 완주분). 개인 최고(best/examBest)와 다를 수 있다. */
+  getRankedBest(key: QuizBoardKey): number {
+    return this.state.rankedBest?.[key] ?? 0;
+  }
+
+  /**
+   * 랭킹 반영 대상인 판인지.
+   * `roundSize`를 넘기지 않는 호출(속도전)은 문항 수 규칙이 다르므로 그대로 통과시킨다.
+   */
+  private isRankedRound(roundSize?: number): boolean {
+    return roundSize === undefined || roundSize === RANKED_ROUND_SIZE;
+  }
+
   /**
    * 이번 주 기록 갱신 시도. **반환값이 true일 때만** 서버에 올린다.
    * [FREE-TIER] 한 판마다 Firestore에 쓰면 write가 판 수만큼 늘어난다.
    * 주간 최고를 로컬에서 들고 있다가 경신될 때만 1 write.
+   *
+   * 50문항이 아닌 판은 아예 집계하지 않는다(RANKED_ROUND_SIZE 참고).
    */
-  recordWeekly(key: QuizBoardKey, score: number): boolean {
+  recordWeekly(key: QuizBoardKey, score: number, roundSize?: number): boolean {
+    if (!this.isRankedRound(roundSize)) return false;
     this.ensureCurrentSeason();
     const prev = this.state.weeklyBest?.[key] ?? 0;
     if (score <= prev) return false;
     this.state.weeklyBest = { ...(this.state.weeklyBest ?? {}), [key]: score };
     this.persist();
     return true;
+  }
+
+  /**
+   * 통산 모의고사 보드 갱신 시도. 반환: 서버에 올릴 값(경신 없으면 null).
+   *
+   * examBest를 그대로 올리지 않는 이유 — examBest는 문항 수를 가리지 않는 개인 기록이라,
+   * 30문항으로 세운 30점을 들고 50문항 보드에 올라가 버린다.
+   */
+  recordRankedExam(score: number, roundSize: number): number | null {
+    if (!this.isRankedRound(roundSize)) return null;
+    const prev = this.state.rankedBest?.exam ?? 0;
+    if (score <= prev) return null;
+    this.state.rankedBest = { ...(this.state.rankedBest ?? {}), exam: score };
+    this.persist();
+    return score;
   }
 
   // ─── 속도 퀴즈(멀티) 통산 전적 ──────────────────────────────────────────────

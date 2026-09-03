@@ -8,6 +8,8 @@ import { pokeAPI } from '../../api/pokeapi';
 import { Rarity, RARITY_COLORS } from '../../data/evolution';
 import { getTypeColor } from '../../utils/typeEffectiveness';
 import { MAX_STARS } from '../../services/CardService';
+import { C, FONT, SP, ICON } from '../../styles/tokens';
+import { pixelBold } from '../../styles/pixel';
 
 const ARTWORK = (id: number) =>
   `https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/other/official-artwork/${id}.png`;
@@ -129,6 +131,11 @@ export const CardView = ({
 };
 
 // ─── styled ──────────────────────────────────────────────────────────────────
+//
+// 여기는 의도적으로 도트 문법을 따르지 않는다. 미니 포켓은 '트레이딩 카드'가
+// 소재이고, 기울기·광택·홀로그램은 실제 카드의 질감이라 장르 관습이다(포켓몬
+// TCG Pocket도 같은 연출을 쓴다). 그래서 3D/홀로 레이어는 그대로 두고,
+// 글자와 색만 디자인 토큰에 맞춘다. docs/DESIGN.md 의 예외.
 const holoShift = keyframes`
   0%   { background-position: 0% 50%; }
   100% { background-position: 200% 50%; }
@@ -183,9 +190,10 @@ const NameBar = styled.div`
   width: 100%; text-align: center; margin-top: 2px;
 `;
 const PName = styled.div`
-  font-size: 12px; font-weight: 700; color: #f8fafc;
+  ${pixelBold}
+  font-size: ${FONT.sm}; color: ${C.text};
   white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
-  text-shadow: 0 1px 3px rgba(0,0,0,0.8);
+  text-shadow: 1px 1px 0 ${C.ink};
 `;
 
 const TypePips = styled.div`display: flex; gap: 4px; margin-top: 3px;`;
@@ -196,14 +204,16 @@ const Pip = styled.span<{ $c: string }>`
 
 const Stars = styled.div`display: flex; align-items: center; gap: 1px; margin-top: 3px; height: 13px;`;
 const MergeDot = styled.span`
-  width: 4px; height: 4px; border-radius: 50%; background: #c084fc;
-  box-shadow: 0 0 4px #c084fcaa; margin-left: 2px; flex: none;
+  width: 4px; height: 4px; border-radius: 50%; background: ${C.purple};
+  box-shadow: 0 0 4px ${C.purple}aa; margin-left: 2px; flex: none;
 `;
-const Star = styled.span`font-size: 11px; color: #ffd54a; text-shadow: 0 0 4px rgba(255,213,74,0.8);`;
+const Star = styled.span`font-size: ${ICON.sm}px; line-height: 1; color: ${C.gold}; text-shadow: 0 0 4px ${C.gold}cc;`;
 
 const LockMark = styled.div`
+  ${pixelBold}
   position: absolute; inset: 0; display: flex; align-items: center; justify-content: center;
-  font-size: 40px; font-weight: 900; color: rgba(255,255,255,0.25);
+  font-size: 36px; color: ${C.textDim};
+  text-shadow: none;
 `;
 
 // 광택(glare) — 포인터 위치 추종 하이라이트
@@ -227,8 +237,11 @@ const Holo = styled.div`
 `;
 
 const NewBadge = styled.div`
-  position: absolute; top: 6px; left: -2px;
-  background: #ef4444; color: #fff; font-size: 9px; font-weight: 800;
-  padding: 2px 6px; border-radius: 0 4px 4px 0;
-  box-shadow: 0 2px 6px rgba(0,0,0,0.4); letter-spacing: 0.05em;
+  ${pixelBold}
+  position: absolute; top: 6px; left: 0;
+  background: ${C.red}; color: ${C.text};
+  border: 2px solid ${C.ink};
+  font-size: ${FONT.sm}; line-height: 1;
+  padding: ${SP.xs} ${SP.sm};
+  text-shadow: none;
 `;

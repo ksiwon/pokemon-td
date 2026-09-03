@@ -63,6 +63,8 @@ import { aiPlayerManager } from "../../services/AIPlayer";
 import { buildTowerDetails } from "../../game/towerFactory";
 import { fromWireAbility } from "../../utils/abilities";
 import { lMedia } from "../../utils/responsive.utils";
+import { C, FONT, SP, SCALE, ICON } from "../../styles/tokens";
+import { win, btn, btnThin, sunken, crisp, pixelText, pixelBold, cursorMark, cursorOn, CURSOR_GUTTER, shadowLg, focusRing, type BtnColor } from "../../styles/pixel";
 import { Emoji } from "../shared/Emoji";
 import { showToast } from "../shared/Toast";
 import { Store, Award } from "lucide-react";
@@ -815,7 +817,6 @@ export const GameLayout: React.FC<GameLayoutProps> = ({ onLeaveGame }) => {
       {isMultiplayer && multiLoading && (
         <MultiLoadingOverlay>
           <MultiLoadingBox>
-            <Spinner />
             <LoadTitle>{t("gameLayout.loadingTitle")}</LoadTitle>
             <LoadDesc>{t("gameLayout.loadingDesc1")}<br />{t("gameLayout.loadingDesc2")}</LoadDesc>
             <LoadDots><span /><span /><span /></LoadDots>
@@ -861,15 +862,15 @@ export const GameLayout: React.FC<GameLayoutProps> = ({ onLeaveGame }) => {
           <HudArea>
             <HudGrid>
               <HudTile>
-                <HudLbl>GOLD</HudLbl>
+                <HudLbl>{t('hud.gold')}</HudLbl>
                 <HudVal $c="gold">{money}G</HudVal>
               </HudTile>
               <HudTile>
-                <HudLbl>LIVES</HudLbl>
+                <HudLbl>{t('hud.lives')}</HudLbl>
                 <HudVal $c="red">{lives}</HudVal>
               </HudTile>
               <HudTile>
-                <HudLbl>WAVE</HudLbl>
+                <HudLbl>{t('hud.wave')}</HudLbl>
                 <HudVal $c="blue">
                   {wave}
                   {/* 싱글: /50, 스토리: /30, 멀티: 표시 없음 */}
@@ -906,14 +907,12 @@ export const GameLayout: React.FC<GameLayoutProps> = ({ onLeaveGame }) => {
           <ShopWrapper>
             <ShopHdr>
               <ShopHdrTitle><Emoji glyph="🏪" size={14} /> {t("shop.title")}</ShopHdrTitle>
-              <GoldBadge><Emoji glyph="💰" size={13} /> {money}G</GoldBadge>
             </ShopHdr>
             <Shop embedded />
           </ShopWrapper>
 
           {/* 액션 버튼 영역 */}
           <ActionArea>
-            <ActionSep>— Action —</ActionSep>
             <BtnGrid>
 
               {/* 웨이브 시작 / 멀티 페이즈 */}
@@ -939,7 +938,7 @@ export const GameLayout: React.FC<GameLayoutProps> = ({ onLeaveGame }) => {
               {/* 포켓몬 관리 */}
               <DsBtn $v="manage" onClick={() => setShowPokemonManager(true)}>
                 <Ico><Emoji glyph="🎒" size={18} /></Ico>
-                <Lbl>{t("hud.managePokemon")} ({towers.length}/6)</Lbl>
+                <Lbl>{t("hud.managePokemon")}<LblSub> ({towers.length}/6)</LblSub></Lbl>
               </DsBtn>
 
               {/* 배속 / 상대방 보기 */}
@@ -975,7 +974,10 @@ export const GameLayout: React.FC<GameLayoutProps> = ({ onLeaveGame }) => {
         <>
           <HamBackdrop onClick={() => setShowHamMenu(false)} />
           <HamPanel>
-            <HamClose onClick={() => setShowHamMenu(false)}><Emoji glyph="❌" size={16} /></HamClose>
+            <HamHdr>
+              <HamHdrTitle>{t('hud.menu')}</HamHdrTitle>
+              <HamClose onClick={() => setShowHamMenu(false)}>✕</HamClose>
+            </HamHdr>
             <HamItem onClick={() => { setShowAchievements(true);  setShowHamMenu(false); }}>
               <Emoji glyph="🏆" size={15} /> {t("gameLayout.navAchievements")}
             </HamItem>
@@ -1104,22 +1106,21 @@ export const GameLayout: React.FC<GameLayoutProps> = ({ onLeaveGame }) => {
     </AppContainer>
   );
 };
-
 // ─────────────────────────────────────────────────────────────────
-// Styled Components
+// Styled Components — docs/DESIGN.md 의 디자인 시스템을 따른다.
+// 값은 tokens.ts, 창틀·글자는 pixel.ts 에서만 가져온다.
 // ─────────────────────────────────────────────────────────────────
 
 // ── 반응형 헬퍼 (가로화면 고정 게임 전용) → lMedia 사용 ──────────
-const L1024 = lMedia.tablet;
-const L768  = lMedia.phone;
 
 // ── Root ──────────────────────────────────────────────────────────
 
 const AppContainer = styled.div`
   width: 100vw;
   height: 100vh;
-  background: radial-gradient(ellipse at top, #1a2332 0%, #0f1419 50%, #000 100%);
-  color: #e8edf3;
+  background: ${C.bg};
+  color: ${C.text};
+  ${pixelText}
   overflow: hidden;
   position: relative;
   display: flex;
@@ -1136,10 +1137,10 @@ const PortraitGuard = styled.div`
     flex-direction: column;
     align-items: center;
     justify-content: center;
-    gap: 20px;
+    gap: ${SP.xl};
     position: fixed;
     inset: 0;
-    background: #0f1419;
+    background: ${C.bg};
     z-index: 99999;
   }
   /* [FIX] orientation 미디어쿼리 미지원 브라우저 대비 */
@@ -1148,40 +1149,46 @@ const PortraitGuard = styled.div`
     flex-direction: column;
     align-items: center;
     justify-content: center;
-    gap: 20px;
+    gap: ${SP.xl};
     position: fixed;
     inset: 0;
-    background: #0f1419;
+    background: ${C.bg};
     z-index: 99999;
   }
 `;
-const RotateEmoji = styled.div`font-size: 52px;`;
+const RotateEmoji = styled.div`font-size: 48px; line-height: 1;`;
 const RotateMsg   = styled.p`
-  font-size: 18px; color: #60b0ff; font-weight: 500; text-align: center;
-  padding: 0 32px;
+  ${pixelBold}
+  ${shadowLg}
+  font-size: ${FONT.xl};
+  color: ${C.blue};
+  text-align: center;
+  padding: 0 ${SP.xxl};
 `;
 
 // ── 3-column grid ─────────────────────────────────────────────────
 
 const TriPane = styled.div`
   display: grid;
-  /* 데스크탑: 210px 패널 */
-  grid-template-columns: 210px 1fr 210px;
+  /* 패널 폭은 12px 글자를 담을 수 있는 하한선에서 정한다.
+     예전에는 폰 가로에서 128px까지 줄이고 글자를 6~8px로 낮췄는데,
+     도트 폰트는 12px 미만에서 획이 뭉개져 읽히지 않는다. 폭을 조금 늘리고
+     글자 크기를 12px에 고정하는 쪽이 맞다. */
+  grid-template-columns: 216px 1fr 216px;
   overflow: hidden;
-  /* 중앙 맵이 세로 중앙 정렬될 때 위/아래 레터박스 여백 색을 맵 배경과
-     동일하게(뒤 AppContainer 그라디언트가 비쳐 상/하 색이 달라 보이는 문제 방지) */
-  background: #080e14;
-  border-top: 2px solid rgba(80, 140, 220, 0.25);
-  border-bottom: 2px solid rgba(80, 140, 220, 0.25);
+  /* 중앙 맵이 세로 중앙 정렬될 때 위/아래 레터박스 여백 색 */
+  background: ${C.ink};
+  border-top: ${SCALE}px solid ${C.divider};
+  border-bottom: ${SCALE}px solid ${C.ink};
 
   /* [FIX] flex 자식으로서 남은 세로 공간을 채우고, 최소 높이 제한 제거 */
   flex: 1;
   min-height: 0;
 
   /* 태블릿 가로 (iPad 등, ≤1024px) */
-  ${L1024} { grid-template-columns: 172px 1fr 172px; }
+  ${lMedia.tablet} { grid-template-columns: 180px 1fr 180px; }
   /* 폰 가로 (≤768px) */
-  ${L768}  { grid-template-columns: 128px 1fr 128px; }
+  ${lMedia.phone}  { grid-template-columns: 152px 1fr 152px; }
 
   /* 세로 화면: PortraitGuard가 덮으므로 숨김 */
   @media (max-width: 1024px) and (orientation: portrait) { display: none; }
@@ -1189,25 +1196,27 @@ const TriPane = styled.div`
   @media (max-width: 500px) and (max-aspect-ratio: 1/1) { display: none; }
 `;
 
-// ── Left Panel ────────────────────────────────────────────────────
+// ── Side panels ───────────────────────────────────────────────────
 
 const LeftPanel = styled.div`
-  background: #111827;
-  border-right: 2px solid rgba(80, 140, 220, 0.2);
+  background: ${C.panel};
+  border-right: ${SCALE}px solid ${C.ink};
   display: flex;
   flex-direction: column;
   overflow: hidden;
 `;
 
+/** 패널 머리글 — 한 단 파인 띠에 골드 글자. 대문자 영문 eyebrow를 대신한다. */
 const PanelHdr = styled.div`
-  background: linear-gradient(180deg, #1e3050 0%, #162540 100%);
-  border-bottom: 1px solid rgba(80, 140, 220, 0.28);
-  padding: 7px 12px;
-  font-size: 12px; font-weight: 600; color: #60b0ff;
-  text-transform: uppercase; letter-spacing: 0.5px;
+  ${pixelBold}
+  background: ${C.panelSunk};
+  border-bottom: ${SCALE}px solid ${C.ink};
+  padding: ${SP.sm} ${SP.md};
+  font-size: ${FONT.sm};
+  color: ${C.gold};
+  display: flex; align-items: center; gap: ${SP.xs};
   flex-shrink: 0;
-  ${L1024} { padding: 6px 9px; font-size: 10px; }
-  ${L768}  { padding: 4px 6px; font-size: 8px; letter-spacing: 0.3px; }
+  ${lMedia.phone} { padding: ${SP.xs} ${SP.sm}; }
 `;
 
 const SynergyArea = styled.div`
@@ -1219,116 +1228,127 @@ const SynergyArea = styled.div`
 `;
 
 const HudSep = styled.div`
-  height: 1px;
-  background: rgba(80, 140, 220, 0.14);
+  height: ${SCALE}px;
+  background: ${C.ink};
   flex-shrink: 0;
 `;
 
 const HudArea = styled.div`
   flex-shrink: 0;
-  background: #0d1520;
-  padding: 10px;
-  display: flex; flex-direction: column; gap: 6px;
-  ${L1024} { padding: 7px 8px; gap: 5px; }
-  ${L768}  { padding: 4px 5px; gap: 3px; }
+  padding: ${SP.sm};
+  display: flex; flex-direction: column; gap: ${SP.sm};
+  border-top: ${SCALE}px solid ${C.ink};
+  ${lMedia.phone} { padding: ${SP.xs}; gap: ${SP.xs}; }
 `;
+
+// ── 시설 (프렌들리숍 / 콘테스트 홀) ───────────────────────────────
 
 const FacilityBox = styled.div`
   flex-shrink: 0;
-  background: #0d1520;
-  padding: 8px 10px;
-  display: flex; flex-direction: column; gap: 5px;
-  border-top: 1px solid rgba(80,140,220,0.1);
-  ${L1024} { padding: 6px 8px; gap: 4px; }
-  ${L768}  { padding: 4px 6px; gap: 3px; }
+  padding: ${SP.sm};
+  display: flex; flex-direction: column; gap: ${SP.sm};
+  border-top: ${SCALE}px solid ${C.ink};
+  ${lMedia.phone} { padding: ${SP.xs} ${SP.sm}; }
 `;
 const FacilityRow = styled.div`
   display: flex; align-items: center; justify-content: space-between;
-  font-size: 11px; color: #a8b8c8; font-weight: 600;
-  ${L768} { font-size: 10px; }
+  gap: ${SP.xs};
+  min-height: 28px;
+  ${pixelText}
+  font-size: ${FONT.sm};
+  color: ${C.textSub};
 `;
 const FacilityName = styled.span`
-  display: inline-flex; align-items: center; gap: 5px;
-  svg { opacity: 0.85; }
+  display: inline-flex; align-items: center; gap: ${SP.xs};
+  min-width: 0;
+  svg { flex-shrink: 0; }
 `;
 const FacilityLv = styled.span<{ $on: boolean }>`
-  font-size: 11px; font-weight: 800;
-  color: ${p => (p.$on ? "#f0b840" : "#566374")};
-  ${L768} { font-size: 10px; }
+  ${pixelBold}
+  font-size: ${FONT.sm};
+  color: ${p => (p.$on ? C.gold : C.textDim)};
 `;
 const FacilityShopBtn = styled.button`
-  font-size: 11px; font-weight: 800; color: #0d1520;
-  background: #f0b840; border: none; border-radius: 4px;
-  padding: 2px 8px; cursor: pointer; line-height: 1.4;
-  transition: filter 0.12s;
-  &:hover { filter: brightness(1.12); }
-  ${L768} { font-size: 10px; padding: 2px 6px; }
+  ${btnThin('gold')}
+  ${pixelBold}
+  font-size: ${FONT.sm};
+  color: ${C.text};
+  padding: ${SP.xs} ${SP.sm};
+  line-height: 1.4;
+  white-space: nowrap;
+  flex-shrink: 0;
 `;
+
+// ── HUD 수치 ──────────────────────────────────────────────────────
 
 const HudGrid = styled.div`
-  display: grid; grid-template-columns: 1fr 1fr; gap: 5px;
-  ${L1024} { gap: 4px; }
-  ${L768}  { gap: 3px; }
+  display: grid; grid-template-columns: 1fr 1fr; gap: ${SP.xs};
 `;
 
+/** 한 단 파인 칸. 예전에는 반투명 유리 카드 + 대문자 라벨이라 게임 HUD가
+    아니라 애널리틱스 위젯으로 읽혔다. */
 const HudTile = styled.div`
-  background: rgba(255,255,255,.04);
-  border: 1px solid rgba(255,255,255,.07);
-  border-radius: 6px; padding: 4px 7px;
-  display: flex; flex-direction: column; gap: 2px;
-  ${L1024} { padding: 3px 5px; }
-  ${L768}  { padding: 2px 4px; }
+  ${sunken()}
+  padding: ${SP.sm};
+  display: flex; flex-direction: column;
+  min-width: 0;
+  ${lMedia.phone} { padding: ${SP.xs}; }
 `;
 
 const HudLbl = styled.span`
-  font-size: 9px; color: #5a7090;
-  text-transform: uppercase; letter-spacing: 0.4px;
-  ${L1024} { font-size: 8px; }
-  ${L768}  { font-size: 6px; letter-spacing: 0.2px; }
+  ${pixelText}
+  font-size: ${FONT.sm};
+  color: ${C.textDim};
+  white-space: nowrap;
 `;
 
-const colorMap: Record<string, string> = {
-  gold: "#f0c040", red: "#e05050", blue: "#60b0ff", white: "#aabbcc",
+const HUD_COLOR: Record<string, string> = {
+  gold: C.gold, red: C.red, blue: C.blue, white: C.text,
 };
 const HudVal = styled.span<{ $c: string }>`
-  font-size: 18px; font-weight: 600; line-height: 1.1;
-  color: ${p => colorMap[p.$c] ?? "#aabbcc"};
-  ${L1024} { font-size: 15px; }
-  ${L768}  { font-size: 12px; }
+  ${pixelBold}
+  ${shadowLg}
+  font-size: ${FONT.xl};
+  line-height: 1.3;
+  color: ${p => HUD_COLOR[p.$c] ?? C.text};
+  white-space: nowrap;
+  /* 폰 가로에서는 칸이 70px까지 줄어 24px 숫자가 넘친다. 12px이 도트 폰트의
+     하한이므로 그 아래로는 내리지 않고 라벨과 같은 크기까지만 내린다. */
+  ${lMedia.phone} { font-size: ${FONT.sm}; text-shadow: 1px 1px 0 ${C.textShadow}; }
 `;
 
 const Sub = styled.span`
-  font-size: 11px; opacity: 0.5;
-  ${L1024} { font-size: 9px; }
-  ${L768}  { font-size: 8px; }
+  font-weight: 400;
+  font-size: ${FONT.sm};
+  color: ${C.textDim};
 `;
 
 const TimeChip = styled.div`
-  font-size: 11px; color: #60b0ff; font-weight: 500;
-  background: rgba(96,176,255,.07); border: 1px solid rgba(96,176,255,.18);
-  border-radius: 5px; padding: 4px 8px; text-align: center;
-  ${L1024} { font-size: 9px; padding: 3px 6px; }
-  ${L768}  { font-size: 8px; padding: 2px 4px; }
+  ${sunken()}
+  ${pixelText}
+  font-size: ${FONT.sm};
+  color: ${C.blue};
+  padding: ${SP.sm} ${SP.xs};
+  display: flex; align-items: center; justify-content: center; gap: ${SP.xs};
 `;
 
-const phaseColorMap: Record<string, { text: string; bg: string; border: string }> = {
-  shopping:       { text: "#f0c040", bg: "rgba(240,192,64,.10)", border: "rgba(240,192,64,.30)" },
-  wave:           { text: "#50d080", bg: "rgba(80,208,128,.10)", border: "rgba(80,208,128,.30)" },
-  battle:         { text: "#e05050", bg: "rgba(224,80,80,.10)",  border: "rgba(224,80,80,.30)"  },
-  waiting_wave:   { text: "#60b0ff", bg: "rgba(96,176,255,.08)", border: "rgba(96,176,255,.22)" },
-  waiting_battle: { text: "#60b0ff", bg: "rgba(96,176,255,.08)", border: "rgba(96,176,255,.22)" },
-  loading:        { text: "#60b0ff", bg: "rgba(96,176,255,.08)", border: "rgba(96,176,255,.22)" },
+const PHASE_COLOR: Record<string, string> = {
+  shopping:       C.gold,
+  wave:           C.green,
+  battle:         C.red,
+  waiting_wave:   C.blue,
+  waiting_battle: C.blue,
+  loading:        C.blue,
 };
 
 const PhaseChip = styled.div<{ $phase: GamePhase }>`
-  font-size: 11px; font-weight: 500;
-  border-radius: 5px; padding: 4px 8px; text-align: center;
-  color:      ${p => phaseColorMap[p.$phase]?.text   ?? "#60b0ff"};
-  background: ${p => phaseColorMap[p.$phase]?.bg     ?? "rgba(96,176,255,.08)"};
-  border: 1px solid ${p => phaseColorMap[p.$phase]?.border ?? "rgba(96,176,255,.22)"};
+  ${sunken()}
+  ${pixelText}
+  font-size: ${FONT.sm};
+  padding: ${SP.sm} ${SP.xs};
+  text-align: center;
+  color: ${p => PHASE_COLOR[p.$phase] ?? C.blue};
   white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
-  ${L1024} { font-size: 9px; padding: 3px 6px; }
-  ${L768}  { font-size: 8px; padding: 2px 4px; }
 `;
 
 // ── Center Panel ──────────────────────────────────────────────────
@@ -1338,7 +1358,8 @@ const CenterPanel = styled.div`
   aspect-ratio: 15 / 10;
   overflow: hidden;
   position: relative;
-  background: #080e14;
+  background: ${C.ink};
+  ${crisp}
   /* [FIX] CSS Grid 아이템이 min-content 이하로 축소될 수 있도록 */
   min-width: 0;
   min-height: 0;
@@ -1351,8 +1372,8 @@ const CenterPanel = styled.div`
 // ── Right Panel ───────────────────────────────────────────────────
 
 const RightPanel = styled.div`
-  background: #111827;
-  border-left: 2px solid rgba(80, 140, 220, 0.2);
+  background: ${C.panel};
+  border-left: ${SCALE}px solid ${C.ink};
   display: flex;
   flex-direction: column;
   overflow: hidden;
@@ -1363,186 +1384,142 @@ const ShopWrapper = styled.div`
   display: flex;
   flex-direction: column;
   overflow: hidden;
-  border-bottom: 2px solid rgba(80, 140, 220, 0.28);
 `;
 
+/* 여백은 왼쪽 '현재 시너지' 머리글(PanelHdr)과 같은 값을 쓴다 — 좌우 패널의
+   머리글이 같은 높이·같은 안쪽 여백으로 마주 보게. */
 const ShopHdr = styled.div`
-  background: linear-gradient(180deg, #1e3050 0%, #162540 100%);
-  border-bottom: 1px solid rgba(80, 140, 220, 0.28);
-  padding: 7px 10px;
+  background: ${C.panelSunk};
+  border-bottom: ${SCALE}px solid ${C.ink};
+  padding: ${SP.sm} ${SP.md};
   display: flex; align-items: center; justify-content: space-between;
+  gap: ${SP.xs};
   flex-shrink: 0;
-  ${L1024} { padding: 5px 8px; }
-  ${L768}  { padding: 4px 6px; }
+  ${lMedia.phone} { padding: ${SP.xs} ${SP.sm}; }
 `;
 
 const ShopHdrTitle = styled.span`
-  font-size: 12px; font-weight: 600; color: #60b0ff;
-  text-transform: uppercase; letter-spacing: 0.4px;
-  ${L1024} { font-size: 10px; }
-  ${L768}  { font-size: 8px; }
-`;
-
-const GoldBadge = styled.span`
-  font-size: 13px; font-weight: 600; color: #f0c040;
-  ${L1024} { font-size: 11px; }
-  ${L768}  { font-size: 9px; }
+  ${pixelBold}
+  font-size: ${FONT.sm};
+  color: ${C.gold};
+  display: inline-flex; align-items: center; gap: ${SP.xs};
 `;
 
 const ActionArea = styled.div`
   flex-shrink: 0;
-  background: #0d1422;
-  padding: 8px;
-  display: flex; flex-direction: column; gap: 5px;
-  ${L1024} { padding: 6px; gap: 4px; }
-  ${L768}  { padding: 4px 5px; gap: 3px; }
+  padding: ${SP.sm};
+  display: flex; flex-direction: column; gap: ${SP.sm};
+  border-top: ${SCALE}px solid ${C.ink};
+  ${lMedia.phone} { padding: ${SP.xs}; gap: ${SP.xs}; }
 `;
 
-const ActionSep = styled.div`
-  font-size: 9px; color: #5a7090;
-  text-transform: uppercase; letter-spacing: 0.7px; text-align: center;
-  border-top: 1px solid rgba(80, 140, 220, 0.14);
-  padding-top: 6px;
-  ${L1024} { font-size: 8px; padding-top: 5px; }
-  ${L768}  { font-size: 7px; padding-top: 3px; }
-`;
+// ── Action buttons ────────────────────────────────────────────────
 
-// ── DS-style buttons ──────────────────────────────────────────────
+/** 버튼 종류 → 창틀 액센트. 글자는 전부 흰색이고 정체성은 테두리가 진다. */
+const BTN_COLOR = {
+  wave:   'green',
+  shop:   'gold',
+  manage: 'blue',
+  speed:  'purple',
+  rival:  'red',
+} as const satisfies Record<string, BtnColor>;
 
-const pulseGreen = keyframes`
-  0%   { box-shadow: 0 0 0 0   rgba(80, 208, 128, 0.80); }
-  70%  { box-shadow: 0 0 0 8px rgba(80, 208, 128, 0);    }
-  100% { box-shadow: 0 0 0 0   rgba(80, 208, 128, 0);    }
+/**
+ * 주목 신호 — 계단식 깜빡임.
+ * 예전에는 1.5초마다 초록/주황 글로우가 바깥으로 번졌는데, 번지는 빛은 도트 UI에
+ * 없는 표현이라 그것만으로 화면이 웹앱으로 읽힌다. 포켓몬 UI가 "지금 눌러라"를
+ * 알리는 방법은 중간값 없는 깜빡임이다.
+ */
+const attn = keyframes`
+  0%,  49%  { opacity: 1;    }
+  50%, 100% { opacity: 0.45; }
 `;
-const pulseOrange = keyframes`
-  0%   { box-shadow: 0 0 0 0   rgba(240, 168, 64, 0.80); }
-  70%  { box-shadow: 0 0 0 8px rgba(240, 168, 64, 0);    }
-  100% { box-shadow: 0 0 0 0   rgba(240, 168, 64, 0);    }
-`;
-
-const btnVariants = {
-  wave:   css`background: linear-gradient(180deg,#1f6640,#174f30);
-              color:#5ee894;
-              border:1.5px solid #2d8a56;
-              text-shadow:0 0 8px rgba(80,230,140,0.5);
-              &:disabled{opacity:.38;}`,
-  shop:   css`background: linear-gradient(180deg,#4e2c0a,#3a2006);
-              color:#f5b540;
-              border:1.5px solid #7a4e18;
-              text-shadow:0 0 8px rgba(245,165,40,0.5);`,
-  manage: css`background: linear-gradient(180deg,#143660,#0e2840);
-              color:#72c0ff;
-              border:1.5px solid #2458a0;
-              text-shadow:0 0 8px rgba(100,180,255,0.5);`,
-  speed:  css`background: linear-gradient(180deg,#321858,#28103c);
-              color:#d090ff;
-              border:1.5px solid #5c2898;
-              text-shadow:0 0 8px rgba(200,100,255,0.5);`,
-  rival:  css`background: linear-gradient(180deg,#4a0c0c,#380808);
-              color:#ff9090;
-              border:1.5px solid #7a2020;
-              text-shadow:0 0 8px rgba(255,100,100,0.5);`,
-};
 
 const BtnGrid = styled.div`
-  display: grid; grid-template-columns: 1fr 1fr;
-  gap: 5px; padding-bottom: 6px;
-  ${L1024} { gap: 4px; padding-bottom: 5px; }
-  ${L768}  { gap: 3px; padding-bottom: 4px; }
+  display: grid; grid-template-columns: 1fr 1fr; gap: ${SP.xs};
 `;
 
-const DsBtn = styled.button<{ $v: keyof typeof btnVariants; $pulse?: boolean }>`
-  padding: 0 4px; border-radius: 8px; cursor: pointer;
+const DsBtn = styled.button<{ $v: keyof typeof BTN_COLOR; $pulse?: boolean }>`
+  ${p => btn(BTN_COLOR[p.$v])}
+  ${pixelBold}
+  color: ${C.text};
+  font-size: ${FONT.sm};
   display: flex; flex-direction: column;
   align-items: center; justify-content: center;
-  gap: 2px; height: 52px;
-  position: relative; overflow: hidden;
-  touch-action: manipulation; width: 100%;
+  gap: 2px; height: 80px; width: 100%;
+  padding: 0 2px;
+  overflow: hidden;
+  touch-action: manipulation;
   outline: none; appearance: none; -webkit-appearance: none;
+  ${focusRing}
+  ${focusRing}
 
-  &::before {
-    content: ""; position: absolute;
-    top: 0; left: 0; right: 0; height: 38%;
-    background: rgba(255,255,255,.09);
-    border-radius: 7px 7px 0 0; pointer-events: none;
+  ${p => p.$pulse && css`
+    & > * { animation: ${attn} 0.9s steps(1, end) infinite; }
+  `}
+
+  ${lMedia.phone}  {
+    /* 폰 가로에서 패널이 152px까지 줄어든다. 12px 창틀을 그대로 쓰면 버튼
+       한 칸(70px) 중 24px이 테두리라 글자가 들어갈 자리가 없다 → 얇은 창틀에
+       아이콘을 빼고 글자만 남긴다. */
+    ${p => btnThin(BTN_COLOR[p.$v])}
+    height: 48px;
+    padding: 0 2px;
   }
-
-  box-shadow: 0 5px 0 rgba(0,0,0,.55), inset 0 1px 0 rgba(255,255,255,.12);
-  ${p => btnVariants[p.$v]}
-  ${p => p.$pulse && p.$v === "wave" && css`animation: ${pulseGreen}  1.5s ease infinite;`}
-  ${p => p.$pulse && p.$v === "shop" && css`animation: ${pulseOrange} 1.5s ease infinite;`}
-
-  @media (hover: hover) {
-    &:not(:disabled):hover {
-      filter: brightness(1.2); transform: translateY(-1px);
-      box-shadow: 0 6px 0 rgba(0,0,0,.5), inset 0 1px 0 rgba(255,255,255,.14);
-    }
-  }
-  &:not(:disabled):active {
-    transform: translateY(4px);
-    box-shadow: 0 1px 0 rgba(0,0,0,.4), inset 0 1px 0 rgba(255,255,255,.08);
-    filter: brightness(0.88);
-  }
-  &:focus, &:focus-visible { outline: none; }
-
-  ${L1024} { height: 46px; border-radius: 7px; }
-  ${L768}  { height: 38px; gap: 1px; border-radius: 6px; }
 `;
 
 const Ico = styled.span`
-  font-size: 20px; line-height: 1; position: relative; z-index: 1;
-  ${L1024} { font-size: 17px; }
-  ${L768}  { font-size: 13px; }
+  font-size: ${ICON.lg}px; line-height: 1;
+  ${lMedia.phone} { display: none; }
 `;
 
 const Lbl = styled.span`
-  font-size: 9.5px; font-weight: 600; line-height: 1.2;
-  position: relative; z-index: 1; text-align: center;
-  width: 100%; padding: 0 3px;
+  font-size: ${FONT.sm};
+  line-height: 1.3;
+  text-align: center;
+  width: 100%;
   word-break: keep-all; overflow-wrap: break-word;
-  ${L1024} { font-size: 8px; }
-  ${L768}  { font-size: 7px; padding: 0 2px; }
+  ${lMedia.phone} { text-shadow: 1px 1px 0 ${C.textShadow}; }
+`;
+
+/** 라벨 뒤에 붙는 보유 수 등. 폰 가로에서는 줄바꿈이 한 줄 더 생겨 버튼을
+    넘치므로 감춘다 — 같은 값이 왼쪽 HUD 칸에 이미 있다. */
+const LblSub = styled.span`
+  ${lMedia.tablet} { display: none; }
 `;
 
 // ── Util buttons (☰ / ⚙️) ─────────────────────────────────────────
 
 const UtilRow = styled.div`
-  display: flex; gap: 5px;
+  display: flex; gap: ${SP.xs};
   /* [FIX] 메뉴·설정은 전체화면 모달(ModalOverlay, z-index 1000) 위에 남긴다.
      웨이브 보상·알바 마일스톤·진화 확인이 큐에 쌓여 있으면 오버레이가 HUD를 통째로 덮어
      "메뉴" 자체를 누를 수 없었다 → 모달을 전부 소화하기 전엔 게임에서 나갈 방법이 없었다.
      햄버거 백드롭(4000)/패널(4001)보다는 낮게 둬서 메뉴가 열리면 정상적으로 덮인다. */
   position: relative; z-index: 1100;
-  ${L768} { gap: 3px; }
 `;
 
+/** 작은 컨트롤이라 얇은 창틀. btn()의 12px 테두리는 32px 높이를 잡아먹는다. */
 const utilBase = css`
-  flex: 1; height: 32px; border-radius: 7px; cursor: pointer;
-  display: flex; align-items: center; justify-content: center; gap: 4px;
-  font-size: 12px; font-weight: 500; touch-action: manipulation;
-  @media (hover: hover) { &:hover { filter: brightness(1.15); } }
-  &:active { transform: scale(0.97); }
-  ${L1024} { height: 28px; font-size: 10px; }
-  ${L768}  { height: 24px; font-size: 9px; }
+  ${pixelBold}
+  flex: 1; min-height: 40px; min-width: 0;
+  display: flex; align-items: center; justify-content: center; gap: ${SP.xs};
+  font-size: ${FONT.sm};
+  color: ${C.text};
+  touch-action: manipulation;
+  outline: none; appearance: none; -webkit-appearance: none;
+  ${focusRing}
+  ${focusRing}
+  ${lMedia.phone} { min-height: 36px; }
 `;
 
 const HamBtn = styled.button`
+  ${btnThin('plain')}
   ${utilBase}
-  background: #1e2232; color: #9ab0cc;
-  border: 1.5px solid #303650;
-  box-shadow: 0 3px 0 rgba(0,0,0,.5);
-  outline: none; appearance: none; -webkit-appearance: none;
-  &:active { transform: translateY(2px); box-shadow: 0 1px 0 rgba(0,0,0,.4); }
-  &:focus, &:focus-visible { outline: none; }
 `;
 const CfgBtn = styled.button`
+  ${btnThin('blue')}
   ${utilBase}
-  background: #0e2240; color: #60b0ff;
-  border: 1.5px solid #1e3860;
-  box-shadow: 0 3px 0 rgba(0,0,0,.5);
-  outline: none; appearance: none; -webkit-appearance: none;
-  &:active { transform: translateY(2px); box-shadow: 0 1px 0 rgba(0,0,0,.4); }
-  &:focus, &:focus-visible { outline: none; }
 `;
 
 // ── Hamburger menu panel ──────────────────────────────────────────
@@ -1552,123 +1529,154 @@ const HamBackdrop = styled.div`
 `;
 
 const HamPanel = styled.div`
+  ${win('plain')}
   position: fixed;
   bottom: 72px; right: 14px;
   z-index: 4001;
-  background: linear-gradient(145deg, #1a1f2e, #0f1419);
-  border: 2px solid rgba(80, 140, 220, 0.32);
-  border-radius: 12px;
-  padding: 8px;
-  min-width: 164px;
-  display: flex; flex-direction: column; gap: 2px;
-  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.6);
-  ${L1024} { right: 10px; bottom: 60px; min-width: 148px; }
-  ${L768}  { right: 8px;  bottom: 52px; min-width: 130px; padding: 6px; }
+  padding: 0 0 ${SP.sm};
+  min-width: 208px;
+  display: flex; flex-direction: column;
+  ${lMedia.tablet} { right: 10px; bottom: 60px; min-width: 192px; }
+  ${lMedia.phone}  { right: 8px;  bottom: 52px; min-width: 176px; }
 `;
 
+/**
+ * 머리띠 — 창틀 '안쪽'을 꽉 채운다.
+ * 모달(ModalHeader)은 좌우를 -FRAME_W 만큼 당겨 창틀 위까지 덮는 전면 띠지만,
+ * 이 창은 200px 남짓이라 같은 방식을 쓰면 띠가 창틀 밖으로 삐져나와 보인다.
+ * HamPanel이 좌우 패딩을 두지 않으므로 마진 없이도 안쪽 끝까지 닿는다.
+ */
+const HamHdr = styled.div`
+  display: flex; align-items: center; justify-content: space-between;
+  gap: ${SP.sm};
+  margin: 0 0 ${SP.xs};
+  padding: ${SP.xs} ${SP.xs} ${SP.xs} ${SP.md};
+  background: ${C.panelSunk};
+  border-bottom: ${SCALE}px solid ${C.ink};
+`;
+const HamHdrTitle = styled.span`
+  ${pixelBold}
+  font-size: ${FONT.sm};
+  color: ${C.gold};
+`;
+
+/** 닫기 — 창틀을 씌우지 않는다. 글리프 하나로 충분하고, 테두리를 두르면
+    작은 컨트롤이 부풀어 올라 메뉴 항목보다 먼저 눈에 들어온다. */
 const HamClose = styled.button`
-  align-self: flex-end;
-  background: none; border: none;
-  color: #5a7090; font-size: 14px; cursor: pointer; padding: 0 4px; margin-bottom: 4px;
-  @media (hover: hover) { &:hover { color: #aabbcc; } }
+  ${pixelBold}
+  background: none; border: none; cursor: pointer;
+  width: 28px; height: 28px; padding: 0; flex-shrink: 0;
+  font-size: ${FONT.sm};
+  color: ${C.textDim};
+  display: flex; align-items: center; justify-content: center;
+  transition: none;
+  @media (hover: hover) { &:hover { color: ${C.text}; } }
+  ${focusRing}
 `;
 
+/** 목록 항목 — hover 배경 대신 ▶ 커서로 선택을 표시한다. */
 const HamItem = styled.button<{ $danger?: boolean }>`
-  background: none; border: none; border-radius: 7px;
-  padding: 8px 12px; font-size: 12px;
-  color: ${p => p.$danger ? "#e05050" : "#aabbd0"};
+  ${pixelText}
+  ${cursorMark}
+  background: none; border: none;
+  padding: ${SP.sm} ${SP.md} ${SP.sm} ${CURSOR_GUTTER}px;
+  font-size: ${FONT.sm};
+  color: ${p => (p.$danger ? C.red : C.text)};
   cursor: pointer; text-align: left;
-  display: flex; align-items: center; gap: 8px;
+  display: flex; align-items: center; gap: ${SP.sm};
   touch-action: manipulation;
-  @media (hover: hover) {
-    &:hover {
-      background: ${p => p.$danger ? "rgba(224,80,80,.1)" : "rgba(96,176,255,.08)"};
-      color: ${p => p.$danger ? "#ff7070" : "#d8e8f8"};
-    }
-  }
-  ${L1024} { font-size: 11px; padding: 7px 10px; }
-  ${L768}  { font-size: 10px; padding: 6px 8px; gap: 6px; }
+  @media (hover: hover) { &:hover { ${cursorOn} } }
+  &:focus-visible { outline: none; ${cursorOn} }
+  ${lMedia.phone} { padding: ${SP.xs} ${SP.sm} ${SP.xs} ${CURSOR_GUTTER}px; }
 `;
 
 const HamDivider = styled.div`
-  height: 1px; background: rgba(255,255,255,.06); margin: 2px 0;
+  height: ${SCALE}px; background: ${C.ink}; margin: ${SP.xs} 0;
 `;
 
 // ── Game over ─────────────────────────────────────────────────────
 
 const GameOverOverlay = styled.div`
   position: fixed; inset: 0;
-  background: rgba(0,0,0,.85);
+  background: rgba(20, 16, 26, 0.86);
   display: flex; justify-content: center; align-items: center;
   z-index: 9999;
 `;
 const GameOverModal = styled.div`
-  background: linear-gradient(135deg, #1a2332, #0f1419);
-  border: 2px solid rgba(255,100,100,.5);
-  border-radius: 20px; padding: 40px;
-  text-align: center; color: #e8edf3; max-width: 90vw;
-  ${L1024} { padding: 28px; border-radius: 16px; }
-  ${L768}  { padding: 20px; border-radius: 12px; }
+  ${win('red')}
+  ${pixelText}
+  padding: ${SP.xl};
+  text-align: center;
+  color: ${C.text};
+  max-width: 90vw;
+  font-size: ${FONT.sm};
+  ${lMedia.phone} { padding: ${SP.lg}; }
 `;
 const GameOverTitle = styled.h2`
-  font-size: 32px; color: #ff6464; margin-bottom: 16px;
-  ${L1024} { font-size: 24px; }
-  ${L768}  { font-size: 20px; }
+  ${pixelBold}
+  ${shadowLg}
+  font-size: ${FONT.display};
+  color: ${C.red};
+  margin-bottom: ${SP.lg};
+  ${lMedia.phone} { font-size: ${FONT.xl}; margin-bottom: ${SP.sm}; }
 `;
 const RestartBtn = styled.button`
-  margin-top: 20px; padding: 12px 32px; font-size: 16px; cursor: pointer;
-  border-radius: 12px; border: 2px solid rgba(76,175,255,.5);
-  background: rgba(76,175,255,.2); color: #4cafff; font-weight: bold;
-  transition: background .2s;
-  @media (hover: hover) { &:hover { background: rgba(76,175,255,.35); } }
+  ${btn('blue')}
+  ${pixelBold}
+  margin-top: ${SP.lg};
+  padding: ${SP.sm} ${SP.xl};
+  font-size: ${FONT.sm};
+  color: ${C.text};
 `;
 
 // ── Multiplayer loading ───────────────────────────────────────────
 
 const MultiLoadingOverlay = styled.div`
   position: fixed; inset: 0;
-  background: rgba(0,0,0,.92);
+  /* backdrop-filter 는 쓰지 않는다 — 도트 UI 뒤가 흐려지면 즉시 웹앱으로 읽힌다. */
+  background: rgba(20, 16, 26, 0.9);
   display: flex; justify-content: center; align-items: center;
-  z-index: 99999; backdrop-filter: blur(6px);
+  z-index: 99999;
 `;
 const MultiLoadingBox = styled.div`
-  display: flex; flex-direction: column; align-items: center; gap: 16px;
-  background: linear-gradient(145deg, #1a1a2e, #16213e);
-  border: 2px solid rgba(76,175,255,.4);
-  border-radius: 24px; padding: 48px 64px;
-  box-shadow: 0 0 40px rgba(76,175,255,.2);
-  ${L1024} { padding: 32px 40px; border-radius: 18px; gap: 12px; }
-  ${L768}  { padding: 24px 28px; border-radius: 14px; gap: 10px; }
-`;
-const spin = keyframes`from{transform:rotate(0deg);}to{transform:rotate(360deg);}`;
-const Spinner = styled.div`
-  width:56px;height:56px;
-  border:4px solid rgba(76,175,255,.2);border-top-color:#4cafff;
-  border-radius:50%;animation:${spin} .9s linear infinite;
-  ${L1024} { width: 44px; height: 44px; }
-  ${L768}  { width: 36px; height: 36px; border-width: 3px; }
+  ${win('blue')}
+  ${pixelText}
+  display: flex; flex-direction: column; align-items: center; gap: ${SP.lg};
+  padding: ${SP.xxl};
+  ${lMedia.phone} { padding: ${SP.xl}; gap: ${SP.md}; }
 `;
 const LoadTitle = styled.div`
-  font-size:22px;font-weight:bold;color:#fff;
-  ${L1024} { font-size: 18px; }
-  ${L768}  { font-size: 15px; }
+  ${pixelBold}
+  ${shadowLg}
+  font-size: ${FONT.xl};
+  color: ${C.text};
+  ${lMedia.phone} { font-size: ${FONT.sm}; }
 `;
 const LoadDesc  = styled.div`
-  font-size:14px;color:rgba(255,255,255,.6);text-align:center;
-  ${L1024} { font-size: 12px; }
-  ${L768}  { font-size: 10px; }
+  ${pixelText}
+  font-size: ${FONT.sm};
+  color: ${C.textSub};
+  text-align: center; line-height: 1.6;
 `;
-const dot = keyframes`
-  0%,80%,100%{transform:translateY(0);opacity:.4;}
-  40%{transform:translateY(-8px);opacity:1;}
+
+/**
+ * 로딩 표시 — 네모 블록 3개가 순서대로 켜진다.
+ * 예전에는 원형 스피너가 돌고 그 아래 둥근 점이 부드럽게 튀었는데, 원과 이징은
+ * 도트 UI에 없는 문법이다. steps()로 끊어 도트 게임의 대기 표시에 맞춘다.
+ */
+const dotStep = keyframes`
+  0%,  32%  { opacity: 1;    }
+  33%, 100% { opacity: 0.22; }
 `;
 const LoadDots = styled.div`
-  display:flex;gap:8px;margin-top:4px;
-  span{width:8px;height:8px;border-radius:50%;background:#4cafff;
-    animation:${dot} 1.2s ease-in-out infinite;
-    &:nth-child(1){animation-delay:0s;}
-    &:nth-child(2){animation-delay:.2s;}
-    &:nth-child(3){animation-delay:.4s;}}
+  display: flex; gap: ${SP.sm};
+  span {
+    width: 12px; height: 12px; background: ${C.blue};
+    animation: ${dotStep} 0.9s steps(1, end) infinite;
+    &:nth-child(1) { animation-delay: 0s;   }
+    &:nth-child(2) { animation-delay: 0.3s; }
+    &:nth-child(3) { animation-delay: 0.6s; }
+  }
 `;
 
 // ── Battle result toast ───────────────────────────────────────────
@@ -1680,33 +1688,30 @@ const toastSlide = keyframes`
   100%{opacity:0;transform:translateX(60px);}
 `;
 const ResultToast = styled.div<{ $won: boolean }>`
-  position:fixed;top:80px;right:20px;z-index:9997;
-  display:flex;align-items:center;gap:12px;
-  padding:14px 20px;border-radius:16px;min-width:220px;
-  background:${p=>p.$won
-    ?"linear-gradient(135deg,rgba(46,204,113,.95),rgba(39,174,96,.95))"
-    :"linear-gradient(135deg,rgba(231,76,60,.95),rgba(192,57,43,.95))"};
-  border:1px solid ${p=>p.$won?"rgba(46,204,113,.5)":"rgba(231,76,60,.5)"};
-  box-shadow:0 8px 32px ${p=>p.$won?"rgba(46,204,113,.4)":"rgba(231,76,60,.4)"};
-  animation:${toastSlide} 5s ease forwards;pointer-events:none;
-  ${L1024}{right:12px;min-width:180px;padding:10px 14px;border-radius:12px;}
-  ${L768} {right:8px; min-width:140px;padding:8px 10px; border-radius:10px;gap:8px;}
+  ${p => win(p.$won ? 'green' : 'red')}
+  ${pixelText}
+  position: fixed; top: 80px; right: 20px; z-index: 9997;
+  display: flex; align-items: center; gap: ${SP.md};
+  min-width: 240px;
+  animation: ${toastSlide} 5s ease forwards;
+  pointer-events: none;
+  ${lMedia.tablet} { right: 12px; min-width: 216px; }
+  ${lMedia.phone}  { right: 8px;  min-width: 192px; gap: ${SP.sm}; }
 `;
 const ToastIco   = styled.div`
-  font-size:28px;line-height:1;flex-shrink:0;
-  ${L1024}{font-size:22px;}
-  ${L768} {font-size:18px;}
+  font-size: 28px; line-height: 1; flex-shrink: 0;
+  ${lMedia.phone} { font-size: ${ICON.lg}px; }
 `;
-const ToastBody  = styled.div`display:flex;flex-direction:column;gap:3px;`;
+const ToastBody  = styled.div`display:flex;flex-direction:column;gap:${SP.xs};min-width:0;`;
 const ToastTitle = styled.div`
-  font-size:15px;font-weight:800;color:#fff;text-shadow:0 1px 4px rgba(0,0,0,0.3);
-  ${L1024}{font-size:13px;}
-  ${L768} {font-size:11px;}
+  ${pixelBold}
+  font-size: ${FONT.xl};
+  color: ${C.text};
+  ${lMedia.phone} { font-size: ${FONT.sm}; text-shadow: 1px 1px 0 ${C.textShadow}; }
 `;
 const ToastDetails = styled.div`display:flex;flex-direction:column;gap:2px;`;
 const ToastLine  = styled.div<{ $pos: boolean }>`
-  font-size:13px;font-weight:600;
-  color:${p=>p.$pos?"#fff":"rgba(255,255,255,.9)"};
-  ${L1024}{font-size:11px;}
-  ${L768} {font-size:10px;}
+  ${pixelText}
+  font-size: ${FONT.sm};
+  color: ${p => (p.$pos ? C.gold : C.textSub)};
 `;

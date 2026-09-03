@@ -4,7 +4,9 @@
 //  - light: 그 외 모든 보스(스토리 중간 보스 3·6·…·27 / 싱글·멀티) → 상단 작은 알림 배너
 // 게임 루프를 막지 않는 비차단(pointer-events:none) 오버레이.
 import React, { useEffect, useRef, useState } from 'react';
-import styled, { keyframes } from 'styled-components';
+import styled, { keyframes } from 'styled-components';
+import { C, FONT, SP, SCALE } from '../../styles/tokens';
+import { winThin, pixelBold } from '../../styles/pixel';
 import { Emoji } from '../shared/Emoji';
 import { useGameStore } from '../../store/gameStore';
 import { useTranslation } from '../../i18n';
@@ -128,8 +130,8 @@ const Band = styled.div`
   min-width: 460px;
   max-width: 88vw;
   background: linear-gradient(100deg, rgba(120,8,8,0) 0%, rgba(120,8,8,0.92) 14%, rgba(20,4,4,0.96) 100%);
-  border-top: 2px solid #f59e0b;
-  border-bottom: 2px solid #f59e0b;
+  border-top: ${SCALE}px solid ${C.gold};
+  border-bottom: ${SCALE}px solid ${C.gold};
   box-shadow: 0 0 40px rgba(245,158,11,0.35), inset 0 0 60px rgba(0,0,0,0.5);
   animation: ${bandIn} 3.4s cubic-bezier(0.16, 1, 0.3, 1) both;
   overflow: hidden;
@@ -169,7 +171,7 @@ const TextCol = styled.div`
 `;
 
 const Warn = styled.div`
-  font-size: 12px;
+  font-size: ${FONT.sm};
   font-weight: 800;
   letter-spacing: 3px;
   color: #fca5a5;
@@ -178,7 +180,7 @@ const Warn = styled.div`
 `;
 
 const BossName = styled.div`
-  font-size: 22px;
+  font-size: ${FONT.xl};
   font-weight: 900;
   color: #fff;
   text-shadow: 0 2px 6px rgba(0,0,0,0.8), 0 0 14px rgba(245,158,11,0.5);
@@ -189,7 +191,7 @@ const BossName = styled.div`
 `;
 
 const Taunt = styled.div`
-  font-size: 14px;
+  font-size: ${FONT.sm};
   font-style: italic;
   color: #fcd34d;
   text-shadow: 0 1px 3px rgba(0,0,0,0.8);
@@ -215,14 +217,10 @@ const LightRoot = styled.div`
 `;
 
 const LightBanner = styled.div`
+  ${winThin('gold')}
   display: flex;
   align-items: center;
-  gap: 9px;
-  padding: 5px 16px 5px 7px;
-  background: rgba(22,8,8,0.9);
-  border: 1px solid rgba(245,158,11,0.55);
-  border-radius: 999px;
-  box-shadow: 0 4px 18px rgba(0,0,0,0.45), 0 0 16px rgba(245,158,11,0.2);
+  gap: ${SP.sm};
   animation: ${lightIn} 1.9s cubic-bezier(0.16, 1, 0.3, 1) both;
 `;
 
@@ -233,10 +231,9 @@ const LightArt = styled.img`
 `;
 
 const LightText = styled.div`
-  font-size: 13px;
-  font-weight: 800;
-  letter-spacing: 1.5px;
-  color: #fcd34d;
-  text-shadow: 0 1px 2px rgba(0,0,0,0.7);
+  ${pixelBold}
+  font-size: ${FONT.sm};
+  color: ${C.gold};
+  text-shadow: 1px 1px 0 ${C.ink};
   white-space: nowrap;
 `;

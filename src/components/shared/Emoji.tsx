@@ -23,26 +23,36 @@ import {
   Landmark, Puzzle, Flower, Flower2, Hand, Cherry, Volume2,
   Sandwich, Snowflake, Egg, Candy, Tornado, type LucideIcon,
 } from "lucide-react";
+import { C as T } from "../../styles/tokens";
 
-// 팔레트 — 어두운 네이비 배경(#0d1520 계열)에서 잘 보이는 톤
+// 아이콘 색.
+// **UI 팔레트와 겹치는 색은 tokens.ts 에서 그대로 가져온다.** 예전에는 이 파일이
+// 자체 팔레트를 들고 있어서, 골드 코인 아이콘(#f0b840)과 그 옆 골드 글자(#ebc07c)가
+// 서로 다른 금색이었다. 아이콘만 살짝 뜨는 그 어긋남이 "AI가 디자인한 것 같다"의
+// 재료다 — 하나하나는 안 보이는데 화면 전체로는 정돈이 안 된 느낌을 준다.
+//
+// 아래 EXTRA 는 토큰에 대응이 없는 색이다. 아이콘은 사물을 가리키므로 UI 액센트
+// 6색보다 색이 더 필요하다(구리 트로피·나뭇잎·살구빛 음식 등). 이건 의도된 확장이고,
+// **UI 요소에는 쓰지 않는다** — 아이콘 글리프 전용.
 const C = {
-  gold:   "#f0b840",
-  silver: "#c4ccd6",
+  gold:   T.gold,
+  red:    T.red,
+  green:  T.green,
+  blue:   T.blue,
+  cyan:   T.cyan,
+  teal:   T.teal,
+  purple: T.purple,
+  white:  T.text,
+  gray:   T.textDim,
+  silver: T.plain,
+  // ── 아이콘 전용 확장색(토큰에 대응 없음) ──
   bronze: "#d08a4e",
   steel:  "#b0bec5",
-  red:    "#ef5350",
   orange: "#ff8a5c",
   yellow: "#ffd54a",
-  cyan:   "#4dd0e1",
-  blue:   "#5aa9f0",
   indigo: "#9aa6ef",
-  green:  "#66bb6a",
-  teal:   "#4db6ac",
   pink:   "#f06292",
-  purple: "#ba68c8",
   brown:  "#b08968",
-  gray:   "#90a4ae",
-  white:  "#e6edf3",
 };
 
 type Entry = [LucideIcon, string];

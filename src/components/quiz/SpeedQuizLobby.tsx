@@ -7,7 +7,10 @@ import { useCallback, useEffect, useState } from 'react';
 import styled from 'styled-components';
 import { ArrowLeft, RefreshCw, Plus, Users, Timer, ListOrdered, Languages, Shapes, Lock } from 'lucide-react';
 import { media } from '../../utils/responsive.utils';
+import { Screen as Root, ScreenBackBtn as BackBtn, ScreenBody, ScreenTitle as Title, ScreenTopBar as TopBar, SectionLabel } from '../shared/screen';
 import { useTranslation, translateIn } from '../../i18n';
+import { C, FONT, SP } from '../../styles/tokens';
+import { win, winThin, btn, btnThin, sunken, pixelText, pixelBold, focusRing } from '../../styles/pixel';
 import { quizRoomService, QUIZ_ROOM_ERROR, QUIZ_RTDB_TIMEOUT_MS } from '../../services/QuizRoomService';
 import { QUIZ_MAX_PLAYERS_PER_ROOM, QUIZ_MAX_ACTIVE_ROOMS } from '../../config/rtdbBudget';
 import { QuizRoomSummary, QuizRoomLang } from '../../types/quizRoom';
@@ -318,175 +321,209 @@ export const SpeedQuizLobby = ({ onEnterRoom, onExit }: Props) => {
   );
 };
 
-// ─── styled ──────────────────────────────────────────────────────────────────
-const ACCENT = '#22d3ee';
-const SURFACE = 'rgba(255,255,255,0.035)';
-const SURFACE_HI = 'rgba(255,255,255,0.06)';
-const BORDER = 'rgba(255,255,255,0.09)';
 
-const Root = styled.div`min-height: 100vh; background: #0b0f14; color: #e7edf3; display: flex; flex-direction: column;`;
-const TopBar = styled.header`
-  display: flex; align-items: center; justify-content: space-between; gap: 12px;
-  padding: 14px 22px; border-bottom: 1px solid ${BORDER};
-  position: sticky; top: 0; z-index: 20; background: rgba(11,15,20,0.85); backdrop-filter: blur(10px);
-  ${media.mobile} { padding: 11px 14px; }
-`;
-const BackBtn = styled.button`
-  flex: 0 0 auto; display: flex; align-items: center; gap: 5px;
-  background: transparent; border: 1px solid ${BORDER}; color: rgba(255,255,255,0.65);
-  padding: 7px 13px; border-radius: 9px; cursor: pointer; font-size: 13.5px; white-space: nowrap;
-  &:hover { background: ${SURFACE_HI}; color: #fff; }
-`;
-// 실시간 구독을 걷어낸 뒤로 목록을 갱신하는 **유일한** 수단이라 터치로 확실히 눌려야 한다.
-// 모바일에서 오히려 키우는 이유: 손가락 기준 권장 40px 이상(데스크톱은 커서라 34px로 충분).
+// ─── styled ──────────────────────────────────────────────────────────────────
+// 화면 껍데기(Root·TopBar·Title·BackBtn·SectionLabel)는 shared/screen 에서 온다.
+
+/** 새로고침처럼 글자 없이 아이콘만 들어가는 정사각 버튼. */
 const IconBtn = styled.button`
+  ${btnThin('plain')}
   flex: 0 0 auto; display: flex; align-items: center; justify-content: center;
-  width: 34px; height: 34px; border-radius: 9px; cursor: pointer;
+  width: 36px; height: 36px; padding: 0;
+  color: ${C.textSub};
   ${media.mobile} { width: 40px; height: 40px; }
-  background: transparent; border: 1px solid ${BORDER}; color: rgba(255,255,255,0.65);
-  &:hover:not(:disabled) { background: ${SURFACE_HI}; color: #fff; }
-  &:disabled { opacity: 0.4; cursor: default; }
+  ${focusRing}
 `;
-const Title = styled.h1`font-size: 17px; font-weight: 800; margin: 0; ${media.mobile} { font-size: 15px; }`;
-const Body = styled.main`
-  flex: 1; width: 100%; max-width: 620px; margin: 0 auto; padding: 22px 18px 48px;
-  display: flex; flex-direction: column; gap: 12px;
-  ${media.mobile} { padding: 16px 14px 40px; }
-`;
+
+/** 읽는 화면이라 좁은 폭. 여백은 공용 껍데기가 정한다. */
+const Body = styled(ScreenBody).attrs({ $narrow: true })``;
+
 const Card = styled.div`
-  display: flex; flex-direction: column; gap: 12px;
-  padding: 16px; border-radius: 14px; background: ${SURFACE}; border: 1px solid ${BORDER};
+  ${win('plain')}
+  display: flex; flex-direction: column; gap: ${SP.md};
 `;
-const CardTitle = styled.div`display: flex; align-items: center; gap: 7px; font-size: 15px; font-weight: 800;`;
-const OptRow = styled.div`display: flex; align-items: center; justify-content: space-between; gap: 10px; flex-wrap: wrap;`;
-const OptLabel = styled.div`display: flex; align-items: center; gap: 5px; font-size: 12.5px; font-weight: 700; color: rgba(255,255,255,0.55);`;
-const Segmented = styled.div`display: inline-flex; background: rgba(0,0,0,0.25); border: 1px solid ${BORDER}; border-radius: 10px; padding: 3px; gap: 2px;`;
+
+const CardTitle = styled.div`
+  ${pixelBold}
+  display: flex; align-items: center; gap: ${SP.xs};
+  font-size: ${FONT.sm};
+`;
+
+const OptRow = styled.div`display: flex; align-items: center; justify-content: space-between; gap: ${SP.sm}; flex-wrap: wrap;`;
+
+const OptLabel = styled.div`
+  display: flex; align-items: center; gap: ${SP.xs};
+  font-size: ${FONT.sm}; color: ${C.textSub};
+`;
+
+const Segmented = styled.div`display: inline-flex; gap: ${SP.xs};`;
+
 const SegBtn = styled.button<{ $active: boolean }>`
-  padding: 6px 12px; border-radius: 8px; border: none; cursor: pointer; font-size: 12.5px; font-weight: 700;
-  background: ${p => p.$active ? ACCENT : 'transparent'};
-  color: ${p => p.$active ? '#062430' : 'rgba(255,255,255,0.55)'};
-  &:hover { color: ${p => p.$active ? '#062430' : '#fff'}; }
+  ${p => btnThin(p.$active ? 'cyan' : 'plain')}
+  ${pixelBold}
+  padding: ${SP.xs} ${SP.sm};
+  font-size: ${FONT.sm};
+  color: ${p => (p.$active ? C.cyan : C.textSub)};
+  ${focusRing}
 `;
-const StepBlock = styled.div`display: flex; flex-direction: column; gap: 8px;`;
+
+const StepBlock = styled.div`display: flex; flex-direction: column; gap: ${SP.sm};`;
+
 const StepLabel = styled.div`
-  display: flex; align-items: center; gap: 6px;
-  font-size: 12.5px; font-weight: 700; color: rgba(255,255,255,0.55);
+  ${pixelBold}
+  display: flex; align-items: center; gap: ${SP.xs};
+  font-size: ${FONT.sm}; color: ${C.textSub};
 `;
+
+/** 단계 번호 — 시안 바탕에 잉크 글자라 그림자를 끈다. */
 const StepNo = styled.span`
-  flex: 0 0 auto; width: 17px; height: 17px; border-radius: 50%;
+  ${pixelBold}
+  flex: 0 0 auto; width: 18px; height: 18px;
   display: flex; align-items: center; justify-content: center;
-  font-size: 10.5px; font-weight: 800; color: #062430; background: ${ACCENT};
+  font-size: ${FONT.sm}; color: ${C.ink}; background: ${C.cyan};
+  border: 2px solid ${C.ink};
+  text-shadow: none;
 `;
+
 const LangBtn = styled.button<{ $active: boolean }>`
-  flex: 1 1 120px; padding: 11px 14px; border-radius: 10px; cursor: pointer;
-  font-size: 14px; font-weight: 800;
-  background: ${p => p.$active ? 'rgba(34,211,238,0.16)' : 'rgba(0,0,0,0.25)'};
-  border: 1px solid ${p => p.$active ? 'rgba(34,211,238,0.5)' : BORDER};
-  color: ${p => p.$active ? ACCENT : 'rgba(255,255,255,0.5)'};
-  &:hover { color: ${p => p.$active ? ACCENT : '#fff'}; }
+  ${p => btnThin(p.$active ? 'cyan' : 'plain')}
+  ${pixelBold}
+  flex: 1 1 120px; padding: ${SP.sm} ${SP.md};
+  font-size: ${FONT.sm};
+  color: ${p => (p.$active ? C.cyan : C.textSub)};
+  ${focusRing}
 `;
+
 const TextField = styled.input`
-  flex: 1; min-width: 0; padding: 10px 12px; border-radius: 9px;
-  font-size: 13.5px; font-weight: 600; color: #e7edf3; outline: none;
-  background: rgba(0,0,0,0.25); border: 1px solid ${BORDER};
-  &::placeholder { color: rgba(255,255,255,0.28); font-weight: 500; }
-  &:focus { border-color: rgba(34,211,238,0.45); }
+  ${sunken()}
+  ${pixelText}
+  flex: 1; min-width: 0; padding: ${SP.sm} ${SP.md};
+  font-size: ${FONT.sm}; color: ${C.text}; outline: none; box-sizing: border-box;
+  ${focusRing}
+  &::placeholder { color: ${C.textDim}; }
+  ${focusRing}
 `;
+
 const LockTag = styled.span`
   flex: 0 0 auto; display: flex; align-items: center;
-  color: rgba(251,191,36,0.9);
-`;
-const PassBox = styled.div`
-  display: flex; flex-direction: column; gap: 9px; padding: 13px;
-  border-radius: 12px; background: rgba(34,211,238,0.06); border: 1px solid rgba(34,211,238,0.25);
-`;
-const PassTitle = styled.div`display: flex; align-items: center; gap: 6px; font-size: 13px; font-weight: 700;`;
-const PassRow = styled.div`display: flex; flex-wrap: wrap; gap: 7px;`;
-const PassBtn = styled.button`
-  flex: 0 0 auto; padding: 0 16px; border-radius: 9px; border: none; cursor: pointer;
-  background: ${ACCENT}; color: #04222b; font-size: 13.5px; font-weight: 800;
-  &:disabled { opacity: 0.45; cursor: not-allowed; }
-`;
-const GhostBtn = styled.button`
-  flex: 0 0 auto; padding: 0 14px; border-radius: 9px; cursor: pointer;
-  background: transparent; border: 1px solid ${BORDER}; color: rgba(255,255,255,0.6);
-  font-size: 13px; font-weight: 700;
-  &:hover { color: #fff; }
+  color: ${C.gold};
 `;
 
-const KindGrid = styled.div`display: flex; flex-wrap: wrap; gap: 6px;`;
+const PassBox = styled.div`
+  ${winThin('cyan')}
+  display: flex; flex-direction: column; gap: ${SP.sm}; padding: ${SP.sm} ${SP.md};
+`;
+
+const PassTitle = styled.div`
+  ${pixelBold}
+  display: flex; align-items: center; gap: ${SP.xs};
+  font-size: ${FONT.sm};
+`;
+
+const PassRow = styled.div`display: flex; flex-wrap: wrap; gap: ${SP.xs};`;
+
+const PassBtn = styled.button`
+  ${btnThin('cyan')}
+  ${pixelBold}
+  flex: 0 0 auto; padding: ${SP.xs} ${SP.md};
+  color: ${C.cyan}; font-size: ${FONT.sm};
+  ${focusRing}
+`;
+
+const GhostBtn = styled.button`
+  ${btnThin('plain')}
+  ${pixelBold}
+  flex: 0 0 auto; padding: ${SP.xs} ${SP.md};
+  color: ${C.textSub}; font-size: ${FONT.sm};
+  ${focusRing}
+`;
+
+const KindGrid = styled.div`display: flex; flex-wrap: wrap; gap: ${SP.xs};`;
+
 const KindChip = styled.button<{ $active: boolean }>`
-  flex: 0 1 auto; padding: 8px 12px; border-radius: 9px; cursor: pointer;
-  font-size: 12.5px; font-weight: 700; white-space: nowrap;
-  background: ${p => p.$active ? 'rgba(34,211,238,0.14)' : 'rgba(0,0,0,0.25)'};
-  border: 1px solid ${p => p.$active ? 'rgba(34,211,238,0.45)' : BORDER};
-  color: ${p => p.$active ? ACCENT : 'rgba(255,255,255,0.45)'};
-  &:hover { color: ${p => p.$active ? ACCENT : '#fff'}; }
+  ${p => btnThin(p.$active ? 'cyan' : 'plain')}
+  ${pixelBold}
+  flex: 0 1 auto; padding: ${SP.xs} ${SP.sm};
+  font-size: ${FONT.sm}; white-space: nowrap;
+  color: ${p => (p.$active ? C.cyan : C.textSub)};
+  ${focusRing}
 `;
 
 const PrimaryBtn = styled.button`
-  padding: 13px; border-radius: 11px; border: none; cursor: pointer;
-  background: ${ACCENT}; color: #04222b; font-size: 15px; font-weight: 800;
-  &:disabled { opacity: 0.45; cursor: not-allowed; }
-  &:not(:disabled):hover { filter: brightness(1.08); }
+  ${btn('cyan')}
+  ${pixelBold}
+  padding: ${SP.sm};
+  color: ${C.text}; font-size: ${FONT.sm};
+  ${focusRing}
 `;
-const Hint = styled.div`font-size: 11.5px; color: rgba(255,255,255,0.4); line-height: 1.5; word-break: keep-all;`;
-const SectionLabel = styled.div`
-  font-size: 11px; font-weight: 700; letter-spacing: 0.12em; text-transform: uppercase;
-  color: rgba(255,255,255,0.35); margin-top: 8px;
-`;
+
+const Hint = styled.div`font-size: ${FONT.sm}; color: ${C.textDim}; word-break: keep-all;`;
+
+
 const RoomRow = styled.button<{ $full?: boolean }>`
-  display: flex; align-items: center; gap: 12px; text-align: left; cursor: pointer; color: #fff;
-  padding: 14px; border-radius: 12px; background: ${SURFACE}; border: 1px solid ${BORDER};
-  &:hover:not(:disabled) { background: ${SURFACE_HI}; border-color: rgba(34,211,238,0.35); }
-  /* 정원이 찬 방은 흐리게 두되 '있다'는 건 보인다 — 빈 목록으로 숨기면 왜 못 들어가는지 모른다. */
-  &:disabled { opacity: ${p => p.$full ? 0.55 : 0.5}; cursor: default; }
+  ${btn('plain')}
+  ${pixelText}
+  display: flex; align-items: center; gap: ${SP.md};
+  text-align: left; color: ${C.text};
+  padding: ${SP.sm} ${SP.md};
+  /* 정원이 찬 방은 흐리게 두되 있다는 건 보인다 — 빈 목록으로 숨기면 왜 못 들어가는지 모른다. */
+  &:disabled { opacity: ${p => (p.$full ? 0.55 : 0.5)}; cursor: default; }
+  ${focusRing}
 `;
 const FullTag = styled.span`
-  flex: 0 0 auto; font-size: 11px; font-weight: 800; color: #fbbf24;
-  background: rgba(251,191,36,0.14); border: 1px solid rgba(251,191,36,0.3);
-  padding: 3px 8px; border-radius: 6px; white-space: nowrap;
+  ${pixelBold}
+  flex: 0 0 auto; font-size: ${FONT.sm}; color: ${C.gold};
+  background: ${C.panelSunk};
+  border: 2px solid ${C.ink};
+  padding: 0 ${SP.xs}; white-space: nowrap;
 `;
 const BusyBox = styled.div`
-  font-size: 12px; font-weight: 600; line-height: 1.55; word-break: keep-all;
-  color: rgba(251,191,36,0.95); padding: 10px 12px; border-radius: 10px;
-  background: rgba(251,191,36,0.1); border: 1px solid rgba(251,191,36,0.28);
+  ${winThin('gold')}
+  font-size: ${FONT.sm}; word-break: keep-all;
+  color: ${C.gold}; padding: ${SP.sm} ${SP.md};
+  text-shadow: 1px 1px 0 ${C.textShadow};
 `;
 const RoomMain = styled.div`flex: 1; min-width: 0;`;
-const RoomHost = styled.div`display: flex; align-items: center; gap: 6px; margin-bottom: 2px; min-width: 0;`;
+const RoomHost = styled.div`display: flex; align-items: center; gap: ${SP.xs}; min-width: 0;`;
 const RoomHostName = styled.span`
-  flex: 1; min-width: 0; font-size: 14.5px; font-weight: 800;
+  ${pixelBold}
+  flex: 1; min-width: 0; font-size: ${FONT.sm};
   overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
 `;
 const LangTag = styled.span<{ $other: boolean }>`
-  flex: 0 0 auto; font-size: 10px; font-weight: 800; letter-spacing: 0.04em;
-  padding: 2px 6px; border-radius: 5px; white-space: nowrap;
+  ${pixelBold}
+  flex: 0 0 auto; font-size: ${FONT.sm};
+  padding: 0 ${SP.xs}; white-space: nowrap;
+  border: 2px solid ${C.ink};
+  background: ${C.panelSunk};
   /* 내 언어와 다르면 눈에 띄게 — 들어가서야 한글/영문 지문을 마주하지 않도록. */
-  color: ${p => p.$other ? '#fbbf24' : 'rgba(255,255,255,0.55)'};
-  background: ${p => p.$other ? 'rgba(251,191,36,0.14)' : 'rgba(255,255,255,0.07)'};
-  border: 1px solid ${p => p.$other ? 'rgba(251,191,36,0.3)' : 'transparent'};
+  color: ${p => (p.$other ? C.gold : C.textSub)};
 `;
-const RoomMeta = styled.div`font-size: 11.5px; color: rgba(255,255,255,0.42);`;
+const RoomMeta = styled.div`font-size: ${FONT.sm}; color: ${C.textDim};`;
 const RoomKinds = styled.div`
-  margin-top: 3px; font-size: 11px; color: rgba(34,211,238,0.75);
+  font-size: ${FONT.sm}; color: ${C.cyan};
   overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
 `;
 const LangNote = styled.div`
-  display: flex; align-items: center; gap: 6px;
-  font-size: 11.5px; color: rgba(255,255,255,0.45); line-height: 1.5; word-break: keep-all;
+  display: flex; align-items: center; gap: ${SP.xs};
+  font-size: ${FONT.sm}; color: ${C.textDim}; word-break: keep-all;
 `;
 const RoomCount = styled.div<{ $full?: boolean }>`
-  flex: 0 0 auto; display: flex; align-items: center; gap: 5px;
-  font-size: 13px; font-weight: 800; font-variant-numeric: tabular-nums;
-  color: ${p => p.$full ? 'rgba(251,191,36,0.9)' : ACCENT};
+  ${pixelBold}
+  flex: 0 0 auto; display: flex; align-items: center; gap: ${SP.xs};
+  font-size: ${FONT.sm}; font-variant-numeric: tabular-nums;
+  color: ${p => (p.$full ? C.gold : C.cyan)};
 `;
-const Dim = styled.div`font-size: 13px; color: rgba(255,255,255,0.38); text-align: center; padding: 20px 0;`;
+const Dim = styled.div`font-size: ${FONT.sm}; color: ${C.textDim}; text-align: center; padding: ${SP.lg} 0;`;
 const Notice = styled.div`
-  font-size: 13.5px; color: rgba(255,255,255,0.6); line-height: 1.6; text-align: center;
-  padding: 28px 18px; border-radius: 12px; background: ${SURFACE}; border: 1px solid ${BORDER};
+  ${winThin('plain')}
+  font-size: ${FONT.sm}; color: ${C.textSub}; text-align: center;
+  padding: ${SP.lg} ${SP.md};
   word-break: keep-all;
 `;
 const ErrBox = styled.div`
-  font-size: 12.5px; font-weight: 600; color: #fca5a5; padding: 11px 14px; border-radius: 10px;
-  background: rgba(248,113,113,0.1); border: 1px solid rgba(248,113,113,0.28); word-break: keep-all;
+  ${winThin('red')}
+  font-size: ${FONT.sm}; color: ${C.red}; padding: ${SP.sm} ${SP.md};
+  text-shadow: 1px 1px 0 ${C.textShadow};
+  word-break: keep-all;
 `;

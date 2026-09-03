@@ -7,10 +7,15 @@ status = 200
 for = "/*"
 [headers.values]
 Cross-Origin-Opener-Policy = "same-origin-allow-popups"
+# 응답의 Content-Type을 브라우저가 임의로 추측하지 않게 한다.
+# SPA 폴백(/* → index.html 200) 때문에 없는 파일이 text/html 200으로 오는데,
+# 그걸 스크립트·스타일로 실행해 보려는 시도를 막는다.
+X-Content-Type-Options = "nosniff"
+Referrer-Policy = "strict-origin-when-cross-origin"
 
 # ── 캐시 정책 ────────────────────────────────────────────────────────────────
 # Netlify 기본값은 `max-age=0, must-revalidate`라, 파일이 안 바뀌어도 방문할 때마다
-# 조건부 요청이 나간다(304라도 왕복 비용은 든다). 아래 두 규칙으로 재방문 트래픽을 없앤다.
+# 조건부 요청이 나간다(304라도 왕복 비용은 든다). 아래 규칙으로 재방문 트래픽을 없앤다.
 
 # 해시가 박힌 빌드 산출물 — 내용이 바뀌면 파일명이 바뀌므로 영구 캐시해도 안전.
 [[headers]]
@@ -28,5 +33,13 @@ Cache-Control = "public, max-age=2592000, stale-while-revalidate=86400"
 
 [[headers]]
 for = "/sounds/*"
+[headers.values]
+Cache-Control = "public, max-age=2592000, stale-while-revalidate=86400"
+
+# Galmuri11 두 벌(합계 671KB). 여기에 규칙이 없어 기본값 `max-age=0`이 걸렸고,
+# 폰트는 내용이 절대 안 바뀌는데도 방문할 때마다 조건부 요청이 나가고 있었다.
+# 이미지·사운드와 같은 정책(30일 + SWR) — 교체 시 파일명 변경 또는 캐시 비우기.
+[[headers]]
+for = "/fonts/*"
 [headers.values]
 Cache-Control = "public, max-age=2592000, stale-while-revalidate=86400"

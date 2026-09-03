@@ -68,6 +68,18 @@
   - 호스트가 나가면 그 시점 점수로 게임이 종료된다 — 정답과 출제권이 호스트에게만 있어 진행을 이어받을 수 없기 때문
 - **한글 우선 출제**: PokeAPI에 한글 도감설명이 없는 개체(9세대 등)는 자동 제외해 항상 한국어로 출제
 - **로컬 기록**: 종목별 최고 점수·최고 연속 정답을 LocalStorage(`pokemon-td-quiz-v1`)에 저장(본편/카드와 분리)
+- **💰 재화 보상** — 최고 정답 수 기준 **1회성 마일스톤**(미니 포켓 코인·별조각으로 지급). 최고점을 새로 넘길 때만 그 구간이 열리고, 한 번 받으면 끝이라 반복 파밍이 안 된다
+  | 정답 수 | 수능 모의고사 | 종목별(모의고사의 **1/5**) |
+  |---|---|---|
+  | 10 | 50 코인 | 10 코인 |
+  | 20 | 80 코인 · 5 조각 | 16 코인 · 1 조각 |
+  | 30 | 120 코인 · 10 조각 | 24 코인 · 2 조각 |
+  | 40 | 160 코인 · 15 조각 | 32 코인 · 3 조각 |
+  | 50 | 250 코인 · 25 조각 | 50 코인 · 5 조각 |
+  | **누적** | **660 코인 · 55 조각** | **종목당 132 코인 · 11 조각** |
+  - 종목을 1/5로 누른 이유: 15종목 × 전액이면 "쉬운 종목만 도는 게 이득"이 된다. 한국어 15종목을 전부 만점 내면 1,980코인 + 165조각이고, 이건 사실상 '전 종목 만점' 도전과제 보상이다
+- **🎯 랭킹은 50문항 완주만 집계**(`RANKED_ROUND_SIZE`). 점수가 '맞힌 개수'라서 문항 수가 섞이면 보드가 무의미해진다 — 10문항 만점(10점)과 50문항 40점이 같은 줄에 서기 때문. 10·30문항은 연습용이고 **개인 기록과 재화에는 그대로 반영**된다
+  - 개인 최고(`best`/`examBest`)와 랭킹용(`rankedBest`)을 저장 스키마에서 분리해 둔다. 개인 기록은 문항 수를 가리지 않으므로, 그대로 올리면 30문항으로 세운 점수가 50문항 보드에 올라간다
 - **🏆 랭킹 3종** (랭킹 모달 → 퀴즈 탭 안의 싱글 / 멀티 / 주간)
   | 보드 | 기준 | 경로 |
   |---|---|---|
@@ -77,6 +89,7 @@
   - 주간 보드는 종목마다 문서를 나누지 않고 **유저당 주 1문서의 `scores` 맵**에 모은다. 문서 수가 유저 수만큼만 늘고, `orderBy('scores.<보드>')`는 Firestore **자동 단일 필드 색인**으로 처리돼 `firestore.indexes.json` 추가가 필요 없다
   - 주가 바뀌면 경로가 바뀌어 **서버 개입 없이 리셋**되고, 2주 이상 지난 내 문서는 다음 쓰기 때 스스로 지운다(미니 포켓 시즌과 동일 패턴)
   - [FREE-TIER] 한 판 끝날 때마다 쓰지 않는다. **이번 주 최고를 경신했을 때만 1 write**(로컬 `weeklyBest`로 판정). 읽기도 지금 보고 있는 보드 하나만
+  - ⚠️ 주간 `speed` 보드는 **방의 문항 수(10/20/30)를 구분하지 않는다** — 30문항 방이 유리하다. 솔로 종목만 50문항으로 고정했고, 속도전은 점수 체계(시간 비례 + 등수)가 달라 같은 규칙을 적용하지 않았다
 - ⚠️ 퀴즈 데이터는 PokeAPI에서 실시간 로드 → **인터넷 연결 필요**
 
 ### 🗺️ 맵 시스템 (8종)
@@ -123,7 +136,7 @@
 ### 🏆 도전과 경쟁
 - **랭킹 시스템**: 맵별 최단 클리어 타임, 최고 웨이브, 업적 포인트(AP), 그리고 실시간 멀티플레이 ELO 레이팅을 기록하는 Firebase 리더보드
 - **전당 등록 (Hall of Fame)**: Wave 50 클리어 시 영구 보존 기록
-- **업적 시스템 (Achievement Points)**: 5단계 티어(Bronze/Silver/Gold/Diamond/Legendary), 총 **65종** 업적 (8카테고리)
+- **업적 시스템 (Achievement Points)**: 5단계 티어(Bronze/Silver/Gold/Diamond/Legendary), 총 **178종** 업적 (9카테고리) — 타입·세대·특수 시너지 업적이 자동 생성돼 109종을 차지한다
   - 웨이브(wave), 전투(combat), 경제(economy), 성장(growth), 수집(collect), 시너지(synergy), 도전(challenge), 멀티플레이(multi) 카테고리
   - 각 업적 달성 시 AP(Achievement Points) 누적 지급
 - **Wave 50 챌린지**: 싱글 플레이 궁극 목표 — 클리어 시 전당 등록 + 특수 모달
@@ -133,6 +146,18 @@
 - 게임 내 모든 텍스트, 업적명, 아이템명 번역 지원
 - **플로팅 설정 (Floating Settings)**: 로비, 게임 중 어디서든 화면 내 설정 버튼을 통해 BGM 볼륨, 속도, 언어 즉시 변경 및 **실시간 버그 제보** 가능
 - **오프라인 모드**: Firebase 무료 사용량 초과 등으로 로그인이 불가능할 때, 로그인 화면에서 "오프라인으로 플레이"로 진입하여 **싱글 플레이 / 스토리 모드를 로컬에서 정상 이용** 가능 (멀티플레이·랭킹·전당은 비활성). 모든 데이터는 LocalStorage에 보존
+
+---
+
+## 🎨 UI 디자인 시스템
+
+화면 문법은 **`docs/DESIGN.md`가 단일 기준**이다. 새 화면을 만들거나 고치기 전에 먼저 읽는다 — 금지 목록과 값 동기화 규칙이 거기 있다.
+
+- 값은 `src/styles/tokens.ts`, 믹스인은 `src/styles/pixel.ts`, 모달은 `src/components/shared/modal.styles.ts`, 라우트 화면 껍데기는 `src/components/shared/screen.tsx` 에서만 가져온다. **파일에 색과 화면 여백을 직접 쓰지 않는다.**
+- 창틀은 CSS가 아니라 **나인슬라이스 PNG**다(`scripts/genUiFrames.mjs` 생성). `tokens.ts` 의 면색이 PNG에도 구워지므로 팔레트를 고치면 `npm run ui:frames && npm run ui:check`.
+- 타입 색은 `TYPE_COLOR` 한 곳이 단일 출처다. 캔버스(`GameCanvas`)도 예외가 아니다 — 팔레트가 갈라지면 테라스탈 타일과 그 툴팁이 서로 다른 색이 된다.
+- 글꼴은 Galmuri11(자체 호스팅). 크기는 **12px이 하한, 그 위로는 4px 격자**(`FONT` 6칸). 아이콘 크기는 `ICON` 토큰을 따로 쓴다 — 아이콘은 글자가 아니다. 행간은 1.5 고정(받침 있는 한글이 잘린다).
+- 트레이딩 카드 3D·홀로, 팩 개봉 연출, 보스 컷인·비주얼 노벨은 **의도된 예외**다. 연출 레이어만 예외이고 글자·색은 이 자리들도 토큰을 쓴다.
 
 ---
 
@@ -170,8 +195,11 @@ src/
 │   │   ├── CardControls.tsx     # 공용 검색·정렬·타입/레어도 필터 바
 │   │   ├── PackOpening.tsx      # 팩 개봉 연출 (봉인→섬광→공개→요약)
 │   │   ├── DeckBuilder.tsx      # 6칸 덱 편성 + 실시간 시너지 계산 + 카드 상세(ⓘ)
+│   │   ├── BattleLogPanel.tsx   # 전투 로그·상태이상 뱃지
+│   │   ├── RandomBattle.tsx     # 카드 랜덤 대전 (비동기 PvP — 상대 덱 스냅샷)
 │   │   └── TrainerTower.tsx     # PvE 트레이너 타워 (층별 자동 전투 아레나)
 │   ├── game/
+│   │   ├── BossCutIn.tsx        # 보스 등장 컷인 연출
 │   │   ├── GameCanvas.tsx       # 메인 게임 캔버스 (Konva 기반 렌더링)
 │   │   └── GameLayout.tsx       # 싱글/멀티/스토리 전환 레이아웃 + 게임루프 제어
 │   ├── menu/
@@ -180,13 +208,16 @@ src/
 │   │   ├── Achievements.tsx          # 업적 목록 (카테고리 필터, AP 표시)
 │   │   ├── BugReport.tsx             # 버그 제보 모달
 │   │   ├── EvolutionConfirmModal.tsx # 진화 확인 모달
+│   │   ├── GameDocs.tsx              # 📄 자료실 — 데미지 계산식·확률·재화 수급표 (모드별 4탭)
 │   │   ├── HallOfFame.tsx            # 전당 등록 기록
+│   │   ├── PatchNotes.tsx            # 인게임 패치노트 (원본: docs/CHANGELOG.md)
 │   │   ├── Rankings.tsx              # 리더보드 (맵/AP/PVP 레이팅 랭킹)
 │   │   ├── Settings.tsx              # BGM/속도/언어 설정 및 버그 제보
 │   │   ├── SkillPicker.tsx           # 레벨업 스킬 선택
-│   │   ├── TutorialModal.tsx         # 게임 튜토리얼
+│   │   ├── TutorialModal.tsx         # 모드별 가이드 4종 (싱글/스토리/멀티/미니 포켓)
 │   │   ├── Wave50ClearModal.tsx      # 웨이브 50 클리어 모달
-│   │   └── WaveEndPicker.tsx         # 웨이브 종료 아이템 보상 선택
+│   │   ├── WaveEndPicker.tsx         # 웨이브 종료 아이템 보상 선택
+│   │   └── WorkMilestoneModal.tsx    # 알바 근무 마일스톤 달성 모달
 │   ├── multiplayer/
 │   │   ├── BattlePhaseUI.tsx         # PvP 배틀 페이즈 UI (4분할 관전 + 디버프)
 │   │   ├── MultiplayerGameOverModal.tsx # 멀티 게임 오버/순위 모달
@@ -194,27 +225,30 @@ src/
 │   │   ├── MultiplayerView.tsx       # 멀티 게임 뷰 (상대방 미니뷰 포함)
 │   │   └── TFTBattleArena.tsx        # TFT 스타일 배틀 아레나 시뮬레이션
 │   ├── shared/
-│   │   └── modal.styles.ts           # 공통 모달 스타일
+│   │   ├── Emoji.tsx                 # 이모지 → lucide 아이콘 매핑 (색은 tokens.ts에서)
+│   │   ├── Toast.tsx                 # 전역 토스트 (alert 대체)
+│   │   └── modal.styles.ts           # 공통 모달 스타일 (오버레이/창/헤더/푸터)
 │   ├── story/                        # 스토리 모드
 │   │   ├── StoryEnding.tsx           # 스토리 스테이지 클리어/엔딩 연출
 │   │   ├── StoryOpening.tsx          # 스토리 오프닝 대사 (타이핑 효과)
 │   │   └── StorySelector.tsx         # 챕터 및 스테이지 선택 UI
 │   ├── quiz/                         # 🧠 포켓몬 퀴즈 (PokeAPI 소재, 독립)
 │   │   ├── QuizView.tsx              # 퀴즈 허브 (문항 수·종목 선택·모의고사·최고점)
-│   │   └── QuizPlay.tsx              # 라운드 진행 엔진 (문제 렌더·채점·결과)
+│   │   ├── QuizPlay.tsx              # 라운드 진행 엔진 (문제 렌더·채점·결과·보상 정산)
+│   │   ├── SpeedQuizLobby.tsx        # 속도전 방 목록·방 만들기 (언어/종목/문항/시간)
+│   │   └── SpeedQuizRoom.tsx         # 속도전 방 (호스트 출제·채점, 실시간 순위판)
 │   └── ui/
 │       ├── FloatingSettings.tsx      # 플로팅 설정 버튼
 │       ├── MapSelector.tsx           # 맵 선택 화면 (8종 맵 카드)
 │       ├── PokemonManager.tsx        # 배치된 포켓몬 관리 패널
 │       ├── PokemonPicker.tsx         # 포켓몬 뽑기/구매 (레어도별 확률)
-│       ├── ShootingStarsBackground.tsx # 별똥별 배경 애니메이션
 │       ├── Shop.tsx                  # 인게임 상점 (아이템 구매/판매)
 │       ├── SynergyDetails.tsx        # 시너지 상세 툴팁
 │       └── SynergyTracker.tsx        # 활성 시너지 트래커
 ├── config/
 │   └── firebase.ts          # Firebase 초기화 + serverNow() + Presence
 ├── data/
-│   ├── achievements.ts      # 65종 업적 정의 (5티어, 8카테고리)
+│   ├── achievements.ts      # 178종 업적 정의 (5티어, 9카테고리 — 시너지분은 생성)
 │   ├── evolution.ts         # 진화 체인 + 메가진화(48종) + 거다이맥스(31종) + 합체(6종)
 │   ├── evolutionItems.ts    # 진화 아이템 정의
 │   ├── heldItems.ts         # 지닌도구 12종 정의 (열매/딜증가/피흡)
@@ -225,13 +259,17 @@ src/
 │   └── storyChapters.ts     # 스토리 모드 챕터, 대사, 보상, 난이도 데이터
 ├── game/
 │   ├── GameManager.ts       # 핵심 게임 루프 (적 이동, 타워 공격, 투사체, 웨이브 관리)
-│   └── WaveSystem.ts        # 웨이브 적 스폰 시스템 (보스 포함)
+│   ├── WaveSystem.ts        # 웨이브 적 스폰 시스템 (보스 포함)
+│   ├── arenaSim.ts          # PvP 아레나 전투 시뮬레이션 (본편/시뮬 공용)
+│   ├── balanceOverrides.ts  # 시뮬 튜너가 덮어쓰는 밸런스 노브
+│   └── towerFactory.ts      # 타워 생성·성장 재현 (본편/시뮬 공용 단일 출처)
 ├── hooks/
 │   ├── useCardState.ts      # 카드 모드 상태 구독 훅 (useSyncExternalStore)
 │   └── useCardMeta.ts       # 보유 카드 이름·타입·레어도 로더 (정렬/필터/검색·시너지 공용)
 ├── i18n/
 │   ├── I18nProvider.tsx     # React Context 기반 i18n 프로바이더 (자체 구현)
 │   ├── index.ts             # I18nProvider / useTranslation re-export
+│   ├── useTranslation.ts    # t() 훅
 │   └── translations/
 │       ├── en.json          # 영어 번역
 │       └── ko.json          # 한국어 번역
@@ -245,8 +283,11 @@ src/
 │   ├── MultiplayerService.ts # Firebase RTDB 기반 멀티플레이 동기화 (V7)
 │   ├── PvPBattleService.ts  # PvP 매치업 생성 및 배틀 결과 계산
 │   ├── QuizEngine.ts        # 퀴즈 문제 생성기 (종목별 생성·초성 변환·오답·셔플·프리페치)
-│   ├── QuizService.ts       # 퀴즈 로컬 영속 (종목별 최고점/최고 연속) LocalStorage
+│   ├── QuizRoomService.ts   # 속도전 방 (RTDB) — 생성·입장·출제·채점 전송
+│   ├── QuizService.ts       # 퀴즈 로컬 영속 (최고점·마일스톤 수령·랭킹 반영 판정) LocalStorage
+│   ├── QuotaGuard.ts        # Firebase 무료 쿼터 초과 감지 → 쓰기 차단
 │   ├── quizExamBank.ts      # 수능 모의고사 큐레이션 문제은행
+│   ├── battleRewards.ts     # 멀티 배틀 정산 (승리/연승/연패 위로금) 단일 출처
 │   ├── SaveService.ts       # LocalStorage 저장/불러오기 (업적, 통계)
 │   ├── SoundService.ts      # Howler.js 오디오 매니저
 │   └── StoryProgressService.ts # 스토리 모드 진행 상태 관리
@@ -256,12 +297,19 @@ src/
 │   ├── cards.ts             # 카드 모드 타입 (CardSaveState, Deck, PackType 등)
 │   ├── game.ts              # 핵심 타입 (GamePokemon, Enemy, Item, Achievement 등)
 │   ├── multiplayer.ts       # 멀티플레이 타입 (Room, PlayerGameState, GamePhase 등)
-│   └── quiz.ts              # 퀴즈 타입 (QuizKind, QuizQuestion, QuizSaveState)
+│   ├── quiz.ts              # 퀴즈 타입 (QuizKind, QuizSaveState, RANKED_ROUND_SIZE)
+│   └── quizRoom.ts          # 속도전 방 타입 (SpeedRoundPayload, QuizRoomPhase 등)
+├── styles/                  # 🎨 UI 디자인 시스템 단일 출처 — docs/DESIGN.md
+│   ├── tokens.ts            # 색·타이포·간격 토큰 (창틀 PNG와 값이 동기화돼야 함)
+│   └── pixel.ts             # 창틀/버튼/글자 믹스인 (win·btn·winThin·btnThin·sunken)
 └── utils/
     ├── abilities.ts         # 특성 효과 계산 (크리티컬, 흡혈, AOE, 속도, 탱크)
     ├── cardCatalog.ts       # 미니 포켓 도감/덱 공용 정렬·필터·검색 로직
     ├── facility.utils.ts    # 알바(숍·콘테스트) 규칙 단일 출처 (모드 판별·잠금·이동 시 누적 초기화)
     ├── responsive.utils.ts  # 반응형 유틸리티
+    ├── rng.ts               # 시드 난수 (본편/시뮬 공용 — 결정론 재현용)
+    ├── season.ts            # 주차 ID (월요일 00:00 KST 앵커) · 일자 ID
+    ├── sentry.ts            # 오류 리포팅 초기화
     ├── synergyManager.ts    # 시너지 계산 (타입/세대/특수 23종) + 스탯 버프 적용
     └── typeEffectiveness.ts # 18종 타입 상성 + STAB + 데미지 계산
 ```
@@ -276,8 +324,20 @@ public/images/
     ├── *.webp                # 맵 배경 1920px — 게임 캔버스·스토리 오프닝용
     └── thumbs/*.webp         # 맵 썸네일 480px — 맵 선택·스토리 챕터·멀티 로비 카드용
 
-assets-src/                   # 원본 PNG 보관 (public 밖 = 배포 제외). 재인코딩 방법은 assets-src/README.md
+public/sounds/
+└── dj-pikachu-00..11.m4a     # BGM 5분 청크 12개 (원본 57분을 -c copy 로 분할 — 음질 동일)
+
+public/fonts/
+└── Galmuri11(-Bold).woff2    # 도트 폰트. SIL OFL 1.1, 전문은 같은 폴더의 라이선스 파일
+
+assets-src/                   # 원본 PNG·BGM 보관 (public 밖 = 배포 제외). 재인코딩 방법은 assets-src/README.md
 ```
+
+> ⚠️ BGM은 **한 덩어리로 두면 안 됩니다.** 57분·36.8MB짜리 단일 파일이던 시절, 브라우저는
+> 재생이 시작되자마자 파일 전체를 당겼고 그 크기는 브라우저 디스크 캐시 상한을 넘어
+> 캐시에 얹히지도 않았습니다 — **재방문마다 처음부터 다시** 받아 세션당 약 70MB
+> (range 재요청까지 겹쳐 파일 크기의 2배)가 나갔습니다. 5분 청크로 나눈 뒤
+> 첫 방문 40초 기준 42.8MB → 6.0MB, 재방문 29.0MB → **0MB** 로 떨어졌습니다.
 
 > ⚠️ 화면에서 `` `/images/maps/${id}.png` `` 처럼 경로를 직접 조립하지 말 것.
 > `maps.ts`의 `mapThumbnailById()` / `MapData.backgroundImage`를 쓴다.
@@ -342,7 +402,18 @@ npm run dev
 npm run build   # tsc 타입 검사 후 vite 빌드 → dist/
 ```
 
-### 6. 퀴즈 번들 데이터 재생성 (선택)
+### 6. UI 창틀·화면 확인 (선택)
+```bash
+npm run ui:frames   # 나인슬라이스 창틀 PNG 재생성 (public/images/ui/)
+npm run ui:check    # tokens.ts ↔ 창틀 PNG 팔레트 동기화 검사
+npm run shots       # dev 서버를 돌며 주요 화면을 shots/ 에 캡처 (Playwright)
+```
+`ui:frames` 는 `tokens.ts` 의 면색을 고쳤을 때만 돌리면 된다 — 값이 어긋나면 패널 안에서
+색이 갈리는 이음매가 보인다. `shots` 는 `npm run dev` 를 먼저 띄운 뒤에 쓰고, 화면 이름을
+인자로 주면 그것만 찍는다(`npm run shots docsQuiz menu@mobile`). 빌드가 통과해도 창틀이
+삐져나오거나 글자가 잘리는 건 눈으로만 보인다.
+
+### 7. 퀴즈 번들 데이터 재생성 (선택)
 ```bash
 npm run quiz:data   # PokeAPI 전수 조사 → pokedexSpecialIndex.json + signatureMoves.json
 ```
@@ -364,8 +435,8 @@ npm run quiz:data   # PokeAPI 전수 조사 → pokedexSpecialIndex.json + signa
 ### 1. 프론트엔드 — Netlify
 `netlify.toml`에 SPA 리다이렉트, 팝업 로그인용 COOP 헤더, **캐시 정책**이 포함되어 있습니다.
 - `/assets/*` — 해시 파일명이라 `immutable` 1년
-- `/images/*`, `/sounds/*` — 30일 + `stale-while-revalidate`
-  > ⚠️ 이미지·사운드는 파일명이 고정입니다. 교체할 땐 **파일명을 바꾸거나** Netlify 캐시를
+- `/images/*`, `/sounds/*`, `/fonts/*` — 30일 + `stale-while-revalidate`
+  > ⚠️ 이미지·사운드·폰트는 파일명이 고정입니다. 교체할 땐 **파일명을 바꾸거나** Netlify 캐시를
   > 비워야 유저에게 반영됩니다.
 - **Git 연동(자동 배포)**: Netlify가 자체 빌드하므로 `VITE_FIREBASE_*` 변수를
   **Site configuration → Environment variables**에 등록해야 합니다(미등록 시 로그인 깨짐).

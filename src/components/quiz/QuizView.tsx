@@ -4,10 +4,13 @@
 import { useEffect, useMemo, useState } from 'react';
 import styled from 'styled-components';
 import { useNavigate } from 'react-router-dom';
-import { Ghost, Volume2, Search, Shapes, Swords, Hash, ScrollText, GraduationCap, Flame, Trophy, ChevronRight, Type, Languages, Combine, Lightbulb, Shuffle, Sparkles, SpellCheck, Zap } from 'lucide-react';
+import { Ghost, Volume2, Search, Shapes, Swords, Hash, ScrollText, GraduationCap, Flame, Trophy, ChevronRight, Type, Languages, Combine, Lightbulb, Shuffle, Sparkles, SpellCheck, Zap, ArrowLeft } from 'lucide-react';
 import { media } from '../../utils/responsive.utils';
+import { Screen as Root, ScreenBackBtn as BackBtn, ScreenBody as Body, ScreenTitle as Title, ScreenTopBar as TopBar, SectionLabel } from '../shared/screen';
 import { useTranslation } from '../../i18n';
-import { QuizKind, QuizMode, availableQuizKinds } from '../../types/quiz';
+import { C, FONT, SP, SCALE, ICON } from '../../styles/tokens';
+import { winThin, btn, btnThin, pixelText, pixelBold, focusRing } from '../../styles/pixel';
+import { QuizKind, QuizMode, availableQuizKinds, ROUND_SIZES, RANKED_ROUND_SIZE } from '../../types/quiz';
 import { quizService } from '../../services/QuizService';
 import { databaseService } from '../../services/DatabaseService';
 import { authService } from '../../services/AuthService';
@@ -33,7 +36,6 @@ const ICONS: Record<QuizKind, JSX.Element> = {
   signature: <Zap size={20} />,
 };
 
-const ROUND_SIZES = [10, 30, 50];
 
 export const QuizView = () => {
   const { t, language } = useTranslation();
@@ -75,12 +77,13 @@ export const QuizView = () => {
   return (
     <Root>
       <TopBar>
-        <BackBtn onClick={() => navigate('/')}>{t('quiz.hub.backToMenu')}</BackBtn>
+        <BackBtn onClick={() => navigate('/')}><ArrowLeft size={ICON.md} /> {t('quiz.hub.backToMenu')}</BackBtn>
         <Title>{t('quiz.menu.title')}</Title>
         <StreakChip><Flame size={13} /> {state.bestStreak}</StreakChip>
       </TopBar>
 
-      {/* 문항 수 — 전 모드 공통, 최상단에 독립 배치 */}
+      {/* 문항 수 — 전 모드 공통, 최상단에 독립 배치.
+          랭킹은 50문항만 집계하므로 그 사실을 고르는 자리에서 바로 알린다. */}
       <RoundBar>
         <RoundLabel>{t('quiz.hub.roundSize')}</RoundLabel>
         <Segmented>
@@ -90,6 +93,7 @@ export const QuizView = () => {
             </SegBtn>
           ))}
         </Segmented>
+        <RankRule>{t('quiz.hub.rankedRule', { n: RANKED_ROUND_SIZE })}</RankRule>
       </RoundBar>
 
       <Body>
@@ -142,122 +146,137 @@ export const QuizView = () => {
 };
 
 // ─── styled ──────────────────────────────────────────────────────────────────
-const ACCENT = '#22d3ee';
-const GOLD = '#f5c451';
-const SURFACE = 'rgba(255,255,255,0.035)';
-const SURFACE_HI = 'rgba(255,255,255,0.06)';
-const BORDER = 'rgba(255,255,255,0.09)';
+// docs/DESIGN.md 의 디자인 시스템을 따른다.
+// 걷어낸 것: 유리 카드(SURFACE/SURFACE_HI/BORDER 3종), uppercase eyebrow,
+//           둥근 아이콘 칩, 세그먼티드 컨트롤, backdrop-filter, → 셰브런,
+//           Tailwind 팔레트(#22d3ee #f5c451 …).
 
-const Root = styled.div`
-  min-height: 100vh; background: #0b0f14; color: #e7edf3;
-  display: flex; flex-direction: column;
-`;
-const TopBar = styled.header`
-  display: flex; align-items: center; justify-content: space-between; gap: 12px;
-  padding: 14px 22px; border-bottom: 1px solid ${BORDER};
-  position: sticky; top: 0; z-index: 20; background: rgba(11,15,20,0.85); backdrop-filter: blur(10px);
-  ${media.mobile} { padding: 11px 14px; }
-`;
-const BackBtn = styled.button`
-  flex: 0 0 auto; background: transparent; border: 1px solid ${BORDER}; color: rgba(255,255,255,0.65);
-  padding: 7px 13px; border-radius: 9px; cursor: pointer; font-size: 13.5px; white-space: nowrap;
-  transition: background 0.15s, color 0.15s;
-  &:hover { background: ${SURFACE_HI}; color: #fff; }
-  ${media.mobile} { padding: 6px 10px; font-size: 12px; }
-`;
-const Title = styled.h1`
-  font-size: 17px; font-weight: 800; margin: 0; letter-spacing: -0.01em;
-  min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
-  ${media.mobile} { font-size: 15px; }
-`;
 const StreakChip = styled.div`
-  flex: 0 0 auto; display: flex; align-items: center; gap: 5px; font-size: 13px; font-weight: 700;
-  color: #fb923c; background: rgba(251,146,60,0.1); border: 1px solid rgba(251,146,60,0.22);
-  padding: 5px 11px; border-radius: 8px;
-`;
-
-const Body = styled.main`
-  flex: 1; width: 100%; max-width: 960px; margin: 0 auto; padding: 24px 20px 56px;
-  display: flex; flex-direction: column; gap: 16px;
-  ${media.mobile} { padding: 18px 14px 44px; gap: 14px; }
+  ${winThin('gold')}
+  ${pixelBold}
+  flex: 0 0 auto; display: flex; align-items: center; gap: ${SP.xs};
+  font-size: ${FONT.sm}; color: ${C.gold};
+  white-space: nowrap;
 `;
 
 const ExamCard = styled.button`
-  display: flex; align-items: center; gap: 15px; text-align: left; cursor: pointer; color: #fff;
-  padding: 18px; border-radius: 14px;
-  background: ${SURFACE}; border: 1px solid rgba(245,196,81,0.28);
-  transition: background 0.15s, border-color 0.15s;
-  &:hover { background: ${SURFACE_HI}; border-color: rgba(245,196,81,0.5); }
-  ${media.mobile} { padding: 15px; gap: 12px; }
+  ${btn('gold')}
+  ${pixelText}
+  display: flex; align-items: center; gap: ${SP.md};
+  text-align: left; color: ${C.text};
+  padding: ${SP.md};
+  ${focusRing}
 `;
+
 const ExamIcon = styled.div`
-  flex: 0 0 auto; width: 50px; height: 50px; border-radius: 13px;
+  flex: 0 0 auto; width: 48px; height: 48px;
   display: flex; align-items: center; justify-content: center;
-  background: rgba(245,196,81,0.12); color: ${GOLD};
-  ${media.mobile} { width: 44px; height: 44px; }
+  background: ${C.panelSunk};
+  border: 2px solid ${C.ink};
+  color: ${C.gold};
 `;
+
+/** 속도전 카드 — 모의고사 카드와 같은 골격, 창틀 색만 다르다. */
 const SpeedCard = styled(ExamCard)`
-  border-color: rgba(34,211,238,0.28);
-  &:hover { border-color: rgba(34,211,238,0.5); }
+  ${btn('cyan')}
 `;
-const SpeedIcon = styled(ExamIcon)`background: rgba(34,211,238,0.12); color: ${ACCENT};`;
+
+const SpeedIcon = styled(ExamIcon)`
+  color: ${C.cyan};
+`;
+
 const ExamInfo = styled.div`flex: 1; min-width: 0;`;
-const ExamName = styled.div`font-size: 18px; font-weight: 800; margin-bottom: 3px; ${media.mobile} { font-size: 16px; }`;
-const ExamDesc = styled.div`font-size: 12.5px; color: rgba(255,255,255,0.5); line-height: 1.4;`;
-const ExamMeta = styled.div`display: flex; flex-direction: column; align-items: flex-end; gap: 5px; flex: 0 0 auto; ${media.mobile} { display: none; }`;
+
+const ExamName = styled.div`
+  ${pixelBold}
+  font-size: ${FONT.sm};
+`;
+
+const ExamDesc = styled.div`font-size: ${FONT.sm}; color: ${C.textSub};`;
+
+const ExamMeta = styled.div`
+  display: flex; flex-direction: column; align-items: flex-end; gap: ${SP.xs}; flex: 0 0 auto;
+  ${media.mobile} { display: none; }
+`;
+
 const MetaChip = styled.div<{ $gold?: boolean }>`
-  display: flex; align-items: center; gap: 4px; font-size: 11.5px; font-weight: 700; white-space: nowrap;
-  color: ${p => p.$gold ? GOLD : 'rgba(255,255,255,0.6)'};
+  ${pixelBold}
+  display: flex; align-items: center; gap: ${SP.xs};
+  font-size: ${FONT.sm}; white-space: nowrap;
+  color: ${p => (p.$gold ? C.gold : C.textSub)};
 `;
-const Chevron = styled.div`flex: 0 0 auto; color: rgba(255,255,255,0.3);`;
 
+/** → 셰브런은 걷어냈다(웹 관용구). 자리만 남겨 둔다. */
+const Chevron = styled.div`
+  display: none;
+`;
+
+/** 문항 수 바 — 랭킹 규칙이 같이 붙으므로 좁으면 다음 줄로 넘긴다. */
 const RoundBar = styled.div`
-  display: flex; align-items: center; justify-content: center; gap: 14px;
-  padding: 12px 20px; border-bottom: 1px solid ${BORDER};
-  background: rgba(255,255,255,0.02);
-  ${media.mobile} { padding: 10px 14px; gap: 10px; }
-`;
-const RoundLabel = styled.div`font-size: 13px; font-weight: 700; color: rgba(255,255,255,0.55);`;
-const Segmented = styled.div`
-  display: inline-flex; background: ${SURFACE}; border: 1px solid ${BORDER};
-  border-radius: 10px; padding: 3px; gap: 2px;
-`;
-const SegBtn = styled.button<{ $active: boolean }>`
-  padding: 7px 15px; border-radius: 8px; border: none; cursor: pointer;
-  font-size: 13px; font-weight: 700; transition: background 0.15s, color 0.15s;
-  background: ${p => p.$active ? ACCENT : 'transparent'};
-  color: ${p => p.$active ? '#062430' : 'rgba(255,255,255,0.55)'};
-  &:hover { color: ${p => p.$active ? '#062430' : '#fff'}; }
-  ${media.mobile} { padding: 6px 12px; font-size: 12px; }
+  display: flex; align-items: center; justify-content: center; gap: ${SP.md};
+  flex-wrap: wrap;
+  padding: ${SP.sm} ${SP.lg};
+  background: ${C.panelSunk};
+  border-bottom: ${SCALE}px solid ${C.ink};
+  ${media.mobile} { padding: ${SP.sm}; }
 `;
 
-const SectionLabel = styled.div`
-  font-size: 11px; font-weight: 700; letter-spacing: 0.12em; text-transform: uppercase;
-  color: rgba(255,255,255,0.35); margin-top: 6px;
+const RankRule = styled.div`
+  ${pixelText}
+  font-size: ${FONT.sm}; color: ${C.textDim};
+  word-break: keep-all;
 `;
+
+const RoundLabel = styled.div`
+  ${pixelBold}
+  font-size: ${FONT.sm}; color: ${C.textSub};
+`;
+
+const Segmented = styled.div`
+  display: inline-flex; gap: ${SP.xs};
+`;
+
+const SegBtn = styled.button<{ $active: boolean }>`
+  ${p => btnThin(p.$active ? 'cyan' : 'plain')}
+  ${pixelBold}
+  padding: ${SP.xs} ${SP.md};
+  font-size: ${FONT.sm};
+  color: ${p => (p.$active ? C.cyan : C.textSub)};
+  ${focusRing}
+`;
+
+
 const Grid = styled.div`
-  display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px;
+  display: grid; grid-template-columns: repeat(3, 1fr); gap: ${SP.sm};
   ${media.tablet} { grid-template-columns: repeat(2, 1fr); }
   ${media.mobile} { grid-template-columns: 1fr; }
 `;
 const QuizCard = styled.button`
-  display: flex; align-items: center; gap: 13px; text-align: left; cursor: pointer; color: #fff;
-  padding: 14px; border-radius: 12px; background: ${SURFACE}; border: 1px solid ${BORDER};
-  transition: background 0.15s, border-color 0.15s;
-  &:hover { background: ${SURFACE_HI}; border-color: rgba(34,211,238,0.35); }
+  ${btn('plain')}
+  ${pixelText}
+  display: flex; align-items: center; gap: ${SP.sm};
+  text-align: left; color: ${C.text};
+  padding: ${SP.sm};
+  ${focusRing}
 `;
 const IconTile = styled.div`
-  flex: 0 0 auto; width: 42px; height: 42px; border-radius: 11px;
+  flex: 0 0 auto; width: 40px; height: 40px;
   display: flex; align-items: center; justify-content: center;
-  background: rgba(34,211,238,0.1); color: ${ACCENT};
+  background: ${C.panelSunk};
+  border: 2px solid ${C.ink};
+  color: ${C.cyan};
 `;
 const CardInfo = styled.div`flex: 1; min-width: 0;`;
-const CardName = styled.div`font-size: 15px; font-weight: 800; margin-bottom: 2px;`;
-const CardDesc = styled.div`font-size: 11.5px; color: rgba(255,255,255,0.42); line-height: 1.35;`;
+const CardName = styled.div`
+  ${pixelBold}
+  font-size: ${FONT.md};
+`;
+const CardDesc = styled.div`font-size: ${FONT.sm}; color: ${C.textSub};`;
 const BestNum = styled.div`
-  flex: 0 0 auto; font-size: 15px; font-weight: 800; color: ${GOLD};
+  ${pixelBold}
+  flex: 0 0 auto; font-size: ${FONT.sm}; color: ${C.gold};
   font-variant-numeric: tabular-nums; min-width: 22px; text-align: right;
 `;
 const Note = styled.div`
-  font-size: 11.5px; color: rgba(255,255,255,0.3); text-align: center; margin-top: 6px;
+  font-size: ${FONT.sm}; color: ${C.textDim}; text-align: center; margin-top: ${SP.xs};
 `;

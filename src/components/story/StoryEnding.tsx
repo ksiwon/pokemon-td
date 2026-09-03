@@ -3,7 +3,9 @@
 // 다 보면 onComplete() 콜백 → 챕터 해금 + /story 이동
 
 import React, { useState, useEffect, useCallback, useRef } from 'react';
-import styled, { keyframes } from 'styled-components';
+import styled, { keyframes } from 'styled-components';
+import { C, FONT, SP, SCALE } from '../../styles/tokens';
+import { btnThin, pixelText, pixelBold, shadowLg, focusRing } from '../../styles/pixel';
 import { StoryChapter, DialogueLine } from '../../data/storyChapters';
 import { useTranslation } from '../../i18n';
 
@@ -223,18 +225,20 @@ const ClearEyebrow = styled.div`
 `;
 
 const ClearTitle = styled.h1<{ $accent: string }>`
-  font-size:clamp(24px,4vw,42px); font-weight:900;
-  color:#fff; margin:0;
-  text-shadow:0 0 48px ${p => p.$accent}66, 0 2px 12px rgba(0,0,0,0.6);
+  ${pixelBold}
+  font-size:clamp(24px,4vw,${FONT.display});
+  color:${C.gold}; margin:0;
+  text-shadow:${SCALE}px ${SCALE}px 0 ${C.ink};
 `;
 
 const SkipBtn = styled.button`
-  position:absolute; top:24px; right:32px;
-  background:rgba(0,0,0,0.4); border:1px solid rgba(255,255,255,0.15);
-  border-radius:6px; color:rgba(255,255,255,0.4);
-  padding:7px 14px; font-size:11px; font-weight:700; letter-spacing:0.12em;
-  cursor:pointer; transition:all 0.2s; z-index:10;
-  &:hover{background:rgba(255,255,255,0.1);color:rgba(255,255,255,0.7);}
+  ${btnThin('plain')}
+  ${pixelBold}
+  position:absolute; top:24px; right:32px; z-index:10;
+  color:${C.textSub};
+  padding:${SP.xs} ${SP.sm}; font-size:${FONT.sm};
+  text-shadow:1px 1px 0 ${C.textShadow};
+  ${focusRing}
 `;
 
 const CharacterArea = styled.div`
@@ -262,22 +266,29 @@ const TextBoxInner = styled.div`
   @media(max-width:600px){padding:18px 24px 16px;}
 `;
 
+/** uppercase + letter-spacing 을 걷어냈다 — 번역된 이름 그대로. */
 const SpeakerLabel = styled.div<{ $isEnemy: boolean }>`
-  font-size:13px; font-weight:800; letter-spacing:0.14em;
-  color:${p => p.$isEnemy ? '#f87171' : 'rgba(245,158,11,0.85)'};
-  text-transform:uppercase; margin-bottom:12px;
+  ${pixelBold}
+  font-size:${FONT.sm};
+  color:${p => p.$isEnemy ? C.red : C.gold};
+  text-shadow:1px 1px 0 ${C.textShadow};
+  margin-bottom:${SP.sm};
 `;
 
 const DialogueText = styled.p`
-  font-size:clamp(16px,2.2vw,20px);
-  line-height:1.75; color:#f0f4f8; margin:0;
-  font-weight:400; min-height:3.5em; letter-spacing:0.01em;
+  ${pixelText}
+  ${shadowLg}
+  font-size:${FONT.xl};
+  color:${C.text}; margin:0;
+  min-height:3.5em;
+  word-break:keep-all;
 `;
 
+/** 타이핑 커서 — 각진 블록. */
 const Cursor = styled.span`
-  display:inline-block; width:2px; height:1.1em;
-  background:rgba(245,158,11,0.8);
-  vertical-align:text-bottom; margin-left:3px;
+  display:inline-block; width:8px; height:1em;
+  background:${C.gold};
+  vertical-align:text-bottom; margin-left:${SP.xs};
   animation:${blink} 0.55s step-end infinite;
 `;
 
@@ -288,14 +299,17 @@ const ProgressRow = styled.div`
   @media(max-width:600px){padding:10px 24px 16px;}
 `;
 
+/** 진행 표시 — 원이 아니라 네모. */
 const ProgDot = styled.div<{ $active: boolean; $past: boolean }>`
-  width:6px; height:6px; border-radius:50%;
-  background:${p => p.$active ? '#f59e0b' : p.$past ? 'rgba(245,158,11,0.3)' : 'rgba(255,255,255,0.1)'};
-  transition:background 0.25s;
+  width:8px; height:8px;
+  border:1px solid ${C.ink};
+  background:${p => p.$active ? C.gold : p.$past ? C.divider : C.panelSunk};
 `;
 
 const AdvanceCue = styled.div<{$visible?:boolean}>`
+  ${pixelBold}
   opacity:${p=>p.$visible===false?0:1};transition:opacity 0.3s;
-  margin-left:auto; font-size:12px; font-weight:700;
-  color:rgba(255,255,255,0.3); letter-spacing:0.1em;
+  margin-left:auto; font-size:${FONT.sm};
+  color:${C.textSub};
+  text-shadow:1px 1px 0 ${C.ink};
 `;

@@ -40,6 +40,8 @@ import { authService } from '../../services/AuthService';
 import { pvpBattleService, deriveBattleSeed, buildMatchId } from '../../services/PvPBattleService';
 import { TFTBattleArena, TFTBattleResult } from './TFTBattleArena';
 import { useTranslation } from '../../i18n';
+import { C, FONT, SP, SCALE, ICON } from '../../styles/tokens';
+import { win, winThin, btn, sunken, pixelText, pixelBold, shadowLg, focusRing } from '../../styles/pixel';
 
 interface BattlePhaseUIProps {
   roomId: string;
@@ -65,53 +67,223 @@ const pulse = keyframes`
   50% { transform: scale(1.05); }
 `;
 
-const BattleOverlay = styled.div`position:fixed;inset:0;z-index:1000;background:rgba(0,0,0,0.85);display:flex;align-items:center;justify-content:center;`;
-const BattleContainer = styled.div`background:linear-gradient(135deg,#1a1a2e 0%,#16213e 50%,#0f3460 100%);border:2px solid rgba(255,255,255,0.15);border-radius:20px;padding:32px;min-width:320px;max-width:90vw;width:100%;text-align:center;animation:${fadeIn} 0.4s ease;box-shadow:0 0 60px rgba(0,100,255,0.3);${lMedia.phoneSm}{padding:20px;border-radius:14px;}`;
-const VSHeader = styled.div`margin-bottom:24px;`;
-const RoundText = styled.div`color:rgba(255,255,255,0.5);font-size:12px;letter-spacing:3px;text-transform:uppercase;margin-bottom:4px;`;
-const BattleTitle = styled.div`color:#fff;font-size:28px;font-weight:900;letter-spacing:4px;text-shadow:0 0 20px rgba(0,150,255,0.8);${lMedia.phoneSm}{font-size:20px;letter-spacing:2px;}`;
-const MatchupContainer = styled.div`display:flex;align-items:center;justify-content:center;gap:24px;margin:24px 0;${lMedia.phoneSm}{gap:12px;margin:16px 0;}`;
-const PlayerCard = styled.div<{ $isMe?: boolean }>`flex:1;padding:16px;background:${p => p.$isMe ? 'linear-gradient(135deg,rgba(0,100,255,0.2),rgba(0,50,150,0.1))' : 'linear-gradient(135deg,rgba(255,50,50,0.2),rgba(150,0,0,0.1))'};border:1px solid ${p => p.$isMe ? 'rgba(0,150,255,0.4)' : 'rgba(255,50,50,0.4)'};border-radius:12px;`;
-const PlayerAvatar = styled.div`width:48px;height:48px;background:rgba(255,255,255,0.1);border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:20px;font-weight:bold;color:#fff;margin:0 auto 8px;`;
-const PlayerName = styled.div`color:rgba(255,255,255,0.9);font-size:14px;font-weight:600;`;
-const ResultText = styled.div<{ $win: boolean }>`font-size:18px;font-weight:900;margin-top:8px;color:${p => p.$win ? '#4ade80' : '#f87171'};`;
-const VSBadge = styled.div`font-size:24px;font-weight:900;color:#fbbf24;text-shadow:0 0 10px rgba(251,191,36,0.5);`;
-const StatusMessage = styled.div`color:rgba(255,255,255,0.7);font-size:14px;margin-top:16px;`;
+// ─── Styled Components ────────────────────────────────────────────────────────
+// docs/DESIGN.md 의 디자인 시스템을 따른다.
+// 걷어낸 것: 그라디언트 패널·버튼·텍스트 클리핑, 유리 카드, 원형 아바타,
+//           uppercase eyebrow, 글로우 그림자, 둥근 모서리, 11~12px 미만 글자.
 
-const TFTArenaOverlay = styled.div`position:fixed;inset:0;z-index:1000;background:rgba(0,0,0,0.95);display:flex;flex-direction:column;`;
-const ByeOverlay = styled.div`position:fixed;inset:0;z-index:1000;background:rgba(0,0,0,0.85);display:flex;align-items:center;justify-content:center;`;
-const ByeContainer = styled.div`background:linear-gradient(135deg,#1a2a1a 0%,#0f2e0f 50%,#1a3a1a 100%);border:2px solid rgba(74,222,128,0.3);border-radius:20px;padding:48px 56px;text-align:center;animation:${fadeIn} 0.4s ease;box-shadow:0 0 60px rgba(74,222,128,0.2);max-width:90vw;${lMedia.phoneSm}{padding:28px 20px;border-radius:14px;}`;
-const ByeIcon = styled.div`font-size:64px;margin-bottom:16px;animation:${pulse} 2s ease-in-out infinite;`;
-const ByeTitle = styled.div`color:#4ade80;font-size:28px;font-weight:900;letter-spacing:3px;margin-bottom:12px;text-shadow:0 0 20px rgba(74,222,128,0.6);${lMedia.phoneSm}{font-size:20px;letter-spacing:1px;}`;
-const ByeSubtitle = styled.div`color:rgba(255,255,255,0.8);font-size:16px;line-height:1.6;margin-bottom:20px;`;
-const ByeBonusBox = styled.div`background:rgba(74,222,128,0.1);border:1px solid rgba(74,222,128,0.3);border-radius:12px;padding:12px 20px;color:#4ade80;font-size:14px;font-weight:600;`;
-const ByeCountdown = styled.div`color:rgba(255,255,255,0.4);font-size:12px;margin-top:16px;`;
+const BattleOverlay = styled.div`
+  position: fixed; inset: 0; z-index: 1000;
+  background: rgba(20, 16, 26, 0.86);
+  display: flex; align-items: center; justify-content: center;
+  padding: ${SP.md};
+`;
+const BattleContainer = styled.div`
+  ${win('blue')}
+  ${pixelText}
+  color: ${C.text};
+  padding: ${SP.xl};
+  min-width: 320px; max-width: 90vw; width: 100%;
+  text-align: center;
+  animation: ${fadeIn} 0.4s ease;
+  ${lMedia.phoneSm} { padding: ${SP.md}; }
+`;
+const VSHeader = styled.div`margin-bottom: ${SP.lg};`;
+/** uppercase + letter-spacing 3px 를 걷어냈다. */
+const RoundText = styled.div`
+  color: ${C.textSub}; font-size: ${FONT.sm}; margin-bottom: ${SP.xs};
+`;
+const BattleTitle = styled.div`
+  ${pixelBold}
+  color: ${C.text}; font-size: ${FONT.xl};
+  ${shadowLg}
+  ${lMedia.phoneSm} { font-size: ${FONT.sm}; }
+`;
+const MatchupContainer = styled.div`
+  display: flex; align-items: center; justify-content: center;
+  gap: ${SP.lg}; margin: ${SP.lg} 0;
+  ${lMedia.phoneSm} { gap: ${SP.sm}; margin: ${SP.md} 0; }
+`;
+const PlayerCard = styled.div<{ $isMe?: boolean }>`
+  ${p => winThin(p.$isMe ? 'blue' : 'red')}
+  flex: 1; padding: ${SP.md};
+`;
+/** 아바타 — 원이 아니라 네모. */
+const PlayerAvatar = styled.div`
+  ${pixelBold}
+  width: 44px; height: 44px;
+  background: ${C.panelSunk};
+  border: 2px solid ${C.ink};
+  display: flex; align-items: center; justify-content: center;
+  font-size: ${FONT.sm}; color: ${C.text}; margin: 0 auto ${SP.sm};
+  text-shadow: none;
+`;
+const PlayerName = styled.div`
+  ${pixelBold}
+  color: ${C.text}; font-size: ${FONT.sm};
+`;
+const ResultText = styled.div<{ $win: boolean }>`
+  ${pixelBold}
+  font-size: ${FONT.sm}; margin-top: ${SP.sm};
+  color: ${p => (p.$win ? C.green : C.red)};
+`;
+const VSBadge = styled.div`
+  ${pixelBold}
+  font-size: ${FONT.xl}; color: ${C.gold};
+  ${shadowLg}
+`;
+const StatusMessage = styled.div`
+  color: ${C.textSub}; font-size: ${FONT.sm}; margin-top: ${SP.md};
+`;
 
-const SummaryOverlay = styled.div`position:fixed;inset:0;z-index:2000;background:rgba(0,0,0,0.9);display:flex;align-items:center;justify-content:center;animation:${fadeIn} 0.4s ease;`;
-const SummaryContainer = styled.div`background:linear-gradient(145deg,#0d0d1a 0%,#111827 100%);border:2px solid rgba(255,255,255,0.12);border-radius:24px;padding:32px;width:600px;max-width:95vw;max-height:85vh;overflow-y:auto;box-shadow:0 0 80px rgba(100,50,255,0.3);${lMedia.phoneSm}{padding:16px;border-radius:14px;}`;
-const SummaryHeader = styled.div`text-align:center;margin-bottom:28px;`;
-const SummaryRound = styled.div`color:rgba(255,255,255,0.4);font-size:11px;letter-spacing:4px;text-transform:uppercase;margin-bottom:4px;`;
-const SummaryTitle = styled.div`color:#fff;font-size:26px;font-weight:900;background:linear-gradient(135deg,#a78bfa,#60a5fa);-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;`;
-const SummaryMatchList = styled.div`display:flex;flex-direction:column;gap:12px;margin-bottom:24px;`;
-const SummaryMatchCard = styled.div<{ $isMyMatch?: boolean }>`background:${p => p.$isMyMatch ? 'rgba(99,102,241,0.1)' : 'rgba(255,255,255,0.04)'};border:1px solid ${p => p.$isMyMatch ? 'rgba(99,102,241,0.4)' : 'rgba(255,255,255,0.08)'};border-radius:12px;padding:14px 18px;display:flex;align-items:center;gap:12px;flex-wrap:wrap;${lMedia.phoneSm}{padding:10px 12px;gap:8px;}`;
-const MatchPlayerName = styled.div<{ $winner?: boolean }>`flex:1;font-size:14px;font-weight:600;color:${p => p.$winner ? '#fbbf24' : 'rgba(255,255,255,0.7)'};text-align:center;`;
-const MatchVS = styled.div`color:rgba(255,255,255,0.3);font-size:12px;font-weight:700;min-width:28px;text-align:center;`;
-const MatchResult = styled.div<{ $winner?: boolean }>`font-size:18px;min-width:28px;text-align:center;`;
-const MatchStats = styled.div`flex:1;text-align:center;color:rgba(255,255,255,0.4);font-size:11px;line-height:1.5;`;
-const ByeCard = styled.div`background:rgba(74,222,128,0.06);border:1px solid rgba(74,222,128,0.2);border-radius:12px;padding:14px 18px;display:flex;align-items:center;justify-content:center;gap:10px;color:#4ade80;font-size:14px;font-weight:600;`;
-const SummaryStandings = styled.div`background:rgba(255,255,255,0.03);border:1px solid rgba(255,255,255,0.07);border-radius:12px;padding:16px;margin-bottom:20px;`;
-const StandingsTitle = styled.div`color:rgba(255,255,255,0.4);font-size:11px;letter-spacing:2px;text-transform:uppercase;margin-bottom:12px;`;
-const StandingRow = styled.div<{ $isMe?: boolean }>`display:flex;align-items:center;gap:12px;padding:8px 10px;border-radius:8px;background:${p => p.$isMe ? 'rgba(99,102,241,0.15)' : 'transparent'};margin-bottom:4px;`;
-const StandingRank = styled.div`color:rgba(255,255,255,0.3);font-size:13px;font-weight:700;min-width:24px;`;
-const StandingName = styled.div<{ $isMe?: boolean }>`flex:1;font-size:13px;font-weight:600;color:${p => p.$isMe ? '#a78bfa' : 'rgba(255,255,255,0.8)'};`;
-const StandingLives = styled.div`color:#f87171;font-size:13px;font-weight:600;`;
-const StandingGold = styled.div`color:#fbbf24;font-size:13px;font-weight:600;`;
-const SummaryCloseBtn = styled.button`width:100%;padding:14px;border-radius:12px;border:none;cursor:pointer;font-size:16px;font-weight:700;background:linear-gradient(135deg,#4f46e5,#7c3aed);color:#fff;transition:background 0.2s;@media(hover:hover){&:hover{background:linear-gradient(135deg,#5a52f0,#8b47f8);transform:translateY(-1px);box-shadow:0 8px 24px rgba(79,70,229,0.4);}}`;
+const TFTArenaOverlay = styled.div`
+  position: fixed; inset: 0; z-index: 1000;
+  background: ${C.bg};
+  display: flex; flex-direction: column;
+`;
+const ByeOverlay = styled.div`
+  position: fixed; inset: 0; z-index: 1000;
+  background: rgba(20, 16, 26, 0.86);
+  display: flex; align-items: center; justify-content: center;
+  padding: ${SP.md};
+`;
+const ByeContainer = styled.div`
+  ${win('green')}
+  ${pixelText}
+  color: ${C.text};
+  padding: ${SP.xxl};
+  text-align: center;
+  animation: ${fadeIn} 0.4s ease;
+  max-width: 90vw;
+  ${lMedia.phoneSm} { padding: ${SP.lg}; }
+`;
+const ByeIcon = styled.div`font-size: 56px; line-height: 1; margin-bottom: ${SP.md}; animation: ${pulse} 2s ease-in-out infinite;`;
+const ByeTitle = styled.div`
+  ${pixelBold}
+  color: ${C.green}; font-size: ${FONT.xl}; margin-bottom: ${SP.sm};
+  ${shadowLg}
+  ${lMedia.phoneSm} { font-size: ${FONT.sm}; }
+`;
+const ByeSubtitle = styled.div`
+  color: ${C.textSub}; font-size: ${FONT.sm}; margin-bottom: ${SP.lg};
+`;
+const ByeBonusBox = styled.div`
+  ${winThin('green')}
+  ${pixelBold}
+  color: ${C.green}; font-size: ${FONT.sm};
+`;
+const ByeCountdown = styled.div`color: ${C.textDim}; font-size: ${FONT.sm}; margin-top: ${SP.md};`;
 
-const MyResultBanner = styled.div<{ $win: boolean }>`text-align:center;margin-bottom:20px;padding:16px;border-radius:12px;background:${p => p.$win ? 'linear-gradient(135deg,rgba(74,222,128,0.15),rgba(16,185,129,0.08))' : 'linear-gradient(135deg,rgba(248,113,113,0.15),rgba(239,68,68,0.08))'};border:1px solid ${p => p.$win ? 'rgba(74,222,128,0.3)' : 'rgba(248,113,113,0.3)'};`;
-const MyResultIcon = styled.div`font-size:36px;margin-bottom:4px;`;
-const MyResultText = styled.div<{ $win: boolean }>`font-size:20px;font-weight:900;color:${p => p.$win ? '#4ade80' : '#f87171'};`;
-const MyResultSub = styled.div`color:rgba(255,255,255,0.5);font-size:12px;margin-top:4px;`;
+const SummaryOverlay = styled.div`
+  position: fixed; inset: 0; z-index: 2000;
+  background: rgba(20, 16, 26, 0.9);
+  display: flex; align-items: center; justify-content: center;
+  animation: ${fadeIn} 0.4s ease;
+  padding: ${SP.md};
+`;
+const SummaryContainer = styled.div`
+  ${win('purple')}
+  ${pixelText}
+  color: ${C.text};
+  padding: ${SP.xl};
+  width: 600px; max-width: 95vw; max-height: 85vh; overflow-y: auto;
+
+  &::-webkit-scrollbar { width: 10px; }
+  &::-webkit-scrollbar-track { background: ${C.panelSunk}; border: ${SCALE}px solid ${C.ink}; }
+  &::-webkit-scrollbar-thumb { background: ${C.divider}; border: ${SCALE}px solid ${C.ink}; }
+
+  ${lMedia.phoneSm} { padding: ${SP.md}; }
+`;
+const SummaryHeader = styled.div`text-align: center; margin-bottom: ${SP.xl};`;
+const SummaryRound = styled.div`
+  color: ${C.textDim}; font-size: ${FONT.sm}; margin-bottom: ${SP.xs};
+`;
+/** 그라디언트 텍스트 클리핑을 걷어냈다 — 도트 글자는 단색 + 하드 그림자다. */
+const SummaryTitle = styled.div`
+  ${pixelBold}
+  color: ${C.purple}; font-size: ${FONT.xl};
+  ${shadowLg}
+`;
+const SummaryMatchList = styled.div`display: flex; flex-direction: column; gap: ${SP.sm}; margin-bottom: ${SP.lg};`;
+const SummaryMatchCard = styled.div<{ $isMyMatch?: boolean }>`
+  ${p => winThin(p.$isMyMatch ? 'purple' : 'plain')}
+  padding: ${SP.sm} ${SP.md};
+  display: flex; align-items: center; gap: ${SP.sm}; flex-wrap: wrap;
+`;
+const MatchPlayerName = styled.div<{ $winner?: boolean }>`
+  ${pixelBold}
+  flex: 1; font-size: ${FONT.sm};
+  color: ${p => (p.$winner ? C.gold : C.textSub)};
+  text-align: center;
+`;
+const MatchVS = styled.div`
+  ${pixelBold}
+  color: ${C.textDim}; font-size: ${FONT.sm}; min-width: 28px; text-align: center;
+`;
+const MatchResult = styled.div<{ $winner?: boolean }>`font-size: ${ICON.md}px; min-width: 28px; text-align: center;`;
+const MatchStats = styled.div`
+  flex: 1; text-align: center; color: ${C.textDim}; font-size: ${FONT.sm};
+`;
+const ByeCard = styled.div`
+  ${winThin('green')}
+  ${pixelBold}
+  padding: ${SP.sm} ${SP.md};
+  display: flex; align-items: center; justify-content: center; gap: ${SP.sm};
+  color: ${C.green}; font-size: ${FONT.sm};
+`;
+const SummaryStandings = styled.div`
+  ${sunken()}
+  padding: ${SP.md}; margin-bottom: ${SP.lg};
+`;
+/** uppercase eyebrow를 걷어낸 자리 — 골드 라벨. */
+const StandingsTitle = styled.div`
+  ${pixelBold}
+  color: ${C.gold}; font-size: ${FONT.sm}; margin-bottom: ${SP.sm};
+`;
+const StandingRow = styled.div<{ $isMe?: boolean }>`
+  display: flex; align-items: center; gap: ${SP.sm};
+  padding: ${SP.xs} ${SP.sm};
+  background: ${p => (p.$isMe ? C.panel : 'transparent')};
+  border-bottom: 2px solid ${C.ink};
+  &:last-child { border-bottom: none; }
+`;
+const StandingRank = styled.div`
+  ${pixelBold}
+  color: ${C.textDim}; font-size: ${FONT.sm}; min-width: 24px;
+`;
+const StandingName = styled.div<{ $isMe?: boolean }>`
+  ${pixelBold}
+  flex: 1; font-size: ${FONT.sm};
+  color: ${p => (p.$isMe ? C.purple : C.text)};
+`;
+const StandingLives = styled.div`
+  ${pixelBold}
+  color: ${C.red}; font-size: ${FONT.sm};
+`;
+const StandingGold = styled.div`
+  ${pixelBold}
+  color: ${C.gold}; font-size: ${FONT.sm};
+`;
+const SummaryCloseBtn = styled.button`
+  ${btn('purple')}
+  ${pixelBold}
+  width: 100%; padding: ${SP.sm};
+  font-size: ${FONT.sm}; color: ${C.text};
+  ${focusRing}
+`;
+
+const MyResultBanner = styled.div<{ $win: boolean }>`
+  ${p => winThin(p.$win ? 'green' : 'red')}
+  text-align: center; margin-bottom: ${SP.lg}; padding: ${SP.md};
+`;
+const MyResultIcon = styled.div`font-size: 32px; line-height: 1; margin-bottom: ${SP.xs};`;
+const MyResultText = styled.div<{ $win: boolean }>`
+  ${pixelBold}
+  font-size: ${FONT.sm};
+  color: ${p => (p.$win ? C.green : C.red)};
+`;
+const MyResultSub = styled.div`color: ${C.textSub}; font-size: ${FONT.sm}; margin-top: ${SP.xs};`;
+
 
 // ─── RoundSummaryModal ──────────────────────────────────────────
 interface RoundSummaryModalProps {

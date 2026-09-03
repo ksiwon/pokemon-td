@@ -14,7 +14,10 @@ import { useCallback, useEffect, useRef, useState } from 'react';
 import styled, { keyframes } from 'styled-components';
 import { ArrowLeft, Check, X, Crown, Users, Volume2, Play } from 'lucide-react';
 import { media } from '../../utils/responsive.utils';
+import { Screen as Root, ScreenBackBtn as BackBtn, ScreenBody, ScreenSpacer as Spacer, ScreenTitle as Title, ScreenTopBar as TopBar } from '../shared/screen';
 import { useTranslation, translateIn } from '../../i18n';
+import { C, FONT, SP, SCALE } from '../../styles/tokens';
+import { win, winThin, btn, sunken, pixelBold, shadowLg, focusRing } from '../../styles/pixel';
 import { createSpeedSession, normalizeAnswer } from '../../services/QuizEngine';
 import { quizRoomService, speedPoints, normalizeKinds, QUIZ_RTDB_TIMEOUT_MS } from '../../services/QuizRoomService';
 import { quizService } from '../../services/QuizService';
@@ -443,167 +446,197 @@ const CryPlayer = ({ url, label }: { url: string; label: string }) => {
 };
 
 // ─── styled ──────────────────────────────────────────────────────────────────
-const pop = keyframes`0%{transform:translateY(4px);opacity:0}100%{transform:translateY(0);opacity:1}`;
-const ACCENT = '#22d3ee';
-const SURFACE = 'rgba(255,255,255,0.035)';
-const SURFACE_HI = 'rgba(255,255,255,0.06)';
-const BORDER = 'rgba(255,255,255,0.09)';
+// docs/DESIGN.md 의 디자인 시스템을 따른다.
+// 걷어낸 것: 유리 카드 3종, 알약 배지, 원형 번호, backdrop-filter, 둥근 모서리,
+//           Tailwind 팔레트, 10~12px 미만 글자.
 
-const Root = styled.div`min-height: 100vh; background: #0b0f14; color: #e7edf3; display: flex; flex-direction: column;`;
-const TopBar = styled.header`
-  display: flex; align-items: center; justify-content: space-between; gap: 10px;
-  padding: 13px 20px; border-bottom: 1px solid ${BORDER};
-  position: sticky; top: 0; z-index: 20; background: rgba(11,15,20,0.85); backdrop-filter: blur(10px);
-  ${media.mobile} { padding: 10px 12px; }
+const pop = keyframes`0%{opacity:0}100%{opacity:1}`;
+
+/** 제한시간 게이지 — 파인 트랙 + 각진 막대. */
+const TimerBar = styled.div`
+  height: ${SCALE * 2}px;
+  background: ${C.panelSunk};
+  border-bottom: ${SCALE}px solid ${C.ink};
 `;
-const BackBtn = styled.button`
-  flex: 0 0 auto; display: flex; align-items: center; gap: 5px;
-  background: transparent; border: 1px solid ${BORDER}; color: rgba(255,255,255,0.65);
-  padding: 7px 12px; border-radius: 9px; cursor: pointer; font-size: 13px; white-space: nowrap;
-  &:hover { background: ${SURFACE_HI}; color: #fff; }
-`;
-const Title = styled.h1`font-size: 15px; font-weight: 800; margin: 0; ${media.mobile} { font-size: 13.5px; }`;
-const Spacer = styled.span`width: 40px;`;
-const Count = styled.div`
-  flex: 0 0 auto; display: flex; align-items: center; gap: 5px; font-size: 13px; font-weight: 800;
-  color: ${ACCENT}; font-variant-numeric: tabular-nums;
-`;
-const TimerBar = styled.div`height: 4px; background: rgba(255,255,255,0.06);`;
 const TimerFill = styled.div<{ $pct: number; $low: boolean }>`
   height: 100%; width: ${p => p.$pct}%;
-  background: ${p => p.$low ? '#f87171' : ACCENT};
-  transition: width 0.1s linear, background 0.3s;
+  background: ${p => (p.$low ? C.red : C.cyan)};
+  transition: width 0.1s linear;
 `;
-const Body = styled.main`
-  flex: 1; width: 100%; max-width: 620px; margin: 0 auto; padding: 20px 18px 44px;
-  display: flex; flex-direction: column; gap: 14px;
-  ${media.mobile} { padding: 16px 14px 36px; gap: 12px; }
-`;
+/** 읽는 화면이라 좁은 폭. 여백은 공용 껍데기가 정한다. */
+const Body = styled(ScreenBody).attrs({ $narrow: true })``;
 const Panel = styled.div`
-  display: flex; flex-direction: column; align-items: center; gap: 10px;
-  padding: 20px 16px; border-radius: 14px; background: ${SURFACE}; border: 1px solid ${BORDER};
+  ${win('plain')}
+  display: flex; flex-direction: column; align-items: center; gap: ${SP.sm};
+  padding: ${SP.lg} ${SP.md};
 `;
-const PanelTitle = styled.div`font-size: 17px; font-weight: 800;`;
-const PanelDesc = styled.div`font-size: 12.5px; color: rgba(255,255,255,0.5);`;
-const PanelTags = styled.div`display: flex; flex-wrap: wrap; justify-content: center; gap: 5px;`;
+const PanelTitle = styled.div`
+  ${pixelBold}
+  font-size: ${FONT.sm};
+`;
+const PanelDesc = styled.div`font-size: ${FONT.sm}; color: ${C.textSub};`;
+const PanelTags = styled.div`display: flex; flex-wrap: wrap; justify-content: center; gap: ${SP.xs};`;
 const Tag = styled.span`
-  font-size: 11px; font-weight: 700; padding: 3px 8px; border-radius: 6px;
-  color: rgba(34,211,238,0.85); background: rgba(34,211,238,0.1); border: 1px solid rgba(34,211,238,0.22);
+  ${pixelBold}
+  font-size: ${FONT.sm}; padding: 0 ${SP.xs};
+  color: ${C.cyan};
+  background: ${C.panelSunk};
+  border: 2px solid ${C.ink};
 `;
-const Hint = styled.div`font-size: 11.5px; color: rgba(255,255,255,0.4); text-align: center; line-height: 1.5; word-break: keep-all;`;
+const Hint = styled.div`font-size: ${FONT.sm}; color: ${C.textDim}; text-align: center; word-break: keep-all;`;
 const Prompt = styled.h2`
-  font-size: 19px; font-weight: 800; text-align: center; margin: 0; line-height: 1.4; word-break: keep-all;
-  ${media.mobile} { font-size: 16px; }
+  ${pixelBold}
+  font-size: ${FONT.xl}; text-align: center; margin: 0; word-break: keep-all;
+  ${shadowLg}
+  ${media.mobile} { font-size: ${FONT.sm}; }
 `;
 const BigText = styled.div`
-  font-size: 40px; font-weight: 900; text-align: center; letter-spacing: 0.12em;
-  color: ${ACCENT}; padding: 18px 12px; border-radius: 14px;
-  background: ${SURFACE}; border: 1px solid ${BORDER}; word-break: break-all;
-  ${media.mobile} { font-size: 30px; padding: 14px 10px; }
+  ${sunken()}
+  ${pixelBold}
+  font-size: ${FONT.display}; text-align: center;
+  color: ${C.cyan}; padding: ${SP.md};
+  word-break: break-all;
+  ${shadowLg}
+  ${media.mobile} { font-size: ${FONT.xl}; }
 `;
 const FlavorText = styled.div`
-  font-size: 15px; line-height: 1.6; text-align: center; word-break: keep-all;
-  padding: 14px; border-radius: 12px; background: ${SURFACE}; border: 1px solid ${BORDER};
+  ${sunken()}
+  font-size: ${FONT.sm}; text-align: center; word-break: keep-all;
+  padding: ${SP.md};
 `;
-const HintList = styled.div`display: flex; flex-direction: column; gap: 8px;`;
+const HintList = styled.div`display: flex; flex-direction: column; gap: ${SP.sm};`;
 const HintRow = styled.div`
-  display: flex; align-items: flex-start; gap: 10px; padding: 12px 14px; border-radius: 12px;
-  background: ${SURFACE}; border: 1px solid ${BORDER};
+  ${sunken()}
+  display: flex; align-items: flex-start; gap: ${SP.sm}; padding: ${SP.sm} ${SP.md};
 `;
+/** 번호 — 원이 아니라 네모. */
 const HintNo = styled.div`
-  flex: 0 0 auto; width: 21px; height: 21px; border-radius: 50%; margin-top: 1px;
+  ${pixelBold}
+  flex: 0 0 auto; width: 20px; height: 20px;
   display: flex; align-items: center; justify-content: center;
-  font-size: 11.5px; font-weight: 800; color: #062430; background: ${ACCENT};
+  font-size: ${FONT.sm}; color: ${C.ink}; background: ${C.cyan};
+  border: 2px solid ${C.ink};
+  text-shadow: none;
 `;
-const HintText = styled.div`flex: 1; min-width: 0; font-size: 14px; font-weight: 600; line-height: 1.5; word-break: keep-all;`;
+const HintText = styled.div`flex: 1; min-width: 0; font-size: ${FONT.sm}; word-break: keep-all;`;
 const MediaWrap = styled.div<{ $zoom?: boolean }>`
+  ${sunken()}
   display: flex; align-items: center; justify-content: center;
-  background: ${SURFACE}; border: 1px solid ${BORDER};
-  border-radius: 16px; padding: 12px; overflow: hidden;
-  ${p => p.$zoom ? 'width: fit-content; margin: 0 auto;' : ''}
+  padding: ${SP.sm}; overflow: hidden;
+  ${p => (p.$zoom ? 'width: fit-content; margin: 0 auto;' : '')}
 `;
 const MediaImg = styled.img<{ $silhouette: boolean; $zoom?: { x: number; y: number } }>`
   width: 190px; height: 190px; object-fit: contain;
-  filter: ${p => p.$silhouette ? 'brightness(0)' : 'none'};
-  transform: ${p => p.$zoom ? 'scale(15)' : 'scale(1)'};
-  transform-origin: ${p => p.$zoom ? `${p.$zoom.x}% ${p.$zoom.y}%` : 'center'};
-  transition: filter 0.35s ease, transform 0.4s ease;
+  filter: ${p => (p.$silhouette ? 'brightness(0)' : 'none')};
+  transform: ${p => (p.$zoom ? 'scale(15)' : 'scale(1)')};
+  transform-origin: ${p => (p.$zoom ? `${p.$zoom.x}% ${p.$zoom.y}%` : 'center')};
   ${media.mobile} { width: 150px; height: 150px; }
 `;
-const AudioWrap = styled.div`display: flex; align-items: center; justify-content: center; padding: 14px 0;`;
+const AudioWrap = styled.div`display: flex; align-items: center; justify-content: center; padding: ${SP.md} 0;`;
 const SpeakerBtn = styled.button`
-  display: flex; flex-direction: column; align-items: center; gap: 9px;
-  padding: 22px 38px; border-radius: 16px; cursor: pointer;
-  background: ${SURFACE}; border: 1px solid rgba(34,211,238,0.3); color: ${ACCENT};
-  font-size: 13.5px; font-weight: 700;
-  &:hover { background: rgba(34,211,238,0.1); }
+  ${btn('cyan')}
+  ${pixelBold}
+  display: flex; flex-direction: column; align-items: center; gap: ${SP.sm};
+  padding: ${SP.lg} ${SP.xl};
+  color: ${C.cyan}; font-size: ${FONT.sm};
+  ${focusRing}
 `;
-const AnswerRow = styled.div`display: flex; gap: 9px;`;
+const AnswerRow = styled.div`display: flex; gap: ${SP.sm};`;
 const TextInput = styled.input`
-  flex: 1; min-width: 0; padding: 14px 16px; border-radius: 12px; font-size: 17px; font-weight: 700;
-  text-align: center; color: #f1f5f9; outline: none;
-  background: rgba(255,255,255,0.05); border: 1.5px solid rgba(34,211,238,0.4);
-  &::placeholder { color: rgba(255,255,255,0.3); font-weight: 500; font-size: 14px; }
-  &:focus { border-color: ${ACCENT}; }
+  ${sunken()}
+  ${pixelBold}
+  flex: 1; min-width: 0; padding: ${SP.sm} ${SP.md};
+  font-size: ${FONT.sm}; text-align: center; color: ${C.text}; outline: none;
+  ${focusRing}
+  box-sizing: border-box;
+  box-shadow: inset 0 0 0 ${SCALE}px ${C.cyan};
+  &::placeholder { color: ${C.textDim}; font-weight: 400; }
+  ${focusRing}
   &:disabled { opacity: 0.55; }
-  ${media.mobile} { font-size: 16px; padding: 12px 14px; }
 `;
 const SubmitBtn = styled.button`
-  flex: 0 0 auto; padding: 0 22px; border-radius: 12px; border: none; cursor: pointer;
-  background: ${ACCENT}; color: #04222b; font-size: 14.5px; font-weight: 800;
-  &:disabled { opacity: 0.4; cursor: not-allowed; }
-  &:not(:disabled):hover { filter: brightness(1.08); }
+  ${btn('cyan')}
+  ${pixelBold}
+  flex: 0 0 auto; padding: ${SP.sm} ${SP.md};
+  color: ${C.text}; font-size: ${FONT.sm};
+  ${focusRing}
 `;
 const PrimaryBtn = styled.button`
-  display: flex; align-items: center; justify-content: center; gap: 7px;
-  padding: 12px 24px; border-radius: 11px; border: none; cursor: pointer;
-  background: ${ACCENT}; color: #04222b; font-size: 15px; font-weight: 800;
-  &:disabled { opacity: 0.45; cursor: not-allowed; }
-  &:not(:disabled):hover { filter: brightness(1.08); }
+  ${btn('cyan')}
+  ${pixelBold}
+  display: flex; align-items: center; justify-content: center; gap: ${SP.xs};
+  padding: ${SP.sm} ${SP.lg};
+  color: ${C.text}; font-size: ${FONT.sm};
+  ${focusRing}
 `;
 const RevealCard = styled.div<{ $correct: boolean }>`
-  animation: ${pop} 0.18s ease both;
-  display: flex; flex-direction: column; gap: 11px; padding: 15px; border-radius: 14px;
-  border: 1px solid ${p => p.$correct ? 'rgba(52,211,153,0.3)' : 'rgba(248,113,113,0.28)'};
-  background: ${p => p.$correct ? 'rgba(52,211,153,0.07)' : 'rgba(248,113,113,0.06)'};
+  ${p => win(p.$correct ? 'green' : 'red')}
+  animation: ${pop} 0.18s steps(2, end) both;
+  display: flex; flex-direction: column; gap: ${SP.sm}; padding: ${SP.md};
 `;
 const RevealVerdict = styled.div<{ $correct: boolean }>`
-  display: flex; align-items: center; gap: 6px; font-size: 14.5px; font-weight: 800;
-  color: ${p => p.$correct ? '#34d399' : '#f87171'};
+  ${pixelBold}
+  display: flex; align-items: center; gap: ${SP.xs};
+  font-size: ${FONT.sm};
+  color: ${p => (p.$correct ? C.green : C.red)};
 `;
-const RevealBody = styled.div`display: flex; align-items: center; gap: 13px;`;
+const RevealBody = styled.div`display: flex; align-items: center; gap: ${SP.md};`;
 const RevealImg = styled.img`width: 70px; height: 70px; object-fit: contain; flex: 0 0 auto;`;
-const RevealTitle = styled.div`font-size: 17px; font-weight: 800; color: #f8fafc;`;
-const RevealSub = styled.div`font-size: 12.5px; color: rgba(255,255,255,0.6); margin-top: 3px;`;
-const Winner = styled.div`
-  display: flex; align-items: center; gap: 7px; font-size: 15px; font-weight: 800; color: #fbbf24;
-  background: rgba(251,191,36,0.12); border: 1px solid rgba(251,191,36,0.3);
-  padding: 8px 16px; border-radius: 100px;
+const RevealTitle = styled.div`
+  ${pixelBold}
+  font-size: ${FONT.sm}; color: ${C.text};
 `;
-const ResultBtns = styled.div`display: flex; gap: 10px; margin-top: 6px;`;
-const Board = styled.div`display: flex; flex-direction: column; gap: 5px; margin-top: 2px;`;
+const RevealSub = styled.div`font-size: ${FONT.sm}; color: ${C.textSub};`;
+const Winner = styled.div`
+  ${winThin('gold')}
+  ${pixelBold}
+  display: flex; align-items: center; gap: ${SP.xs};
+  font-size: ${FONT.sm}; color: ${C.gold};
+`;
+const ResultBtns = styled.div`display: flex; gap: ${SP.sm}; margin-top: ${SP.xs};`;
+/** 방 인원 표시. 숫자가 흔들리지 않게 tabular-nums. */
+const Count = styled.div`
+  ${pixelBold}
+  flex: 0 0 auto; display: flex; align-items: center; gap: ${SP.xs};
+  font-size: ${FONT.sm}; color: ${C.cyan};
+  font-variant-numeric: tabular-nums;
+`;
+
+const Board = styled.div`display: flex; flex-direction: column; gap: ${SP.xs};`;
 const BoardRow = styled.div<{ $me: boolean }>`
-  display: flex; align-items: center; gap: 10px; padding: 9px 12px; border-radius: 10px;
-  background: ${p => p.$me ? 'rgba(34,211,238,0.09)' : SURFACE};
-  border: 1px solid ${p => p.$me ? 'rgba(34,211,238,0.3)' : BORDER};
+  ${sunken()}
+  display: flex; align-items: center; gap: ${SP.sm}; padding: ${SP.sm} ${SP.md};
+  ${p => p.$me && `box-shadow: inset 0 0 0 ${SCALE}px ${C.cyan};`}
 `;
 const BoardRank = styled.div<{ $top: boolean }>`
-  flex: 0 0 auto; width: 20px; text-align: center; font-size: 12.5px; font-weight: 800;
-  color: ${p => p.$top ? '#fbbf24' : 'rgba(255,255,255,0.4)'};
+  ${pixelBold}
+  flex: 0 0 auto; width: 20px; text-align: center; font-size: ${FONT.sm};
+  color: ${p => (p.$top ? C.gold : C.textDim)};
 `;
 const BoardName = styled.div`
-  flex: 1; min-width: 0; display: flex; align-items: center; gap: 6px;
-  font-size: 13.5px; font-weight: 700; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+  ${pixelBold}
+  flex: 1; min-width: 0; display: flex; align-items: center; gap: ${SP.xs};
+  font-size: ${FONT.sm}; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
 `;
 const HostTag = styled.span`
-  flex: 0 0 auto; font-size: 10px; font-weight: 800; color: #fbbf24;
-  background: rgba(251,191,36,0.14); padding: 2px 6px; border-radius: 5px;
+  ${pixelBold}
+  flex: 0 0 auto; font-size: ${FONT.sm}; color: ${C.gold};
+  background: ${C.panel};
+  border: 2px solid ${C.ink};
+  padding: 0 ${SP.xs};
 `;
-const Submitted = styled.span`flex: 0 0 auto; display: flex; color: #34d399;`;
-const Gain = styled.span`flex: 0 0 auto; font-size: 12.5px; font-weight: 800; color: #34d399;`;
+const Submitted = styled.span`flex: 0 0 auto; display: flex; color: ${C.green};`;
+const Gain = styled.span`
+  ${pixelBold}
+  flex: 0 0 auto; font-size: ${FONT.sm}; color: ${C.green};
+`;
 const BoardScore = styled.div`
-  flex: 0 0 auto; font-size: 14px; font-weight: 800; color: ${ACCENT};
+  ${pixelBold}
+  flex: 0 0 auto; font-size: ${FONT.sm}; color: ${C.cyan};
   font-variant-numeric: tabular-nums; min-width: 34px; text-align: right;
 `;
-const Center = styled.div`flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 16px; padding: 40px;`;
-const Dim = styled.div`font-size: 13.5px; color: rgba(255,255,255,0.45); text-align: center; line-height: 1.6; word-break: keep-all;`;
+const Center = styled.div`
+  flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: center;
+  gap: ${SP.md}; padding: ${SP.xxl};
+`;
+const Dim = styled.div`font-size: ${FONT.sm}; color: ${C.textDim}; text-align: center; word-break: keep-all;`;

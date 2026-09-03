@@ -17,8 +17,10 @@
 // ──────────────────────────────────────────────────────────────────────────────
 
 import { useSyncExternalStore } from 'react';
-import styled, { keyframes, css } from 'styled-components';
+import styled, { keyframes } from 'styled-components';
 import { lMedia } from '../../utils/responsive.utils';
+import { C, FONT, SP } from '../../styles/tokens';
+import { winThin, pixelBold } from '../../styles/pixel';
 
 export type ToastKind = 'error' | 'success' | 'info';
 
@@ -111,10 +113,11 @@ const slideIn = keyframes`
   to   { opacity: 1; transform: translateY(0)     scale(1);    }
 `;
 
+/** 종류별 창틀 색과 글자색. 창틀이 정체성을 지고 면은 고정이다. */
 const KIND = {
-  error:   { fg: '#fca5a5', bg: 'rgba(127,29,29,0.92)',  bd: 'rgba(248,113,113,0.45)' },
-  success: { fg: '#86efac', bg: 'rgba(6,78,59,0.92)',    bd: 'rgba(74,222,128,0.45)'  },
-  info:    { fg: '#bae6fd', bg: 'rgba(12,44,74,0.92)',   bd: 'rgba(125,211,252,0.40)' },
+  error:   { win: 'red',   fg: C.red   },
+  success: { win: 'green', fg: C.green },
+  info:    { win: 'blue',  fg: C.blue  },
 } as const;
 
 /**
@@ -134,7 +137,7 @@ const Layer = styled.div`
   display: flex;
   flex-direction: column;
   align-items: center;
-  gap: 8px;
+  gap: ${SP.sm};
   pointer-events: none;
   width: max-content;
   max-width: min(92vw, 460px);
@@ -143,26 +146,14 @@ const Layer = styled.div`
 `;
 
 const Bubble = styled.div<{ $kind: ToastKind }>`
+  ${p => winThin(KIND[p.$kind].win)}
+  ${pixelBold}
   pointer-events: none;
-  padding: 11px 18px;
-  border-radius: 10px;
-  font-size: 14px;
-  font-weight: 600;
-  line-height: 1.5;
+  padding: ${SP.sm} ${SP.md};
+  font-size: ${FONT.sm};
   text-align: center;
   white-space: pre-line;
-  backdrop-filter: blur(6px);
-  box-shadow: 0 10px 30px rgba(0,0,0,0.55);
+  word-break: keep-all;
   animation: ${slideIn} 0.18s ease-out;
-
-  ${p => {
-    const c = KIND[p.$kind];
-    return css`
-      color: ${c.fg};
-      background: ${c.bg};
-      border: 1px solid ${c.bd};
-    `;
-  }}
-
-  ${lMedia.phone} { font-size: 12.5px; padding: 8px 14px; }
+  color: ${p => KIND[p.$kind].fg};
 `;

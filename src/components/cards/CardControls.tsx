@@ -6,6 +6,8 @@ import { Search, X } from 'lucide-react';
 import { useTranslation } from '../../i18n';
 import { Rarity } from '../../data/evolution';
 import { CardFilterState, CARD_SORT_KEYS, isFilterActive } from '../../utils/cardCatalog';
+import { C, FONT, SP } from '../../styles/tokens';
+import { btnThin, sunken, pixelText, pixelBold, focusRing } from '../../styles/pixel';
 
 const TYPE_SLUGS = [
   'normal', 'fire', 'water', 'electric', 'grass', 'ice', 'fighting', 'poison', 'ground',
@@ -74,34 +76,50 @@ export const CardControls = ({ value, onChange, resultCount, totalCount }: Props
 };
 
 // ─── styled ──────────────────────────────────────────────────────────────────
+// docs/DESIGN.md 의 디자인 시스템을 따른다.
+//
+// 예전에는 검색 인풋 + 드롭다운 3개가 반투명 둥근 사각으로 나란히 놓여 있어
+// 어드민 테이블의 필터바처럼 읽혔다. 입력칸은 '한 단 파인 면'(sunken)으로,
+// 버튼은 얇은 창틀로 바꿔 게임 UI 문법에 맞춘다.
+
 const Bar = styled.div`
-  display: flex; flex-wrap: wrap; align-items: center; gap: 8px;
+  display: flex; flex-wrap: wrap; align-items: center; gap: ${SP.sm};
 `;
 const SearchBox = styled.div`
-  display: flex; align-items: center; gap: 6px; flex: 1 1 180px; min-width: 150px;
-  background: rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.1);
-  border-radius: 8px; padding: 0 10px; color: rgba(255,255,255,0.5);
-  &:focus-within { border-color: rgba(96,176,255,0.5); }
+  ${sunken()}
+  display: flex; align-items: center; gap: ${SP.xs}; flex: 1 1 180px; min-width: 150px;
+  padding: ${SP.xs} ${SP.sm}; color: ${C.textDim};
 `;
 const SearchInput = styled.input`
+  ${pixelText}
   flex: 1; min-width: 0; background: transparent; border: none; outline: none;
-  color: #e8edf5; font-size: 13px; padding: 8px 0;
-  &::placeholder { color: rgba(255,255,255,0.35); }
+  ${focusRing}
+  color: ${C.text}; font-size: ${FONT.sm}; padding: ${SP.xs} 0;
+  &::placeholder { color: ${C.textDim}; }
 `;
 const ClearInline = styled.button`
-  display: flex; background: none; border: none; color: rgba(255,255,255,0.4);
-  cursor: pointer; padding: 2px; &:hover { color: #fff; }
+  display: flex; background: none; border: none; padding: 2px;
+  color: ${C.textDim}; cursor: pointer;
+  transition: none;
+  @media (hover: hover) { &:hover { color: ${C.text}; } }
+  ${focusRing}
 `;
 const Sel = styled.select`
-  background: rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.1);
-  border-radius: 8px; color: #e8edf5; font-size: 13px; padding: 8px 10px; cursor: pointer;
-  &:focus { outline: none; border-color: rgba(96,176,255,0.5); }
-  option { background: #12182a; color: #e8edf5; }
+  ${sunken()}
+  ${pixelText}
+  color: ${C.text}; font-size: ${FONT.sm}; padding: ${SP.xs} ${SP.sm}; cursor: pointer;
+  ${focusRing}
+  /* 네이티브 드롭다운 목록은 OS가 그리므로 색만 맞춘다 */
+  option { background: ${C.panelSunk}; color: ${C.text}; }
 `;
-const Count = styled.span`font-size: 12px; color: rgba(255,255,255,0.45); white-space: nowrap;`;
+const Count = styled.span`
+  font-size: ${FONT.sm}; color: ${C.textDim}; white-space: nowrap;
+`;
 const ResetBtn = styled.button`
-  display: flex; align-items: center; gap: 4px; background: rgba(255,255,255,0.05);
-  border: 1px solid rgba(255,255,255,0.12); border-radius: 8px; color: rgba(255,255,255,0.6);
-  font-size: 12px; padding: 7px 10px; cursor: pointer;
-  &:hover { background: rgba(255,255,255,0.1); color: #fff; }
+  ${btnThin('plain')}
+  ${pixelBold}
+  display: flex; align-items: center; gap: ${SP.xs};
+  color: ${C.text}; font-size: ${FONT.sm};
+  padding: ${SP.xs} ${SP.sm};
+  ${focusRing}
 `;

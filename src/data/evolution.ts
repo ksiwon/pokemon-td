@@ -709,6 +709,6 @@ export const FUSION_DATA: FusionData[] = [
   { base: 800, material: 792, result: 10156, item: 'dna-splicers' }, // 네크로즈마 + 루나아라 = 새벽의 날개 (necrozma-dawn #10156)
   
   // 버드렉스 합체 (ID 수정)
-  { base: 898, material: 896, result: 10193, item: 'dna-splicers' }, // 버드렉스 + 레이스포스 = 아이스 라이더 (calyrex-ice #10193)
-  { base: 898, material: 897, result: 10194, item: 'dna-splicers' }, // 버드렉스 + 블리자포스 = 쉐도우 라이더 (calyrex-shadow #10194)
+  { base: 898, material: 896, result: 10193, item: 'dna-splicers' }, // 버드렉스 + 블리자포스 = 백마 (calyrex-ice #10193)
+  { base: 898, material: 897, result: 10194, item: 'dna-splicers' }, // 버드렉스 + 레이스포스 = 흑마 (calyrex-shadow #10194)
 ];

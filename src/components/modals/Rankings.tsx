@@ -15,8 +15,11 @@ import { cardService } from '../../services/CardService';
 import { quizService } from '../../services/QuizService';
 import { daysUntilSeasonReset } from '../../utils/season';
 import { useTranslation } from '../../i18n';
+import { C, FONT, SP, SCALE } from '../../styles/tokens';
+import { winThin, btnThin, sunken, pixelBold, focusRing } from '../../styles/pixel';
 import {
   ModalOverlay, ModalBox, ModalHeader, ModalTitle, ModalCloseBtn,
+  modalPadX, MODAL_PAD_X, MODAL_PAD_X_M, ModalTabBtn, ModalChipBtn,
   ModalBody, MODAL_ACCENT,
 } from '../shared/modal.styles';
 
@@ -155,7 +158,7 @@ export const Rankings = ({ onClose, initialTab = 'ap' }: RankingsProps) => {
 
         <ModalHeader>
           <ModalTitle><Emoji glyph="🏆" size={16} /> {t('rankings.title')}</ModalTitle>
-          <ModalCloseBtn onClick={onClose}><Emoji glyph="❌" size={14} /></ModalCloseBtn>
+          <ModalCloseBtn onClick={onClose}>✕</ModalCloseBtn>
         </ModalHeader>
 
         {/* ── 탭 ── */}
@@ -401,106 +404,94 @@ export const Rankings = ({ onClose, initialTab = 'ap' }: RankingsProps) => {
 };
 
 // ─── Local Styled Components ──────────────────────────────────────────────────
+// docs/DESIGN.md 의 디자인 시스템을 따른다.
+// 걷어낸 것: 유리 카드/버튼, 알약 탭, uppercase eyebrow 헤더, hover 배경 전환,
+//           둥근 모서리, 10~12px 미만 글자.
 
 const PaginationRow = styled.div`
-  display: flex; align-items: center; justify-content: center; gap: 16px;
-  margin-top: 16px; margin-bottom: 8px;
+  display: flex; align-items: center; justify-content: center; gap: ${SP.md};
+  margin-top: ${SP.md}; margin-bottom: ${SP.sm};
 `;
 
 const PageBtn = styled.button`
-  padding: 6px 14px; border-radius: 8px;
-  background: rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.1);
-  color: #fff; cursor: pointer; font-size: 13px; font-weight: bold;
-  transition: all 0.2s;
+  ${btnThin('plain')}
+  ${pixelBold}
+  padding: ${SP.xs} ${SP.sm};
+  color: ${C.text}; font-size: ${FONT.sm};
   display: flex; align-items: center; justify-content: center;
-  &:disabled { opacity: 0.35; cursor: not-allowed; }
-  &:not(:disabled):hover { background: rgba(255,255,255,0.12); border-color: rgba(255,255,255,0.2); }
-  ${media.mobile} { padding: 5px 12px; font-size: 12px; }
+  ${focusRing}
 `;
 
 const PageInfo = styled.span`
-  font-size: 13px; color: rgba(255,255,255,0.55); font-weight: 700;
+  ${pixelBold}
+  font-size: ${FONT.sm}; color: ${C.textSub};
   font-variant-numeric: tabular-nums;
-  ${media.mobile} { font-size: 12px; }
 `;
 
 const MyRankBadgeWrapper = styled.div`
-  padding: 0 24px;
-  margin-bottom: 12px;
-
-  ${media.tablet} { padding: 0 18px; }
-  ${media.mobile} { padding: 0 14px; margin-bottom: 10px; }
-  ${lMedia.phoneSm} { padding: 0 12px; }
+  ${modalPadX}
+  margin-bottom: ${SP.md};
 `;
 
 const MyRankBadge = styled.div`
-  display: flex; align-items: center; gap: 8px;
-  margin-top: 0; padding: 9px 14px;
-  background: rgba(79,195,247,0.08); border: 1px solid rgba(79,195,247,0.22);
-  border-radius: 8px; color: #4fc3f7; font-size: 14px; font-weight: 700;
-  ${media.mobile} { font-size: 13px; padding: 7px 12px; margin-top: 0; }
+  ${winThin('blue')}
+  ${pixelBold}
+  display: flex; align-items: center; gap: ${SP.sm};
+  padding: ${SP.sm} ${SP.md};
+  color: ${C.blue}; font-size: ${FONT.sm};
 `;
 
 const SeasonNote = styled.div`
-  margin-top: 6px; font-size: 12px; font-weight: 600; color: rgba(251,191,36,0.85);
-  ${media.mobile} { font-size: 11px; }
+  margin-top: ${SP.xs}; font-size: ${FONT.sm}; color: ${C.gold};
 `;
 
 // ─── 퀴즈 탭 하위 보드(싱글/멀티/주간) ────────────────────────────────────────
 // 이 두 줄(하위탭·보드선택)은 ModalBody 바깥, 즉 **스크롤되지 않는 고정 헤더**다.
 // 폰 가로(높이 ~390px)에서는 90vh 안에서 목록이 보일 자리를 그만큼 잡아먹으므로
-// phoneSm에서 높이를 줄인다 — 안 그러면 주간 탭에서 순위가 3줄밖에 안 보인다.
+// phoneSm에서 여백을 줄인다 — 안 그러면 주간 탭에서 순위가 3줄밖에 안 보인다.
 const SubTabRow = styled.div`
-  display: flex; gap: 5px; padding: 0 24px; margin-bottom: 10px;
-  ${media.tablet} { padding: 0 18px; }
-  ${media.mobile} { padding: 0 14px; margin-bottom: 8px; }
-  ${lMedia.phoneSm} { padding: 0 12px; margin-bottom: 6px; }
+  ${modalPadX}
+  display: flex; gap: ${SP.xs}; margin-bottom: ${SP.sm};
+  ${lMedia.phoneSm} { margin-bottom: ${SP.xs}; }
 `;
 
-const SubTab = styled.button<{ $active: boolean }>`
-  flex: 1; padding: 7px 10px; border-radius: 8px; cursor: pointer;
-  font-size: 13px; font-weight: 700; transition: background 0.15s, color 0.15s;
-  border: 1px solid ${p => p.$active ? 'rgba(79,195,247,0.45)' : 'rgba(255,255,255,0.1)'};
-  background: ${p => p.$active ? 'rgba(79,195,247,0.16)' : 'transparent'};
-  color: ${p => p.$active ? '#4fc3f7' : 'rgba(255,255,255,0.55)'};
-  &:hover { color: ${p => p.$active ? '#4fc3f7' : '#fff'}; }
-  ${media.mobile} { font-size: 12px; padding: 6px 8px; }
-  ${lMedia.phoneSm} { font-size: 11.5px; padding: 4px 8px; }
+/** 하위 탭 — 고른 순위표 안을 나눈다(싱글/멀티/주간). 주 탭보다 한 단계 작다. */
+const SubTab = styled(ModalChipBtn).attrs<{ $active?: boolean }>(p => ({
+  $on: p.$active, $c: 'blue' as const,
+}))`
+  flex: 1; justify-content: center;
 `;
 
 const BoardPickRow = styled.div`
-  padding: 0 24px; margin-bottom: 10px;
-  ${media.tablet} { padding: 0 18px; }
-  ${media.mobile} { padding: 0 14px; margin-bottom: 8px; }
-  ${lMedia.phoneSm} { padding: 0 12px; margin-bottom: 6px; }
+  ${modalPadX}
+  margin-bottom: ${SP.sm};
+  ${lMedia.phoneSm} { margin-bottom: ${SP.xs}; }
 `;
 
 const BoardSelect = styled.select`
-  width: 100%; padding: 9px 12px; border-radius: 8px; cursor: pointer;
-  font-size: 13.5px; font-weight: 700; color: #e7edf3; outline: none;
-  background: rgba(255,255,255,0.06); border: 1px solid rgba(255,255,255,0.14);
-  &:focus { border-color: rgba(79,195,247,0.5); }
+  ${sunken()}
+  ${pixelBold}
+  width: 100%; padding: ${SP.sm} ${SP.md}; cursor: pointer;
+  font-size: ${FONT.sm}; color: ${C.text}; outline: none;
+  ${focusRing}
+  ${focusRing}
   /* 네이티브 드롭다운은 OS 배경을 쓰므로 옵션 색을 명시하지 않으면 흰 배경에 흰 글씨가 된다. */
-  & option { background: #16202b; color: #e7edf3; }
-  ${media.mobile} { font-size: 12.5px; padding: 8px 10px; }
-  ${lMedia.phoneSm} { font-size: 12px; padding: 5px 10px; }
+  & option { background: ${C.panelSunk}; color: ${C.text}; }
 `;
 
-// [FREE-TIER] 무료 쿼터 소진으로 최신 데이터를 못 받는 상태를 '빈 목록'과 구분해 알린다.
+/* [FREE-TIER] 무료 쿼터 소진으로 최신 데이터를 못 받는 상태를 '빈 목록'과 구분해 알린다. */
 const QuotaNotice = styled.div`
-  display: flex; align-items: flex-start; gap: 6px;
-  margin: 0 0 10px; padding: 9px 12px;
-  background: rgba(251,146,60,0.10); border: 1px solid rgba(251,146,60,0.28);
-  border-radius: 8px; color: rgba(251,146,60,0.95);
-  font-size: 12px; font-weight: 600; line-height: 1.5;
-  ${media.mobile} { font-size: 11px; padding: 8px 10px; }
+  ${winThin('gold')}
+  display: flex; align-items: flex-start; gap: ${SP.xs};
+  margin: 0 0 ${SP.sm}; padding: ${SP.sm} ${SP.md};
+  color: ${C.gold}; font-size: ${FONT.sm};
+  text-shadow: 1px 1px 0 ${C.textShadow};
 `;
 
 const StatusMsg = styled.div<{ $dimmed?: boolean }>`
   display: flex; align-items: center; justify-content: center;
-  color: ${p => p.$dimmed ? 'rgba(255,255,255,0.3)' : 'rgba(255,255,255,0.6)'};
-  font-size: 15px; padding: 48px;
-  ${media.mobile} { padding: 32px; font-size: 13px; }
+  color: ${p => (p.$dimmed ? C.textDim : C.textSub)};
+  font-size: ${FONT.sm}; padding: ${SP.xxl};
 `;
 
 const COLS_D_AP = '72px 1fr 130px 150px';
@@ -512,89 +503,76 @@ const COLS_T_PVP = '56px 1fr 110px';
 const COLS_M_PVP = '40px 1fr 90px';
 
 const TabRow = styled.div`
-  display: flex; gap: 4px; margin-bottom: 6px;
-  padding: 0 24px;
+  ${modalPadX}
+  display: flex; gap: ${SP.xs}; margin-bottom: ${SP.xs};
   /* 탭 4개 — 좁은 화면에서 가로 넘침 방지(가로 스크롤 폴백). */
   overflow-x: auto; flex-wrap: nowrap;
   scrollbar-width: none;
   &::-webkit-scrollbar { display: none; }
   & > * { flex: 0 0 auto; }
-
-  ${media.tablet} { padding: 0 18px; }
-  ${media.mobile} { margin-bottom: 4px; padding: 0 14px; }
-  ${lMedia.phoneSm} { padding: 0 12px; }
 `;
 
-const Tab = styled.button<{ $active: boolean }>`
-  padding: 8px 18px; font-size: 14px; font-weight: bold;
-  border: none; border-radius: 10px 10px 0 0; cursor: pointer;
-  transition: background 0.2s, color 0.2s;
-  background: ${p => p.$active ? 'rgba(79,195,247,0.18)' : 'rgba(255,255,255,0.06)'};
-  color: ${p => p.$active ? '#4fc3f7' : 'rgba(255,255,255,0.5)'};
-  border-bottom: ${p => p.$active ? '2px solid #4fc3f7' : '2px solid transparent'};
-  @media (hover: hover) { &:hover { background: rgba(79,195,247,0.12); color: #4fc3f7; } }
+/** 주 탭 — 어떤 순위표를 볼까. */
+const Tab = styled(ModalTabBtn).attrs<{ $active?: boolean }>(p => ({
+  $on: p.$active, $c: 'blue' as const,
+}))``;
 
-  ${media.tablet} { padding: 7px 14px; font-size: 13px; }
-  ${media.mobile} { padding: 6px 10px; font-size: 11.5px; border-radius: 8px 8px 0 0; }
-  ${lMedia.phoneSm} { padding: 5px 10px; font-size: 11px; }
-`;
-
+/* 표는 좌우로 여백만큼 들어와 선다 — 본문 글과 좌변이 맞아야 한다. */
 const RankingTable = styled.div`
-  margin: 0 24px 20px;
-  border: 1px solid rgba(255,255,255,0.07);
-  border-radius: 12px; overflow: hidden;
-  ${media.mobile} { margin: 0 14px 16px; border-radius: 10px; }
+  margin: 0 ${MODAL_PAD_X} ${SP.lg};
+  border: ${SCALE}px solid ${C.ink};
+  overflow: hidden;
+  ${media.mobile}   { margin: 0 ${MODAL_PAD_X_M} ${SP.md}; }
+  ${lMedia.phoneSm} { margin: 0 ${MODAL_PAD_X_M} ${SP.md}; }
 `;
 
+/** uppercase eyebrow를 걷어낸 자리 — 파인 띠에 골드 라벨. */
 const TableHead = styled.div<{ $isAp?: boolean }>`
-  display: grid; grid-template-columns: ${p => p.$isAp ? COLS_D_AP : COLS_D_PVP};
-  gap: 12px; padding: 10px 16px;
-  background: rgba(255,255,255,0.04);
-  border-bottom: 1px solid rgba(255,255,255,0.07);
-  font-size: 11px; font-weight: 700; color: rgba(255,255,255,0.35);
-  text-transform: uppercase; letter-spacing: 0.08em;
-  ${media.tablet} { grid-template-columns: ${p => p.$isAp ? COLS_T_AP : COLS_T_PVP}; gap: 8px; }
-  ${media.mobile} { grid-template-columns: ${p => p.$isAp ? COLS_M_AP : COLS_M_PVP}; gap: 6px; padding: 8px 12px; font-size: 10px; }
-  ${lMedia.phone} { grid-template-columns: ${p => p.$isAp ? COLS_T_AP : COLS_T_PVP}; gap: 8px; }
-  ${lMedia.phoneSm} { grid-template-columns: ${p => p.$isAp ? COLS_M_AP : COLS_M_PVP}; gap: 6px; font-size: 10px; }
+  ${pixelBold}
+  display: grid; grid-template-columns: ${p => (p.$isAp ? COLS_D_AP : COLS_D_PVP)};
+  gap: ${SP.md}; padding: ${SP.sm} ${SP.md};
+  background: ${C.panelSunk};
+  border-bottom: ${SCALE}px solid ${C.ink};
+  font-size: ${FONT.sm}; color: ${C.gold};
+  ${media.tablet}   { grid-template-columns: ${p => (p.$isAp ? COLS_T_AP : COLS_T_PVP)}; gap: ${SP.sm}; }
+  ${media.mobile}   { grid-template-columns: ${p => (p.$isAp ? COLS_M_AP : COLS_M_PVP)}; gap: ${SP.xs}; padding: ${SP.xs} ${SP.sm}; }
+  ${lMedia.phone}   { grid-template-columns: ${p => (p.$isAp ? COLS_T_AP : COLS_T_PVP)}; gap: ${SP.sm}; }
+  ${lMedia.phoneSm} { grid-template-columns: ${p => (p.$isAp ? COLS_M_AP : COLS_M_PVP)}; gap: ${SP.xs}; }
 `;
 
 const TableRow = styled.div<{ $top?: boolean; $isAp?: boolean }>`
-  display: grid; grid-template-columns: ${p => p.$isAp ? COLS_D_AP : COLS_D_PVP};
-  gap: 12px; padding: 10px 16px; align-items: center;
-  border-bottom: 1px solid rgba(255,255,255,0.04);
-  background: ${p => p.$top ? 'rgba(255,215,0,0.025)' : 'transparent'};
-  transition: background 0.15s;
-  @media (hover:hover) { &:hover { background: rgba(255,255,255,0.04); } }
+  display: grid; grid-template-columns: ${p => (p.$isAp ? COLS_D_AP : COLS_D_PVP)};
+  gap: ${SP.md}; padding: ${SP.sm} ${SP.md}; align-items: center;
+  border-bottom: 2px solid ${C.ink};
+  background: ${p => (p.$top ? C.panelSunk : 'transparent')};
   &:last-child { border-bottom: none; }
-  ${media.tablet} { grid-template-columns: ${p => p.$isAp ? COLS_T_AP : COLS_T_PVP}; gap: 8px; }
-  ${media.mobile} { grid-template-columns: ${p => p.$isAp ? COLS_M_AP : COLS_M_PVP}; gap: 6px; padding: 8px 12px; }
-  ${lMedia.phone} { grid-template-columns: ${p => p.$isAp ? COLS_T_AP : COLS_T_PVP}; gap: 8px; }
-  ${lMedia.phoneSm} { grid-template-columns: ${p => p.$isAp ? COLS_M_AP : COLS_M_PVP}; gap: 6px; padding: 7px 10px; }
+  ${media.tablet}   { grid-template-columns: ${p => (p.$isAp ? COLS_T_AP : COLS_T_PVP)}; gap: ${SP.sm}; }
+  ${media.mobile}   { grid-template-columns: ${p => (p.$isAp ? COLS_M_AP : COLS_M_PVP)}; gap: ${SP.xs}; padding: ${SP.xs} ${SP.sm}; }
+  ${lMedia.phone}   { grid-template-columns: ${p => (p.$isAp ? COLS_T_AP : COLS_T_PVP)}; gap: ${SP.sm}; }
+  ${lMedia.phoneSm} { grid-template-columns: ${p => (p.$isAp ? COLS_M_AP : COLS_M_PVP)}; gap: ${SP.xs}; padding: ${SP.xs} ${SP.sm}; }
 `;
 
 const ColRank = styled.div<{ $idx?: number }>`
-  font-size: ${p => (p.$idx !== undefined && p.$idx < 3) ? '18px' : '13px'};
-  font-weight: 700;
-  color: ${p => (p.$idx !== undefined && p.$idx < 3) ? '#FFD700' : 'rgba(255,255,255,0.4)'};
-  ${media.mobile} { font-size: 13px; }
+  ${pixelBold}
+  font-size: ${FONT.sm};
+  color: ${p => (p.$idx !== undefined && p.$idx < 3 ? C.gold : C.textDim)};
 `;
 
 const ColPlayer = styled.div`
-  font-size: 14px; font-weight: 600; color: #e8edf3;
+  ${pixelBold}
+  font-size: ${FONT.sm}; color: ${C.text};
   overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
-  ${media.mobile} { font-size: 13px; }
 `;
 
 const ColRating = styled.div`
-  font-size: 13px; color: #f1c40f; font-weight: 600;
-  ${media.mobile} { display: none; }
+  font-size: ${FONT.sm}; color: ${C.gold};
+  ${media.mobile}   { display: none; }
   ${lMedia.phoneSm} { display: none; }
 `;
 
 const ColScore = styled.div<{ $accent?: boolean }>`
-  font-size: 14px; font-weight: 800; text-align: right;
-  color: ${p => p.$accent ? '#4fc3f7' : 'rgba(255,255,255,0.7)'};
+  ${pixelBold}
+  font-size: ${FONT.sm}; text-align: right;
+  color: ${p => (p.$accent ? C.blue : C.textSub)};
   font-variant-numeric: tabular-nums;
-  ${media.mobile} { font-size: 13px; }
 `;

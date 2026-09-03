@@ -23,3 +23,9 @@ firebase-debug.log
 database-debug.log
 firestore-debug.log
 ui-debug.log
+
+# 화면 캡처 산출물 (npm run shots — 재생성 가능)
+shots/
+
+# 캡처 도구가 쓰는 브라우저 프로필(게스트 세션 재사용)
+.playwright-profile/

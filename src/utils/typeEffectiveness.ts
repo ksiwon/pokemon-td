@@ -2,6 +2,8 @@
 
 // 최신 포켓몬 타입 상성표 (18개 타입 - 9세대 기준)
 // 2배 효과: 2, 0.5배 효과: 0.5, 무효: 0
+import { TYPE_COLOR } from '../styles/tokens';
+
 const TYPE_CHART: Record<string, Record<string, number>> = {
   normal: { 
     rock: 0.5, 
@@ -188,28 +190,15 @@ export function getTypeEffectiveness(
   return multiplier;
 }
 
+/**
+ * 타입 색 — 단일 출처는 src/styles/tokens.ts 의 TYPE_COLOR 다.
+ *
+ * 예전에는 이 함수가 자체 팔레트(3세대풍 웹 색)를 들고 있어 UI의 타입 색과
+ * 어긋났다. 같은 '불꽃'이 화면마다 다른 주황이었고, 그런 어긋남이 "AI가
+ * 디자인한 것 같다"의 원인 중 하나였다. 새 타입 색은 tokens.ts 에만 추가한다.
+ */
 export function getTypeColor(type: string): string {
-  const colors: Record<string, string> = {
-    normal: '#A8A878', 
-    fire: '#F08030', 
-    water: '#6890F0', 
-    electric: '#F8D030',
-    grass: '#78C850', 
-    ice: '#98D8D8', 
-    fighting: '#C03028', 
-    poison: '#A040A0',
-    ground: '#E0C068', 
-    flying: '#A890F0', 
-    psychic: '#F85888', 
-    bug: '#A8B820',
-    rock: '#B8A038', 
-    ghost: '#705898', 
-    dragon: '#7038F8',
-    dark: '#705848',
-    steel: '#B8B8D0',
-    fairy: '#EE99AC',
-  };
-  return colors[type] || '#68A090';
+  return TYPE_COLOR[type] ?? '#68A090';
 }
 
 // 자속 보정 (STAB - Same Type Attack Bonus) 계산
