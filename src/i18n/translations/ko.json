@@ -1007,6 +1007,7 @@
     "helpMulti": "멀티 플레이 가이드",
     "helpCards": "미니 포켓 가이드",
     "helpDocs": "자료실",
+    "otherGames": "이런 게임은 어떠세요?",
     "gameTitle": "포켓몬 아이기스",
     "ratingLabel": "⭐ Rating: {rating}",
     "offlineBadge": "오프라인 모드",
@@ -2133,6 +2134,23 @@
       "speedRound": "방 설정 문항 수",
       "speedSec": "방 설정 제한 시간 (초)",
       "speedFoot": "시간 점수는 남은 시간에 비례합니다(제한 시간이 몇 초든 만점은 100). 주간 속도전 보드는 방의 문항 수를 구분하지 않아서 30문항 방이 유리합니다."
+    }
+  },
+  "otherGames": {
+    "title": "이런 게임은 어떠세요?",
+    "intro": "같은 사람이 만든 포켓몬 웹 게임입니다. 설치 없이 브라우저에서 바로 열립니다.",
+    "open": "새 탭에서 열기",
+    "footnote": "셋 다 비공식·비영리 팬 게임입니다. 관련 상표와 저작물은 각 권리자의 것입니다.",
+    "games": {
+      "aegis": {
+        "line": "포켓몬 타워 디펜스 X TFT 게임"
+      },
+      "radiant": {
+        "line": "포켓몬 플래티넘을 브라우저에서 3D로"
+      },
+      "pokerhythm": {
+        "line": "포켓몬 BGM 리듬게임"
+      }
     }
   }
 }
