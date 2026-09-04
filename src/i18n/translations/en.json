@@ -975,6 +975,7 @@
     "helpMulti": "Multiplayer Guide",
     "helpCards": "Mini Pocket Guide",
     "helpDocs": "Reference",
+    "otherGames": "Looking for another game?",
     "gameTitle": "Pokémon Aegis",
     "ratingLabel": "⭐ Rating: {rating}",
     "offlineBadge": "Offline Mode",
@@ -2133,6 +2134,23 @@
       "speedRound": "Room question count",
       "speedSec": "Room time limit (seconds)",
       "speedFoot": "The time score is proportional to time remaining, so 100 is the cap no matter the limit. The weekly speed board does not separate room sizes, which favours 30-question rooms."
+    }
+  },
+  "otherGames": {
+    "title": "Looking for another game?",
+    "intro": "Pokémon web games by the same author. Nothing to install — they open straight in the browser.",
+    "open": "Opens in a new tab",
+    "footnote": "All three are unofficial, non-commercial fan games. Related trademarks and works belong to their respective owners.",
+    "games": {
+      "aegis": {
+        "line": "Pokémon Tower Defense X TFT"
+      },
+      "radiant": {
+        "line": "Pokémon Platinum in 3D, in your browser"
+      },
+      "pokerhythm": {
+        "line": "A Pokémon BGM rhythm game"
+      }
     }
   }
 }

@@ -32,6 +32,7 @@ import { Rankings } from '../modals/Rankings';
 import { TutorialModal, hasTowerTutorialSeen, hasMultiTutorialSeen, hasStoryTutorialSeen, hasCardsTutorialSeen } from '../modals/TutorialModal';
 import { PatchNotes, hasUnreadPatchNotes } from '../modals/PatchNotes';
 import { GameDocs, DocsTab } from '../modals/GameDocs';
+import { OtherGames } from '../modals/OtherGames';
 import { showToast } from '../shared/Toast';
 import { C, FONT, SP } from '../../styles/tokens';
 import { win, btn, btnThin, backdrop, pixelBold, cursorMark, cursorOn, CURSOR_GUTTER, BtnColor, pixelText, shadowLg, focusRing } from '../../styles/pixel';
@@ -45,6 +46,8 @@ export const MainMenu = () => {
   const [showHallOfFame, setShowHallOfFame] = useState(false);
   const [showRankings, setShowRankings] = useState(false);
   const [showPatchNotes, setShowPatchNotes] = useState(false);
+  /** “이런 게임은 어떠세요?” — 같은 사람이 만든 나머지 둘 (modals/OtherGames.tsx) */
+  const [showOtherGames, setShowOtherGames] = useState(false);
   // 안 본 최신 패치가 있으면 버튼에 점 표시. 모달을 열면 읽음 처리되므로 여기서 내린다.
   const [patchUnread, setPatchUnread] = useState(hasUnreadPatchNotes);
   const [tutorial, setTutorial] = useState<'tower' | 'multi' | 'story' | 'cards' | null>(null);
@@ -172,7 +175,10 @@ export const MainMenu = () => {
             </ModeBtn>
           </SecondaryGrid>
 
-          {/* 내 정보 */}
+          {/* 내 정보 — 업적·전당·랭킹·패치노트·자료실.
+              다섯 다 '펼쳐 놓고 들여다보는 것'이라 한 줄에 선다. 자료실은 한동안
+              도움말 줄 오른쪽 끝에 있었는데, 그 줄의 나머지 넷은 '어떻게 노느냐'를
+              알려주는 튜토리얼이고 자료실은 수치표라 결이 달랐다. */}
           <SectionLabel>{t('mainMenu.myInfo')}</SectionLabel>
           <UtilRow>
             <UtilBtn onClick={() => setShowAchievements(true)}>{t('mainMenu.achievements')}</UtilBtn>
@@ -183,16 +189,19 @@ export const MainMenu = () => {
               {t('mainMenu.patchNotes')}
               {patchUnread && <UnreadDot />}
             </UtilBtn>
+            {/* 자료실도 서버를 안 쓴다 — 오프라인에서도 열린다.
+                넷과 성격이 갈리는 것(내 기록이 아니라 게임의 수치표)은 창틀 색으로 알린다. */}
+            <DocsBtn onClick={() => setDocsTab('single')}>{t('mainMenu.helpDocs')}</DocsBtn>
           </UtilRow>
 
-          {/* 도움말 — 가이드 4종은 '어떻게 노느냐', 자료실은 '어떤 수치로 도느냐'.
-              성격이 달라서 같은 줄 오른쪽 끝에 따로 세운다. */}
+          {/* 도움말 — 가이드 4종은 '어떻게 노느냐'. 오른쪽 끝은 이 게임 밖으로
+              나가는 길이라, 넷과 성격이 달라 창틀 색으로 구분한다(자료실이 있던 자리). */}
           <HelpRow>
             <HelpBtn onClick={() => { setPendingNav(null); setTutorial('tower'); }}>{t('mainMenu.helpSingle')}</HelpBtn>
             <HelpBtn onClick={() => { setPendingNav(null); setTutorial('story'); }}>{t('mainMenu.helpStory')}</HelpBtn>
             <HelpBtn onClick={() => { setPendingNav(null); setTutorial('multi'); }}>{t('mainMenu.helpMulti')}</HelpBtn>
             <HelpBtn onClick={() => { setPendingNav(null); setTutorial('cards'); }}>{t('mainMenu.helpCards')}</HelpBtn>
-            <DocsBtn onClick={() => setDocsTab('single')}>{t('mainMenu.helpDocs')}</DocsBtn>
+            <OtherGamesBtn onClick={() => setShowOtherGames(true)}>{t('mainMenu.otherGames')}</OtherGamesBtn>
           </HelpRow>
         </Main>
       </Root>
@@ -207,6 +216,7 @@ export const MainMenu = () => {
           onOpenDocs={tab => { setTutorial(null); setPendingNav(null); setDocsTab(tab); }} />
       )}
       {docsTab && <GameDocs initialTab={docsTab} onClose={() => setDocsTab(null)} />}
+      {showOtherGames && <OtherGames onClose={() => setShowOtherGames(false)} />}
     </>
   );
 };
@@ -383,8 +393,11 @@ const ModeDesc = styled.span`
 // 뻗는 게임 목록 머리글로 바꿨다.
 
 
+/* 업적·전당·랭킹·패치노트 + 자료실 = 한 줄 5칸. 좁아지면 2열로 접고,
+   자료실만 한 줄을 다 쓴다 (5개를 2열에 넣으면 마지막 칸이 혼자 왼쪽에 남아
+   빠뜨린 것처럼 보인다). */
 const UtilRow = styled.div`
-  display: grid; grid-template-columns: repeat(4, 1fr); gap: ${SP.sm};
+  display: grid; grid-template-columns: repeat(5, 1fr); gap: ${SP.sm};
   margin-bottom: ${SP.md};
   ${media.mobile} { grid-template-columns: repeat(2, 1fr); }
 `;
@@ -396,8 +409,16 @@ const UtilBtn = styled.button`
   padding: ${SP.sm} ${SP.xs};
   font-size: ${FONT.sm}; color: ${C.text};
   text-align: center;
-  /* 4열이라 좁은 화면에서 긴 한글 라벨이 단어 단위로 줄바꿈되게 */
+  /* 5열이라 좁은 화면에서 긴 한글 라벨이 단어 단위로 줄바꿈되게 */
   word-break: keep-all; line-height: 1.4;
+`;
+
+/** 자료실 — 넷과 성격이 다르니 창틀 색으로 구분한다(같은 줄, 오른쪽 끝). */
+const DocsBtn = styled(UtilBtn)`
+  ${btn('gold')}
+  padding: ${SP.sm} ${SP.xs};
+  color: ${C.gold};
+  ${media.mobile} { grid-column: 1 / -1; }
 `;
 
 // 패치노트 미확인 표시 — 텍스트 배치를 건드리지 않도록 절대 위치로 띄운다.
@@ -410,8 +431,8 @@ const UnreadDot = styled.span`
   animation: blink 1s steps(1, end) infinite;
 `;
 
-/* 가이드 4종 + 자료실 = 한 줄 5칸. 좁아지면 2열로 접고, 자료실만 한 줄을 다 쓴다
-   (5개를 2열에 넣으면 마지막 칸이 혼자 왼쪽에 남아 빠뜨린 것처럼 보인다). */
+/* 가이드 4종 + 다른 게임 = 한 줄 5칸. 좁아지면 2열로 접고, 마지막 칸만 한 줄을
+   다 쓴다 (5개를 2열에 넣으면 마지막 칸이 혼자 왼쪽에 남아 빠뜨린 것처럼 보인다). */
 const HelpRow = styled.div`
   display: grid; grid-template-columns: repeat(5, 1fr); gap: ${SP.sm};
   ${media.mobile} { grid-template-columns: repeat(2, 1fr); }
@@ -427,8 +448,13 @@ const HelpBtn = styled.button`
   text-align: center; word-break: keep-all; line-height: 1.4;
 `;
 
-/** 자료실 — 가이드와 성격이 다르니 창틀 색으로 구분한다(같은 줄, 오른쪽 끝). */
-const DocsBtn = styled(HelpBtn)`
+/**
+ * 교차 홍보 — 만든 사람의 다른 게임 (modals/OtherGames.tsx).
+ *
+ * 가이드 넷과 같은 줄이되 창틀 색이 다르다. 저 넷은 이 게임 안으로 들어가는
+ * 길이고 이것만 밖으로 나가는 길이라, 같은 회색으로 두면 잘못 누른다.
+ */
+const OtherGamesBtn = styled(HelpBtn)`
   ${btnThin('gold')}
   padding: ${SP.sm} ${SP.xs};
   color: ${C.gold};
