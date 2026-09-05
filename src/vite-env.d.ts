@@ -18,3 +18,6 @@ interface ImportMetaEnv {
 interface ImportMeta {
   readonly env: ImportMetaEnv
 }
+
+/** package.json의 버전. vite.config.ts의 define이 빌드 때 박아 넣는다. */
+declare const __APP_VERSION__: string
