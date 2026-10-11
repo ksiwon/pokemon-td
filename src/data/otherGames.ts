@@ -33,6 +33,7 @@ export const GAMES: OtherGame[] = [
   { key: 'aegis',      name: 'Pokemon Aegis',    url: 'https://aegis.siwon.it.kr',      accent: 'gold'   },
   { key: 'radiant',    name: 'Radiant Platinum', url: 'https://radiant.siwon.it.kr',    accent: 'green'  },
   { key: 'pokerhythm', name: 'PokeRhythm',       url: 'https://pokerhythm.siwon.it.kr', accent: 'purple' },
+  { key: 'cosmic',     name: 'Cosmic Gold',      url: 'https://cosmic.siwon.it.kr',     accent: 'red'    },
 ];
 
 /** 여기 말고 갈 수 있는 곳 — 목록에서 나만 뺀 것 */

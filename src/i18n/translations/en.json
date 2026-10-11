@@ -2140,7 +2140,7 @@
     "title": "Looking for another game?",
     "intro": "Pokémon web games by the same author. Nothing to install — they open straight in the browser.",
     "open": "Opens in a new tab",
-    "footnote": "All three are unofficial, non-commercial fan games. Related trademarks and works belong to their respective owners.",
+    "footnote": "All of these are unofficial, non-commercial fan games. Related trademarks and works belong to their respective owners.",
     "games": {
       "aegis": {
         "line": "Pokémon Tower Defense X TFT"
@@ -2150,6 +2150,9 @@
       },
       "pokerhythm": {
         "line": "A Pokémon BGM rhythm game"
+      },
+      "cosmic": {
+        "line": "Pokémon HeartGold in 3D, in your browser"
       }
     }
   }
