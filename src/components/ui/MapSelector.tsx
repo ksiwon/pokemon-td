@@ -221,7 +221,10 @@ const Grid = styled.div`
   justify-content: center;
   ${media.tablet}   { grid-template-columns: repeat(2,1fr); gap: ${SP.md}; max-width: 640px; }
   ${media.mobile}   { grid-template-columns: 1fr; gap: ${SP.sm}; max-width: 400px; }
-  ${lMedia.tablet}  { grid-template-columns: repeat(4, minmax(0,220px)); gap: ${SP.md}; }
+  /* 가로폭 480~1024의 가로 화면(752×740 같은 정사각형에 가까운 폰 포함)에서는
+     위 media.tablet의 max-width 640이 같이 걸려 4열이 150px로 찌그러졌다.
+     폭 상한을 풀고, 열 수는 카드 최소 폭(200px)으로 정한다. */
+  ${lMedia.tablet}  { grid-template-columns: repeat(auto-fit, minmax(200px, 240px)); gap: ${SP.md}; max-width: 1200px; }
   ${lMedia.phoneSm} { grid-template-columns: repeat(2,1fr); gap: ${SP.sm}; max-width: 600px; }
 `;
 
@@ -286,6 +289,7 @@ const CardTitle = styled.h3`
   font-size: ${FONT.xl}; color: ${C.text};
   margin: 0 0 ${SP.xs};
   ${media.mobile}   { font-size: ${FONT.sm}; }
+  ${lMedia.tablet}  { font-size: ${FONT.md}; }
   ${lMedia.phoneSm} { font-size: ${FONT.sm}; }
 `;
 

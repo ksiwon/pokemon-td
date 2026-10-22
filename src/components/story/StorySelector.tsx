@@ -515,7 +515,10 @@ const MainLayout = styled.div<{ $visible: boolean }>`
     grid-template-columns: 1fr;
     overflow-y: auto;
   }
-  ${lMedia.tablet}  { grid-template-columns: 1fr 300px; overflow: hidden; }
+  /* 700px 이하 가로 화면은 위 900px 규칙(1열)을 따른다. 안 그러면 좁은 가로 화면에서 2열이 되살아난다. */
+  @media (min-width: 701px) and (max-width: 1024px) and (orientation: landscape) {
+    grid-template-columns: 1fr 300px; overflow: hidden;
+  }
   ${lMedia.phoneSm} { grid-template-columns: 1fr; overflow-y: auto; }
 `;
 
@@ -527,7 +530,9 @@ const ChapterList = styled.div`
   ${scrollArea}
 
   @media (max-width: 900px) { padding: ${SP.md}; overflow-y: visible; }
-  ${lMedia.tablet}  { padding: ${SP.md}; overflow-y: auto; }
+  @media (min-width: 701px) and (max-width: 1024px) and (orientation: landscape) {
+    padding: ${SP.md}; overflow-y: auto;
+  }
   ${lMedia.phoneSm} { padding: ${SP.sm}; overflow-y: visible; }
 `;
 
